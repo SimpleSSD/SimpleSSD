@@ -78,7 +78,10 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
     info.dataProtectionSettings = 0x00;
     info.namespaceSharingCapabilities = 0x00;
 
-    if (!createNamespace(NSID_LOWEST, &info)) {
+    if (createNamespace(NSID_LOWEST, &info)) {
+      lNamespaces.front()->attach(true);
+    }
+    else {
       // TODO: panic("Failed to create namespace");
     }
   }
@@ -98,7 +101,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
 
   // Allocate LPN
   uint64_t requestedLogicalPages =
-      info->size / lbaSize[info->lbaFormatIndex] * logicalPageSize;
+      info->size / logicalPageSize * lbaSize[info->lbaFormatIndex];
   uint64_t unallocatedLogicalPages = totalLogicalPages - allocatedLogicalPages;
 
   if (requestedLogicalPages > unallocatedLogicalPages) {
@@ -159,14 +162,18 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
   unallocatedLogicalPages = 0;  // This now contain reserved pages
 
   for (auto iter = unallocated.begin(); iter != unallocated.end(); iter++) {
-    iter->nlp = MIN(iter->nlp, requestedLogicalPages - unallocatedLogicalPages);
-    unallocatedLogicalPages += iter->nlp;
-
     if (unallocatedLogicalPages >= requestedLogicalPages) {
       unallocated.erase(iter, unallocated.end());
 
       break;
     }
+
+    iter->nlp = MIN(iter->nlp, requestedLogicalPages - unallocatedLogicalPages);
+    unallocatedLogicalPages += iter->nlp;
+  }
+
+  if (unallocated.size() == 0) {
+    // TODO: panic("BUG");
   }
 
   allocatedLogicalPages += unallocatedLogicalPages;
@@ -249,7 +256,7 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   buffer[24] = 0x04;  // Trim supported
 
   // Number of LBA Formats
-  buffer[25] = nLBAFormat;
+  buffer[25] = nLBAFormat - 1;  // 0's based
 
   // Formatted LBA Size
   buffer[26] = info->lbaFormatIndex;
@@ -390,7 +397,8 @@ void Subsystem::flush(Namespace *ns, uint64_t &tick) {
   pHIL->flush(*ns->getLPNRange(), tick);
 }
 
-void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk, uint64_t &tick) {
+void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk,
+                     uint64_t &tick) {
   std::list<LPNRange> result;
   uint32_t lbaratio = logicalPageSize / ns->getInfo()->lbaSize;
   uint64_t slpn;

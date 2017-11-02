@@ -255,7 +255,7 @@ uint64_t PRPList::read(uint64_t offset, uint64_t length, uint8_t *buffer,
       begin = true;
       totalRead = offset - currentOffset;
       read = MIN(iter.size - totalRead, length);
-      delay = dmaEngine->read(iter.addr, read, buffer, tick);
+      delay = dmaEngine->read(iter.addr + totalRead, read, buffer, tick);
       totalRead = read;
     }
 
@@ -292,7 +292,7 @@ uint64_t PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
       begin = true;
       totalWritten = offset - currentOffset;
       written = MIN(iter.size - totalWritten, length);
-      delay = dmaEngine->write(iter.addr, written, buffer, tick);
+      delay = dmaEngine->write(iter.addr + totalWritten, written, buffer, tick);
       totalWritten = written;
     }
 

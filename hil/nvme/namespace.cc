@@ -82,6 +82,8 @@ bool Namespace::submitCommand(SQEntryWrapper &req, CQEntryWrapper &resp,
     }
   }
 
+  resp.submitAt = beginAt;
+
   return true;
 }
 

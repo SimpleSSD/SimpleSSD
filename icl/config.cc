@@ -158,6 +158,93 @@ uint64_t Config::readUint(uint32_t idx) {
     case ICL_ENTRY_SIZE:
       ret = cacheEntrySize;
       break;
+    case DRAM_CHANNEL:
+      ret = dram.channel;
+      break;
+    case DRAM_RANK:
+      ret = dram.rank;
+      break;
+    case DRAM_BANK:
+      ret = dram.bank;
+      break;
+    case DRAM_CHIP:
+      ret = dram.chip;
+      break;
+    case DRAM_CHIP_SIZE:
+      ret = dram.chipSize;
+      break;
+    case DRAM_CHIP_BUS_WIDTH:
+      ret = dram.busWidth;
+      break;
+    case DRAM_BURST_LENGTH:
+      ret = dram.burstLength;
+      break;
+    case DRAM_ACTIVATION_LIMIT:
+      ret = dram.activationLimit;
+      break;
+    case DRAM_TIMING_CK:
+      ret = dramTiming.tCK;
+      break;
+    case DRAM_TIMING_RCD:
+      ret = dramTiming.tRCD;
+      break;
+    case DRAM_TIMING_CL:
+      ret = dramTiming.tCL;
+      break;
+    case DRAM_TIMING_RP:
+      ret = dramTiming.tRP;
+      break;
+    case DRAM_TIMING_RAS:
+      ret = dramTiming.tRAS;
+      break;
+    case DRAM_TIMING_WR:
+      ret = dramTiming.tWR;
+      break;
+    case DRAM_TIMING_RTP:
+      ret = dramTiming.tRTP;
+      break;
+    case DRAM_TIMING_BURST:
+      ret = dramTiming.tBURST;
+      break;
+    case DRAM_TIMING_CCD_L:
+      ret = dramTiming.tCCD_L;
+      break;
+    case DRAM_TIMING_RFC:
+      ret = dramTiming.tRFC;
+      break;
+    case DRAM_TIMING_REFI:
+      ret = dramTiming.tREFI;
+      break;
+    case DRAM_TIMING_WTR:
+      ret = dramTiming.tWTR;
+      break;
+    case DRAM_TIMING_RTW:
+      ret = dramTiming.tRTW;
+      break;
+    case DRAM_TIMING_CS:
+      ret = dramTiming.tCS;
+      break;
+    case DRAM_TIMING_RRD:
+      ret = dramTiming.tRRD;
+      break;
+    case DRAM_TIMING_RRD_L:
+      ret = dramTiming.tRRD_L;
+      break;
+    case DRAM_TIMING_XAW:
+      ret = dramTiming.tXAW;
+      break;
+    case DRAM_TIMING_XP:
+      ret = dramTiming.tXP;
+      break;
+    case DRAM_TIMING_XPDLL:
+      ret = dramTiming.tXPDLL;
+      break;
+    case DRAM_TIMING_XS:
+      ret = dramTiming.tXS;
+      break;
+    case DRAM_TIMING_XSDLL:
+      ret = dramTiming.tXSDLL;
+      break;
   }
 
   return ret;
@@ -165,6 +252,81 @@ uint64_t Config::readUint(uint32_t idx) {
 
 float Config::readFloat(uint32_t idx) {
   float ret = 0.f;
+
+  switch (idx) {
+    case DRAM_POWER_IDD0:
+      ret = dramPower.pIDD0[0];
+      break;
+    case DRAM_POWER_IDD02:
+      ret = dramPower.pIDD0[1];
+      break;
+    case DRAM_POWER_IDD2P0:
+      ret = dramPower.pIDD2P0[0];
+      break;
+    case DRAM_POWER_IDD2P02:
+      ret = dramPower.pIDD2P0[1];
+      break;
+    case DRAM_POWER_IDD2P1:
+      ret = dramPower.pIDD2P1[0];
+      break;
+    case DRAM_POWER_IDD2P12:
+      ret = dramPower.pIDD2P1[1];
+      break;
+    case DRAM_POWER_IDD2N:
+      ret = dramPower.pIDD2N[0];
+      break;
+    case DRAM_POWER_IDD2N2:
+      ret = dramPower.pIDD2N[1];
+      break;
+    case DRAM_POWER_IDD3P0:
+      ret = dramPower.pIDD3P0[0];
+      break;
+    case DRAM_POWER_IDD3P02:
+      ret = dramPower.pIDD3P0[1];
+      break;
+    case DRAM_POWER_IDD3P1:
+      ret = dramPower.pIDD3P1[0];
+      break;
+    case DRAM_POWER_IDD3P12:
+      ret = dramPower.pIDD3P1[1];
+      break;
+    case DRAM_POWER_IDD3N:
+      ret = dramPower.pIDD3N[0];
+      break;
+    case DRAM_POWER_IDD3N2:
+      ret = dramPower.pIDD3N[1];
+      break;
+    case DRAM_POWER_IDD4R:
+      ret = dramPower.pIDD4R[0];
+      break;
+    case DRAM_POWER_IDD4R2:
+      ret = dramPower.pIDD4R[1];
+      break;
+    case DRAM_POWER_IDD4W:
+      ret = dramPower.pIDD4W[0];
+      break;
+    case DRAM_POWER_IDD4W2:
+      ret = dramPower.pIDD4W[1];
+      break;
+    case DRAM_POWER_IDD5:
+      ret = dramPower.pIDD5[0];
+      break;
+    case DRAM_POWER_IDD52:
+      ret = dramPower.pIDD5[1];
+      break;
+    case DRAM_POWER_IDD6:
+      ret = dramPower.pIDD6[0];
+      break;
+    case DRAM_POWER_IDD62:
+      ret = dramPower.pIDD6[1];
+      break;
+    case DRAM_POWER_VDD:
+      ret = dramPower.pVDD[0];
+      break;
+    case DRAM_POWER_VDD2:
+      ret = dramPower.pVDD[1];
+      break;
+  }
 
   return ret;
 }
@@ -187,6 +349,9 @@ bool Config::readBoolean(uint32_t idx) {
       break;
     case ICL_USE_READ_PREFETCH:
       ret = readPrefetch;
+      break;
+    case DRAM_DLL:
+      ret = dram.useDLL;
       break;
   }
 

@@ -96,7 +96,7 @@ void Queue::setBase(PRPList *p, uint64_t s) {
 CQueue::CQueue(uint16_t iv, bool en, uint16_t qid, uint16_t size)
     : Queue(qid, size), ien(en), phase(true), interruptVector(iv) {}
 
-uint64_t CQueue::setData(CQEntry *entry, uint64_t tick) {
+void CQueue::setData(CQEntry *entry, uint64_t &tick) {
   if (entry) {
     // Set phase
     entry->dword3.status &= 0xFFFE;
@@ -127,8 +127,6 @@ uint64_t CQueue::setData(CQEntry *entry, uint64_t tick) {
     DPRINTF(NVMeBreakdown, "C%d|3|H%d|T%d|S%d|I%d\n", qid, head, tail,
             entry->DW2.SQID, entry->DW3.CID); */
   }
-
-  return tick;
 }
 
 uint16_t CQueue::incHead() {
@@ -164,7 +162,7 @@ void SQueue::setTail(uint16_t newTail) {
   tail = newTail;
 }
 
-uint64_t SQueue::getData(SQEntry *entry, uint64_t tick) {
+void SQueue::getData(SQEntry *entry, uint64_t &tick) {
   if (entry && head != tail) {
     // Read entry
     tick = base->read(head * stride, 0x40, entry->data, tick);
@@ -184,8 +182,6 @@ uint64_t SQueue::getData(SQEntry *entry, uint64_t tick) {
         DPRINTF(NVMeBreakdown, "S%d|1|H%d|T%d|I%d|N%u\n", qid, head, tail,
                 entry->CDW0.CID, entry->NSID); */
   }
-
-  return tick;
 }
 
 uint8_t SQueue::getPriority() {

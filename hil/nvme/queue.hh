@@ -126,7 +126,7 @@ class CQueue : public Queue {
  public:
   CQueue(uint16_t, bool, uint16_t, uint16_t);
 
-  uint64_t setData(CQEntry *, uint64_t);
+  void setData(CQEntry *, uint64_t &);
   uint16_t incHead();
   void setHead(uint16_t);
   bool interruptEnabled();
@@ -143,7 +143,7 @@ class SQueue : public Queue {
 
   uint16_t getCQID();
   void setTail(uint16_t);
-  uint64_t getData(SQEntry *, uint64_t);
+  void getData(SQEntry *, uint64_t &);
   uint8_t getPriority();
 };
 

@@ -31,7 +31,6 @@ namespace ICL {
 class GenericCache : public Cache {
  private:
   uint32_t setSize;
-  uint32_t setMask;
   uint32_t entrySize;
   uint32_t lineSize;
 
