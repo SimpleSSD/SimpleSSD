@@ -73,9 +73,7 @@ class List {
 
   uint64_t size() { return length; }
 
-  void push_back(T val) {
-    insert(nullptr, val);
-  }
+  void push_back(T val) { insert(nullptr, val); }
 
   T pop_back() {
     if (length > 0) {
@@ -93,9 +91,7 @@ class List {
     }
   }
 
-  void push_front(T val) {
-    insert(head, val);
-  }
+  void push_front(T val) { insert(head, val); }
 
   T pop_front() {
     if (length > 0) {

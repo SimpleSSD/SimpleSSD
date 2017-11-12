@@ -50,6 +50,7 @@ Config::Config() {
   dram.burstLength = 8;
   dram.activationLimit = 4;
   dram.useDLL = false;
+  dram.pageSize = 4096;
 
   dramTiming.tCK = 1250;
   dramTiming.tRCD = 18000;
@@ -181,6 +182,9 @@ uint64_t Config::readUint(uint32_t idx) {
       break;
     case DRAM_ACTIVATION_LIMIT:
       ret = dram.activationLimit;
+      break;
+    case DRAM_PAGE_SIZE:
+      ret = dram.pageSize;
       break;
     case DRAM_TIMING_CK:
       ret = dramTiming.tCK;

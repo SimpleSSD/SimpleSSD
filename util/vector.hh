@@ -108,9 +108,7 @@ class Vector {
     length = count;
   }
 
-  void push_back(T val) {
-    insert(length, val);
-  }
+  void push_back(T val) { insert(length, val); }
 
   T pop_back() {
     if (length > 0) {

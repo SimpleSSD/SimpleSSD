@@ -20,6 +20,8 @@
 #include "ftl/ftl.hh"
 
 #include "ftl/abstract_ftl.hh"
+#include "ftl/ftl_old.hh"
+#include "log/trace.hh"
 
 namespace SimpleSSD {
 
@@ -38,8 +40,10 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
   param.pagesInBlock = palparam->page;
   param.pageSize = palparam->superPageSize;
 
-  // TODO allocated pFTL
+  pFTL = new FTLOLD(&param, pPAL, pConf);
+
   // Initialize pFTL
+  pFTL->initialize();
 }
 
 FTL::~FTL() {
@@ -48,14 +52,20 @@ FTL::~FTL() {
 }
 
 void FTL::read(uint64_t lpn, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "READ  | LPN %" PRIu64, lpn);
+
   pFTL->read(lpn, tick);
 }
 
 void FTL::write(uint64_t lpn, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "WRITE | LPN %" PRIu64, lpn);
+
   pFTL->write(lpn, tick);
 }
 
 void FTL::trim(uint64_t lpn, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "TRIM  | LPN %" PRIu64, lpn);
+
   pFTL->trim(lpn, tick);
 }
 

@@ -19,6 +19,8 @@
 
 #include "PAL2.h"
 
+#include "util/algorithm.hh"
+
 PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
   stats = statistics;
   gconf = c;
@@ -184,19 +186,9 @@ PAL2::~PAL2() {
   delete ChFreeSlots;
   delete DieFreeSlots;
 }
-void PAL2::TimelineScheduling(Command &req) {
+void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   // ensure we can erase multiple blocks from single request
   unsigned erase_block = 1;
-  if (req.operation == OPER_ERASE) {
-    for (int i = 5; i >= 0; i--) {
-      if (AddrRemap[i] != 5) {
-        erase_block *= RearrangedSizes[i];
-      }
-      else {
-        break;
-      }
-    }
-  }
   /*=========== CONFLICT data gather ============*/
   for (unsigned cur_command = 0; cur_command < erase_block; cur_command++) {
 #if GATHER_RESOURCE_CONFLICT
@@ -204,8 +196,6 @@ void PAL2::TimelineScheduling(Command &req) {
     uint64_t confLength = 0;
 #endif
     req.ppn = req.ppn - (req.ppn & (erase_block - 1)) + cur_command;
-    CPDPBP reqCPD;
-    PPNdisassemble((uint64_t *)&(req.ppn), &reqCPD);
     uint32_t reqCh = reqCPD.Channel;
     uint32_t reqDieIdx = CPDPBPtoDieIdx(&reqCPD);
     TimeSlot *tsDMA0 = NULL, *tsMEM = NULL, *tsDMA1 = NULL;
@@ -220,7 +210,7 @@ void PAL2::TimelineScheduling(Command &req) {
     latANTI = lat->GetLatency(reqCPD.Page, OPER_READ, BUSY_DMA0);
     // Start Finding available Slot
     DMA0tickFrom = req.arrived;  // get Current System Time
-    while (1)                  // LOOP0
+    while (1)                    // LOOP0
     {
       while (1)  // LOOP1
       {
@@ -505,30 +495,31 @@ void PAL2::TimelineScheduling(Command &req) {
       // DPRINTF(PAL,
       //         "PAL: %s PPN 0x%" PRIX64 " ch%02d die%05d : REQTime  %" PRIu64
       //         "\n",
-      //         OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel, reqDieIdx,
-      //         req.arrived);  // Use DPRINTF here
+      //         OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel,
+      //         reqDieIdx, req.arrived);  // Use DPRINTF here
       printCPDPBP(&reqCPD);
       // DPRINTF(PAL,
       //         "PAL: %s PPN 0x%" PRIX64 " ch%02d die%05d : DMA0 %" PRIu64
       //         " ~ %" PRIu64 " (%" PRIu64 ") , MEM  %" PRIu64 " ~ %" PRIu64
-      //         " (%" PRIu64 ") , DMA1 %" PRIu64 " ~ %" PRIu64 " (%" PRIu64 ")\n",
-      //         OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel, reqDieIdx,
-      //         tsDMA0->StartTick, tsDMA0->EndTick,
-      //         (tsDMA0->EndTick - tsDMA0->StartTick + 1), tsMEM->StartTick,
-      //         tsMEM->EndTick,
+      //         " (%" PRIu64 ") , DMA1 %" PRIu64 " ~ %" PRIu64 " (%" PRIu64
+      //         ")\n", OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel,
+      //         reqDieIdx, tsDMA0->StartTick, tsDMA0->EndTick, (tsDMA0->EndTick
+      //         - tsDMA0->StartTick + 1), tsMEM->StartTick, tsMEM->EndTick,
       //         (tsMEM->EndTick - tsMEM->StartTick + 1) -
       //             (tsDMA0->EndTick - tsDMA0->StartTick + 1) -
       //             (tsDMA1->EndTick - tsDMA1->StartTick + 1),
       //         tsDMA1->StartTick, tsDMA1->EndTick,
-      //         (tsDMA1->EndTick - tsDMA1->StartTick + 1));  // Use DPRINTF here
+      //         (tsDMA1->EndTick - tsDMA1->StartTick + 1));  // Use DPRINTF
+      //         here
 
       // DPRINTF(PAL,
       //         "PAL: %s PPN 0x%" PRIX64
       //         " ch%02d die%05d : REQ~DMA0start(%" PRIu64
       //         "), DMA0~DMA1end(%" PRIu64 ")\n",
-      //         OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel, reqDieIdx,
-      //         (tsDMA0->StartTick - 1 - req.arrived + 1),
-      //         (tsDMA1->EndTick - tsDMA0->StartTick + 1));  // Use DPRINTF here
+      //         OPER_STRINFO[req.operation], req.ppn, reqCPD.Channel,
+      //         reqDieIdx, (tsDMA0->StartTick - 1 - req.arrived + 1),
+      //         (tsDMA1->EndTick - tsDMA0->StartTick + 1));  // Use DPRINTF
+      //         here
 #endif
 #if GATHER_RESOURCE_CONFLICT
       if (confType != CONFLICT_NONE) {
@@ -572,8 +563,57 @@ void PAL2::TimelineScheduling(Command &req) {
   }
 }
 
-void PAL2::submit(Command &cmd) {
-  TimelineScheduling(cmd);
+void PAL2::submit(Command &cmd, uint32_t blkidx, uint32_t pageidx) {
+  CPDPBP addr;
+  uint32_t finishedAt = 0;
+
+  addr.Page = pageidx;
+
+  if (gconf->readBoolean(SimpleSSD::PAL::NAND_USE_MULTI_PLANE_OP)) {
+    addr.Block = blkidx;
+
+    for (uint32_t c = 0; c < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
+         c++) {
+      for (uint32_t p = 0; p < gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
+           p++) {
+        for (uint32_t d = 0; d < gconf->readUint(SimpleSSD::PAL::NAND_DIE);
+             d++) {
+          for (uint32_t pl = 0;
+               pl < gconf->readUint(SimpleSSD::PAL::NAND_PLANE); pl++) {
+            addr.Channel = c;
+            addr.Package = p;
+            addr.Die = d;
+            addr.Plane = pl;
+
+            TimelineScheduling(cmd, addr);
+            finishedAt = MAX(finishedAt, cmd.finished);
+          }
+        }
+      }
+    }
+  }
+  else {
+    addr.Block = blkidx / gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
+    addr.Plane = blkidx % gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
+
+    for (uint32_t c = 0; c < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
+         c++) {
+      for (uint32_t p = 0; p < gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
+           p++) {
+        for (uint32_t d = 0; d < gconf->readUint(SimpleSSD::PAL::NAND_DIE);
+             d++) {
+          addr.Channel = c;
+          addr.Package = p;
+          addr.Die = d;
+
+          TimelineScheduling(cmd, addr);
+          finishedAt = MAX(finishedAt, cmd.finished);
+        }
+      }
+    }
+  }
+
+  cmd.finished = finishedAt;
 }
 
 uint8_t PAL2::VerifyTimeLines(uint8_t print_on) {
@@ -1012,9 +1052,10 @@ bool PAL2::FindFreeTime(
         (e->second)->upper_bound(tickFrom);
     if (f != (e->second)->begin()) {
       f--;
-      if (f->second >= tickLen + tickFrom - (uint64_t)1) {  // this free slot is
-                                                            // best fit one, skip
-                                                            // checking others
+      if (f->second >=
+          tickLen + tickFrom - (uint64_t)1) {  // this free slot is
+                                               // best fit one, skip
+                                               // checking others
         startTick = f->first;
         conflicts = false;
         return true;
@@ -1122,13 +1163,14 @@ uint32_t PAL2::CPDPBPtoDieIdx(CPDPBP *pCPDPBP) {
   uint32_t ret = 0;
   ret += pCPDPBP->Die;
   ret += pCPDPBP->Package * (gconf->readUint(SimpleSSD::PAL::NAND_DIE));
-  ret += pCPDPBP->Channel * (gconf->readUint(SimpleSSD::PAL::NAND_DIE) * gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE));
+  ret += pCPDPBP->Channel * (gconf->readUint(SimpleSSD::PAL::NAND_DIE) *
+                             gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE));
 
   return ret;
 }
 
 void PAL2::printCPDPBP(CPDPBP *pCPDPBP) {
-//  uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
+  //  uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
 
   // DPRINTF(PAL, "PAL:    %7s | %7s | %7s | %7s | %7s | %7s\n",
   //         ADDR_STRINFO[gconf->AddrSeq[0]], ADDR_STRINFO[gconf->AddrSeq[1]],

@@ -19,17 +19,14 @@
 
 #include "hil/hil.hh"
 
+#include "log/trace.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
 namespace HIL {
 
-LPNRange::_LPNRange() : slpn(0), nlp(0) {}
-
-LPNRange::_LPNRange(uint64_t s, uint64_t n) : slpn(s), nlp(n) {}
-
-HIL::HIL(ConfigReader *c) : pConf(c) {
+HIL::HIL(ConfigReader *c) : pConf(c), reqCount(0) {
   pICL = new ICL::ICL(pConf);
 }
 
@@ -37,84 +34,52 @@ HIL::~HIL() {
   delete pICL;
 }
 
-void HIL::read(uint64_t slpn, uint64_t nlp, uint64_t &tick) {
+void HIL::read(Request &req, uint64_t &tick) {
   // TODO: stat
 
-  pICL->read(slpn, nlp, tick);
+  Logger::debugprint(Logger::LOG_HIL,
+                     "READ  | LPN %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+                     " + %" PRIu64,
+                     req.range.slpn, req.range.nlp, req.offset, req.length);
+
+  req.reqID = reqCount++;
+  pICL->read(req, tick);
 }
 
-void HIL::read(std::list<LPNRange> &range, uint64_t &tick) {
-  uint64_t beginAt;
-  uint64_t finishedAt = 0;
-
-  for (auto &iter : range) {
-    beginAt = tick;
-
-    read(iter.slpn, iter.nlp, beginAt);
-    finishedAt = MAX(finishedAt, beginAt);
-  }
-
-  tick = finishedAt;
-}
-
-void HIL::write(uint64_t slpn, uint64_t nlp, uint64_t &tick) {
+void HIL::write(Request &req, uint64_t &tick) {
   // TODO: stat
 
-  pICL->write(slpn, nlp, tick);
+  Logger::debugprint(Logger::LOG_HIL,
+                     "WRITE | LPN %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+                     " + %" PRIu64,
+                     req.range.slpn, req.range.nlp, req.offset, req.length);
+
+  req.reqID = reqCount++;
+  pICL->write(req, tick);
 }
 
-void HIL::write(std::list<LPNRange> &range, uint64_t &tick) {
-  uint64_t beginAt;
-  uint64_t finishedAt = 0;
-
-  for (auto &iter : range) {
-    beginAt = tick;
-
-    write(iter.slpn, iter.nlp, beginAt);
-    finishedAt = MAX(finishedAt, beginAt);
-  }
-
-  tick = finishedAt;
-}
-
-void HIL::flush(uint64_t slpn, uint64_t nlp, uint64_t &tick) {
+void HIL::flush(Request &req, uint64_t &tick) {
   // TODO: stat
 
-  pICL->flush(slpn, nlp, tick);
+  Logger::debugprint(Logger::LOG_HIL,
+                     "FLUSH | LPN %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+                     " + %" PRIu64,
+                     req.range.slpn, req.range.nlp, req.offset, req.length);
+
+  req.reqID = reqCount++;
+  pICL->flush(req, tick);
 }
 
-void HIL::flush(std::list<LPNRange> &range, uint64_t &tick) {
-  uint64_t beginAt;
-  uint64_t finishedAt = 0;
-
-  for (auto &iter : range) {
-    beginAt = tick;
-
-    flush(iter.slpn, iter.nlp, beginAt);
-    finishedAt = MAX(finishedAt, beginAt);
-  }
-
-  tick = finishedAt;
-}
-
-void HIL::trim(uint64_t slpn, uint64_t nlp, uint64_t &tick) {
+void HIL::trim(Request &req, uint64_t &tick) {
   // TODO: stat
 
-  pICL->trim(slpn, nlp, tick);
-}
+  Logger::debugprint(Logger::LOG_HIL,
+                     "TRIM  | LPN %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+                     " + %" PRIu64,
+                     req.range.slpn, req.range.nlp, req.offset, req.length);
 
-void HIL::trim(std::list<LPNRange> &range, uint64_t &tick) {
-  uint64_t beginAt;
-  uint64_t finishedAt = 0;
-
-  for (auto &iter : range) {
-    beginAt = tick;
-
-    trim(iter.slpn, iter.nlp, beginAt);
-    finishedAt = MAX(finishedAt, beginAt);
-  }
-
-  tick = finishedAt;
+  req.reqID = reqCount++;
+  pICL->trim(req, tick);
 }
 
 void HIL::getLPNInfo(uint64_t &totalLogicalPages, uint32_t &logicalPageSize) {

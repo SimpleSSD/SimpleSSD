@@ -23,6 +23,7 @@
 #include "ftl/ftl.hh"
 #include "icl/cache.hh"
 #include "util/config.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
@@ -42,10 +43,10 @@ class ICL {
   ICL(ConfigReader *);
   ~ICL();
 
-  void read(uint64_t, uint64_t, uint64_t &);
-  void write(uint64_t, uint64_t, uint64_t &);
-  void flush(uint64_t, uint64_t, uint64_t &);
-  void trim(uint64_t, uint64_t, uint64_t &);
+  void read(Request &, uint64_t &);
+  void write(Request &, uint64_t &);
+  void flush(Request &, uint64_t &);
+  void trim(Request &, uint64_t &);
 
   void getLPNInfo(uint64_t &, uint32_t &);
 };

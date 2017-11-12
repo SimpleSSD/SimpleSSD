@@ -31,6 +31,7 @@
 #include "ftl/old/PALStatistics.h"
 #include "ftl/old/ftl.hh"
 #include "ftl/old/ftl_defs.hh"
+#include "log/trace.hh"
 
 namespace SimpleSSD {
 
@@ -69,6 +70,7 @@ FTLOLD::FTLOLD(Parameter *p, PAL::PAL *l, ConfigReader *c)
   old->warmup = pConf->readFloat(FTL_WARM_UP_RATIO);
   old->erase_cycle = pConf->readUint(FTL_ERASE_CYCLE);
   old->page_byte = p->pageSize;
+  old->page_per_block = p->pagesInBlock;
 
   ftl = new ::FTL(old, pal);
 }
@@ -85,15 +87,29 @@ bool FTLOLD::initialize() {
 }
 
 void FTLOLD::read(uint64_t slpn, uint64_t &tick) {
-  tick = ftl->read(slpn, 1, tick);
+  uint64_t begin = tick;
+
+  tick = ftl->read(slpn, 1, begin);
+
+  Logger::debugprint(Logger::LOG_FTL_OLD,
+                     "READ  | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64
+                     " (%" PRIu64 ")",
+                     slpn, begin, tick, tick - begin);
 }
 
 void FTLOLD::write(uint64_t slpn, uint64_t &tick) {
-  tick = ftl->write(slpn, 1, tick);
+  uint64_t begin = tick;
+
+  tick = ftl->write(slpn, 1, begin);
+
+  Logger::debugprint(Logger::LOG_FTL_OLD,
+                     "WRITE | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64
+                     " (%" PRIu64 ")",
+                     slpn, begin, tick, tick - begin);
 }
 
 void FTLOLD::trim(uint64_t slpn, uint64_t &tick) {
-  // NOT USED
+  Logger::debugprint(Logger::LOG_FTL_OLD, "TRIM  | NOT IMPLEMENTED");
 }
 
 }  // namespace FTL

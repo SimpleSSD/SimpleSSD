@@ -35,7 +35,7 @@ class AbstractFTL {
 
  public:
   AbstractFTL(Parameter *p, PAL::PAL *l) : pParam(p), pPAL(l) {}
-  virtual ~AbstractFTL() {};
+  virtual ~AbstractFTL(){};
 
   virtual bool initialize() = 0;
 

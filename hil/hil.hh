@@ -24,36 +24,27 @@
 
 #include "icl/icl.hh"
 #include "util/config.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
 namespace HIL {
-
-typedef struct _LPNRange {
-  uint64_t slpn;
-  uint64_t nlp;
-
-  _LPNRange();
-  _LPNRange(uint64_t, uint64_t);
-} LPNRange;
 
 class HIL {
  private:
   ConfigReader *pConf;
   ICL::ICL *pICL;
 
+  uint64_t reqCount;
+
  public:
   HIL(ConfigReader *);
   ~HIL();
 
-  void read(uint64_t, uint64_t, uint64_t &);
-  void read(std::list<LPNRange> &, uint64_t &);
-  void write(uint64_t, uint64_t, uint64_t &);
-  void write(std::list<LPNRange> &, uint64_t &);
-  void flush(uint64_t, uint64_t, uint64_t &);
-  void flush(std::list<LPNRange> &, uint64_t &);
-  void trim(uint64_t, uint64_t, uint64_t &);
-  void trim(std::list<LPNRange> &, uint64_t &);
+  void read(Request &, uint64_t &);
+  void write(Request &, uint64_t &);
+  void flush(Request &, uint64_t &);
+  void trim(Request &, uint64_t &);
 
   void getLPNInfo(uint64_t &, uint32_t &);
 };

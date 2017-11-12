@@ -23,6 +23,7 @@
 #include <cmath>
 
 #include "hil/nvme/controller.hh"
+#include "log/trace.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
@@ -69,7 +70,7 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
     }
 
     if (info.lbaFormatIndex == nLBAFormat) {
-      // TODO: panic("Failed to setting LBA size (512B ~ 4KB)");
+      Logger::panic("Failed to setting LBA size (512B ~ 4KB)");
     }
 
     // Fill Namespace information
@@ -82,7 +83,7 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
       lNamespaces.front()->attach(true);
     }
     else {
-      // TODO: panic("Failed to create namespace");
+      Logger::panic("Failed to create namespace");
     }
   }
 }
@@ -110,9 +111,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
 
   // Collect allocated slots
   for (auto &iter : lNamespaces) {
-    std::list<LPNRange> *pList = iter->getLPNRange();
-
-    allocated.insert(allocated.end(), pList->begin(), pList->end());
+    allocated.push_back(iter->getInfo()->range);
   }
 
   // Sort
@@ -154,42 +153,39 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
       last.nlp = iter.slpn - last.slpn;
     }
     else {
-      // TODO: panic("BUG");
+      Logger::panic("BUG");
     }
   }
 
   // Allocated unallocated area to namespace
-  unallocatedLogicalPages = 0;  // This now contain reserved pages
-
   for (auto iter = unallocated.begin(); iter != unallocated.end(); iter++) {
-    if (unallocatedLogicalPages >= requestedLogicalPages) {
-      unallocated.erase(iter, unallocated.end());
+    if (iter->nlp >= requestedLogicalPages) {
+      info->range = *iter;
+      info->range.nlp = requestedLogicalPages;
 
       break;
     }
-
-    iter->nlp = MIN(iter->nlp, requestedLogicalPages - unallocatedLogicalPages);
-    unallocatedLogicalPages += iter->nlp;
   }
 
-  if (unallocated.size() == 0) {
-    // TODO: panic("BUG");
+  if (info->range.nlp == 0) {
+    return false;
   }
 
-  allocatedLogicalPages += unallocatedLogicalPages;
+  allocatedLogicalPages += requestedLogicalPages;
 
   // Fill Information
-  info->sizeInByteL = unallocatedLogicalPages * logicalPageSize;
+  info->sizeInByteL = requestedLogicalPages * logicalPageSize;
   info->sizeInByteH = 0;
 
   // Create namespace
   Namespace *pNS = new Namespace(this, pCfgdata);
-  pNS->setData(nsid, info, unallocated);
+  pNS->setData(nsid, info);
 
   lNamespaces.push_back(pNS);
-  // // DPRINTF(NVMeAll, "NS %-5d| CREATE | LBA Range %" PRIu64 " + %" PRIu64
-  // "\n",
-  //        nsid, lastOffset, logical_blocks);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "NS %-5d| CREATE | LBA size %" PRIu32
+                     " | Capacity %" PRIu64,
+                     nsid, info->lbaSize, info->size);
 
   return true;
 }
@@ -202,7 +198,8 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
     if ((*iter)->getNSID() == nsid) {
       found = true;
 
-      // // DPRINTF(NVMeAll, "NS %-5d| DELETE\n", nsid);
+      Logger::debugprint(Logger::LOG_HIL_NVME, "NS %-5d| DELETE", nsid);
+
       info = (*iter)->getInfo();
       allocatedLogicalPages -= info->size * info->lbaSize / logicalPageSize;
 
@@ -215,30 +212,6 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
   }
 
   return found;
-}
-
-void Subsystem::convert(std::list<LPNRange> &out, std::list<LPNRange> *in,
-                        uint64_t slpn, uint64_t nlp) {
-  uint64_t passed = 0;
-  uint64_t len;
-
-  for (auto &iter : *in) {
-    if (passed + iter.nlp < slpn) {
-      continue;
-    }
-
-    len = MIN(nlp, iter.nlp - (slpn - passed));
-    nlp -= len;
-    slpn += len;
-
-    out.push_back(LPNRange(iter.slpn + (slpn - passed), len));
-
-    passed += iter.nlp;
-
-    if (nlp == 0) {
-      break;
-    }
-  }
 }
 
 void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
@@ -361,8 +334,9 @@ uint32_t Subsystem::validNamespaceCount() {
 
 void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
                      uint64_t &tick) {
-  std::list<LPNRange> result;
-  uint32_t lbaratio = logicalPageSize / ns->getInfo()->lbaSize;
+  Request req;
+  Namespace::Information *info = ns->getInfo();
+  uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
   uint64_t nlp;
   uint64_t off;
@@ -371,15 +345,19 @@ void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
   off = slba % lbaratio;
   nlp = (nlblk + off + lbaratio - 1) / lbaratio;
 
-  convert(result, ns->getLPNRange(), slpn, nlp);
+  req.range.slpn = slpn + info->range.slpn;
+  req.range.nlp = nlp;
+  req.offset = off * info->lbaSize;
+  req.length = nlblk * info->lbaSize;
 
-  pHIL->read(result, tick);
+  pHIL->read(req, tick);
 }
 
 void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
                       PRPList &prp, uint64_t &tick) {
-  std::list<LPNRange> result;
-  uint32_t lbaratio = logicalPageSize / ns->getInfo()->lbaSize;
+  Request req;
+  Namespace::Information *info = ns->getInfo();
+  uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
   uint64_t nlp;
   uint64_t off;
@@ -388,19 +366,31 @@ void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
   off = slba % lbaratio;
   nlp = (nlblk + off + lbaratio - 1) / lbaratio;
 
-  convert(result, ns->getLPNRange(), slpn, nlp);
+  req.range.slpn = slpn + info->range.slpn;
+  req.range.nlp = nlp;
+  req.offset = off * info->lbaSize;
+  req.length = nlblk * info->lbaSize;
 
-  pHIL->write(result, tick);
+  pHIL->write(req, tick);
 }
 
 void Subsystem::flush(Namespace *ns, uint64_t &tick) {
-  pHIL->flush(*ns->getLPNRange(), tick);
+  Request req;
+  Namespace::Information *info = ns->getInfo();
+
+  req.range.slpn = info->range.slpn;
+  req.range.nlp = info->range.nlp;
+  req.offset = 0;
+  req.length = info->range.nlp * logicalPageSize;
+
+  pHIL->flush(req, tick);
 }
 
 void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk,
                      uint64_t &tick) {
-  std::list<LPNRange> result;
-  uint32_t lbaratio = logicalPageSize / ns->getInfo()->lbaSize;
+  Request req;
+  Namespace::Information *info = ns->getInfo();
+  uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
   uint64_t nlp;
   uint64_t off;
@@ -409,16 +399,20 @@ void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk,
   off = slba % lbaratio;
   nlp = (nlblk + off + lbaratio - 1) / lbaratio;
 
-  convert(result, ns->getLPNRange(), slpn, nlp);
+  req.range.slpn = slpn + info->range.slpn;
+  req.range.nlp = nlp;
+  req.offset = off * info->lbaSize;
+  req.length = nlblk * info->lbaSize;
 
-  pHIL->trim(result, tick);
+  pHIL->trim(req, tick);
 }
 
 bool Subsystem::deleteSQueue(SQEntryWrapper &req, CQEntryWrapper &resp,
                              uint64_t &tick) {
   uint16_t sqid = req.entry.dword10 & 0xFFFF;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Delete I/O Submission Queue\n");
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Delete I/O Submission Queue");
 
   int ret = pParent->deleteSQueue(sqid);
 
@@ -440,7 +434,8 @@ bool Subsystem::createSQueue(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint8_t priority = (req.entry.dword11 & 0x06) >> 1;
   bool pc = req.entry.dword11 & 0x01;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Create I/O Submission Queue\n");
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Create I/O Submission Queue");
 
   if (entrySize > pCfgdata->maxQueueEntry) {
     err = true;
@@ -477,8 +472,9 @@ bool Subsystem::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint32_t req_size = (((uint32_t)numdu << 16 | numdl) + 1) * 4;
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Get Log Page | Log %d | Size %d | NSID %d\n",
-  // lid, req_size, req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Get Log Page | Log %d | Size %d | NSID %d", lid,
+                     req_size, req.entry.namespaceID);
 
   PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)req_size);
 
@@ -509,7 +505,8 @@ bool Subsystem::deleteCQueue(SQEntryWrapper &req, CQEntryWrapper &resp,
                              uint64_t &tick) {
   uint16_t cqid = req.entry.dword10 & 0xFFFF;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Delete I/O Completion Queue\n");
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Delete I/O Completion Queue");
 
   int ret = pParent->deleteCQueue(cqid);
 
@@ -535,7 +532,8 @@ bool Subsystem::createCQueue(SQEntryWrapper &req, CQEntryWrapper &resp,
   bool ien = req.entry.dword11 & 0x02;
   bool pc = req.entry.dword11 & 0x01;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Create I/O Completion Queue\n");
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Create I/O Completion Queue");
 
   if (entrySize > pCfgdata->maxQueueEntry) {
     err = true;
@@ -568,8 +566,9 @@ bool Subsystem::identify(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint16_t idx = 0;
 
   memset(data, 0, 0x1000);
-  // DPRINTF(NVMeAll, "ADMIN   | Identify | CNS %d | CNTID %d | NSID %d\n", cns,
-  // cntid, req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Identify | CNS %d | CNTID %d | NSID %d", cns,
+                     cntid, req.entry.namespaceID);
 
   PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)0x1000);
 
@@ -657,7 +656,8 @@ bool Subsystem::abort(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint16_t sqid = req.entry.dword10 & 0xFFFF;
   uint16_t cid = (req.entry.dword10 & 0xFFFF0000) >> 16;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Abort | SQID %d | CID %d\n", sqid, cid);
+  Logger::debugprint(Logger::LOG_HIL_NVME, "ADMIN   | Abort | SQID %d | CID %d",
+                     sqid, cid);
 
   int ret = pParent->abort(sqid, cid);
 
@@ -680,8 +680,9 @@ bool Subsystem::setFeatures(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint16_t fid = req.entry.dword10 & 0x00FF;
   bool save = req.entry.dword10 & 0x80000000;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Set Features | Feature %d | NSID %d\n", fid,
-  // req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Set Features | Feature %d | NSID %d", fid,
+                     req.entry.namespaceID);
 
   if (save) {
     err = true;
@@ -729,8 +730,9 @@ bool Subsystem::getFeatures(SQEntryWrapper &req, CQEntryWrapper &resp,
                             uint64_t &tick) {
   uint16_t fid = req.entry.dword10 & 0x00FF;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Get Features | Feature %d | NSID %d\n", fid,
-  // req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Get Features | Feature %d | NSID %d", fid,
+                     req.entry.namespaceID);
 
   switch (fid) {
     case FEATURE_ARBITRATION:
@@ -770,8 +772,9 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
 
   uint8_t sel = req.entry.dword10 & 0x0F;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Namespace Management | OP %d | NSID %d\n", sel,
-  // req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Namespace Management | OP %d | NSID %d", sel,
+                     req.entry.namespaceID);
 
   if ((sel == 0x00 && req.entry.namespaceID != NSID_NONE) || sel > 0x01) {
     err = true;
@@ -858,8 +861,9 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint8_t sel = req.entry.dword10 & 0x0F;
   uint32_t ctrlList;
 
-  // DPRINTF(NVMeAll, "ADMIN   | Namespace Attachment | OP %d | NSID %d\n", sel,
-  // req.entry.NSID);
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Namespace Attachment | OP %d | NSID %d", sel,
+                     req.entry.namespaceID);
 
   PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)0x1000);
   PRP.read(0, 4, (uint8_t *)&ctrlList, tick);

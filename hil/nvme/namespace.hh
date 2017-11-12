@@ -22,10 +22,10 @@
 
 #include <list>
 
+#include "hil/hil.hh"
 #include "hil/nvme/def.hh"
 #include "hil/nvme/dma.hh"
 #include "hil/nvme/queue.hh"
-#include "hil/hil.hh"
 #include "util/disk.hh"
 
 namespace SimpleSSD {
@@ -57,6 +57,7 @@ class Namespace {
     uint8_t namespaceSharingCapabilities;  //!< NMIC
 
     uint32_t lbaSize;
+    LPNRange range;
   } Information;
 
  private:
@@ -73,8 +74,6 @@ class Namespace {
 
   HealthInfo health;
 
-  std::list<LPNRange> lpnRanges;
-
   // Admin commands
   void getLogPage(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
 
@@ -90,11 +89,10 @@ class Namespace {
 
   bool submitCommand(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
 
-  void setData(uint32_t, Information *, std::list<LPNRange> &);
+  void setData(uint32_t, Information *);
   void attach(bool);
   uint32_t getNSID();
   Information *getInfo();
-  std::list<LPNRange> *getLPNRange();
   bool isAttached();
 };
 

@@ -61,7 +61,6 @@ void PAL::erase(uint32_t blockIndex, uint64_t &tick) {
   // TODO implement
 }
 
-
 Parameter *PAL::getInfo() {
   return &param;
 }

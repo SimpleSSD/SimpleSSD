@@ -62,7 +62,7 @@ Tick FTL::read(Addr lpn, size_t npages, Tick arrived) {
 
   ftl_statistics.updateStats(&cmd);
 
-  return finished - arrived;
+  return finished;
 }
 
 Tick FTL::write(Addr lpn, size_t npages, Tick arrived, bool init) {
@@ -91,7 +91,7 @@ Tick FTL::write(Addr lpn, size_t npages, Tick arrived, bool init) {
     ftl_statistics.updateStats(&cmd);
   }
 
-  return finished - arrived;
+  return finished;
 }
 
 Tick FTL::trim(Addr lpn, size_t npages) {
@@ -110,7 +110,7 @@ Tick FTL::readInternal(Addr ppn, Tick now, bool flag) {
   Command cmd = Command(now, ppn, OPER_READ, param->page_byte);
   cmd.mergeSnapshot = flag;
 
-  pal->submit(cmd);
+  pal->submit(cmd, ppn / param->logical_page_number, ppn % param->logical_page_number);
 
   return cmd.finished;
 }
@@ -119,7 +119,7 @@ Tick FTL::writeInternal(Addr ppn, Tick now, bool flag) {
   Command cmd = Command(now, ppn, OPER_WRITE, param->page_byte);
   cmd.mergeSnapshot = flag;
 
-  pal->submit(cmd);
+    pal->submit(cmd, ppn / param->logical_page_number, ppn % param->logical_page_number);
 
   return cmd.finished;
 }
@@ -127,7 +127,7 @@ Tick FTL::writeInternal(Addr ppn, Tick now, bool flag) {
 Tick FTL::eraseInternal(Addr ppn, Tick now) {
   Command cmd = Command(now, ppn, OPER_ERASE, 0);
 
-  pal->submit(cmd);
+    pal->submit(cmd, ppn / param->logical_page_number, 0);
 
   return cmd.finished;
 }

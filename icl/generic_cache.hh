@@ -41,22 +41,23 @@ class GenericCache : public Cache {
   EVICT_POLICY policy;
 
   // TODO: replace this with DRAM model
-  uint64_t latency;
-  uint32_t width;
+  Config::DRAMTiming *pTiming;
+  Config::DRAMStructure *pStructure;
 
   Line **ppCache;
 
   uint32_t calcSet(uint64_t);
-  uint32_t flushVictim(uint32_t, uint64_t &);
+  uint32_t flushVictim(uint32_t, uint64_t &, bool * = nullptr);
+  uint64_t calculateDelay(uint64_t);
 
  public:
   GenericCache(ConfigReader *, FTL::FTL *);
   ~GenericCache();
 
-  bool read(uint64_t, uint64_t &);
-  bool write(uint64_t, uint64_t &);
-  bool flush(uint64_t, uint64_t &);
-  bool trim(uint64_t, uint64_t &);
+  bool read(uint64_t, uint64_t, uint64_t &);
+  bool write(uint64_t, uint64_t, uint64_t &);
+  bool flush(uint64_t, uint64_t, uint64_t &);
+  bool trim(uint64_t, uint64_t, uint64_t &);
 };
 
 }  // namespace ICL

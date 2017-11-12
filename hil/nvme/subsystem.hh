@@ -49,8 +49,6 @@ class Subsystem {
 
   bool createNamespace(uint32_t, Namespace::Information *);
   bool destroyNamespace(uint32_t);
-  void convert(std::list<LPNRange> &, std::list<LPNRange> *, uint64_t,
-               uint64_t);
   void fillIdentifyNamespace(uint8_t *, Namespace::Information *);
 
   // Admin commands

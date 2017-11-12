@@ -42,10 +42,11 @@ typedef enum {
   DRAM_BANK,              //!< Banks / Rank
   DRAM_CHIP,              //!< Chips / Rank
   DRAM_CHIP_SIZE,         //!< Chip size in bytes
-  DRAM_CHIP_BUS_WIDTH,    //!< Bus width in bits
+  DRAM_CHIP_BUS_WIDTH,    //!< Bus width / Channel in bits
   DRAM_DLL,               //!< DLL is enabled
   DRAM_BURST_LENGTH,      //!< Burst length
   DRAM_ACTIVATION_LIMIT,  //!< Max number of activations in window
+  DRAM_PAGE_SIZE,         //!< Page size of DRAM (Typically 4KB)
 
   /* Timing in ps */
   DRAM_TIMING_CK,     //!< Clock period
@@ -115,6 +116,7 @@ class Config : public BaseConfig {
     uint32_t activationLimit;
     bool useDLL;
     uint64_t chipSize;
+    uint64_t pageSize;
   } DRAMStructure;
 
   typedef struct {

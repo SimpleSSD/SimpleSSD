@@ -22,6 +22,9 @@
 #include <cmath>
 
 #include "hil/nvme/subsystem.hh"
+#include "log/trace.hh"
+
+#define BOOLEAN_STRING(b) ((b) ? "true" : "false")
 
 namespace SimpleSSD {
 
@@ -96,40 +99,64 @@ void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
   memcpy(buffer, registers.data + offset, size);
   pDmaEngine->read(0, size, nullptr, tick);
 
-  /*
-  TODO:
   switch (offset) {
     case REG_CONTROLLER_CAPABILITY:
-    case REG_CONTROLLER_CAPABILITY + 4:   DPRINTF(NVMeAll, "BAR0    | READ  |
-  Controller Capabilities\n");              break; case REG_VERSION:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Version\n"); break; case
-  REG_INTERRUPT_MASK_SET:          DPRINTF(NVMeAll, "BAR0    | READ  | Interrupt
-  Mask Set\n");                   break; case REG_INTERRUPT_MASK_CLEAR:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Interrupt Mask Clear\n"); break; case
-  REG_CONTROLLER_CONFIG:           DPRINTF(NVMeAll, "BAR0    | READ  |
-  Controller Configuration\n");             break; case REG_CONTROLLER_STATUS:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Controller Status\n"); break; case
-  REG_NVM_SUBSYSTEM_RESET:         DPRINTF(NVMeAll, "BAR0    | READ  | NVM
-  Subsystem Reset\n");                  break; case REG_ADMIN_QUEUE_ATTRIBUTE:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Admin Queue Attributes\n"); break; case
-  REG_ADMIN_SQUEUE_BASE_ADDR: case REG_ADMIN_SQUEUE_BASE_ADDR + 4:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Admin Submission Queue Base Address\n");
-  break; case REG_ADMIN_CQUEUE_BASE_ADDR: case REG_ADMIN_CQUEUE_BASE_ADDR + 4:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Admin Completion Queue Base Address\n");
-  break; case REG_CMB_LOCATION:                DPRINTF(NVMeAll, "BAR0    | READ
-  | Controller Memory Buffer Location\n");    break; case REG_CMB_SIZE:
-  DPRINTF(NVMeAll, "BAR0    | READ  | Controller Memory Buffer Size\n"); break;
+    case REG_CONTROLLER_CAPABILITY + 4:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Controller Capabilities");
+      break;
+    case REG_VERSION:
+      debugprint(Logger::LOG_HIL_NVME, "BAR0    | READ  | Version");
+      break;
+    case REG_INTERRUPT_MASK_SET:
+      debugprint(Logger::LOG_HIL_NVME, "BAR0    | READ  | Interrupt Mask Set");
+      break;
+    case REG_INTERRUPT_MASK_CLEAR:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Interrupt Mask Clear");
+      break;
+    case REG_CONTROLLER_CONFIG:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Controller Configuration");
+      break;
+    case REG_CONTROLLER_STATUS:
+      debugprint(Logger::LOG_HIL_NVME, "BAR0    | READ  | Controller Status");
+      break;
+    case REG_NVM_SUBSYSTEM_RESET:
+      debugprint(Logger::LOG_HIL_NVME, "BAR0    | READ  | NVM Subsystem Reset");
+      break;
+    case REG_ADMIN_QUEUE_ATTRIBUTE:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Admin Queue Attributes");
+      break;
+    case REG_ADMIN_SQUEUE_BASE_ADDR:
+    case REG_ADMIN_SQUEUE_BASE_ADDR + 4:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Admin Submission Queue Base Address");
+      break;
+    case REG_ADMIN_CQUEUE_BASE_ADDR:
+    case REG_ADMIN_CQUEUE_BASE_ADDR + 4:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Admin Completion Queue Base Address");
+      break;
+    case REG_CMB_LOCATION:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Controller Memory Buffer Location");
+      break;
+    case REG_CMB_SIZE:
+      debugprint(Logger::LOG_HIL_NVME,
+                 "BAR0    | READ  | Controller Memory Buffer Size");
+      break;
   }
 
   if (size == 4) {
-    DPRINTF(NVMeDMA, "DMAPORT | READ  | DATA %08" PRIX32 "\n", *(uint32_t
-  *)buffer);
+    debugprint(Logger::LOG_HIL_NVME, "DMAPORT | READ  | DATA %08" PRIX32,
+               *(uint32_t *)buffer);
   }
   else {
-    DPRINTF(NVMeDMA, "DMAPORT | READ  | DATA %016" PRIX64 "\n", *(uint64_t
-  *)buffer);
+    debugprint(Logger::LOG_HIL_NVME, "DMAPORT | READ  | DATA %016" PRIX64,
+               *(uint64_t *)buffer);
   }
-  */
 }
 
 void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
@@ -144,19 +171,22 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
 
     switch (offset) {
       case REG_INTERRUPT_MASK_SET:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Interrupt Mask Set\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Interrupt Mask Set");
 
         interruptMask |= uiTemp32;
 
         break;
       case REG_INTERRUPT_MASK_CLEAR:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Interrupt Mask Clear\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Interrupt Mask Clear");
 
         interruptMask &= ~uiTemp32;
 
         break;
       case REG_CONTROLLER_CONFIG:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Controller Configuration\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Controller Configuration");
 
         registers.configuration &= 0xFF00000E;
         registers.configuration |= (uiTemp32 & 0x00FFFFF1);
@@ -204,7 +234,7 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
 
         break;
       case REG_CONTROLLER_STATUS:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Controller Status\n");
+        debugprint(Logger::LOG_HIL_NVME, "BAR0    | WRITE | Controller Status");
 
         // Clear NSSRO if set
         if (uiTemp32 & 0x00000010) {
@@ -213,7 +243,8 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
 
         break;
       case REG_NVM_SUBSYSTEM_RESET:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | NVM Subsystem Reset\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | NVM Subsystem Reset");
 
         registers.subsystemReset = uiTemp32;
 
@@ -221,78 +252,82 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
         // (when CAP.NSSRS is 1)
         break;
       case REG_ADMIN_QUEUE_ATTRIBUTE:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Queue Attributes\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Queue Attributes");
 
         registers.adminQueueAttributes &= 0xF000F000;
         registers.adminQueueAttributes |= (uiTemp32 & 0x0FFF0FFF);
 
         break;
       case REG_ADMIN_CQUEUE_BASE_ADDR:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Completion Queue Base
-        // Address | L\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Completion Queue Base Address | L");
 
         memcpy(&(registers.adminCQueueBaseAddress), buffer, 4);
         adminQueueInited++;
 
         break;
       case REG_ADMIN_CQUEUE_BASE_ADDR + 4:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Completion Queue Base
-        // Address | H\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Completion Queue Base Address | H");
 
         memcpy(((uint8_t *)&(registers.adminCQueueBaseAddress)) + 4, buffer, 4);
         adminQueueInited++;
 
         break;
       case REG_ADMIN_SQUEUE_BASE_ADDR:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Submission Queue Base
-        // Address | L\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Submission Queue Base Address | L");
         memcpy(&(registers.adminSQueueBaseAddress), buffer, 4);
         adminQueueInited++;
 
         break;
       case REG_ADMIN_SQUEUE_BASE_ADDR + 4:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Submission Queue Base
-        // Address | H\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Submission Queue Base Address | H");
         memcpy(((uint8_t *)&(registers.adminSQueueBaseAddress)) + 4, buffer, 4);
         adminQueueInited++;
 
         break;
       default:
-        // panic("nvme_ctrl: Write on read only register\n");
+        Logger::panic("nvme_ctrl: Write on read only register");
         break;
     }
 
-    // DPRINTF(NVMeDMA, "DMAPORT | WRITE | DATA %08" PRIX32 "\n", uiTemp32);
+    debugprint(Logger::LOG_HIL_NVME, "DMAPORT | WRITE | DATA %08" PRIX32,
+               uiTemp32);
   }
   else if (size == 8) {
     memcpy(&uiTemp64, buffer, 8);
 
     switch (offset) {
       case REG_ADMIN_CQUEUE_BASE_ADDR:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Completion Queue Base
-        // Address\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Completion Queue Base Address");
 
         registers.adminCQueueBaseAddress = uiTemp64;
         adminQueueInited += 2;
 
         break;
       case REG_ADMIN_SQUEUE_BASE_ADDR:
-        // DPRINTF(NVMeAll, "BAR0    | WRITE | Admin Submission Queue Base
-        // Address\n");
+        debugprint(Logger::LOG_HIL_NVME,
+                   "BAR0    | WRITE | Admin Submission Queue Base Address");
 
         registers.adminSQueueBaseAddress = uiTemp64;
         adminQueueInited += 2;
 
         break;
       default:
-        // panic("nvme_ctrl: Write on read only register\n");
+        Logger::panic("nvme_ctrl: Write on read only register");
         break;
     }
 
-    // DPRINTF(NVMeDMA, "DMAPORT | WRITE | DATA %016" PRIX64 "\n", uiTemp64);
+    debugprint(Logger::LOG_HIL_NVME, "DMAPORT | WRITE | DATA %016" PRIX64,
+               uiTemp64);
   }
   else {
-    // panic("nvme_ctrl: Invalid read size(%d) on controller register\n", size);
+    Logger::panic("nvme_ctrl: Invalid read size(%d) on controller register",
+                  size);
   }
 
   if (adminQueueInited == 4) {
@@ -303,12 +338,14 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
     ppCQueue[0] = new CQueue(0, true, 0, entrySize);
 
-    // DPRINTF(NVMeQueue, "CQ 0    | CREATE | Entry size %d\n", entrySize);
+    debugprint(Logger::LOG_HIL_NVME, "CQ 0    | CREATE | Entry size %d",
+               entrySize);
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
     ppSQueue[0] = new SQueue(0, 0, 0, entrySize);
 
-    // DPRINTF(NVMeQueue, "SQ 0    | CREATE | Entry size %d\n", entrySize);
+    debugprint(Logger::LOG_HIL_NVME, "SQ 0    | CREATE | Entry size %d",
+               entrySize);
   }
 }
 
@@ -320,11 +357,12 @@ void Controller::ringCQHeadDoorbell(uint16_t qid, uint16_t head,
 
   if (pQueue) {
     pQueue->setHead(head);
-    /*
-        DPRINTF(NVMeQueue, "CQ %-5d| Completion Queue Head Doorbell | Item count
-       in queue %d | head %d | tail %d\n", qid, pQueue->getItemCount(),
-       pQueue->getHead(), pQueue->getTail()); DPRINTF(NVMeBreakdown,
-       "C%d|4|H%d|T%d\n", qid, pQueue->getHead(), pQueue->getTail());*/
+
+    debugprint(
+        Logger::LOG_HIL_NVME,
+        "CQ %-5d| Completion Queue Head Doorbell | Item count in queue %d | "
+        "head %d | tail %d",
+        qid, pQueue->getItemCount(), pQueue->getHead(), pQueue->getTail());
 
     if (pQueue->interruptEnabled()) {
       clearInterrupt(pQueue->getInterruptVector());
@@ -340,11 +378,12 @@ void Controller::ringSQTailDoorbell(uint16_t qid, uint16_t tail,
 
   if (pQueue) {
     pQueue->setTail(tail);
-    /*
-        DPRINTF(NVMeQueue, "SQ %-5d| Submission Queue Tail Doorbell | Item count
-       in queue %d | head %d | tail %d\n", qid, pQueue->getItemCount(),
-       pQueue->getHead(), pQueue->getTail()); DPRINTF(NVMeBreakdown,
-       "S%d|0|H%d|T%d\n", qid, pQueue->getHead(), pQueue->getTail());*/
+
+    debugprint(
+        Logger::LOG_HIL_NVME,
+        "SQ %-5d| Submission Queue Tail Doorbell | Item count in queue %d | "
+        "head %d | tail %d",
+        qid, pQueue->getItemCount(), pQueue->getHead(), pQueue->getTail());
   }
 }
 
@@ -372,7 +411,8 @@ void Controller::submit(CQEntryWrapper &entry) {
   CQueue *pQueue = ppCQueue[entry.cqID];
 
   if (pQueue == NULL) {
-    // panic("nvme_ctrl: Completion Queue not created! CQID %d\n", entry.cqid);
+    Logger::panic("nvme_ctrl: Completion Queue not created! CQID %d",
+                  entry.cqID);
   }
 
   // Enqueue with delay
@@ -398,8 +438,9 @@ int Controller::createCQueue(uint16_t cqid, uint16_t size, uint16_t iv,
 
     ret = 0;
 
-    // DPRINTF(NVMeQueue, "CQ %-5d| CREATE | Entry size %d | IV %04X | IEN %s |
-    // PC %s\n", cqid, entrySize, iv, BOOLEAN_STRING(ien), BOOLEAN_STRING(pc));
+    debugprint(Logger::LOG_HIL_NVME,
+               "CQ %-5d| CREATE | Entry size %d | IV %04X | IEN %s | PC %s",
+               cqid, size, iv, BOOLEAN_STRING(ien), BOOLEAN_STRING(pc));
   }
 
   return ret;
@@ -417,8 +458,9 @@ int Controller::createSQueue(uint16_t sqid, uint16_t cqid, uint16_t size,
 
       ret = 0;
 
-      // DPRINTF(NVMeQueue, "SQ %-5d| CREATE | Entry size %d | Priority %d | PC
-      // %s\n", cqid, entrySize, priority, BOOLEAN_STRING(pc));
+      debugprint(Logger::LOG_HIL_NVME,
+                 "SQ %-5d| CREATE | Entry size %d | Priority %d | PC %s", cqid,
+                 size, priority, BOOLEAN_STRING(pc));
     }
     else {
       ret = 2;  // Invalid CQueue
@@ -445,7 +487,7 @@ int Controller::deleteCQueue(uint16_t cqid) {
       delete ppCQueue[cqid];
       ppCQueue[cqid] = NULL;
 
-      // DPRINTF(NVMeQueue, "CQ %-5d| DELETE\n", cqid);
+      debugprint(Logger::LOG_HIL_NVME, "CQ %-5d| DELETE", cqid);
     }
   }
   else {
@@ -480,7 +522,7 @@ int Controller::deleteSQueue(uint16_t sqid) {
     delete ppSQueue[sqid];
     ppSQueue[sqid] = NULL;
 
-    // DPRINTF(NVMeQueue, "SQ %-5d| DELETE\n", sqid);
+    debugprint(Logger::LOG_HIL_NVME, "SQ %-5d| DELETE", sqid);
   }
   else {
     ret = 1;  // Invalid Queue ID
@@ -1122,7 +1164,7 @@ void Controller::collectSQueue(uint64_t &tick) {
     }
   }
   else {
-    // panic("nvme_ctrl: Invalid arbitration method\n");
+    Logger::panic("nvme_ctrl: Invalid arbitration method");
   }
 }
 
