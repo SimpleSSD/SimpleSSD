@@ -298,6 +298,9 @@ bool Subsystem::submitCommand(SQEntryWrapper &req, CQEntryWrapper &resp,
       case OPCODE_NAMESPACE_ATTACHMENT:
         processed = namespaceAttachment(req, resp, beginAt);
         break;
+      case OPCODE_FORMAT_NVM:
+        processed = formatNVM(req, resp, beginAt);
+        break;
       default:
         resp.makeStatus(true, false, TYPE_GENERIC_COMMAND_STATUS,
                         STATUS_INVALID_OPCODE);
@@ -334,7 +337,7 @@ uint32_t Subsystem::validNamespaceCount() {
 
 void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
                      uint64_t &tick) {
-  Request req;
+  ICL::Request req;
   Namespace::Information *info = ns->getInfo();
   uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
@@ -355,7 +358,7 @@ void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
 
 void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
                       PRPList &prp, uint64_t &tick) {
-  Request req;
+  ICL::Request req;
   Namespace::Information *info = ns->getInfo();
   uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
@@ -375,7 +378,7 @@ void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
 }
 
 void Subsystem::flush(Namespace *ns, uint64_t &tick) {
-  Request req;
+  ICL::Request req;
   Namespace::Information *info = ns->getInfo();
 
   req.range.slpn = info->range.slpn;
@@ -388,7 +391,7 @@ void Subsystem::flush(Namespace *ns, uint64_t &tick) {
 
 void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk,
                      uint64_t &tick) {
-  Request req;
+  ICL::Request req;
   Namespace::Information *info = ns->getInfo();
   uint32_t lbaratio = logicalPageSize / info->lbaSize;
   uint64_t slpn;
@@ -904,6 +907,69 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req, CQEntryWrapper &resp,
     else {
       resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
                       STATUS_INVALID_FIELD);
+    }
+  }
+
+  return true;
+}
+
+bool Subsystem::formatNVM(SQEntryWrapper &req, CQEntryWrapper &resp,
+                          uint64_t &tick) {
+  bool err = false;
+
+  uint8_t ses = (req.entry.dword10 & 0x0E00) >> 9;
+  bool pil = req.entry.dword10 & 0x0100;
+  uint8_t pi = (req.entry.dword10 & 0xE0) >> 5;
+  bool mset = req.entry.dword10 & 0x10;
+  uint8_t lbaf = req.entry.dword10 & 0x0F;
+
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "ADMIN   | Format NVM | SES %d | NSID %d", ses,
+                     req.entry.namespaceID);
+
+  if (ses != 0x00 && ses != 0x01) {
+    err = true;
+  }
+  if (pil || mset) {
+    err = true;
+  }
+  if (pi != 0x00) {
+    err = true;
+  }
+  if (lbaf >= nLBAFormat) {
+    err = true;
+  }
+
+  if (err) {
+    resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                    STATUS_INVALID_FORMAT);
+  }
+  else {
+    // Update Namespace
+    auto iter = lNamespaces.begin();
+    Namespace::Information *info = nullptr;
+
+    for (; iter != lNamespaces.end(); iter++) {
+      if ((*iter)->getNSID() == req.entry.namespaceID) {
+        info = (*iter)->getInfo();
+
+        break;
+      }
+    }
+
+    if (info) {
+      info->lbaFormatIndex = lbaf;
+      info->lbaSize = lbaSize[lbaf];
+
+      // Send format command to HIL
+      pHIL->format(info->range, ses == 0x01, tick);
+
+      // Reset health stat and set format progress
+      (*iter)->format(tick);
+    }
+    else {
+      resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                      STATUS_ABORT_INVALID_NAMESPACE);
     }
   }
 

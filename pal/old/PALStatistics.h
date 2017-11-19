@@ -24,7 +24,7 @@
 
 #include "Latency.h"
 #include "PAL2_TimeSlot.h"
-#include "ftl.hh"
+#include "ftl/old/ftl.hh"
 
 #include "util/config.hh"
 

@@ -22,6 +22,7 @@
 #include "icl/generic_cache.hh"
 #include "log/trace.hh"
 #include "util/algorithm.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
@@ -46,16 +47,22 @@ ICL::~ICL() {
 void ICL::read(Request &req, uint64_t &tick) {
   uint64_t beginAt;
   uint64_t finishedAt = tick;
-  uint64_t reqOffset = req.offset;
   uint64_t reqRemain = req.length;
-  uint64_t size;
+  FTL::Request reqInternal;
+
+  reqInternal.reqID = req.reqID;
+  reqInternal.offset = req.offset;
 
   for (uint64_t i = 0; i < req.range.nlp; i++) {
     beginAt = tick;
-    size = MIN(reqRemain, logicalPageSize - reqOffset);
-    pCache->read(req.range.slpn + i, size, beginAt);
-    reqRemain -= size;
-    reqOffset = 0;
+
+    reqInternal.reqSubID = i + 1;
+    reqInternal.lpn = req.range.slpn + i;
+    reqInternal.length = MIN(reqRemain, logicalPageSize - reqInternal.offset);
+    pCache->read(reqInternal, beginAt);
+    reqRemain -= reqInternal.length;
+    reqInternal.offset = 0;
+
     finishedAt = MAX(finishedAt, beginAt);
   }
 
@@ -71,16 +78,22 @@ void ICL::read(Request &req, uint64_t &tick) {
 void ICL::write(Request &req, uint64_t &tick) {
   uint64_t beginAt;
   uint64_t finishedAt = tick;
-  uint64_t reqOffset = req.offset;
   uint64_t reqRemain = req.length;
-  uint64_t size;
+  FTL::Request reqInternal;
+
+  reqInternal.reqID = req.reqID;
+  reqInternal.offset = req.offset;
 
   for (uint64_t i = 0; i < req.range.nlp; i++) {
     beginAt = tick;
-    size = MIN(reqRemain, logicalPageSize - reqOffset);
-    pCache->write(req.range.slpn + i, size, beginAt);
-    reqRemain -= size;
-    reqOffset = 0;
+
+    reqInternal.reqSubID = i + 1;
+    reqInternal.lpn = req.range.slpn + i;
+    reqInternal.length = MIN(reqRemain, logicalPageSize - reqInternal.offset);
+    pCache->write(reqInternal, beginAt);
+    reqRemain -= reqInternal.length;
+    reqInternal.offset = 0;
+
     finishedAt = MAX(finishedAt, beginAt);
   }
 
@@ -96,16 +109,22 @@ void ICL::write(Request &req, uint64_t &tick) {
 void ICL::flush(Request &req, uint64_t &tick) {
   uint64_t beginAt;
   uint64_t finishedAt = tick;
-  uint64_t reqOffset = req.offset;
   uint64_t reqRemain = req.length;
-  uint64_t size;
+  FTL::Request reqInternal;
+
+  reqInternal.reqID = req.reqID;
+  reqInternal.offset = req.offset;
 
   for (uint64_t i = 0; i < req.range.nlp; i++) {
     beginAt = tick;
-    size = MIN(reqRemain, logicalPageSize - reqOffset);
-    pCache->flush(req.range.slpn + i, size, beginAt);
-    reqRemain -= size;
-    reqOffset = 0;
+
+    reqInternal.reqSubID = i + 1;
+    reqInternal.lpn = req.range.slpn + i;
+    reqInternal.length = MIN(reqRemain, logicalPageSize - reqInternal.offset);
+    pCache->flush(reqInternal, beginAt);
+    reqRemain -= reqInternal.length;
+    reqInternal.offset = 0;
+
     finishedAt = MAX(finishedAt, beginAt);
   }
 
@@ -121,16 +140,22 @@ void ICL::flush(Request &req, uint64_t &tick) {
 void ICL::trim(Request &req, uint64_t &tick) {
   uint64_t beginAt;
   uint64_t finishedAt = tick;
-  uint64_t reqOffset = req.offset;
   uint64_t reqRemain = req.length;
-  uint64_t size;
+  FTL::Request reqInternal;
+
+  reqInternal.reqID = req.reqID;
+  reqInternal.offset = req.offset;
 
   for (uint64_t i = 0; i < req.range.nlp; i++) {
     beginAt = tick;
-    size = MIN(reqRemain, logicalPageSize - reqOffset);
-    pCache->trim(req.range.slpn + i, size, beginAt);
-    reqRemain -= size;
-    reqOffset = 0;
+
+    reqInternal.reqSubID = i + 1;
+    reqInternal.lpn = req.range.slpn + i;
+    reqInternal.length = MIN(reqRemain, logicalPageSize - reqInternal.offset);
+    pCache->trim(reqInternal, beginAt);
+    reqRemain -= reqInternal.length;
+    reqInternal.offset = 0;
+
     finishedAt = MAX(finishedAt, beginAt);
   }
 
@@ -141,6 +166,18 @@ void ICL::trim(Request &req, uint64_t &tick) {
                      finishedAt - tick);
 
   tick = finishedAt;
+}
+
+void ICL::format(LPNRange &range, uint64_t &tick) {
+  uint64_t beginAt = tick;
+
+  pCache->format(range, tick);
+
+  Logger::debugprint(Logger::LOG_ICL,
+                     "FORMAT| LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     " - %" PRIu64 " (%" PRIu64 ")",
+                     range.slpn, range.nlp, beginAt, tick,
+                     tick - beginAt);
 }
 
 void ICL::getLPNInfo(uint64_t &t, uint32_t &s) {

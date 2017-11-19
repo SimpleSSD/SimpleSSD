@@ -22,19 +22,19 @@ class Block {
     PAGE_VALID = 0,
     PAGE_INVALID,
     PAGE_FREE
-  };                   // since page_bit_map is assigning one bit for each
-                       // page, state should be only zero or one
-  int page_per_block;  // total number of page per block
-  uint64_t block_number;   // physical block number
-  int erase_count;     // number of erase count on the block
+  };                      // since page_bit_map is assigning one bit for each
+                          // page, state should be only zero or one
+  int page_per_block;     // total number of page per block
+  uint64_t block_number;  // physical block number
+  int erase_count;        // number of erase count on the block
   unsigned int
       *page_bit_map;  // each bit shows the state of a page
                       // value for each bit: (PAGE_VALID vs. PAGE_INVALID)
                       // since each block has more than 32 (int size) bit,
                       // an array of integer is used
   uint64_t page_sequence_number;  // page within the block have to be written in
-                              // order
-  bool bad_block;             // true: bad_block false:good_block
+                                  // order
+  bool bad_block;                 // true: bad_block false:good_block
 
   Block() {}
   void initialize(int page_per_block,

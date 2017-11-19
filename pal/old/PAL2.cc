@@ -21,28 +21,24 @@
 
 #include "util/algorithm.hh"
 
-PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
-  stats = statistics;
-  gconf = c;
-  lat = l;
-
+PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
+           SimpleSSD::PAL::Config *c, Latency *l)
+    : pParam(p), lat(l), stats(statistics) {
   uint32_t OriginalSizes[7];
 
-  OriginalSizes[ADDR_CHANNEL] = gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
-  OriginalSizes[ADDR_PACKAGE] = gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
-  OriginalSizes[ADDR_DIE] = gconf->readUint(SimpleSSD::PAL::NAND_DIE);
+  OriginalSizes[ADDR_CHANNEL] = pParam->channel;
+  OriginalSizes[ADDR_PACKAGE] = pParam->package;
+  OriginalSizes[ADDR_DIE] = pParam->die;
 
-  if (gconf->readBoolean(SimpleSSD::PAL::NAND_USE_MULTI_PLANE_OP)) {
+  if (c->readBoolean(SimpleSSD::PAL::NAND_USE_MULTI_PLANE_OP)) {
     OriginalSizes[ADDR_PLANE] = 1;
-    OriginalSizes[ADDR_PAGE] = gconf->readUint(SimpleSSD::PAL::NAND_PAGE) *
-                               gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
   }
   else {
-    OriginalSizes[ADDR_PLANE] = gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
-    OriginalSizes[ADDR_PAGE] = gconf->readUint(SimpleSSD::PAL::NAND_PAGE);
+    OriginalSizes[ADDR_PLANE] = pParam->plane;
   }
 
-  OriginalSizes[ADDR_BLOCK] = gconf->readUint(SimpleSSD::PAL::NAND_BLOCK);
+  OriginalSizes[ADDR_BLOCK] = pParam->block;
+  OriginalSizes[ADDR_PAGE] = pParam->page;
   OriginalSizes[6] = 0;  // Add remaining bits
 
   AddrRemap[0] = ADDR_PAGE;
@@ -61,14 +57,10 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
     //  ], RearrangedSizes[i]); //Use DPRINTF here
   }
 
-  totalDie = gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
-  totalDie *= gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
-  totalDie *= gconf->readUint(SimpleSSD::PAL::NAND_DIE);
+  totalDie = pParam->channel * pParam->package * pParam->die;
 
-  ChTimeSlots = new TimeSlot *[gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL)];
-  std::memset(
-      ChTimeSlots, 0,
-      sizeof(TimeSlot *) * gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL));
+  ChTimeSlots = new TimeSlot *[pParam->channel];
+  std::memset(ChTimeSlots, 0, sizeof(TimeSlot *) * pParam->channel);
 
   DieTimeSlots = new TimeSlot *[totalDie];
   std::memset(DieTimeSlots, 0, sizeof(TimeSlot *) * totalDie);
@@ -77,10 +69,9 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
   MergedTimeSlots[0] = NULL;
 
   ChFreeSlots =
-      new std::map<uint64_t, std::map<uint64_t, uint64_t> *>[gconf->readUint(
-          SimpleSSD::PAL::PAL_CHANNEL)];
-  ChStartPoint = new uint64_t[gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL)];
-  for (unsigned i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++)
+      new std::map<uint64_t, std::map<uint64_t, uint64_t> *>[pParam->channel];
+  ChStartPoint = new uint64_t[pParam->channel];
+  for (unsigned i = 0; i < pParam->channel; i++)
     ChStartPoint[i] = 0;
 
   DieFreeSlots =
@@ -90,9 +81,9 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
     DieStartPoint[i] = 0;
 
   // currently, hard code pre-dma, mem-op and post-dma values
-  for (unsigned i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
+  for (unsigned i = 0; i < pParam->channel; i++) {
     std::map<uint64_t, uint64_t> *tmp;
-    switch (gconf->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
+    switch (c->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
       case SimpleSSD::PAL::NAND_SLC:
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][100000 / lat->SPDIV] = tmp;
@@ -141,7 +132,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
 
   for (unsigned i = 0; i < totalDie; i++) {
     std::map<uint64_t, uint64_t> *tmp;
-    switch (gconf->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
+    switch (c->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
       case SimpleSSD::PAL::NAND_SLC:
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][25000000 + 100000 / lat->SPDIV] = tmp;
@@ -572,54 +563,8 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   }
 }
 
-void PAL2::submit(Command &cmd, uint32_t blkidx, uint32_t pageidx) {
-  CPDPBP addr;
-  uint64_t finishedAt = 0;
-
-  addr.Page = pageidx;
-
-  if (gconf->readBoolean(SimpleSSD::PAL::NAND_USE_MULTI_PLANE_OP)) {
-    addr.Block = blkidx;
-
-    for (uint32_t c = 0; c < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
-         c++) {
-      for (uint32_t p = 0; p < gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
-           p++) {
-        for (uint32_t d = 0; d < gconf->readUint(SimpleSSD::PAL::NAND_DIE);
-             d++) {
-          addr.Channel = c;
-          addr.Package = p;
-          addr.Die = d;
-          addr.Plane = 0;
-
-          TimelineScheduling(cmd, addr);
-          finishedAt = MAX(finishedAt, cmd.finished);
-        }
-      }
-    }
-  }
-  else {
-    addr.Block = blkidx / gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
-    addr.Plane = blkidx % gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
-
-    for (uint32_t c = 0; c < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
-         c++) {
-      for (uint32_t p = 0; p < gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
-           p++) {
-        for (uint32_t d = 0; d < gconf->readUint(SimpleSSD::PAL::NAND_DIE);
-             d++) {
-          addr.Channel = c;
-          addr.Package = p;
-          addr.Die = d;
-
-          TimelineScheduling(cmd, addr);
-          finishedAt = MAX(finishedAt, cmd.finished);
-        }
-      }
-    }
-  }
-
-  cmd.finished = finishedAt;
+void PAL2::submit(Command &cmd, CPDPBP &addr) {
+  TimelineScheduling(cmd, addr);
 }
 
 uint8_t PAL2::VerifyTimeLines(uint8_t print_on) {
@@ -627,7 +572,7 @@ uint8_t PAL2::VerifyTimeLines(uint8_t print_on) {
   if (print_on)
     printf("[ Verify Timelines ]\n");
 
-  for (uint32_t c = 0; c < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); c++) {
+  for (uint32_t c = 0; c < pParam->channel; c++) {
     TimeSlot *tsDBG = ChTimeSlots[c];
     TimeSlot *prev = tsDBG;
     uint64_t ioCnt = 0;
@@ -932,7 +877,7 @@ void PAL2::InquireBusyTime(uint64_t currentTick) {
 }
 
 void PAL2::FlushTimeSlots(uint64_t currentTick) {
-  for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
+  for (uint32_t i = 0; i < pParam->channel; i++) {
     ChTimeSlots[i] = FlushATimeSlot(ChTimeSlots[i], currentTick);
   }
 
@@ -948,7 +893,7 @@ void PAL2::FlushTimeSlots(uint64_t currentTick) {
 }
 
 void PAL2::FlushFreeSlots(uint64_t currentTick) {
-  for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
+  for (uint32_t i = 0; i < pParam->channel; i++) {
     FlushAFreeSlot(ChFreeSlots[i], currentTick);
   }
   for (uint32_t i = 0; i < totalDie; i++) {
@@ -1168,9 +1113,8 @@ uint32_t PAL2::CPDPBPtoDieIdx(CPDPBP *pCPDPBP) {
   //[Channel][Package][Die];
   uint32_t ret = 0;
   ret += pCPDPBP->Die;
-  ret += pCPDPBP->Package * (gconf->readUint(SimpleSSD::PAL::NAND_DIE));
-  ret += pCPDPBP->Channel * (gconf->readUint(SimpleSSD::PAL::NAND_DIE) *
-                             gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE));
+  ret += pCPDPBP->Package * pParam->die;
+  ret += pCPDPBP->Channel * pParam->die * pParam->package;
 
   return ret;
 }

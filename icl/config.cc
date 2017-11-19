@@ -19,6 +19,7 @@
 
 #include "icl/config.hh"
 
+#include "log/trace.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
@@ -30,7 +31,7 @@ const char NAME_USE_WRITE_CACHE[] = "EnableWriteCache";
 const char NAME_USE_READ_PREFETCH[] = "EnableReadPrefetch";
 const char NAME_EVICT_POLICY[] = "EvictPolicy";
 const char NAME_SET_SIZE[] = "CacheSetSize";
-const char NAME_ENTRY_SIZE[] = "CacheEntrySize";
+const char NAME_WAY_SIZE[] = "CacheWaySize";
 
 Config::Config() {
   readCaching = false;
@@ -38,7 +39,7 @@ Config::Config() {
   readPrefetch = false;
   evictPolicy = POLICY_LEAST_RECENTLY_USED;
   cacheSetSize = 8192;
-  cacheEntrySize = 1;
+  cacheWaySize = 1;
 
   /* LPDDR3-1600 4Gbit 1x32 */
   dram.channel = 1;
@@ -118,8 +119,8 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_SET_SIZE)) {
     cacheSetSize = strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_ENTRY_SIZE)) {
-    cacheEntrySize = strtoul(value, nullptr, 10);
+  else if (MATCH_NAME(NAME_WAY_SIZE)) {
+    cacheWaySize = strtoul(value, nullptr, 10);
   }
   else {
     ret = false;
@@ -130,10 +131,10 @@ bool Config::setConfig(const char *name, const char *value) {
 
 void Config::update() {
   if (popcount(cacheSetSize) != 1) {
-    // TODO: panic("cache set size should be power of 2");
+    Logger::panic("cache set size should be power of 2");
   }
-  if (popcount(cacheEntrySize) != 1) {
-    // TODO: panic("cache entry size should be power of 2");
+  if (popcount(cacheWaySize) != 1) {
+    Logger::panic("cache entry size should be power of 2");
   }
 }
 
@@ -156,8 +157,8 @@ uint64_t Config::readUint(uint32_t idx) {
     case ICL_SET_SIZE:
       ret = cacheSetSize;
       break;
-    case ICL_ENTRY_SIZE:
-      ret = cacheEntrySize;
+    case ICL_WAY_SIZE:
+      ret = cacheWaySize;
       break;
     case DRAM_CHANNEL:
       ret = dram.channel;

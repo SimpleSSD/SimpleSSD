@@ -17,46 +17,45 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ICL_CACHE__
-#define __ICL_CACHE__
+#ifndef __FTL_COMMON_BLOCK__
+#define __FTL_COMMON_BLOCK__
 
-#include "ftl/ftl.hh"
-#include "util/config.hh"
-#include "util/def.hh"
+#include <cinttypes>
+#include <vector>
 
 namespace SimpleSSD {
 
-namespace ICL {
+namespace FTL {
 
-typedef struct _Line {
-  uint64_t tag;
+class Block {
+ private:
+  const uint32_t pageCount;
+  uint32_t nextWritePageIndex;
+
+  std::vector<bool> validBits;
+  std::vector<bool> erasedBits;
+  std::vector<uint64_t> lpns;
+
   uint64_t lastAccessed;
-  uint64_t insertedAt;
-  bool dirty;
-  bool valid;
+  uint32_t eraseCount;
 
-  _Line();
-  _Line(uint64_t, bool);
-} Line;
-
-class Cache {
- protected:
-  ConfigReader *conf;
-  FTL::FTL *pFTL;
+  void increasePageIndex(uint32_t &);
 
  public:
-  Cache(ConfigReader *, FTL::FTL *);
-  virtual ~Cache();
+  Block(uint32_t);
+  ~Block();
 
-  virtual bool read(FTL::Request &, uint64_t &) = 0;
-  virtual bool write(FTL::Request &, uint64_t &) = 0;
-  virtual bool flush(FTL::Request &, uint64_t &) = 0;
-  virtual bool trim(FTL::Request &, uint64_t &) = 0;
-
-  virtual void format(LPNRange &, uint64_t &) = 0;
+  uint64_t getLastAccessedTime();
+  uint32_t getEraseCount();
+  uint32_t getValidPageCount();
+  uint32_t getNextWritePageIndex();
+  bool read(uint32_t, uint64_t *, uint64_t);
+  bool write(uint32_t, uint64_t, uint64_t);
+  void erase();
+  void invalidate(uint32_t);
 };
 
-}  // namespace ICL
+}  // namespace FTL
 
 }  // namespace SimpleSSD
 

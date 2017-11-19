@@ -20,7 +20,7 @@
 #ifndef __ICL_GENERIC_CACHE__
 #define __ICL_GENERIC_CACHE__
 
-#include <unordered_map>
+#include <random>
 
 #include "icl/cache.hh"
 
@@ -31,7 +31,7 @@ namespace ICL {
 class GenericCache : public Cache {
  private:
   uint32_t setSize;
-  uint32_t entrySize;
+  uint32_t waySize;
   uint32_t lineSize;
 
   bool useReadCaching;
@@ -39,6 +39,9 @@ class GenericCache : public Cache {
   bool useReadPrefetch;
 
   EVICT_POLICY policy;
+  std::random_device rd;
+  std::mt19937 gen;
+  std::uniform_int_distribution<> dist;
 
   // TODO: replace this with DRAM model
   Config::DRAMTiming *pTiming;
@@ -47,17 +50,19 @@ class GenericCache : public Cache {
   Line **ppCache;
 
   uint32_t calcSet(uint64_t);
-  uint32_t flushVictim(uint32_t, uint64_t &, bool * = nullptr);
+  uint32_t flushVictim(FTL::Request, uint64_t &, bool * = nullptr);
   uint64_t calculateDelay(uint64_t);
 
  public:
   GenericCache(ConfigReader *, FTL::FTL *);
-  ~GenericCache();
+  ~GenericCache() override;
 
-  bool read(uint64_t, uint64_t, uint64_t &);
-  bool write(uint64_t, uint64_t, uint64_t &);
-  bool flush(uint64_t, uint64_t, uint64_t &);
-  bool trim(uint64_t, uint64_t, uint64_t &);
+  bool read(FTL::Request &, uint64_t &) override;
+  bool write(FTL::Request &, uint64_t &) override;
+  bool flush(FTL::Request &, uint64_t &) override;
+  bool trim(FTL::Request &, uint64_t &) override;
+
+  void format(LPNRange &, uint64_t &) override;
 };
 
 }  // namespace ICL

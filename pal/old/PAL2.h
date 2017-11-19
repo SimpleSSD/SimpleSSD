@@ -24,7 +24,7 @@
 
 #include "Latency.h"
 #include "PALStatistics.h"
-#include "util/config.hh"
+#include "pal/pal.hh"
 
 #include "PAL2_TimeSlot.h"
 
@@ -42,10 +42,11 @@ class PALStatistics;
 class PAL2  // let's not inherit PAL1
 {
  public:
-  PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l);
+  PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
+       SimpleSSD::PAL::Config *c, Latency *l);
   ~PAL2();
 
-  SimpleSSD::PAL::Config *gconf;
+  SimpleSSD::PAL::Parameter *pParam;
   Latency *lat;
 
   TimeSlot **ChTimeSlots;
@@ -61,7 +62,7 @@ class PAL2  // let's not inherit PAL1
   std::map<uint64_t, std::map<uint64_t, uint64_t> *> *DieFreeSlots;
   uint64_t *DieStartPoint;
 
-  void submit(Command &cmd, uint32_t blkidx, uint32_t pageidx);
+  void submit(Command &cmd, CPDPBP &addr);
   void TimelineScheduling(Command &req, CPDPBP &reqCPD);
   PALStatistics *stats;  // statistics of PAL2, not created by itself
   void InquireBusyTime(uint64_t currentTick);

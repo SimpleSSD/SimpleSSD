@@ -112,7 +112,7 @@ class HybridMapping : virtual public MappingTable {
   // super class function
   STATE find_victim(const Addr *block_list, int count, Addr &victim);
   STATE getppn(const Addr lpn, Addr &ppn);
-  STATE merge(const Addr lpn);
+  STATE merge(const Addr lpn, Tick &tick);
   STATE allocate_new_page(const Addr lpn, Addr &ppn);
 
   // merge functions
@@ -128,15 +128,15 @@ class HybridMapping : virtual public MappingTable {
                         const Addr *target_lpns);
 
   STATE do_direct_erase(const Addr target_block, const Addr target_group,
-                        const Addr *target_lpns);
+                        const Addr *target_lpns, Tick &);
   STATE do_switch_merge(const Addr target_block, const Addr target_group,
-                        const Addr *target_lpns);
+                        const Addr *target_lpns, Tick &);
   STATE do_reorder_merge(const Addr target_block, const Addr target_group,
-                         const Addr *target_lpns);
+                         const Addr *target_lpns, Tick &);
   STATE do_partial_merge(const Addr target_block, const Addr target_group,
-                         const Addr *target_lpns);
+                         const Addr *target_lpns, Tick &);
   STATE do_full_merge(const Addr target_block, const Addr target_group,
-                      const Addr *target_lpns);
+                      const Addr *target_lpns, Tick &);
 
  public:
   HybridMapping(FTL *);
@@ -150,11 +150,9 @@ class HybridMapping : virtual public MappingTable {
   int full_merge_count;
   int global_gc_count;
 
-  Tick lastGCTick;
-
   // super class functions
 
-  Tick GarbageCollection();
+  Tick GarbageCollection(Tick beginAt);
 
   void PrintStats();
   void ResetStats();

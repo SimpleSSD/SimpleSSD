@@ -48,6 +48,13 @@ bool Namespace::submitCommand(SQEntryWrapper &req, CQEntryWrapper &resp,
                               uint64_t &tick) {
   uint64_t beginAt = tick;
 
+  if (beginAt < formatFinishedAt) {
+    resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                    STATUS_FORMAT_IN_PROGRESS);
+
+    return true;
+  }
+
   // Admin commands
   if (req.sqID == 0) {
     switch (req.entry.dword0.opcode) {
@@ -133,6 +140,17 @@ Namespace::Information *Namespace::getInfo() {
 
 bool Namespace::isAttached() {
   return attached;
+}
+
+void Namespace::format(uint64_t tick) {
+  formatFinishedAt = tick;
+
+  health = HealthInfo();
+
+  if (pDisk) {
+    delete pDisk;
+    pDisk = nullptr;
+  }
 }
 
 void Namespace::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,

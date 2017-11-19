@@ -33,7 +33,7 @@ typedef enum {
   ICL_USE_READ_PREFETCH,
   ICL_EVICT_POLICY,
   ICL_SET_SIZE,
-  ICL_ENTRY_SIZE,
+  ICL_WAY_SIZE,
 
   /* DRAM config for dram_ctrl TODO: seperate this */
   /* Structure */
@@ -99,9 +99,9 @@ typedef enum {
 } ICL_CONFIG;
 
 typedef enum {
-  POLICY_FIRST_ENTRY,          //!< Always select first entry in the set
-  POLICY_FIFO,                 //!< Select entry that lastly inserted
-  POLICY_LEAST_RECENTLY_USED,  //!< Select entry that least recently used
+  POLICY_RANDOM,               //!< Select way in random
+  POLICY_FIFO,                 //!< Select way that lastly inserted
+  POLICY_LEAST_RECENTLY_USED,  //!< Select way that least recently used
 } EVICT_POLICY;
 
 class Config : public BaseConfig {
@@ -164,7 +164,7 @@ class Config : public BaseConfig {
   bool readPrefetch;         //!< Default: false
   EVICT_POLICY evictPolicy;  //!< Default: POLICY_LEAST_RECENTLY_USED
   uint64_t cacheSetSize;     //!< Default: 8192
-  uint64_t cacheEntrySize;   //!< Default: 1
+  uint64_t cacheWaySize;     //!< Default: 1
 
   DRAMStructure dram;
   DRAMTiming dramTiming;

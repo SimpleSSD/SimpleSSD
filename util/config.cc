@@ -19,6 +19,8 @@
 
 #include "util/config.hh"
 
+#include "log/trace.hh"
+
 #ifdef _MSC_VER
 #define strcasecmp _stricmp
 #else
@@ -31,6 +33,7 @@ const char SECTION_NVME[] = "nvme";
 const char SECTION_FTL[] = "ftl";
 const char SECTION_ICL[] = "icl";
 const char SECTION_PAL[] = "pal";
+const char SECTION_TWEAK[] = "tweak";
 
 bool BaseConfig::convertBool(const char *value) {
   bool ret = false;
@@ -52,6 +55,7 @@ bool ConfigReader::init(std::string file) {
   ftlConfig.update();
   iclConfig.update();
   palConfig.update();
+  tweakConfig.update();
 
   return true;
 }
@@ -73,9 +77,12 @@ int ConfigReader::parserHandler(void *context, const char *section,
   else if (MATCH_SECTION(SECTION_PAL)) {
     handled = pThis->palConfig.setConfig(name, value);
   }
+  else if (MATCH_SECTION(SECTION_TWEAK)) {
+    handled = pThis->tweakConfig.setConfig(name, value);
+  }
 
   if (!handled) {
-    // TODO: warn("Config [%s] %s = %s not handled\n", section, name, value);
+    Logger::warn("Config [%s] %s = %s not handled\n", section, name, value);
   }
 
   return 1;

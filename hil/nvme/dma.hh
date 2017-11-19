@@ -33,24 +33,9 @@ namespace HIL {
 
 namespace NVMe {
 
-class DMAScheduler {
- private:
-  Interface *interface;
-
-  uint64_t lastReadEndAt;
-  uint64_t lastWriteEndAt;
-  float psPerByte;
-
- public:
-  DMAScheduler(Interface *, Config *);
-
-  uint64_t read(uint64_t, uint64_t, uint8_t *, uint64_t &);
-  uint64_t write(uint64_t, uint64_t, uint8_t *, uint64_t &);
-};
-
 typedef struct {
   ConfigReader *pConfigReader;
-  DMAScheduler *pDmaEngine;
+  Interface *pInterface;
   uint64_t memoryPageSize;
   uint8_t memoryPageSizeOrder;
   uint16_t maxQueueEntry;
@@ -66,7 +51,7 @@ struct PRP {
 
 class PRPList {
  private:
-  DMAScheduler *dmaEngine;
+  Interface *pInterface;
   std::vector<PRP> prpList;
   uint64_t totalSize;
   uint64_t pagesize;

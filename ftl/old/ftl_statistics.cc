@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include "ftl_statistics.hh"
+#include <stdio.h>
 
 #include "base/trace.hh"
 #include "base/types.hh"

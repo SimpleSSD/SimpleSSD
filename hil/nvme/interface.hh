@@ -38,8 +38,8 @@ class Interface {
   virtual void updateInterrupt(uint16_t, bool) = 0;
   virtual void getVendorID(uint16_t &, uint16_t &) = 0;
 
-  virtual void dmaRead(uint64_t, uint64_t, uint8_t *) = 0;
-  virtual void dmaWrite(uint64_t, uint64_t, uint8_t *) = 0;
+  virtual uint64_t dmaRead(uint64_t, uint64_t, uint8_t *, uint64_t &) = 0;
+  virtual uint64_t dmaWrite(uint64_t, uint64_t, uint8_t *, uint64_t &) = 0;
 
   virtual void enableController(uint64_t, uint64_t) = 0;
   virtual void disableController() = 0;

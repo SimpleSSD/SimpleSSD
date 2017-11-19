@@ -25,3 +25,4 @@ if env['TARGET_ISA'] == 'null':
 Source('config.cc')
 Source('ftl_old.cc')
 Source('ftl.cc')
+Source('page_mapping.cc')

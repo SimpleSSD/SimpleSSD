@@ -64,6 +64,7 @@ class Subsystem {
   bool asyncEventReq(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
   bool namespaceManagement(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
   bool namespaceAttachment(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
+  bool formatNVM(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
 
  public:
   Subsystem(Controller *, ConfigData *);

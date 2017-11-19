@@ -17,46 +17,41 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ICL_CACHE__
-#define __ICL_CACHE__
+#ifndef __PAL_PAL_OLD__
+#define __PAL_PAL_OLD__
 
-#include "ftl/ftl.hh"
-#include "util/config.hh"
-#include "util/def.hh"
+#include <cinttypes>
+#include <vector>
+
+#include "pal/abstract_pal.hh"
+#include "util/old/SimpleSSD_types.h"
+
+class PAL2;
+class PALStatistics;
+class Latency;
 
 namespace SimpleSSD {
 
-namespace ICL {
+namespace PAL {
 
-typedef struct _Line {
-  uint64_t tag;
-  uint64_t lastAccessed;
-  uint64_t insertedAt;
-  bool dirty;
-  bool valid;
+class PALOLD : public AbstractPAL {
+ private:
+  ::PAL2 *pal;
+  ::PALStatistics *stats;
+  ::Latency *lat;
 
-  _Line();
-  _Line(uint64_t, bool);
-} Line;
-
-class Cache {
- protected:
-  ConfigReader *conf;
-  FTL::FTL *pFTL;
+  void convertCPDPBP(Request &, std::vector<::CPDPBP> &);
 
  public:
-  Cache(ConfigReader *, FTL::FTL *);
-  virtual ~Cache();
+  PALOLD(Parameter &, Config &);
+  ~PALOLD() override;
 
-  virtual bool read(FTL::Request &, uint64_t &) = 0;
-  virtual bool write(FTL::Request &, uint64_t &) = 0;
-  virtual bool flush(FTL::Request &, uint64_t &) = 0;
-  virtual bool trim(FTL::Request &, uint64_t &) = 0;
-
-  virtual void format(LPNRange &, uint64_t &) = 0;
+  void read(Request &, uint64_t &) override;
+  void write(Request &, uint64_t &) override;
+  void erase(Request &, uint64_t &) override;
 };
 
-}  // namespace ICL
+}  // namespace PAL
 
 }  // namespace SimpleSSD
 

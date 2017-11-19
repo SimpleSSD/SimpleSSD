@@ -17,46 +17,32 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ICL_CACHE__
-#define __ICL_CACHE__
+#ifndef __PAL_ABSTRACT_PAL__
+#define __PAL_ABSTRACT_PAL__
 
-#include "ftl/ftl.hh"
-#include "util/config.hh"
-#include "util/def.hh"
+#include <cinttypes>
+
+#include "pal/pal.hh"
 
 namespace SimpleSSD {
 
-namespace ICL {
+namespace PAL {
 
-typedef struct _Line {
-  uint64_t tag;
-  uint64_t lastAccessed;
-  uint64_t insertedAt;
-  bool dirty;
-  bool valid;
-
-  _Line();
-  _Line(uint64_t, bool);
-} Line;
-
-class Cache {
+class AbstractPAL {
  protected:
-  ConfigReader *conf;
-  FTL::FTL *pFTL;
+  Parameter &param;
+  Config &conf;
 
  public:
-  Cache(ConfigReader *, FTL::FTL *);
-  virtual ~Cache();
+  AbstractPAL(Parameter &p, Config &c) : param(p), conf(c) {}
+  virtual ~AbstractPAL(){};
 
-  virtual bool read(FTL::Request &, uint64_t &) = 0;
-  virtual bool write(FTL::Request &, uint64_t &) = 0;
-  virtual bool flush(FTL::Request &, uint64_t &) = 0;
-  virtual bool trim(FTL::Request &, uint64_t &) = 0;
-
-  virtual void format(LPNRange &, uint64_t &) = 0;
+  virtual void read(Request &, uint64_t &) = 0;
+  virtual void write(Request &, uint64_t &) = 0;
+  virtual void erase(Request &, uint64_t &) = 0;
 };
 
-}  // namespace ICL
+}  // namespace PAL
 
 }  // namespace SimpleSSD
 

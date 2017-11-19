@@ -18,6 +18,8 @@
 #include "ftl_hybridmapping.hh"
 #include "ftl_mappingtable.hh"
 #include "ftl_statistics.hh"
+#include "pal/pal.hh"
+#include "util/def.hh"
 
 #define __STDC_FORMAT_MACROS 1
 
@@ -26,16 +28,14 @@
 #include <cinttypes>
 #include <ctime>
 
-class PAL2;
-
 class FTL {
  protected:
   Parameter *param;
 
-  PAL2 *pal;
+  SimpleSSD::PAL::PAL *pal;
 
  public:
-  FTL(Parameter *, PAL2 *);
+  FTL(Parameter *, SimpleSSD::PAL::PAL *);
   ~FTL();
 
   FTLStats ftl_statistics;
@@ -44,18 +44,16 @@ class FTL {
   bool initialize();
   Parameter *getParameter() { return param; }
 
-  Tick read(Addr lpn, size_t npages, Tick arrived);
-  Tick write(Addr lpn, size_t npages, Tick arrived, bool init = false);
-  Tick trim(Addr lpn, size_t npages);
-
-  void translate(Addr lpn, CPDPBP *pa);
+  Tick read(SimpleSSD::FTL::Request &, Tick arrived);
+  Tick write(SimpleSSD::FTL::Request &, Tick arrived, bool init = false);
+  Tick trim(SimpleSSD::FTL::Request &);
 
   void PrintStats(Tick sim_time);
   void PrintFinalStats(Tick sim_time);
 
-  Tick readInternal(Addr ppn, Tick now, bool flag = false);
-  Tick writeInternal(Addr ppn, Tick now, bool flag = false);
-  Tick eraseInternal(Addr ppn, Tick now);
+  Tick readInternal(SimpleSSD::PAL::Request &, Tick now, bool flag = false);
+  Tick writeInternal(SimpleSSD::PAL::Request &, Tick now, bool flag = false);
+  Tick eraseInternal(SimpleSSD::PAL::Request &, Tick now);
 };
 
 #endif /* defined(__FTL_3__FTL__) */

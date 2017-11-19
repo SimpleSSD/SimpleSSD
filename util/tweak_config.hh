@@ -17,46 +17,31 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ICL_CACHE__
-#define __ICL_CACHE__
+#ifndef __UTIL_TWEAK_CONFIG__
+#define __UTIL_TWEAK_CONFIG__
 
-#include "ftl/ftl.hh"
-#include "util/config.hh"
-#include "util/def.hh"
+#include "util/base_config.hh"
 
 namespace SimpleSSD {
 
-namespace ICL {
+typedef enum { TWEAK_PARTIAL_IO } TWEAK_CONFIG;
 
-typedef struct _Line {
-  uint64_t tag;
-  uint64_t lastAccessed;
-  uint64_t insertedAt;
-  bool dirty;
-  bool valid;
-
-  _Line();
-  _Line(uint64_t, bool);
-} Line;
-
-class Cache {
- protected:
-  ConfigReader *conf;
-  FTL::FTL *pFTL;
+class TweakConfig : public BaseConfig {
+ private:
+  bool enablePartialIO;  //!< Default: false
 
  public:
-  Cache(ConfigReader *, FTL::FTL *);
-  virtual ~Cache();
+  TweakConfig();
 
-  virtual bool read(FTL::Request &, uint64_t &) = 0;
-  virtual bool write(FTL::Request &, uint64_t &) = 0;
-  virtual bool flush(FTL::Request &, uint64_t &) = 0;
-  virtual bool trim(FTL::Request &, uint64_t &) = 0;
+  bool setConfig(const char *, const char *);
+  void update();
 
-  virtual void format(LPNRange &, uint64_t &) = 0;
+  int64_t readInt(uint32_t);
+  uint64_t readUint(uint32_t);
+  float readFloat(uint32_t);
+  std::string readString(uint32_t);
+  bool readBoolean(uint32_t);
 };
-
-}  // namespace ICL
 
 }  // namespace SimpleSSD
 

@@ -31,8 +31,12 @@ typedef enum {
   FTL_MAPPING_MODE,
   FTL_OVERPROVISION_RATIO,
   FTL_GC_THRESHOLD_RATIO,
-  FTL_ERASE_CYCLE,
+  FTL_BAD_BLOCK_THRESHOLD,
   FTL_WARM_UP_RATIO,
+  FTL_GC_MODE,
+  FTL_GC_RECLAIM_BLOCK,
+  FTL_GC_RECLAIM_THRESHOLD,
+  FTL_GC_EVICT_POLICY,
 
   /* N+K Mapping configuration*/
   FTL_NKMAP_N,
@@ -40,17 +44,31 @@ typedef enum {
 } FTL_CONFIG;
 
 typedef enum {
-  FTL_PAGE_MAPPING,
-  FTL_NK_MAPPING,
-} FTL_MAPPING;
+  PAGE_MAPPING,
+  NK_MAPPING,
+} MAPPING;
+
+typedef enum {
+  GC_MODE_0,
+  GC_MODE_1,
+} GC_MODE;
+
+typedef enum {
+  POLICY_GREEDY,
+  POLICY_COST_BENEFIT,
+} EVICT_POLICY;
 
 class Config : public BaseConfig {
  private:
-  FTL_MAPPING mapping;  //!< Default: FTL_NK_MAPPING
-  float overProvision;  //!< Default: 0.25 (25%)
-  float gcThreshold;    //!< Default: 0.05 (5%)
-  uint64_t eraseCycle;  //!< Default: 100000
-  float warmup;         //!< Default: 1.0 (100%)
+  MAPPING mapping;             //!< Default: FTL_NK_MAPPING
+  float overProvision;         //!< Default: 0.25 (25%)
+  float gcThreshold;           //!< Default: 0.05 (5%)
+  uint64_t badBlockThreshold;  //!< Default: 100000
+  float warmup;                //!< Default: 1.0 (100%)
+  uint64_t reclaimBlock;       //!< Default: 1
+  float reclaimThreshold;      //!< Default: 0.1 (10%)
+  GC_MODE gcMode;              //!< Default: FTL_GC_MODE_0
+  EVICT_POLICY evictPolicy;    //!< Default: POLICY_GREEDY
 
   uint64_t N;  //!< Default: 32
   uint64_t K;  //!< Default: 32

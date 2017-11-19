@@ -32,7 +32,7 @@ class MappingTable {
   virtual STATE getppn(const Addr lpn, Addr &ppn) = 0;
   virtual STATE find_victim(const Addr *block_list, int count,
                             Addr &victim) = 0;
-  virtual STATE merge(const Addr lpn);
+  virtual STATE merge(const Addr lpn, Tick&);
   virtual STATE allocate_new_page(const Addr lpn, Addr &ppn) = 0;
   virtual STATE find_lpn(const Addr ppn, const Addr group_number,
                          Addr &lpn) = 0;
@@ -57,8 +57,8 @@ class MappingTable {
   Addr map_used_block_count;
 
   STATE read(const Addr lpn, Addr &ppn);
-  STATE write(const Addr lpn, Addr &ppn);
-  virtual Tick GarbageCollection() = 0;
+  STATE write(const Addr lpn, Addr &ppn, Tick tick);
+  virtual Tick GarbageCollection(Tick) = 0;
   bool need_gc();
 
   virtual void PrintStats();

@@ -19,6 +19,9 @@
 
 #include "pal/pal.hh"
 
+#include "log/trace.hh"
+#include "pal/pal_old.hh"
+
 namespace SimpleSSD {
 
 namespace PAL {
@@ -35,7 +38,6 @@ PAL::PAL(ConfigReader *c) : pConf(c) {
 
   // TODO Make options to setting size and address parse order of super block
   param.superBlock = param.block;
-  param.superPage = param.page;
   param.superPageSize =
       param.pageSize * param.channel * param.package * param.die;
 
@@ -45,20 +47,29 @@ PAL::PAL(ConfigReader *c) : pConf(c) {
   else {
     param.superBlock *= param.plane;
   }
+
+  pPAL = new PALOLD(param, c->palConfig);
 }
 
-PAL::~PAL() {}
-
-void PAL::read(uint32_t blockIndex, uint32_t pageIndex, uint64_t &tick) {
-  // TODO implement
+PAL::~PAL() {
+  delete pPAL;
 }
 
-void PAL::write(uint32_t blockIndex, uint32_t pageIndex, uint64_t &tick) {
-  // TODO implement
+void PAL::read(Request &req, uint64_t &tick) {
+  pPAL->read(req, tick);
 }
 
-void PAL::erase(uint32_t blockIndex, uint64_t &tick) {
-  // TODO implement
+void PAL::write(Request &req, uint64_t &tick) {
+  pPAL->write(req, tick);
+}
+
+void PAL::erase(Request &req, uint64_t &tick) {
+  pPAL->erase(req, tick);
+}
+
+void PAL::copyback(uint32_t blockIndex, uint32_t oldPageIndex,
+                   uint32_t newPageIndex, uint64_t &tick) {
+  Logger::panic("Copyback not implemented");
 }
 
 Parameter *PAL::getInfo() {

@@ -8,15 +8,15 @@
 //  Modified by Donghyun Gouk <kukdh1@camelab.org>
 //
 
-#include "PAL2.h"
 #include "ftl.hh"
 #include "ftl_statistics.hh"
+#include "pal/old/PAL2.h"
 
 #ifndef MAX
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #endif
 
-FTL::FTL(Parameter *p, PAL2 *pal2) : param(p), pal(pal2) {
+FTL::FTL(Parameter *p, SimpleSSD::PAL::PAL *l) : param(p), pal(l) {
   FTLmapping = new HybridMapping(this);
 }
 
@@ -25,6 +25,8 @@ FTL::~FTL() {
 }
 
 bool FTL::initialize() {
+  SimpleSSD::FTL::Request req;
+
   std::cout << "Total physical block/page " << param->physical_block_number
             << "  " << param->physical_page_number << endl;
   std::cout << "Total logical block/page " << param->logical_block_number
@@ -37,7 +39,11 @@ bool FTL::initialize() {
       return false;
     }
     if (to_fill_page_number != 0) {
-      write(i * param->page_per_block, to_fill_page_number, 0, true);
+      for (int j = 0; j < to_fill_page_number; j++) {
+        req.lpn = i * param->page_per_block + j;
+
+        write(req, 0, true);
+      }
     }
   }
   std::cout << "Initialization done! " << std::endl;
@@ -45,20 +51,21 @@ bool FTL::initialize() {
   return true;
 }
 
-Tick FTL::read(Addr lpn, size_t npages, Tick arrived) {
+Tick FTL::read(SimpleSSD::FTL::Request &req, Tick arrived) {
   Tick finished = 0;
   Tick oneReq;
   Addr ppn;
+  SimpleSSD::PAL::Request palRequest(req);
 
   ftl_statistics.read_req_arrive(arrived);
 
-  for (size_t i = 0; i < npages; i++) {
-    FTLmapping->read(lpn + i, ppn);
-    oneReq = readInternal(ppn, arrived);
-    finished = MAX(oneReq, finished);
-  }
+  FTLmapping->read(req.lpn, ppn);
+  palRequest.blockIndex = ppn / param->page_per_block;
+  palRequest.pageIndex = ppn % param->page_per_block;
+  oneReq = readInternal(palRequest, arrived);
+  finished = MAX(oneReq, finished);
 
-  Command cmd = Command(arrived, lpn, OPER_READ, param->page_byte * npages);
+  Command cmd = Command(arrived, req.lpn, OPER_READ, param->page_byte);
   cmd.finished = finished;
 
   ftl_statistics.updateStats(&cmd);
@@ -66,27 +73,28 @@ Tick FTL::read(Addr lpn, size_t npages, Tick arrived) {
   return finished;
 }
 
-Tick FTL::write(Addr lpn, size_t npages, Tick arrived, bool init) {
+Tick FTL::write(SimpleSSD::FTL::Request &req, Tick arrived, bool init) {
   Tick finished = 0;
   Tick oneReq;
   Addr ppn;
+  SimpleSSD::PAL::Request palRequest(req);
 
   ftl_statistics.write_req_arrive(arrived);
 
-  for (size_t i = 0; i < npages; i++) {
-    FTLmapping->write(lpn + i, ppn);
-    if (!init) {
-      oneReq = writeInternal(ppn, arrived);
-      finished = MAX(oneReq, finished);
-    }
+  FTLmapping->write(req.lpn, ppn, arrived);
+  if (!init) {
+    palRequest.blockIndex = ppn / param->page_per_block;
+    palRequest.pageIndex = ppn % param->page_per_block;
+    oneReq = writeInternal(palRequest, arrived);
+    finished = MAX(oneReq, finished);
   }
 
   if (FTLmapping->need_gc()) {
-    FTLmapping->GarbageCollection();
+    FTLmapping->GarbageCollection(finished);
   }
 
   if (!init) {
-    Command cmd = Command(arrived, lpn, OPER_WRITE, param->page_byte * npages);
+    Command cmd = Command(arrived, req.lpn, OPER_WRITE, param->page_byte);
     cmd.finished = finished;
 
     ftl_statistics.updateStats(&cmd);
@@ -95,44 +103,27 @@ Tick FTL::write(Addr lpn, size_t npages, Tick arrived, bool init) {
   return finished;
 }
 
-Tick FTL::trim(Addr lpn, size_t npages) {
+Tick FTL::trim(SimpleSSD::FTL::Request &req) {
   // FIXME: Not implemented
   return 0;
 }
 
-void FTL::translate(Addr lpn, CPDPBP *pa) {
-  Addr ppn;
+Tick FTL::readInternal(SimpleSSD::PAL::Request &req, Tick now, bool flag) {
+  pal->read(req, now);
 
-  FTLmapping->read(lpn, ppn);
-  pal->PPNdisassemble(&ppn, pa);
+  return now;
 }
 
-Tick FTL::readInternal(Addr ppn, Tick now, bool flag) {
-  Command cmd = Command(now, ppn, OPER_READ, param->page_byte);
-  cmd.mergeSnapshot = flag;
+Tick FTL::writeInternal(SimpleSSD::PAL::Request &req, Tick now, bool flag) {
+  pal->write(req, now);
 
-  pal->submit(cmd, ppn / param->logical_page_number,
-              ppn % param->logical_page_number);
-
-  return cmd.finished;
+  return now;
 }
 
-Tick FTL::writeInternal(Addr ppn, Tick now, bool flag) {
-  Command cmd = Command(now, ppn, OPER_WRITE, param->page_byte);
-  cmd.mergeSnapshot = flag;
+Tick FTL::eraseInternal(SimpleSSD::PAL::Request &req, Tick now) {
+  pal->erase(req, now);
 
-  pal->submit(cmd, ppn / param->logical_page_number,
-              ppn % param->logical_page_number);
-
-  return cmd.finished;
-}
-
-Tick FTL::eraseInternal(Addr ppn, Tick now) {
-  Command cmd = Command(now, ppn, OPER_ERASE, 0);
-
-  pal->submit(cmd, ppn / param->logical_page_number, 0);
-
-  return cmd.finished;
+  return now;
 }
 
 void FTL::PrintStats(Tick sim_time) {

@@ -48,6 +48,8 @@ class ICL {
   void flush(Request &, uint64_t &);
   void trim(Request &, uint64_t &);
 
+  void format(LPNRange &, uint64_t &);
+
   void getLPNInfo(uint64_t &, uint32_t &);
 };
 

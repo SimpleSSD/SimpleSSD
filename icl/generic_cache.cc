@@ -28,10 +28,13 @@ namespace SimpleSSD {
 
 namespace ICL {
 
-GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f) : Cache(c, f) {
+GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f)
+    : Cache(c, f), gen(rd()) {
   setSize = c->iclConfig.readUint(ICL_SET_SIZE);
-  entrySize = c->iclConfig.readUint(ICL_ENTRY_SIZE);
+  waySize = c->iclConfig.readUint(ICL_WAY_SIZE);
   lineSize = f->getInfo()->pageSize;
+
+  dist = std::uniform_int_distribution<>(0, waySize - 1);
 
   useReadCaching = c->iclConfig.readBoolean(ICL_USE_READ_CACHE);
   useWriteCaching = c->iclConfig.readBoolean(ICL_USE_WRITE_CACHE);
@@ -46,7 +49,7 @@ GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f) : Cache(c, f) {
   ppCache = (Line **)calloc(setSize, sizeof(Line *));
 
   for (uint32_t i = 0; i < setSize; i++) {
-    ppCache[i] = new Line[entrySize]();
+    ppCache[i] = new Line[waySize]();
   }
 }
 
@@ -62,9 +65,10 @@ uint32_t GenericCache::calcSet(uint64_t lpn) {
   return lpn & (setSize - 1);
 }
 
-uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
+uint32_t GenericCache::flushVictim(FTL::Request req, uint64_t &tick,
                                    bool *isCold) {
-  uint32_t entryIdx = entrySize;
+  uint32_t setIdx = calcSet(req.lpn);
+  uint32_t entryIdx = waySize;
   uint64_t min = std::numeric_limits<uint64_t>::max();
 
   if (isCold) {
@@ -72,7 +76,7 @@ uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
   }
 
   // Check set has empty entry
-  for (uint32_t i = 0; i < entrySize; i++) {
+  for (uint32_t i = 0; i < waySize; i++) {
     if (!ppCache[setIdx][i].valid) {
       entryIdx = i;
 
@@ -85,14 +89,14 @@ uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
   }
 
   // If no empty entry
-  if (entryIdx == entrySize) {
+  if (entryIdx == waySize) {
     switch (policy) {
-      case POLICY_FIRST_ENTRY:
-        entryIdx = 0;
+      case POLICY_RANDOM:
+        entryIdx = dist(gen);
 
         break;
       case POLICY_FIFO:
-        for (uint32_t i = 0; i < entrySize; i++) {
+        for (uint32_t i = 0; i < waySize; i++) {
           if (ppCache[setIdx][i].insertedAt < min) {
             min = ppCache[setIdx][i].insertedAt;
             entryIdx = i;
@@ -101,7 +105,7 @@ uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
 
         break;
       case POLICY_LEAST_RECENTLY_USED:
-        for (uint32_t i = 0; i < entrySize; i++) {
+        for (uint32_t i = 0; i < waySize; i++) {
           if (ppCache[setIdx][i].lastAccessed < min) {
             min = ppCache[setIdx][i].lastAccessed;
             entryIdx = i;
@@ -113,7 +117,11 @@ uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
 
     // Let's flush 'em if dirty
     if (ppCache[setIdx][entryIdx].dirty) {
-      pFTL->write(ppCache[setIdx][entryIdx].tag, tick);
+      req.lpn = ppCache[setIdx][entryIdx].tag;
+      req.offset = 0;
+      req.length = lineSize;
+
+      pFTL->write(req, tick);
     }
     else {
       Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
@@ -129,29 +137,32 @@ uint32_t GenericCache::flushVictim(uint32_t setIdx, uint64_t &tick,
 }
 
 uint64_t GenericCache::calculateDelay(uint64_t bytesize) {
-  uint64_t pageCount = (bytesize > 0) ? (bytesize - 1) / pStructure->pageSize + 1 : 0;
+  uint64_t pageCount =
+      (bytesize > 0) ? (bytesize - 1) / pStructure->pageSize + 1 : 0;
   uint64_t pageFetch = pTiming->tRP + pTiming->tRCD + pTiming->tCL;
-  double bandwidth = 2.0 * pStructure->busWidth * pStructure->channel / 8.0 / pTiming->tCK;
+  double bandwidth =
+      2.0 * pStructure->busWidth * pStructure->channel / 8.0 / pTiming->tCK;
 
   return (uint64_t)(pageFetch + pageCount * pStructure->pageSize / bandwidth);
 }
 
 // True when hit
-bool GenericCache::read(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
+bool GenericCache::read(FTL::Request &req, uint64_t &tick) {
   bool ret = false;
 
   Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
-                     "READ  | LPN %" PRIu64 " | SIZE %" PRIu64, lpn, bytesize);
+                     "READ  | LPN %" PRIu64 " | SIZE %" PRIu64, req.lpn,
+                     req.length);
 
   if (useReadCaching) {
-    uint32_t setIdx = calcSet(lpn);
+    uint32_t setIdx = calcSet(req.lpn);
     uint32_t entryIdx;
-    uint64_t lat = calculateDelay(bytesize);
+    uint64_t lat = calculateDelay(req.length);
 
-    for (entryIdx = 0; entryIdx < entrySize; entryIdx++) {
+    for (entryIdx = 0; entryIdx < waySize; entryIdx++) {
       Line &line = ppCache[setIdx][entryIdx];
 
-      if (line.valid && line.tag == lpn) {
+      if (line.valid && line.tag == req.lpn) {
         line.lastAccessed = tick;
         ret = true;
 
@@ -172,7 +183,7 @@ bool GenericCache::read(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
                          "READ  | Cache miss at %u", setIdx);
 
       bool cold;
-      entryIdx = flushVictim(setIdx, tick, &cold);
+      entryIdx = flushVictim(req, tick, &cold);
 
       if (cold) {
         Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
@@ -186,39 +197,40 @@ bool GenericCache::read(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
 
       ppCache[setIdx][entryIdx].valid = true;
       ppCache[setIdx][entryIdx].dirty = false;
-      ppCache[setIdx][entryIdx].tag = lpn;
+      ppCache[setIdx][entryIdx].tag = req.lpn;
       ppCache[setIdx][entryIdx].lastAccessed = tick;
       ppCache[setIdx][entryIdx].insertedAt = tick;
 
       // Request read and flush at same time
-      pFTL->read(lpn, tick);
+      pFTL->read(req, tick);
 
       // DRAM delay should be hidden by NAND I/O
     }
   }
   else {
-    pFTL->read(lpn, tick);
+    pFTL->read(req, tick);
   }
 
   return ret;
 }
 
 // True when cold-miss/hit
-bool GenericCache::write(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
+bool GenericCache::write(FTL::Request &req, uint64_t &tick) {
   bool ret = false;
 
   Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
-                     "WRITE | LPN %" PRIu64 " | SIZE %" PRIu64, lpn, bytesize);
+                     "WRITE | LPN %" PRIu64 " | SIZE %" PRIu64, req.lpn,
+                     req.length);
 
   if (useWriteCaching) {
-    uint32_t setIdx = calcSet(lpn);
+    uint32_t setIdx = calcSet(req.lpn);
     uint32_t entryIdx;
-    uint64_t lat = calculateDelay(bytesize);
+    uint64_t lat = calculateDelay(req.length);
 
-    for (entryIdx = 0; entryIdx < entrySize; entryIdx++) {
+    for (entryIdx = 0; entryIdx < waySize; entryIdx++) {
       Line &line = ppCache[setIdx][entryIdx];
 
-      if (line.valid && line.tag == lpn) {
+      if (line.valid && line.tag == req.lpn) {
         line.lastAccessed = tick;
         line.dirty = true;
         ret = true;
@@ -241,7 +253,7 @@ bool GenericCache::write(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
 
       bool cold;
       uint64_t insertAt = tick;
-      entryIdx = flushVictim(setIdx, tick, &cold);
+      entryIdx = flushVictim(req, tick, &cold);
 
       if (cold) {
         Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
@@ -257,7 +269,7 @@ bool GenericCache::write(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
 
       ppCache[setIdx][entryIdx].valid = true;
       ppCache[setIdx][entryIdx].dirty = true;
-      ppCache[setIdx][entryIdx].tag = lpn;
+      ppCache[setIdx][entryIdx].tag = req.lpn;
       ppCache[setIdx][entryIdx].lastAccessed = insertAt;
       ppCache[setIdx][entryIdx].insertedAt = insertAt;
 
@@ -265,27 +277,27 @@ bool GenericCache::write(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
     }
   }
   else {
-    pFTL->write(lpn, tick);
+    pFTL->write(req, tick);
   }
 
   return ret;
 }
 
 // True when hit
-bool GenericCache::flush(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
+bool GenericCache::flush(FTL::Request &req, uint64_t &tick) {
   bool ret = false;
 
   Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE, "FLUSH | LPN %" PRIu64,
-                     lpn);
+                     req.lpn);
 
   if (useReadCaching || useWriteCaching) {
-    uint32_t setIdx = calcSet(lpn);
+    uint32_t setIdx = calcSet(req.lpn);
     uint32_t i;
 
-    for (i = 0; i < entrySize; i++) {
+    for (i = 0; i < waySize; i++) {
       Line &line = ppCache[setIdx][i];
 
-      if (line.valid && line.tag == lpn) {
+      if (line.valid && line.tag == req.lpn) {
         ret = true;
 
         break;
@@ -295,7 +307,7 @@ bool GenericCache::flush(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
     if (ret) {
       if (ppCache[setIdx][i].dirty) {
         // we have to flush this
-        pFTL->write(ppCache[setIdx][i].tag, tick);
+        pFTL->write(req, tick);
       }
 
       // invalidate
@@ -307,20 +319,20 @@ bool GenericCache::flush(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
 }
 
 // True when hit
-bool GenericCache::trim(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
+bool GenericCache::trim(FTL::Request &req, uint64_t &tick) {
   bool ret = false;
 
   Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE, "TRIM  | LPN %" PRIu64,
-                     lpn);
+                     req.lpn);
 
   if (useReadCaching || useWriteCaching) {
-    uint32_t setIdx = calcSet(lpn);
+    uint32_t setIdx = calcSet(req.lpn);
     uint32_t i;
 
-    for (i = 0; i < entrySize; i++) {
+    for (i = 0; i < waySize; i++) {
       Line &line = ppCache[setIdx][i];
 
-      if (line.valid && line.tag == lpn) {
+      if (line.valid && line.tag == req.lpn) {
         ret = true;
 
         break;
@@ -333,13 +345,49 @@ bool GenericCache::trim(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
     }
 
     // we have to trim this
-    pFTL->trim(ppCache[setIdx][i].tag, tick);
+    pFTL->trim(req, tick);
   }
   else {
-    pFTL->trim(lpn, tick);
+    pFTL->trim(req, tick);
   }
 
   return ret;
+}
+
+void GenericCache::format(LPNRange &range, uint64_t &tick) {
+  bool ret = false;
+
+  if (useReadCaching || useWriteCaching) {
+    uint64_t lpn;
+    uint32_t setIdx;
+    uint32_t way;
+
+    for (uint64_t i = 0; i < range.nlp; i++) {
+      lpn = range.slpn + i;
+      setIdx = calcSet(lpn);
+
+      for (way = 0; way < waySize; way++) {
+        Line &line = ppCache[setIdx][way];
+
+        if (line.valid && line.tag == lpn) {
+          ret = true;
+
+          break;
+        }
+      }
+
+      if (ret) {
+        // invalidate
+        ppCache[setIdx][way].valid = false;
+      }
+    }
+
+    // we have to trim this
+    pFTL->format(range, tick);
+  }
+  else {
+    pFTL->format(range, tick);
+  }
 }
 
 }  // namespace ICL

@@ -25,6 +25,36 @@ LPNRange::_LPNRange() : slpn(0), nlp(0) {}
 
 LPNRange::_LPNRange(uint64_t s, uint64_t n) : slpn(s), nlp(n) {}
 
+namespace ICL {
+
 Request::_Request() : reqID(0), offset(0), length(0) {}
+
+}  // namespace ICL
+
+namespace FTL {
+
+Request::_Request() : reqID(0), reqSubID(0), lpn(0), offset(0), length(0) {}
+
+}  // namespace FTL
+
+namespace PAL {
+
+Request::_Request()
+    : reqID(0),
+      reqSubID(0),
+      blockIndex(0),
+      pageIndex(0),
+      offset(0),
+      length(0) {}
+
+Request::_Request(FTL::Request &r)
+    : reqID(r.reqID),
+      reqSubID(r.reqSubID),
+      blockIndex(0),
+      pageIndex(0),
+      offset(r.offset),
+      length(r.length) {}
+
+}  // namespace PAL
 
 }  // namespace SimpleSSD

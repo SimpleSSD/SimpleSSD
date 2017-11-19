@@ -6,8 +6,8 @@
 //  Copyright (c) 2015 narges shahidi. All rights reserved.
 //
 
-#include "ftl.hh"
 #include "ftl_mappingtable.hh"
+#include "ftl.hh"
 
 MappingTable::MappingTable(FTL *f) : ftl(f) {
   param = f->getParameter();
@@ -106,9 +106,9 @@ STATE MappingTable::read(const Addr lpn, Addr &ppn) {
   return getppn(lpn, ppn);
 }
 
-STATE MappingTable::write(const Addr lpn, Addr &ppn) {
+STATE MappingTable::write(const Addr lpn, Addr &ppn, Tick tick) {
   if (allocate_new_page(lpn, ppn) != SUCCESS) {
-    STATE merge_state = merge(lpn);
+    STATE merge_state = merge(lpn, tick);
     if (merge_state == SUCCESS) {
       return allocate_new_page(lpn, ppn);
     }
@@ -189,6 +189,6 @@ void MappingTable::updateStats(Tick latency) {
                    latency / (double)map_total_gc_count;
 }
 
-STATE MappingTable::merge(const Addr lpn) {
+STATE MappingTable::merge(const Addr lpn, Tick &tick) {
   return SUCCESS;
 }

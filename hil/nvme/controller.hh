@@ -62,8 +62,6 @@ class Controller {
   Interface *pParent;     //!< NVMe::Interface passed from constructor
   Subsystem *pSubsystem;  //!< NVMe::Subsystem allocate in constructor
 
-  DMAScheduler *pDmaEngine;  //!< DMA engine allocate in constructor
-
   RegisterTable registers;   //!< Table for NVMe Controller Registers
   uint64_t sqstride;         //!< Calculated SQ Stride
   uint64_t cqstride;         //!< Calculated CQ stride

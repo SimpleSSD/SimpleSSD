@@ -19,8 +19,8 @@
 
 #include "ftl/ftl.hh"
 
-#include "ftl/abstract_ftl.hh"
 #include "ftl/ftl_old.hh"
+#include "ftl/page_mapping.hh"
 #include "log/trace.hh"
 
 namespace SimpleSSD {
@@ -40,7 +40,14 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
   param.pagesInBlock = palparam->page;
   param.pageSize = palparam->superPageSize;
 
-  pFTL = new FTLOLD(&param, pPAL, pConf);
+  switch (pConf->ftlConfig.readInt(FTL_MAPPING_MODE)) {
+    case PAGE_MAPPING:
+      pFTL = new PageMapping(&param, pPAL, pConf);
+      break;
+    case NK_MAPPING:
+      pFTL = new FTLOLD(&param, pPAL, pConf);
+      break;
+  }
 
   // Initialize pFTL
   pFTL->initialize();
@@ -51,22 +58,26 @@ FTL::~FTL() {
   delete pFTL;
 }
 
-void FTL::read(uint64_t lpn, uint64_t &tick) {
-  Logger::debugprint(Logger::LOG_FTL, "READ  | LPN %" PRIu64, lpn);
+void FTL::read(Request &req, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "READ  | LPN %" PRIu64, req.lpn);
 
-  pFTL->read(lpn, tick);
+  pFTL->read(req, tick);
 }
 
-void FTL::write(uint64_t lpn, uint64_t &tick) {
-  Logger::debugprint(Logger::LOG_FTL, "WRITE | LPN %" PRIu64, lpn);
+void FTL::write(Request &req, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "WRITE | LPN %" PRIu64, req.lpn);
 
-  pFTL->write(lpn, tick);
+  pFTL->write(req, tick);
 }
 
-void FTL::trim(uint64_t lpn, uint64_t &tick) {
-  Logger::debugprint(Logger::LOG_FTL, "TRIM  | LPN %" PRIu64, lpn);
+void FTL::trim(Request &req, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_FTL, "TRIM  | LPN %" PRIu64, req.lpn);
 
-  pFTL->trim(lpn, tick);
+  pFTL->trim(req, tick);
+}
+
+void FTL::format(LPNRange &range, uint64_t &tick) {
+  pFTL->format(range, tick);
 }
 
 Parameter *FTL::getInfo() {

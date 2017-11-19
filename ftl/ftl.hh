@@ -22,6 +22,7 @@
 
 #include "pal/pal.hh"
 #include "util/config.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
@@ -48,9 +49,11 @@ class FTL {
   FTL(ConfigReader *);
   ~FTL();
 
-  void read(uint64_t, uint64_t &);
-  void write(uint64_t, uint64_t &);
-  void trim(uint64_t, uint64_t &);
+  void read(Request &, uint64_t &);
+  void write(Request &, uint64_t &);
+  void trim(Request &, uint64_t &);
+
+  void format(LPNRange &, uint64_t &);
 
   Parameter *getInfo();
 };

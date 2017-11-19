@@ -41,8 +41,6 @@ Controller::Controller(Interface *intrface, ConfigReader *c)
       adminQueueInited(false),
       interruptMask(0),
       conf(c->nvmeConfig) {
-  pDmaEngine = new DMAScheduler(pParent, &conf);
-
   // Allocate array for Command Queues
   ppCQueue = (CQueue **)calloc(conf.readUint(NVME_MAX_IO_CQUEUE) + 1,
                                sizeof(CQueue *));
@@ -66,7 +64,7 @@ Controller::Controller(Interface *intrface, ConfigReader *c)
   registers.version = 0x00010201;  // NVMe 1.2.1
 
   cfgdata.pConfigReader = c;
-  cfgdata.pDmaEngine = pDmaEngine;
+  cfgdata.pInterface = intrface;
   cfgdata.maxQueueEntry = (registers.capabilities & 0xFFFF) + 1;
 
   pSubsystem = new Subsystem(this, &cfgdata);
@@ -97,7 +95,7 @@ void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
   registers.interruptMaskClear = interruptMask;
 
   memcpy(buffer, registers.data + offset, size);
-  pDmaEngine->read(0, size, nullptr, tick);
+  pParent->dmaRead(0, size, nullptr, tick);
 
   switch (offset) {
     case REG_CONTROLLER_CAPABILITY:
@@ -164,7 +162,7 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
   uint32_t uiTemp32;
   uint64_t uiTemp64;
 
-  pDmaEngine->write(0, size, nullptr, tick);
+  pParent->dmaWrite(0, size, nullptr, tick);
 
   if (size == 4) {
     memcpy(&uiTemp32, buffer, 4);
@@ -353,7 +351,7 @@ void Controller::ringCQHeadDoorbell(uint16_t qid, uint16_t head,
                                     uint64_t &tick) {
   CQueue *pQueue = ppCQueue[qid];
 
-  pDmaEngine->write(0, 4, nullptr, tick);
+  pParent->dmaWrite(0, 4, nullptr, tick);
 
   if (pQueue) {
     pQueue->setHead(head);
@@ -374,7 +372,7 @@ void Controller::ringSQTailDoorbell(uint16_t qid, uint16_t tail,
                                     uint64_t &tick) {
   SQueue *pQueue = ppSQueue[qid];
 
-  pDmaEngine->write(0, 4, nullptr, tick);
+  pParent->dmaWrite(0, 4, nullptr, tick);
 
   if (pQueue) {
     pQueue->setTail(tail);
@@ -681,7 +679,7 @@ void Controller::identify(uint8_t *data) {
       //         commands
       // [01:01] 1 for Support Format NVM command
       // [00:00] 1 for Support Security Send and Security Receive commands
-      data[0x0100] = 0x08;
+      data[0x0100] = 0x0A;
       data[0x0101] = 0x00;
     }
 

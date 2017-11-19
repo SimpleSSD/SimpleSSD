@@ -33,6 +33,8 @@ typedef struct _LPNRange {
   _LPNRange(uint64_t, uint64_t);
 } LPNRange;
 
+namespace ICL {
+
 typedef struct _Request {
   uint64_t reqID;
   uint64_t offset;
@@ -41,6 +43,38 @@ typedef struct _Request {
 
   _Request();
 } Request;
+
+}  // namespace ICL
+
+namespace FTL {
+
+typedef struct _Request {
+  uint64_t reqID;  // ID of ICL::Request
+  uint64_t reqSubID;
+  uint64_t lpn;
+  uint32_t offset;
+  uint32_t length;
+
+  _Request();
+} Request;
+
+}  // namespace FTL
+
+namespace PAL {
+
+typedef struct _Request {
+  uint64_t reqID;  // ID of ICL::Request
+  uint64_t reqSubID;
+  uint32_t blockIndex;
+  uint32_t pageIndex;
+  uint32_t offset;
+  uint32_t length;
+
+  _Request();
+  _Request(FTL::Request &);
+} Request;
+
+}  // namespace PAL
 
 }  // namespace SimpleSSD
 

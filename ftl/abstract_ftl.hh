@@ -39,9 +39,11 @@ class AbstractFTL {
 
   virtual bool initialize() = 0;
 
-  virtual void read(uint64_t, uint64_t &) = 0;
-  virtual void write(uint64_t, uint64_t &) = 0;
-  virtual void trim(uint64_t, uint64_t &) = 0;
+  virtual void read(Request &, uint64_t &) = 0;
+  virtual void write(Request &, uint64_t &) = 0;
+  virtual void trim(Request &, uint64_t &) = 0;
+
+  virtual void format(LPNRange &, uint64_t &) = 0;
 };
 
 }  // namespace FTL

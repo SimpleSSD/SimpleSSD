@@ -74,6 +74,8 @@ class Namespace {
 
   HealthInfo health;
 
+  uint64_t formatFinishedAt;
+
   // Admin commands
   void getLogPage(SQEntryWrapper &, CQEntryWrapper &, uint64_t &);
 
@@ -94,6 +96,8 @@ class Namespace {
   uint32_t getNSID();
   Information *getInfo();
   bool isAttached();
+
+  void format(uint64_t);
 };
 
 }  // namespace NVMe

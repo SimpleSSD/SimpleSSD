@@ -34,7 +34,7 @@ HIL::~HIL() {
   delete pICL;
 }
 
-void HIL::read(Request &req, uint64_t &tick) {
+void HIL::read(ICL::Request &req, uint64_t &tick) {
   // TODO: stat
 
   Logger::debugprint(Logger::LOG_HIL,
@@ -42,11 +42,11 @@ void HIL::read(Request &req, uint64_t &tick) {
                      " + %" PRIu64,
                      req.range.slpn, req.range.nlp, req.offset, req.length);
 
-  req.reqID = reqCount++;
+  req.reqID = ++reqCount;
   pICL->read(req, tick);
 }
 
-void HIL::write(Request &req, uint64_t &tick) {
+void HIL::write(ICL::Request &req, uint64_t &tick) {
   // TODO: stat
 
   Logger::debugprint(Logger::LOG_HIL,
@@ -54,11 +54,11 @@ void HIL::write(Request &req, uint64_t &tick) {
                      " + %" PRIu64,
                      req.range.slpn, req.range.nlp, req.offset, req.length);
 
-  req.reqID = reqCount++;
+  req.reqID = ++reqCount;
   pICL->write(req, tick);
 }
 
-void HIL::flush(Request &req, uint64_t &tick) {
+void HIL::flush(ICL::Request &req, uint64_t &tick) {
   // TODO: stat
 
   Logger::debugprint(Logger::LOG_HIL,
@@ -66,11 +66,11 @@ void HIL::flush(Request &req, uint64_t &tick) {
                      " + %" PRIu64,
                      req.range.slpn, req.range.nlp, req.offset, req.length);
 
-  req.reqID = reqCount++;
+  req.reqID = ++reqCount;
   pICL->flush(req, tick);
 }
 
-void HIL::trim(Request &req, uint64_t &tick) {
+void HIL::trim(ICL::Request &req, uint64_t &tick) {
   // TODO: stat
 
   Logger::debugprint(Logger::LOG_HIL,
@@ -78,8 +78,24 @@ void HIL::trim(Request &req, uint64_t &tick) {
                      " + %" PRIu64,
                      req.range.slpn, req.range.nlp, req.offset, req.length);
 
-  req.reqID = reqCount++;
+  req.reqID = ++reqCount;
   pICL->trim(req, tick);
+}
+
+void HIL::format(LPNRange &range, bool erase, uint64_t &tick) {
+  Logger::debugprint(Logger::LOG_HIL, "FORMAT| LPN %" PRIu64 " + %" PRIu64,
+                     range.slpn, range.nlp);
+
+  if (erase) {
+    pICL->format(range, tick);
+  }
+  else {
+    ICL::Request req;
+
+    req.range = range;
+
+    pICL->trim(req, tick);
+  }
 }
 
 void HIL::getLPNInfo(uint64_t &totalLogicalPages, uint32_t &logicalPageSize) {

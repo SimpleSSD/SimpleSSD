@@ -21,10 +21,13 @@
 #define __PAL_PAL__
 
 #include "util/config.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
 namespace PAL {
+
+class AbstractPAL;
 
 typedef struct {
   uint32_t channel;        //!< Total # channels
@@ -34,7 +37,6 @@ typedef struct {
   uint32_t block;          //!< # blocks / plane
   uint32_t page;           //!< # pages / block
   uint64_t superBlock;     //!< Total super blocks
-  uint64_t superPage;      //!< Total super pages
   uint32_t pageSize;       //!< Size of page in bytes
   uint32_t superPageSize;  //!< Size of super page in bytes
 } Parameter;
@@ -42,6 +44,7 @@ typedef struct {
 class PAL {
  private:
   Parameter param;
+  AbstractPAL *pPAL;
 
   ConfigReader *pConf;
 
@@ -49,9 +52,10 @@ class PAL {
   PAL(ConfigReader *);
   ~PAL();
 
-  void read(uint32_t, uint32_t, uint64_t &);
-  void write(uint32_t, uint32_t, uint64_t &);
-  void erase(uint32_t, uint64_t &);
+  void read(Request &, uint64_t &);
+  void write(Request &, uint64_t &);
+  void erase(Request &, uint64_t &);
+  void copyback(uint32_t, uint32_t, uint32_t, uint64_t &);
 
   Parameter *getInfo();
 };

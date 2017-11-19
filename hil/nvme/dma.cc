@@ -25,7 +25,7 @@ namespace SimpleSSD {
 namespace HIL {
 
 namespace NVMe {
-
+/*
 DMAScheduler::DMAScheduler(Interface *intr, Config *conf)
     : interface(intr), lastReadEndAt(0), lastWriteEndAt(0) {
   psPerByte = conf->readFloat(NVME_DMA_DELAY);
@@ -114,13 +114,13 @@ uint64_t DMAScheduler::write(uint64_t addr, uint64_t length, uint8_t *buffer,
 
   return delay;
 }
-
+*/
 PRP::PRP() : addr(0), size(0) {}
 
 PRP::PRP(uint64_t address, uint64_t s) : addr(address), size(s) {}
 
 PRPList::PRPList(ConfigData *cfg, uint64_t prp1, uint64_t prp2, uint64_t size)
-    : dmaEngine(cfg->pDmaEngine),
+    : pInterface(cfg->pInterface),
       totalSize(size),
       pagesize(cfg->memoryPageSize) {
   uint64_t prp1Size = getPRPSize(prp1);
@@ -166,7 +166,7 @@ PRPList::PRPList(ConfigData *cfg, uint64_t prp1, uint64_t prp2, uint64_t size)
 }
 
 PRPList::PRPList(ConfigData *cfg, uint64_t base, uint64_t size, bool cont)
-    : dmaEngine(cfg->pDmaEngine),
+    : pInterface(cfg->pInterface),
       totalSize(size),
       pagesize(cfg->memoryPageSize) {
   if (cont) {
@@ -193,7 +193,7 @@ void PRPList::getPRPListFromPRP(uint64_t base, uint64_t size) {
     uint64_t tick = 0;
 
     // Read PRP
-    dmaEngine->read(base, prpSize, buffer, tick);
+    pInterface->dmaRead(base, prpSize, buffer, tick);
 
     for (size_t i = 0; i < prpSize; i += 8) {
       listPRP = *((uint64_t *)(buffer + i));
@@ -242,8 +242,8 @@ uint64_t PRPList::read(uint64_t offset, uint64_t length, uint8_t *buffer,
   for (auto &iter : prpList) {
     if (begin) {
       read = MIN(iter.size, length - totalRead);
-      dmaEngine->read(iter.addr, read, buffer ? buffer + totalRead : NULL,
-                      tick);
+      pInterface->dmaRead(iter.addr, read, buffer ? buffer + totalRead : NULL,
+                          tick);
       totalRead += read;
 
       if (totalRead == length) {
@@ -255,7 +255,7 @@ uint64_t PRPList::read(uint64_t offset, uint64_t length, uint8_t *buffer,
       begin = true;
       totalRead = offset - currentOffset;
       read = MIN(iter.size - totalRead, length);
-      delay = dmaEngine->read(iter.addr + totalRead, read, buffer, tick);
+      delay = pInterface->dmaRead(iter.addr + totalRead, read, buffer, tick);
       totalRead = read;
     }
 
@@ -279,8 +279,8 @@ uint64_t PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   for (auto &iter : prpList) {
     if (begin) {
       written = MIN(iter.size, length - totalWritten);
-      dmaEngine->write(iter.addr, written,
-                       buffer ? buffer + totalWritten : NULL, tick);
+      pInterface->dmaWrite(iter.addr, written,
+                           buffer ? buffer + totalWritten : NULL, tick);
       totalWritten += written;
 
       if (totalWritten == length) {
@@ -292,7 +292,8 @@ uint64_t PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
       begin = true;
       totalWritten = offset - currentOffset;
       written = MIN(iter.size - totalWritten, length);
-      delay = dmaEngine->write(iter.addr + totalWritten, written, buffer, tick);
+      delay =
+          pInterface->dmaWrite(iter.addr + totalWritten, written, buffer, tick);
       totalWritten = written;
     }
 

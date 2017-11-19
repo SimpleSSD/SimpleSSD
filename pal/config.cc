@@ -19,6 +19,8 @@
 
 #include "pal/config.hh"
 
+#include "log/trace.hh"
+
 namespace SimpleSSD {
 
 namespace PAL {
@@ -94,7 +96,7 @@ bool Config::setConfig(const char *name, const char *value) {
 
 void Config::update() {
   if (dmaWidth & 0x07) {
-    // TODO panic("dmaWidth should be multiple of 8.");
+    Logger::panic("dmaWidth should be multiple of 8.");
   }
 }
 

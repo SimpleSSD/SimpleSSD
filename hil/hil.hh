@@ -41,10 +41,12 @@ class HIL {
   HIL(ConfigReader *);
   ~HIL();
 
-  void read(Request &, uint64_t &);
-  void write(Request &, uint64_t &);
-  void flush(Request &, uint64_t &);
-  void trim(Request &, uint64_t &);
+  void read(ICL::Request &, uint64_t &);
+  void write(ICL::Request &, uint64_t &);
+  void flush(ICL::Request &, uint64_t &);
+  void trim(ICL::Request &, uint64_t &);
+
+  void format(LPNRange &, bool, uint64_t &);
 
   void getLPNInfo(uint64_t &, uint32_t &);
 };

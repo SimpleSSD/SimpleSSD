@@ -28,6 +28,7 @@
 #include "icl/config.hh"
 #include "lib/ini/ini.h"
 #include "pal/config.hh"
+#include "util/tweak_config.hh"
 
 namespace SimpleSSD {
 
@@ -40,6 +41,7 @@ class ConfigReader {
   HIL::NVMe::Config nvmeConfig;
   ICL::Config iclConfig;
   PAL::Config palConfig;
+  TweakConfig tweakConfig;
 
   bool init(std::string);
 };
