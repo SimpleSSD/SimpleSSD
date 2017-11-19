@@ -172,7 +172,6 @@ bool GenericCache::read(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
                          "READ  | Cache miss at %u", setIdx);
 
       bool cold;
-      uint64_t insertAt = tick;
       entryIdx = flushVictim(setIdx, tick, &cold);
 
       if (cold) {
@@ -188,13 +187,11 @@ bool GenericCache::read(uint64_t lpn, uint64_t bytesize, uint64_t &tick) {
       ppCache[setIdx][entryIdx].valid = true;
       ppCache[setIdx][entryIdx].dirty = false;
       ppCache[setIdx][entryIdx].tag = lpn;
-      ppCache[setIdx][entryIdx].lastAccessed = insertAt;
-      ppCache[setIdx][entryIdx].insertedAt = insertAt;
+      ppCache[setIdx][entryIdx].lastAccessed = tick;
+      ppCache[setIdx][entryIdx].insertedAt = tick;
 
       // Request read and flush at same time
-      pFTL->read(lpn, insertAt);
-
-      tick = MAX(tick, insertAt);
+      pFTL->read(lpn, tick);
 
       // DRAM delay should be hidden by NAND I/O
     }

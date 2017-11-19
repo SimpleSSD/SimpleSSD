@@ -31,9 +31,18 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l) {
   OriginalSizes[ADDR_CHANNEL] = gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
   OriginalSizes[ADDR_PACKAGE] = gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
   OriginalSizes[ADDR_DIE] = gconf->readUint(SimpleSSD::PAL::NAND_DIE);
-  OriginalSizes[ADDR_PLANE] = gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
+
+  if (gconf->readBoolean(SimpleSSD::PAL::NAND_USE_MULTI_PLANE_OP)) {
+    OriginalSizes[ADDR_PLANE] = 1;
+    OriginalSizes[ADDR_PAGE] = gconf->readUint(SimpleSSD::PAL::NAND_PAGE) *
+                               gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
+  }
+  else {
+    OriginalSizes[ADDR_PLANE] = gconf->readUint(SimpleSSD::PAL::NAND_PLANE);
+    OriginalSizes[ADDR_PAGE] = gconf->readUint(SimpleSSD::PAL::NAND_PAGE);
+  }
+
   OriginalSizes[ADDR_BLOCK] = gconf->readUint(SimpleSSD::PAL::NAND_BLOCK);
-  OriginalSizes[ADDR_PAGE] = gconf->readUint(SimpleSSD::PAL::NAND_PAGE);
   OriginalSizes[6] = 0;  // Add remaining bits
 
   AddrRemap[0] = ADDR_PAGE;
@@ -565,7 +574,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
 
 void PAL2::submit(Command &cmd, uint32_t blkidx, uint32_t pageidx) {
   CPDPBP addr;
-  uint32_t finishedAt = 0;
+  uint64_t finishedAt = 0;
 
   addr.Page = pageidx;
 
@@ -578,16 +587,13 @@ void PAL2::submit(Command &cmd, uint32_t blkidx, uint32_t pageidx) {
            p++) {
         for (uint32_t d = 0; d < gconf->readUint(SimpleSSD::PAL::NAND_DIE);
              d++) {
-          for (uint32_t pl = 0;
-               pl < gconf->readUint(SimpleSSD::PAL::NAND_PLANE); pl++) {
-            addr.Channel = c;
-            addr.Package = p;
-            addr.Die = d;
-            addr.Plane = pl;
+          addr.Channel = c;
+          addr.Package = p;
+          addr.Die = d;
+          addr.Plane = 0;
 
-            TimelineScheduling(cmd, addr);
-            finishedAt = MAX(finishedAt, cmd.finished);
-          }
+          TimelineScheduling(cmd, addr);
+          finishedAt = MAX(finishedAt, cmd.finished);
         }
       }
     }

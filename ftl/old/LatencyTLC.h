@@ -23,13 +23,13 @@
 
 #include "Latency.h"
 
-class LatencyTLC : public Latency
-{
-    public:
-        LatencyTLC(uint32_t mhz, uint32_t pagesize);
+class LatencyTLC : public Latency {
+ public:
+  LatencyTLC(uint32_t mhz, uint32_t pagesize);
 
-        uint64_t GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy);
-        inline uint8_t  GetPageType(uint32_t AddrPage);
+  uint64_t GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy);
+  uint64_t GetPower(uint8_t Oper, uint8_t Busy);
+  inline uint8_t GetPageType(uint32_t AddrPage);
 };
 
-#endif //__LatencyTLC_h__
+#endif  //__LatencyTLC_h__

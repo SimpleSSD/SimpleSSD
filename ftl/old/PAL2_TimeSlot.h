@@ -23,22 +23,21 @@
 #include "util/old/SimpleSSD_types.h"
 
 #include <cinttypes>
-#include <iostream>
-#include <string>
-#include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <fstream>
+#include <iostream>
+#include <string>
 using namespace std;
 
-class TimeSlot
-{
-    public:
-        TimeSlot(uint64_t startTick, uint64_t duration);
-        uint64_t StartTick;
-        uint64_t EndTick;
-        TimeSlot* Next;
+class TimeSlot {
+ public:
+  TimeSlot(uint64_t startTick, uint64_t duration);
+  uint64_t StartTick;
+  uint64_t EndTick;
+  TimeSlot *Next;
 };
 
 #endif

@@ -28,72 +28,87 @@
 
 #include "PAL2_TimeSlot.h"
 
-#include <iostream>
-#include <string>
-#include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <fstream>
+#include <iostream>
+#include <string>
 using namespace std;
 
 class PALStatistics;
 
-class PAL2 //let's not inherit PAL1
+class PAL2  // let's not inherit PAL1
 {
-  public:
-    PAL2(PALStatistics* statistics, SimpleSSD::PAL::Config *c, Latency *l);
-    ~PAL2();
+ public:
+  PAL2(PALStatistics *statistics, SimpleSSD::PAL::Config *c, Latency *l);
+  ~PAL2();
 
-    SimpleSSD::PAL::Config *gconf;
-    Latency *lat;
+  SimpleSSD::PAL::Config *gconf;
+  Latency *lat;
 
-    TimeSlot** ChTimeSlots;
-    TimeSlot** DieTimeSlots;
-    TimeSlot** MergedTimeSlots; //for gathering busy time
+  TimeSlot **ChTimeSlots;
+  TimeSlot **DieTimeSlots;
+  TimeSlot **MergedTimeSlots;  // for gathering busy time
 
-    uint64_t totalDie;
+  uint64_t totalDie;
 
-    std::map<uint64_t, uint64_t> OpTimeStamp[3];
+  std::map<uint64_t, uint64_t> OpTimeStamp[3];
 
-    std::map<uint64_t, std::map<uint64_t, uint64_t>* > * ChFreeSlots;
-    uint64_t* ChStartPoint; //record the start point of rightmost free slot
-    std::map<uint64_t, std::map<uint64_t, uint64_t>* > * DieFreeSlots;
-    uint64_t* DieStartPoint;
+  std::map<uint64_t, std::map<uint64_t, uint64_t> *> *ChFreeSlots;
+  uint64_t *ChStartPoint;  // record the start point of rightmost free slot
+  std::map<uint64_t, std::map<uint64_t, uint64_t> *> *DieFreeSlots;
+  uint64_t *DieStartPoint;
 
-    void submit(Command &cmd, uint32_t blkidx, uint32_t pageidx);
-    void TimelineScheduling(Command& req, CPDPBP &reqCPD);
-    PALStatistics* stats; //statistics of PAL2, not created by itself
-    void InquireBusyTime(uint64_t currentTick);
-    void FlushTimeSlots(uint64_t currentTick);
-    void FlushOpTimeStamp();
-    TimeSlot* FlushATimeSlot(TimeSlot* tgtTimeSlot, uint64_t currentTick);
-    TimeSlot* FlushATimeSlotBusyTime(TimeSlot* tgtTimeSlot, uint64_t currentTick, uint64_t* TimeSum);
-    //Jie: merge time slotss
-    void MergeATimeSlot(TimeSlot* tgtTimeSlot);
-    void MergeATimeSlot(TimeSlot* startTimeSlot, TimeSlot* endTimeSlot);
-    void MergeATimeSlotCH(TimeSlot* tgtTimeSlot);
-    void MergeATimeSlotDIE(TimeSlot* tgtTimeSlot);
-    TimeSlot* InsertAfter(TimeSlot* tgtTimeSlot, uint64_t tickLen, uint64_t tickFrom);
+  void submit(Command &cmd, uint32_t blkidx, uint32_t pageidx);
+  void TimelineScheduling(Command &req, CPDPBP &reqCPD);
+  PALStatistics *stats;  // statistics of PAL2, not created by itself
+  void InquireBusyTime(uint64_t currentTick);
+  void FlushTimeSlots(uint64_t currentTick);
+  void FlushOpTimeStamp();
+  TimeSlot *FlushATimeSlot(TimeSlot *tgtTimeSlot, uint64_t currentTick);
+  TimeSlot *FlushATimeSlotBusyTime(TimeSlot *tgtTimeSlot, uint64_t currentTick,
+                                   uint64_t *TimeSum);
+  // Jie: merge time slotss
+  void MergeATimeSlot(TimeSlot *tgtTimeSlot);
+  void MergeATimeSlot(TimeSlot *startTimeSlot, TimeSlot *endTimeSlot);
+  void MergeATimeSlotCH(TimeSlot *tgtTimeSlot);
+  void MergeATimeSlotDIE(TimeSlot *tgtTimeSlot);
+  TimeSlot *InsertAfter(TimeSlot *tgtTimeSlot, uint64_t tickLen,
+                        uint64_t tickFrom);
 
-    TimeSlot* FindFreeTime(TimeSlot* tgtTimeSlot, uint64_t tickLen, uint64_t tickFrom); // you can insert a tickLen TimeSlot after Returned TimeSlot.
+  TimeSlot *FindFreeTime(TimeSlot *tgtTimeSlot, uint64_t tickLen,
+                         uint64_t tickFrom);  // you can insert a tickLen
+                                              // TimeSlot after Returned
+                                              // TimeSlot.
 
-    //Jie: return: FreeSlot is found?
-    bool FindFreeTime(std::map<uint64_t, std::map<uint64_t, uint64_t>* >& tgtFreeSlot, uint64_t tickLen, uint64_t & tickFrom, uint64_t & startTick, bool & conflicts);
-    void InsertFreeSlot(std::map<uint64_t, std::map<uint64_t, uint64_t>* >& tgtFreeSlot, uint64_t tickLen, uint64_t tickFrom, uint64_t startTick, uint64_t & startPoint, bool split);
-    void AddFreeSlot(std::map<uint64_t, std::map<uint64_t, uint64_t>* >& tgtFreeSlot, uint64_t tickLen, uint64_t tickFrom);
-    void FlushFreeSlots(uint64_t currentTick);
-    void FlushAFreeSlot(std::map<uint64_t, std::map<uint64_t, uint64_t>* >& tgtFreeSlot, uint64_t currentTick);
-    uint8_t VerifyTimeLines(uint8_t print_on);
+  // Jie: return: FreeSlot is found?
+  bool FindFreeTime(
+      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      uint64_t tickLen, uint64_t &tickFrom, uint64_t &startTick,
+      bool &conflicts);
+  void InsertFreeSlot(
+      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      uint64_t tickLen, uint64_t tickFrom, uint64_t startTick,
+      uint64_t &startPoint, bool split);
+  void AddFreeSlot(
+      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      uint64_t tickLen, uint64_t tickFrom);
+  void FlushFreeSlots(uint64_t currentTick);
+  void FlushAFreeSlot(
+      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      uint64_t currentTick);
+  uint8_t VerifyTimeLines(uint8_t print_on);
 
-
-    //PPN Conversion related //ToDo: Shifted-Mode is also required for better performance.
-    uint32_t RearrangedSizes[7];
-    uint8_t AddrRemap[6];
-    uint32_t CPDPBPtoDieIdx(CPDPBP* pCPDPBP);
-    void printCPDPBP(CPDPBP* pCPDPBP);
-    void PPNdisassemble(uint64_t* pPPN, CPDPBP* pCPDPBP);
-    void AssemblePPN(CPDPBP* pCPDPBP, uint64_t* pPPN);
+  // PPN Conversion related //ToDo: Shifted-Mode is also required for better
+  // performance.
+  uint32_t RearrangedSizes[7];
+  uint8_t AddrRemap[6];
+  uint32_t CPDPBPtoDieIdx(CPDPBP *pCPDPBP);
+  void printCPDPBP(CPDPBP *pCPDPBP);
+  void PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP);
+  void AssemblePPN(CPDPBP *pCPDPBP, uint64_t *pPPN);
 };
 
 #endif

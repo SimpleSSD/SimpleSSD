@@ -8,35 +8,36 @@
 //  Modified by Donghyun Gouk <kukdh1@camelab.org>
 //
 
+#include "PAL2.h"
 #include "ftl.hh"
 #include "ftl_statistics.hh"
-#include "PAL2.h"
 
 #ifndef MAX
-#define MAX(x, y)   ((x) > (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 #endif
 
-FTL::FTL(Parameter *p, PAL2 *pal2) :
-  param(p), pal(pal2) {
+FTL::FTL(Parameter *p, PAL2 *pal2) : param(p), pal(pal2) {
   FTLmapping = new HybridMapping(this);
 }
 
-FTL::~FTL(){
+FTL::~FTL() {
   delete param;
 }
 
-bool FTL::initialize(){
-  std::cout << "Total physical block/page "  << param->physical_block_number << "  " << param->physical_page_number << endl;
-  std::cout << "Total logical block/page "  << param->logical_block_number << "  " << param->logical_page_number << endl;
+bool FTL::initialize() {
+  std::cout << "Total physical block/page " << param->physical_block_number
+            << "  " << param->physical_page_number << endl;
+  std::cout << "Total logical block/page " << param->logical_block_number
+            << "  " << param->logical_page_number << endl;
 
-  for (Addr i = 0; i < param->logical_block_number; i++){
+  for (Addr i = 0; i < param->logical_block_number; i++) {
     int to_fill_page_number = (param->page_per_block * param->warmup);
-    if (to_fill_page_number > param->page_per_block)  {
+    if (to_fill_page_number > param->page_per_block) {
       cout << "error in initialization " << endl;
       return false;
     }
     if (to_fill_page_number != 0) {
-      write (i * param->page_per_block, to_fill_page_number, 0, true);
+      write(i * param->page_per_block, to_fill_page_number, 0, true);
     }
   }
   std::cout << "Initialization done! " << std::endl;
@@ -110,7 +111,8 @@ Tick FTL::readInternal(Addr ppn, Tick now, bool flag) {
   Command cmd = Command(now, ppn, OPER_READ, param->page_byte);
   cmd.mergeSnapshot = flag;
 
-  pal->submit(cmd, ppn / param->logical_page_number, ppn % param->logical_page_number);
+  pal->submit(cmd, ppn / param->logical_page_number,
+              ppn % param->logical_page_number);
 
   return cmd.finished;
 }
@@ -119,7 +121,8 @@ Tick FTL::writeInternal(Addr ppn, Tick now, bool flag) {
   Command cmd = Command(now, ppn, OPER_WRITE, param->page_byte);
   cmd.mergeSnapshot = flag;
 
-    pal->submit(cmd, ppn / param->logical_page_number, ppn % param->logical_page_number);
+  pal->submit(cmd, ppn / param->logical_page_number,
+              ppn % param->logical_page_number);
 
   return cmd.finished;
 }
@@ -127,7 +130,7 @@ Tick FTL::writeInternal(Addr ppn, Tick now, bool flag) {
 Tick FTL::eraseInternal(Addr ppn, Tick now) {
   Command cmd = Command(now, ppn, OPER_ERASE, 0);
 
-    pal->submit(cmd, ppn / param->logical_page_number, 0);
+  pal->submit(cmd, ppn / param->logical_page_number, 0);
 
   return cmd.finished;
 }
@@ -139,7 +142,7 @@ void FTL::PrintStats(Tick sim_time) {
 }
 
 void FTL::PrintFinalStats(Tick sim_time) {
-  //que->PrintStats();
-  //FTLmapping->PrintStats();
+  // que->PrintStats();
+  // FTLmapping->PrintStats();
   ftl_statistics.print_final_stats(sim_time);
 }

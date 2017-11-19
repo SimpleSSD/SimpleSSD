@@ -167,7 +167,8 @@ void PALStatistics::ValueOper::printstat(
   //   }
   //   else {
   //     DPRINTF(PAL,
-  //             "%s, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64
+  //             "%s, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %"
+  //             PRIu64
   //             "\n",
   //             OPER_STR[i], (uint64_t)vals[i].avg(), (uint64_t)vals[i].cnt,
   //             (uint64_t)vals[i].sum, (uint64_t)vals[i].minval,
@@ -176,13 +177,49 @@ void PALStatistics::ValueOper::printstat(
   // }
 }
 
+void PALStatistics::ValueOper::printstat_energy(const char *namestr) {
+  /*     char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+       printf( "[ %s ]:\n", namestr);
+       printf( "PAL: OPER, AVERAGE(nJ), COUNT, TOTAL(uJ)\n");
+
+       for (int i=0;i<OPER_ALL;i++)
+       {
+          if(vals[i].cnt == 0)
+          {
+                  printf( "PAL: %s, ( NO DATA )\n", OPER_STR[i]);
+          }
+          else
+          {
+                  printf( "PAL: %s, %llu, %llu, %llu\n",
+                     OPER_STR[i], (uint64_t)vals[i].avg()/1000000,
+     (uint64_t)vals[i].cnt, (uint64_t)vals[i].sum/1000000);
+          }
+      }
+  */
+}
+
+// power
+void PALStatistics::PrintDieIdleTicks(
+    uint32_t die_num, uint64_t sim_time_ps,
+    uint64_t idle_power_nw) { /*
+                                  uint64_t active_time_ps =
+                                 Ticks_Active_die[die_num].vals[OPER_ALL -
+                                 1].sum; uint64_t idle_time_ps = sim_time_ps -
+                                 active_time_ps; uint64_t idle_energy =
+                                 idle_power_nw * idle_time_ps;
+
+                                  printf("PAL: Idle(pJ), Die%d, %llu\n",
+                                 die_num, idle_energy/1000000000); */
+}
+
 void PALStatistics::ValueOper::printstat_bandwidth(
     class ValueOper *Access_Capacity, uint64_t ExactBusyTime,
     uint64_t LastExactBusyTime) {
   // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
   // for (int i = 0; i < OPER_ALL; i++) {
   //   if (ExactBusyTime > LastExactBusyTime) {
-  //     // printf("sum=%f\tsampled_sum=%f\n",Access_Capacity->vals[i].sum,Access_Capacity->vals[i].sampled_sum);
+  //     //
+  //     printf("sum=%f\tsampled_sum=%f\n",Access_Capacity->vals[i].sum,Access_Capacity->vals[i].sampled_sum);
   //     this->exclusive_add(
   //         i, (Access_Capacity->vals[i].sum -
   //             Access_Capacity->vals[i].sampled_sum) *
@@ -192,8 +229,8 @@ void PALStatistics::ValueOper::printstat_bandwidth(
   //   if (vals[i].cnt == 0) {
   //     DPRINTF(
   //         PAL,
-  //         "%s bandwidth excluding idle time (min, max, average): ( NO DATA )\n",
-  //         OPER_STR[i]);
+  //         "%s bandwidth excluding idle time (min, max, average): ( NO DATA
+  //         )\n", OPER_STR[i]);
   //   }
   //   else {
   //     DPRINTF(PAL,
@@ -214,14 +251,16 @@ void PALStatistics::ValueOper::printstat_bandwidth_widle(
   //   assert(ExecutionTime > LastExecutionTime);
   //   this->exclusive_add(
   //       i,
-  //       (Access_Capacity->vals[i].sum - Access_Capacity->vals[i].sampled_sum) *
-  //           1.0 / MBYTE / ((ExecutionTime - LastExecutionTime) * 1.0 / PSEC));
+  //       (Access_Capacity->vals[i].sum - Access_Capacity->vals[i].sampled_sum)
+  //       *
+  //           1.0 / MBYTE / ((ExecutionTime - LastExecutionTime) * 1.0 /
+  //           PSEC));
   //
   //   if (vals[i].cnt == 0) {
   //     DPRINTF(
   //         PAL,
-  //         "%s bandwidth including idle time (min, max, average): ( NO DATA )\n",
-  //         OPER_STR[i]);
+  //         "%s bandwidth including idle time (min, max, average): ( NO DATA
+  //         )\n", OPER_STR[i]);
   //   }
   //   else {
   //     DPRINTF(PAL,
@@ -253,7 +292,8 @@ void PALStatistics::ValueOper::printstat_oper_bandwidth(
   //   }
   //   else {
   //     DPRINTF(PAL,
-  //             "%s-only bandwidth (min, max, average): %.6lf MB/s, %.6lf MB/s, "
+  //             "%s-only bandwidth (min, max, average): %.6lf MB/s, %.6lf MB/s,
+  //             "
   //             "%.6lf MB/s\n",
   //             OPER_STR[i], vals[i].minval, vals[i].maxval,
   //             (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
@@ -274,8 +314,8 @@ void PALStatistics::ValueOper::printstat_iops(class ValueOper *Access_Capacity,
   //                1.0 / ((ExactBusyTime - LastExactBusyTime) * 1.0 / PSEC));
   //   if (vals[i].cnt == 0) {
   //     DPRINTF(PAL,
-  //             "%s IOPS excluding idle time (min, max, average): ( NO DATA )\n",
-  //             OPER_STR[i]);
+  //             "%s IOPS excluding idle time (min, max, average): ( NO DATA
+  //             )\n", OPER_STR[i]);
   //   }
   //   else {
   //     DPRINTF(
@@ -283,7 +323,8 @@ void PALStatistics::ValueOper::printstat_iops(class ValueOper *Access_Capacity,
   //         "%s IOPS excluding idle time (min, max, average): %.6lf, %.6lf, "
   //         "%.6lf\n",
   //         OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExactBusyTime)*1.0 / PSEC));
+  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExactBusyTime)*1.0 /
+  //         PSEC));
   //   }
   // }
 }
@@ -295,12 +336,13 @@ void PALStatistics::ValueOper::printstat_iops_widle(
   // for (int i = 0; i < OPER_ALL; i++) {
   //   this->exclusive_add(
   //       i,
-  //       (Access_Capacity->vals[i].cnt - Access_Capacity->vals[i].sampled_cnt) *
+  //       (Access_Capacity->vals[i].cnt - Access_Capacity->vals[i].sampled_cnt)
+  //       *
   //           1.0 / ((ExecutionTime - LastExecutionTime) * 1.0 / PSEC));
   //   if (vals[i].cnt == 0) {
   //     DPRINTF(PAL,
-  //             "%s IOPS including idle time (min, max, average): ( NO DATA )\n",
-  //             OPER_STR[i]);
+  //             "%s IOPS including idle time (min, max, average): ( NO DATA
+  //             )\n", OPER_STR[i]);
   //   }
   //   else {
   //     DPRINTF(
@@ -308,7 +350,8 @@ void PALStatistics::ValueOper::printstat_iops_widle(
   //         "%s IOPS including idle time (min, max, average): %.6lf, %.6lf, "
   //         "%.6lf\n",
   //         OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExecutionTime)*1.0 / PSEC));
+  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExecutionTime)*1.0 /
+  //         PSEC));
   //   }
   // }
 }
@@ -367,7 +410,7 @@ PALStatistics::PALStatistics(SimpleSSD::PAL::Config *c, Latency *l)
 }
 
 PALStatistics::~PALStatistics() {
-//  PrintStats(curTick());
+  //  PrintStats(curTick());
   ClearStats();
 }
 
@@ -390,7 +433,8 @@ void PALStatistics::InitStats() {
   totalDie *= gconf->readUint(SimpleSSD::PAL::PAL_PACKAGE);
   totalDie *= gconf->readUint(SimpleSSD::PAL::NAND_DIE);
 
-  PPN_requested_ch = new CounterOper[gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL)];
+  PPN_requested_ch =
+      new CounterOper[gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL)];
   PPN_requested_die = new CounterOper[totalDie];
   Ticks_Active_ch = new ValueOper[gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL)];
   Ticks_Active_die = new ValueOper[totalDie];
@@ -414,6 +458,12 @@ void PALStatistics::InitStats() {
   Ticks_DMA1.init();
   Ticks_Total.init();
   Ticks_TotalOpti.init();
+  // Ticks_Active_ch
+  Energy_DMA0.init();
+  Energy_MEM.init();
+  Energy_DMA1.init();
+  Energy_Total.init();
+
   // Ticks_Active_ch
   // Ticks_Active_die
   Access_Capacity.init();
@@ -537,6 +587,19 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   Ticks_DMA1.add(oper, time_all[TICK_DMA1]);
   Ticks_Total.add(oper, time_all[TICK_FULL]);
   //***********************************************
+  // power - energy unit (fJ) = n(-9) x ps(-12) / +6
+  uint64_t energy_dma0 =
+      lat->GetPower(CMD.operation, BUSY_DMA0) * time_all[TICK_DMA0] / 1000000;
+  uint64_t energy_mem =
+      lat->GetPower(CMD.operation, BUSY_MEM) * time_all[TICK_MEM] / 1000000;
+  uint64_t energy_dma1 =
+      lat->GetPower(CMD.operation, BUSY_DMA1) * time_all[TICK_DMA1] / 1000000;
+  Energy_DMA0.add(oper, energy_dma0);
+  Energy_MEM.add(oper, energy_mem);
+  Energy_DMA1.add(oper, energy_dma1);
+  Energy_Total.add(oper, energy_dma0 + energy_mem + energy_dma1);
+  // printf("[Energy(fJ) of Oper(%d)] DMA0(%llu) MEM(%llu) DMA1(%llu)\n", oper,
+  // energy_dma0, energy_mem, energy_dma1);
   uint64_t finished_time = CMD.finished;
   uint64_t update_point = finished_time / EPOCH_INTERVAL;
   std::map<uint64_t, ValueOper *>::iterator e =
@@ -578,18 +641,24 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
                                (time_all[TICK_DMA0] + time_all[TICK_MEM] +
                                 time_all[TICK_DMA1WAIT] + time_all[TICK_DMA1]));
   if (oper == OPER_ERASE)
-    Access_Capacity.add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) * gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
+    Access_Capacity.add(
+        oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) *
+                  gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
   else
-    Access_Capacity.add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
+    Access_Capacity.add(
+        oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
   //************************************************
   update_point = finished_time / EPOCH_INTERVAL;
   std::map<uint64_t, ValueOper *>::iterator f =
       Access_Capacity_snapshot.find(update_point);
   if (f != Access_Capacity_snapshot.end()) {
     if (oper == OPER_ERASE)
-      f->second->add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) * gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
+      f->second->add(oper,
+                     gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) *
+                         gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
     else
-      f->second->add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
+      f->second->add(
+          oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
   }
   else {
     f = Access_Capacity_snapshot.upper_bound(update_point);
@@ -613,7 +682,8 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
 
     if (oper == OPER_ERASE)
       Access_Capacity_snapshot[update_point]->add(
-          oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) * gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
+          oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) *
+                    gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
     else
       Access_Capacity_snapshot[update_point]->add(
           oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
@@ -621,9 +691,12 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   f = Access_Capacity_snapshot.upper_bound(update_point);
   while (f != Access_Capacity_snapshot.end()) {
     if (oper == OPER_ERASE)
-      f->second->add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) * gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
+      f->second->add(oper,
+                     gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE) *
+                         gconf->readUint(SimpleSSD::PAL::NAND_PAGE));  // ERASE
     else
-      f->second->add(oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
+      f->second->add(
+          oper, gconf->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE));  // READ,WRITE
     f = Access_Capacity_snapshot.upper_bound(f->first);
   }
 //************************************************
@@ -706,6 +779,16 @@ void PALStatistics::PrintFinalStats(uint64_t sim_time_ps) {
   Ticks_DMA1.printstat("Info of DMA1 Tick");
   Ticks_Total.printstat("Info of TOTAL(D0W+D0+M+D1W+D1) Tick");
   Ticks_TotalOpti.printstat("Info of OPTIMUM(D0+M+D1) Tick");
+  // power
+  printf("===================\n");
+  Energy_DMA0.printstat_energy("Energy consumption of DMA0");
+  Energy_MEM.printstat_energy("Energy consumption of MEM");
+  Energy_DMA1.printstat_energy("Energy consumption of DAM1");
+  Energy_Total.printstat_energy("Total Energy consumption");
+  printf("-------------------\n");
+  for (uint32_t i = 0; i < totalDie; i++) {
+    PrintDieIdleTicks(i, sim_time_ps, lat->GetPower(10, 10));
+  }
   printf("===================\n");
 
   for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
@@ -724,17 +807,17 @@ void PALStatistics::PrintFinalStats(uint64_t sim_time_ps) {
 }
 
 void PALStatistics::PrintStats(uint64_t sim_time_ps) {
-  // uint64_t elapsed_time_ps = (sim_time_ps - sim_start_time_ps) + 1;
-  // if (LastExecutionTime == 0)
-  //   LastExecutionTime = sim_start_time_ps;
-  // DPRINTF(PAL, "Execution time = %" PRIu64 "\n", sim_time_ps);
-  // DPRINTF(PAL, "Last Execution time = %" PRIu64 "\n", LastExecutionTime);
-  // if (sim_start_time_ps >= sim_time_ps)  // abnormal case
-  // {
-  //   elapsed_time_ps = sim_time_ps + 1;
-  // }
+// uint64_t elapsed_time_ps = (sim_time_ps - sim_start_time_ps) + 1;
+// if (LastExecutionTime == 0)
+//   LastExecutionTime = sim_start_time_ps;
+// DPRINTF(PAL, "Execution time = %" PRIu64 "\n", sim_time_ps);
+// DPRINTF(PAL, "Last Execution time = %" PRIu64 "\n", LastExecutionTime);
+// if (sim_start_time_ps >= sim_time_ps)  // abnormal case
+// {
+//   elapsed_time_ps = sim_time_ps + 1;
+// }
 
-  // DPRINTF(PAL, "[ PAL Stats ]\n");
+// DPRINTF(PAL, "[ PAL Stats ]\n");
 
 #if 1
 #define SIM_TIME_SEC ((long double)elapsed_time_ps / PSEC)
@@ -744,15 +827,15 @@ void PALStatistics::PrintStats(uint64_t sim_time_ps) {
                  Access_Capacity.vals[OPER_WRITE].sum) / \
    MBYTE)
 
-  // fDPRINTF(PAL, "Sim.Time :  %Lf Sec. , %" PRIu64 " ps\n", SIM_TIME_SEC,
-  //          elapsed_time_ps);
-  // fDPRINTF(PAL, "Transferred :  %Lf MB\n", TRANSFER_TOTAL_MB);
-  // fDPRINTF(PAL, "Performance: %Lf MB/Sec\n",
-  //          (long double)TRANSFER_TOTAL_MB / SIM_TIME_SEC);
-  // fDPRINTF(PAL, "Busy Sim.Time: %Lf Sec. , %" PRIu64 " ps\n", BUSY_TIME_SEC,
-  //          ExactBusyTime);
-  // fDPRINTF(PAL, "Busy Performance: %Lf MB/Sec\n",
-  //          (long double)TRANSFER_TOTAL_MB / BUSY_TIME_SEC);
+// fDPRINTF(PAL, "Sim.Time :  %Lf Sec. , %" PRIu64 " ps\n", SIM_TIME_SEC,
+//          elapsed_time_ps);
+// fDPRINTF(PAL, "Transferred :  %Lf MB\n", TRANSFER_TOTAL_MB);
+// fDPRINTF(PAL, "Performance: %Lf MB/Sec\n",
+//          (long double)TRANSFER_TOTAL_MB / SIM_TIME_SEC);
+// fDPRINTF(PAL, "Busy Sim.Time: %Lf Sec. , %" PRIu64 " ps\n", BUSY_TIME_SEC,
+//          ExactBusyTime);
+// fDPRINTF(PAL, "Busy Performance: %Lf MB/Sec\n",
+//          (long double)TRANSFER_TOTAL_MB / BUSY_TIME_SEC);
 #endif
 
 #if 1  // Polished stats - Improved instrumentation
@@ -769,7 +852,8 @@ void PALStatistics::PrintStats(uint64_t sim_time_ps) {
     }
     // DPRINTF(PAL, "===================\n");
 
-    for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
+    for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
+         i++) {
       char str[256];
       sprintf(str, "Num of CH_%u PPN IO request", i);
       PPN_requested_ch[i].printstat(str);
@@ -801,7 +885,8 @@ void PALStatistics::PrintStats(uint64_t sim_time_ps) {
     Ticks_TotalOpti.printstat("Info of OPTIMUM(D0+M+D1) Tick");
     // DPRINTF(PAL, "===================\n");
 
-    for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL); i++) {
+    for (uint32_t i = 0; i < gconf->readUint(SimpleSSD::PAL::PAL_CHANNEL);
+         i++) {
       char str[256];
       sprintf(str, "Info of CH_%u Active Tick", i);
       Ticks_Active_ch[i].printstat(str);

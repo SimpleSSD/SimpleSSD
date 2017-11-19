@@ -33,15 +33,22 @@ typedef struct _Command {
   Addr ppn;
   PAL_OPERATION operation;
   bool mergeSnapshot;
-  size_t size;
+  uint64_t size;
 
-  _Command() :
-    arrived(0), finished(0), ppn(0),
-    operation(OPER_NUM), mergeSnapshot(false),
-    size(0) {}
-  _Command(Tick t, Addr a, PAL_OPERATION op, size_t s) :
-    arrived(t), finished(0), ppn(a), operation(op),
-    mergeSnapshot(false), size(s) {}
+  _Command()
+      : arrived(0),
+        finished(0),
+        ppn(0),
+        operation(OPER_NUM),
+        mergeSnapshot(false),
+        size(0) {}
+  _Command(Tick t, Addr a, PAL_OPERATION op, uint64_t s)
+      : arrived(t),
+        finished(0),
+        ppn(a),
+        operation(op),
+        mergeSnapshot(false),
+        size(s) {}
 
   Tick getLatency() {
     if (finished > 0) {
