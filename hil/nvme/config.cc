@@ -159,10 +159,6 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-float Config::readFloat(uint32_t idx) {
-  return 0.f;
-}
-
 std::string Config::readString(uint32_t idx) {
   std::string ret("");
 

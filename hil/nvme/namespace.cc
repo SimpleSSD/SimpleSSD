@@ -36,7 +36,8 @@ Namespace::Namespace(Subsystem *p, ConfigData *c)
       conf(c->pConfigReader->nvmeConfig),
       nsid(NSID_NONE),
       attached(false),
-      allocated(false) {}
+      allocated(false),
+      formatFinishedAt(0) {}
 
 Namespace::~Namespace() {
   if (pDisk) {
@@ -164,16 +165,24 @@ void Namespace::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint32_t req_size = (((uint32_t)numdu << 16 | numdl) + 1) * 4;
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
 
+  DMAInterface *dma = nullptr;
+
   Logger::debugprint(Logger::LOG_HIL_NVME,
                      "ADMIN   | Get Log Page | Log %d | Size %d | NSID %d", lid,
                      req_size, nsid);
 
-  PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)req_size);
+  if (req.useSGL) {
+    dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+  }
+  else {
+    dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                      (uint64_t)req_size);
+  }
 
   switch (lid) {
     case LOG_SMART_HEALTH_INFORMATION:
       if (req.entry.namespaceID == nsid) {
-        PRP.write(offset, 512, health.data, tick);
+        dma->write(offset, 512, health.data, tick);
       }
       else {
         resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
@@ -218,6 +227,8 @@ void Namespace::write(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
   uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
 
+  DMAInterface *dma = nullptr;
+
   if (!attached) {
     err = true;
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
@@ -235,21 +246,26 @@ void Namespace::write(SQEntryWrapper &req, CQEntryWrapper &resp,
     uint64_t diff = tick;
     uint64_t dmaDelayed;
 
-    PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2,
-                (uint64_t)nlb * info.lbaSize);
+    if (req.useSGL) {
+      dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+    }
+    else {
+      dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                        (uint64_t)nlb * info.lbaSize);
+    }
 
-    pParent->write(this, slba, nlb, PRP, tick);
+    pParent->write(this, slba, nlb, tick);
 
     if (pDisk) {
       uint8_t *buffer = (uint8_t *)calloc(nlb, info.lbaSize);
 
-      dmaDelayed = PRP.read(0, nlb * info.lbaSize, buffer, dmaTick);
+      dmaDelayed = dma->read(0, nlb * info.lbaSize, buffer, dmaTick);
       pDisk->write(slba, nlb, buffer);
 
       free(buffer);
     }
     else {
-      dmaDelayed = PRP.read(0, nlb * info.lbaSize, nullptr, dmaTick);
+      dmaDelayed = dma->read(0, nlb * info.lbaSize, nullptr, dmaTick);
     }
 
     Logger::debugprint(Logger::LOG_HIL_NVME,
@@ -271,6 +287,8 @@ void Namespace::read(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
   // bool fua = req.entry.dword12 & 0x40000000;
 
+  DMAInterface *dma = nullptr;
+
   if (!attached) {
     err = true;
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
@@ -288,21 +306,26 @@ void Namespace::read(SQEntryWrapper &req, CQEntryWrapper &resp,
     uint64_t diff = tick;
     uint64_t dmaDelayed;
 
-    PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2,
-                (uint64_t)nlb * info.lbaSize);
+    if (req.useSGL) {
+      dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+    }
+    else {
+      dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                        (uint64_t)nlb * info.lbaSize);
+    }
 
-    pParent->read(this, slba, nlb, PRP, tick);
+    pParent->read(this, slba, nlb, tick);
 
     if (pDisk) {
       uint8_t *buffer = (uint8_t *)calloc(nlb, info.lbaSize);
 
       pDisk->read(slba, nlb, buffer);
-      dmaDelayed = PRP.write(0, nlb * info.lbaSize, buffer, dmaTick);
+      dmaDelayed = dma->write(0, nlb * info.lbaSize, buffer, dmaTick);
 
       free(buffer);
     }
     else {
-      dmaDelayed = PRP.write(0, nlb * info.lbaSize, nullptr, dmaTick);
+      dmaDelayed = dma->write(0, nlb * info.lbaSize, nullptr, dmaTick);
     }
 
     Logger::debugprint(Logger::LOG_HIL_NVME,
@@ -323,6 +346,8 @@ void Namespace::datasetManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
   int nr = (req.entry.dword10 & 0xFF) + 1;
   bool ad = req.entry.dword11 & 0x04;
 
+  DMAInterface *dma = nullptr;
+
   if (!attached) {
     err = true;
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
@@ -337,10 +362,16 @@ void Namespace::datasetManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
     static DatasetManagementRange range;
     uint64_t beginAt = tick;
 
-    PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)0x1000);
+    if (req.useSGL) {
+      dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+    }
+    else {
+      dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                        (uint64_t)0x1000);
+    }
 
     for (int i = 0; i < nr; i++) {
-      PRP.read(i * 0x10, 0x10, range.data, tick);
+      dma->read(i * 0x10, 0x10, range.data, tick);
       pParent->trim(this, range.slba, range.nlb, tick);
     }
 

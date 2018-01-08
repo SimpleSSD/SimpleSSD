@@ -23,6 +23,6 @@ if env['TARGET_ISA'] == 'null':
     Return()
 
 Source('config.cc')
-Source('cache.cc')
+Source('abstract_cache.cc')
 Source('generic_cache.cc')
 Source('icl.cc')

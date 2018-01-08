@@ -30,16 +30,27 @@ const char NAME_USE_READ_CACHE[] = "EnableReadCache";
 const char NAME_USE_WRITE_CACHE[] = "EnableWriteCache";
 const char NAME_USE_READ_PREFETCH[] = "EnableReadPrefetch";
 const char NAME_EVICT_POLICY[] = "EvictPolicy";
-const char NAME_SET_SIZE[] = "CacheSetSize";
+const char NAME_CACHE_SIZE[] = "CacheSize";
 const char NAME_WAY_SIZE[] = "CacheWaySize";
+const char NAME_PREFETCH_COUNT[] = "ReadPrefetchCount";
+
+// TODO: seperate This
+const char NAME_DRAM_CHANNEL[] = "DRAMChannel";
+const char NAME_DRAM_BUS_WIDTH[] = "DRAMBusWidth";
+const char NAME_DRAM_PAGE_SIZE[] = "DRAMPageSize";
+const char NAME_DRAM_TIMING_CK[] = "DRAMtCK";
+const char NAME_DRAM_TIMING_RCD[] = "DRAMtRCD";
+const char NAME_DRAM_TIMING_CL[] = "DRAMtCL";
+const char NAME_DRAM_TIMING_RP[] = "DRAMtRP";
 
 Config::Config() {
   readCaching = false;
   writeCaching = true;
   readPrefetch = false;
   evictPolicy = POLICY_LEAST_RECENTLY_USED;
-  cacheSetSize = 8192;
+  cacheSize = 33554432;
   cacheWaySize = 1;
+  prefetchCount = 1;
 
   /* LPDDR3-1600 4Gbit 1x32 */
   dram.channel = 1;
@@ -113,14 +124,38 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_USE_READ_PREFETCH)) {
     readPrefetch = convertBool(value);
   }
+  else if (MATCH_NAME(NAME_PREFETCH_COUNT)) {
+    prefetchCount = strtoul(value, nullptr, 10);
+  }
   else if (MATCH_NAME(NAME_EVICT_POLICY)) {
     evictPolicy = (EVICT_POLICY)strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_SET_SIZE)) {
-    cacheSetSize = strtoul(value, nullptr, 10);
+  else if (MATCH_NAME(NAME_CACHE_SIZE)) {
+    cacheSize = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_WAY_SIZE)) {
     cacheWaySize = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_CHANNEL)) {
+    dram.channel = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_BUS_WIDTH)) {
+    dram.busWidth = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_PAGE_SIZE)) {
+    dram.pageSize = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_CK)) {
+    dramTiming.tCK = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RCD)) {
+    dramTiming.tRCD = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_CL)) {
+    dramTiming.tCL = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RP)) {
+    dramTiming.tRP = strtoul(value, nullptr, 10);
   }
   else {
     ret = false;
@@ -130,11 +165,8 @@ bool Config::setConfig(const char *name, const char *value) {
 }
 
 void Config::update() {
-  if (popcount(cacheSetSize) != 1) {
-    Logger::panic("cache set size should be power of 2");
-  }
-  if (popcount(cacheWaySize) != 1) {
-    Logger::panic("cache entry size should be power of 2");
+  if (prefetchCount == 0) {
+    Logger::panic("Invalid ReadPrefetchCount");
   }
 }
 
@@ -154,11 +186,14 @@ uint64_t Config::readUint(uint32_t idx) {
   uint64_t ret = 0;
 
   switch (idx) {
-    case ICL_SET_SIZE:
-      ret = cacheSetSize;
+    case ICL_CACHE_SIZE:
+      ret = cacheSize;
       break;
     case ICL_WAY_SIZE:
       ret = cacheWaySize;
+      break;
+    case ICL_PREFETCH_COUNT:
+      ret = prefetchCount;
       break;
     case DRAM_CHANNEL:
       ret = dram.channel;
@@ -332,12 +367,6 @@ float Config::readFloat(uint32_t idx) {
       ret = dramPower.pVDD[1];
       break;
   }
-
-  return ret;
-}
-
-std::string Config::readString(uint32_t idx) {
-  std::string ret("");
 
   return ret;
 }

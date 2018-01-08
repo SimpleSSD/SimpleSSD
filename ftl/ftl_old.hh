@@ -43,11 +43,11 @@ class FTLOLD : public AbstractFTL {
   FTLOLD(Parameter *, PAL::PAL *, ConfigReader *);
   ~FTLOLD();
 
-  bool initialize();
+  bool initialize() override;
 
-  void read(Request &, uint64_t &);
-  void write(Request &, uint64_t &);
-  void trim(Request &, uint64_t &);
+  void read(Request &, uint64_t &) override;
+  void write(Request &, uint64_t &) override;
+  void trim(Request &, uint64_t &) override;
 
   void format(LPNRange &, uint64_t &) override;
 };

@@ -52,6 +52,7 @@ FTLOLD::FTLOLD(Parameter *p, PAL::PAL *l, ConfigReader *c)
   old.erase_cycle = pConf->readUint(FTL_BAD_BLOCK_THRESHOLD);
   old.page_byte = p->pageSize;
   old.page_per_block = p->pagesInBlock;
+  old.ioUnitInPage = p->ioUnitInPage;
 
   ftl = new ::FTL(&old, l);
 }

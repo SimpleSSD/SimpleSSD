@@ -164,18 +164,6 @@ float Config::readFloat(uint32_t idx) {
   return ret;
 }
 
-std::string Config::readString(uint32_t idx) {
-  std::string ret("");
-
-  return ret;
-}
-
-bool Config::readBoolean(uint32_t idx) {
-  bool ret = false;
-
-  return ret;
-}
-
 }  // namespace FTL
 
 }  // namespace SimpleSSD

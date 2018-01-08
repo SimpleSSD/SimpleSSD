@@ -79,6 +79,8 @@ typedef struct _SQEntryWrapper {
   uint16_t cqID;
   uint16_t sqHead;
 
+  bool useSGL;
+
   _SQEntryWrapper(SQEntry &, uint16_t, uint16_t, uint16_t);
 } SQEntryWrapper;
 
@@ -103,7 +105,7 @@ class Queue {
   uint16_t size;
   uint64_t stride;
 
-  PRPList *base;
+  DMAInterface *base;
 
  public:
   Queue(uint16_t, uint16_t);
@@ -114,7 +116,7 @@ class Queue {
   uint16_t getHead();
   uint16_t getTail();
   uint16_t getSize();
-  void setBase(PRPList *, uint64_t);
+  void setBase(DMAInterface *, uint64_t);
 };
 
 class CQueue : public Queue {

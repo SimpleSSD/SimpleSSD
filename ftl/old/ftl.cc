@@ -25,7 +25,9 @@ FTL::~FTL() {
 }
 
 bool FTL::initialize() {
-  SimpleSSD::FTL::Request req;
+  SimpleSSD::FTL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   std::cout << "Total physical block/page " << param->physical_block_number
             << "  " << param->physical_page_number << endl;

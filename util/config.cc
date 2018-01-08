@@ -57,6 +57,12 @@ bool ConfigReader::init(std::string file) {
   palConfig.update();
   tweakConfig.update();
 
+  // Check
+  if (tweakConfig.readBoolean(TWEAK_PARTIAL_IO) &&
+      ftlConfig.readUint(FTL::FTL_MAPPING_MODE) == FTL::NK_MAPPING) {
+    Logger::panic("Current N+K FTL does not support partial I/O tweak");
+  }
+
   return true;
 }
 
@@ -82,7 +88,7 @@ int ConfigReader::parserHandler(void *context, const char *section,
   }
 
   if (!handled) {
-    Logger::warn("Config [%s] %s = %s not handled\n", section, name, value);
+    Logger::warn("Config [%s] %s = %s not handled", section, name, value);
   }
 
   return 1;

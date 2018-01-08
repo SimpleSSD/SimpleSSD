@@ -560,7 +560,9 @@ bool HybridMapping::check_partial_merge(const Addr target_block,
 STATE HybridMapping::do_direct_erase(const Addr target_block,
                                      const Addr target_group,
                                      const Addr *target_lpns, Tick &tick) {
-  SimpleSSD::PAL::Request req;
+  SimpleSSD::PAL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   if (log_block_MT->removeLogBlock(target_group, target_block) != SUCCESS) {
     my_assert("Problem in direct erase: removing from log block list failed! ");
@@ -578,7 +580,9 @@ STATE HybridMapping::do_direct_erase(const Addr target_block,
 STATE HybridMapping::do_switch_merge(const Addr target_block,
                                      const Addr target_group,
                                      const Addr *target_lpns, Tick &tick) {
-  SimpleSSD::PAL::Request req;
+  SimpleSSD::PAL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   if (target_lpns[0] == -1) {
     my_assert("Fail to do switch merge");
@@ -616,7 +620,9 @@ STATE HybridMapping::do_switch_merge(const Addr target_block,
 STATE HybridMapping::do_reorder_merge(const Addr target_block,
                                       const Addr target_group,
                                       const Addr *target_lpns, Tick &tick) {
-  SimpleSSD::PAL::Request req;
+  SimpleSSD::PAL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   if (target_lpns[0]) {
     my_assert("Fail to do reorder merge");
@@ -683,7 +689,9 @@ STATE HybridMapping::do_reorder_merge(const Addr target_block,
 STATE HybridMapping::do_partial_merge(const Addr target_block,
                                       const Addr target_group,
                                       const Addr *target_lpns, Tick &tick) {
-  SimpleSSD::PAL::Request req;
+  SimpleSSD::PAL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   if (target_lpns[0] == -1) {
     my_assert("Fail to do partial merge");
@@ -740,7 +748,9 @@ STATE HybridMapping::do_partial_merge(const Addr target_block,
 STATE HybridMapping::do_full_merge(const Addr target_block,
                                    const Addr target_group,
                                    const Addr *target_lpns, Tick &tick) {
-  SimpleSSD::PAL::Request req;
+  SimpleSSD::PAL::Request req(param->ioUnitInPage);
+
+  req.ioFlag.set();
 
   for (int i = 0; i < param->page_per_block; i++) {
     if (physical_blocks[target_block].get_page_state(i) != Block::PAGE_VALID)
@@ -956,7 +966,8 @@ Tick HybridMapping::GarbageCollection(Tick tick) {
       }
     }
     if (max > 0) {
-      state = merge(selected_group_number * N_Data * param->page_per_block, tick);
+      state =
+          merge(selected_group_number * N_Data * param->page_per_block, tick);
     }
     else {
       gc_flag = false;

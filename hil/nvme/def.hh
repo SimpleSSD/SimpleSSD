@@ -32,6 +32,11 @@ namespace NVMe {
 #define NSID_LOWEST 0x00000001
 #define NSID_ALL 0xFFFFFFFF
 
+#define MAKE_SGL_ID(type, subtype) \
+  (uint8_t)(((type << 4) & 0xF0) | (subtype & 0x0F))
+#define SGL_TYPE(id) (uint8_t)(id >> 4)
+#define SGL_SUBTYPE(id) (uint8_t)(id & 0x0F)
+
 typedef union _HealthInfo {
   uint8_t data[0x200];
   struct {
@@ -53,6 +58,20 @@ typedef union _HealthInfo {
 
   _HealthInfo();
 } HealthInfo;
+
+typedef enum : uint8_t {
+  TYPE_DATA_BLOCK_DESCRIPTOR = 0x00,
+  TYPE_BIT_BUCKET_DESCRIPTOR = 0x01,
+  TYPE_SEGMENT_DESCRIPTOR = 0x02,
+  TYPE_LAST_SEGMENT_DESCRIPTOR = 0x03,
+  TYPE_KEYED_DATA_BLOCK_DESCRIPTOR = 0x04
+} SGL_DESCRIPTOR_TYPE;
+
+typedef enum : uint8_t {
+  SUBTYPE_ADDRESS = 0x00,
+  SUBTYPE_OFFSET = 0x01,
+  SUBTYPE_NVME_TRANSPORT_SPECIFIC = 0x02
+} SGL_DESCRIPTOR_SUBTYPE;
 
 typedef enum {
   PRIORITY_URGENT,
@@ -78,6 +97,14 @@ typedef enum {
 } COMMAND_REGISTER;
 
 typedef enum { ROUND_ROBIN, WEIGHTED_ROUND_ROBIN } ARBITRATION_METHOD;
+
+typedef enum {
+  OPCODE_PROPERTY_SET = 0x00,
+  OPCODE_CONNECT = 0x01,
+  OPCODE_PROPERTY_GET = 0x04,
+  OPCODE_AUTHENTICATION_SEND = 0x05,
+  OPCODE_AUTHENTICATION_RECEIVE = 0x06
+} FABRIC_OPCODE;
 
 typedef enum {
   OPCODE_DELETE_IO_SQUEUE = 0x00,

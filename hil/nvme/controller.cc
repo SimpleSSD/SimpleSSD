@@ -901,7 +901,7 @@ void Controller::identify(uint8_t *data) {
       // [31:21] Reserved
       // [20:20] 1 for Support Address field in SGL Data Block
       // [19:19] 1 for Support MPTR containing SGL descriptor
-      // [18:18] 1 for Support MPTR/DPTR containing SGL with larger than amouont
+      // [18:18] 1 for Support MPTR/DPTR containing SGL with larger than amount
       //         of data to be trasferred
       // [17:17] 1 for Support byte aligned contiguous physical buffer of
       //         metadata is supported
@@ -910,9 +910,9 @@ void Controller::identify(uint8_t *data) {
       // [02:02] 1 for Support Keyed SGL Data Block descriptor
       // [01:01] Reserved
       // [00:00] 1 for Support SGLs in NVM Command Set
-      data[0x0218] = 0x00;
+      data[0x0218] = 0x01;
       data[0x0219] = 0x00;
-      data[0x021A] = 0x00;
+      data[0x021A] = 0x17;
       data[0x021B] = 0x00;
     }
 

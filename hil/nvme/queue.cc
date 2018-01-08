@@ -19,6 +19,8 @@
 
 #include "hil/nvme/queue.hh"
 
+#include "log/trace.hh"
+
 namespace SimpleSSD {
 
 namespace HIL {
@@ -35,7 +37,11 @@ CQEntry::_CQEntry() {
 
 SQEntryWrapper::_SQEntryWrapper(SQEntry &sqdata, uint16_t sqid, uint16_t cqid,
                                 uint16_t sqhead)
-    : entry(sqdata), sqID(sqid), cqID(cqid), sqHead(sqhead) {}
+    : entry(sqdata), sqID(sqid), cqID(cqid), sqHead(sqhead), useSGL(true) {
+  if ((sqdata.dword0.fuse >> 6) == 0x00) {
+    useSGL = false;
+  }
+}
 
 CQEntryWrapper::_CQEntryWrapper(SQEntryWrapper &sqew) {
   cqID = sqew.cqID;
@@ -88,7 +94,7 @@ uint16_t Queue::getSize() {
   return size;
 }
 
-void Queue::setBase(PRPList *p, uint64_t s) {
+void Queue::setBase(DMAInterface *p, uint64_t s) {
   base = p;
   stride = s;
 }
@@ -114,18 +120,8 @@ void CQueue::setData(CQEntry *entry, uint64_t &tick) {
     }
 
     if (head == tail) {
-      // TODO: logging system
-      // panic("nvme_ctrl: Completion Queue Overflow!! CQID: %d, head: %d\n",
-      // qid, head);
+      Logger::panic("Completion queue overflow");
     }
-
-    /*
-    TODO: Logging system
-    DPRINTF(NVMeQueue,
-            "CQ %-5d| WRITE | Item count in queue %d | head %d | tail %d\n",
-            qid, getItemCount(), head, tail);
-    DPRINTF(NVMeBreakdown, "C%d|3|H%d|T%d|S%d|I%d\n", qid, head, tail,
-            entry->DW2.SQID, entry->DW3.CID); */
   }
 }
 
@@ -173,14 +169,6 @@ void SQueue::getData(SQEntry *entry, uint64_t &tick) {
     if (head == size) {
       head = 0;
     }
-
-    /*
-    TODO: logging system
-        DPRINTF(NVMeQueue,
-                "SQ %-5d| READ  | Item count in queue %d | head %d | tail %d\n",
-                qid, getItemCount(), head, tail);
-        DPRINTF(NVMeBreakdown, "S%d|1|H%d|T%d|I%d|N%u\n", qid, head, tail,
-                entry->CDW0.CID, entry->NSID); */
   }
 }
 

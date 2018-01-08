@@ -41,10 +41,12 @@ class PALOLD : public AbstractPAL {
   ::Latency *lat;
 
   void convertCPDPBP(Request &, std::vector<::CPDPBP> &);
+  void printCPDPBP(::CPDPBP &, const char *);
+  void printPPN(Request &, const char *);
 
  public:
   PALOLD(Parameter &, Config &);
-  ~PALOLD() override;
+  ~PALOLD();
 
   void read(Request &, uint64_t &) override;
   void write(Request &, uint64_t &) override;

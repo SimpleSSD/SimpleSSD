@@ -36,13 +36,13 @@ class BaseConfig {
 
  public:
   virtual bool setConfig(const char *, const char *) = 0;
-  virtual void update() = 0;
+  virtual void update() {};
 
-  virtual int64_t readInt(uint32_t) = 0;
-  virtual uint64_t readUint(uint32_t) = 0;
-  virtual float readFloat(uint32_t) = 0;
-  virtual std::string readString(uint32_t) = 0;
-  virtual bool readBoolean(uint32_t) = 0;
+  virtual int64_t readInt(uint32_t) { return 0; };
+  virtual uint64_t readUint(uint32_t) { return 0; };
+  virtual float readFloat(uint32_t) { return 0.f; };
+  virtual std::string readString(uint32_t) { return ""; };
+  virtual bool readBoolean(uint32_t) { return false; };
 };
 
 }  // namespace SimpleSSD

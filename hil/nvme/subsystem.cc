@@ -58,7 +58,6 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
   if (conf.readBoolean(NVME_ENABLE_DEFAULT_NAMESPACE)) {
     Namespace::Information info;
     uint32_t lba = (uint32_t)conf.readUint(NVME_LBA_SIZE);
-    uint32_t lbaRatio = logicalPageSize / lba;
 
     for (info.lbaFormatIndex = 0; info.lbaFormatIndex < nLBAFormat;
          info.lbaFormatIndex++) {
@@ -74,7 +73,7 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
     }
 
     // Fill Namespace information
-    info.size = totalLogicalPages * lbaRatio;
+    info.size = totalLogicalPages * logicalPageSize / lba;
     info.capacity = info.size;
     info.dataProtectionSettings = 0x00;
     info.namespaceSharingCapabilities = 0x00;
@@ -335,7 +334,7 @@ uint32_t Subsystem::validNamespaceCount() {
   return (uint32_t)lNamespaces.size();
 }
 
-void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
+void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk,
                      uint64_t &tick) {
   ICL::Request req;
   Namespace::Information *info = ns->getInfo();
@@ -357,7 +356,7 @@ void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk, PRPList &prp,
 }
 
 void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
-                      PRPList &prp, uint64_t &tick) {
+                      uint64_t &tick) {
   ICL::Request req;
   Namespace::Information *info = ns->getInfo();
   uint32_t lbaratio = logicalPageSize / info->lbaSize;
@@ -475,11 +474,19 @@ bool Subsystem::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,
   uint32_t req_size = (((uint32_t)numdu << 16 | numdl) + 1) * 4;
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
 
+  DMAInterface *dma = nullptr;
+
   Logger::debugprint(Logger::LOG_HIL_NVME,
                      "ADMIN   | Get Log Page | Log %d | Size %d | NSID %d", lid,
                      req_size, req.entry.namespaceID);
 
-  PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)req_size);
+  if (req.useSGL) {
+    dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+  }
+  else {
+    dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                      (uint64_t)req_size);
+  }
 
   switch (lid) {
     case LOG_ERROR_INFORMATION:
@@ -488,7 +495,7 @@ bool Subsystem::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,
     case LOG_SMART_HEALTH_INFORMATION:
       if (req.entry.namespaceID == NSID_ALL) {
         ret = true;
-        PRP.write(offset, 512, globalHealth.data, tick);
+        dma->write(offset, 512, globalHealth.data, tick);
       }
       break;
     case LOG_FIRMWARE_SLOT_INFORMATION:
@@ -567,13 +574,20 @@ bool Subsystem::identify(SQEntryWrapper &req, CQEntryWrapper &resp,
   bool ret = true;
 
   uint16_t idx = 0;
+  DMAInterface *dma = nullptr;
 
   memset(data, 0, 0x1000);
   Logger::debugprint(Logger::LOG_HIL_NVME,
                      "ADMIN   | Identify | CNS %d | CNTID %d | NSID %d", cns,
                      cntid, req.entry.namespaceID);
 
-  PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)0x1000);
+  if (req.useSGL) {
+    dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+  }
+  else {
+    dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                      (uint64_t)0x1000);
+  }
 
   switch (cns) {
     case CNS_IDENTIFY_NAMESPACE:
@@ -648,7 +662,7 @@ bool Subsystem::identify(SQEntryWrapper &req, CQEntryWrapper &resp,
   }
 
   if (ret && !err) {
-    PRP.write(0, 0x1000, data, tick);
+    dma->write(0, 0x1000, data, tick);
   }
 
   return ret;
@@ -775,6 +789,8 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
 
   uint8_t sel = req.entry.dword10 & 0x0F;
 
+  DMAInterface *dma = nullptr;
+
   Logger::debugprint(Logger::LOG_HIL_NVME,
                      "ADMIN   | Namespace Management | OP %d | NSID %d", sel,
                      req.entry.namespaceID);
@@ -806,10 +822,15 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
         static uint8_t data[0x1000];
         static Namespace::Information info;
 
-        PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2,
-                    (uint64_t)0x1000);
+        if (req.useSGL) {
+          dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+        }
+        else {
+          dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                            (uint64_t)0x1000);
+        }
 
-        PRP.read(0, 0x1000, data, tick);
+        dma->read(0, 0x1000, data, tick);
 
         // Copy data
         memcpy(&info.size, data + 0, 8);
@@ -862,14 +883,23 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req, CQEntryWrapper &resp,
   bool err = false;
 
   uint8_t sel = req.entry.dword10 & 0x0F;
+
   uint32_t ctrlList;
+  DMAInterface *dma = nullptr;
 
   Logger::debugprint(Logger::LOG_HIL_NVME,
                      "ADMIN   | Namespace Attachment | OP %d | NSID %d", sel,
                      req.entry.namespaceID);
 
-  PRPList PRP(pCfgdata, req.entry.data1, req.entry.data2, (uint64_t)0x1000);
-  PRP.read(0, 4, (uint8_t *)&ctrlList, tick);
+  if (req.useSGL) {
+    dma = new SGL(pCfgdata, req.entry.data1, req.entry.data2);
+  }
+  else {
+    dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
+                      (uint64_t)0x1000);
+  }
+
+  dma->read(0, 4, (uint8_t *)&ctrlList, tick);
 
   if (ctrlList != 0x00000001) {
     err = true;
@@ -960,6 +990,8 @@ bool Subsystem::formatNVM(SQEntryWrapper &req, CQEntryWrapper &resp,
     if (info) {
       info->lbaFormatIndex = lbaf;
       info->lbaSize = lbaSize[lbaf];
+      info->size = totalLogicalPages * logicalPageSize / info->lbaSize;
+      info->capacity = info->size;
 
       // Send format command to HIL
       pHIL->format(info->range, ses == 0x01, tick);

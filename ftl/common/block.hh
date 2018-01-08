@@ -23,6 +23,8 @@
 #include <cinttypes>
 #include <vector>
 
+#include "util/def.hh"
+
 namespace SimpleSSD {
 
 namespace FTL {
@@ -30,27 +32,28 @@ namespace FTL {
 class Block {
  private:
   const uint32_t pageCount;
-  uint32_t nextWritePageIndex;
+  const uint32_t ioUnitInPage;
+  std::vector<uint32_t> nextWritePageIndex;
 
-  std::vector<bool> validBits;
-  std::vector<bool> erasedBits;
+  std::vector<DynamicBitset> validBits;
+  std::vector<DynamicBitset> erasedBits;
   std::vector<uint64_t> lpns;
 
   uint64_t lastAccessed;
   uint32_t eraseCount;
 
-  void increasePageIndex(uint32_t &);
-
  public:
-  Block(uint32_t);
+  Block(uint32_t, uint32_t);
   ~Block();
 
   uint64_t getLastAccessedTime();
   uint32_t getEraseCount();
   uint32_t getValidPageCount();
   uint32_t getNextWritePageIndex();
-  bool read(uint32_t, uint64_t *, uint64_t);
-  bool write(uint32_t, uint64_t, uint64_t);
+  uint32_t getNextWritePageIndex(DynamicBitset &);
+  bool getPageInfo(uint32_t, uint64_t &, DynamicBitset &);
+  bool read(uint32_t, DynamicBitset &, uint64_t);
+  bool write(uint32_t, uint64_t, DynamicBitset &, uint64_t);
   void erase();
   void invalidate(uint32_t);
 };

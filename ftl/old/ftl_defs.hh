@@ -27,7 +27,7 @@ inline void my_assert(const char message[]) {
 class Parameter {
  public:
   int page_per_block;
-
+  uint32_t ioUnitInPage;
   Addr physical_page_number;
   Addr logical_page_number;
   Addr physical_block_number;

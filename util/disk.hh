@@ -55,11 +55,11 @@ class CoWDisk : public Disk {
   CoWDisk();
   ~CoWDisk();
 
-  uint64_t open(std::string, uint64_t, uint32_t);
-  void close();
+  uint64_t open(std::string, uint64_t, uint32_t) override;
+  void close() override;
 
-  uint16_t read(uint64_t, uint16_t, uint8_t *);
-  uint16_t write(uint64_t, uint16_t, uint8_t *);
+  uint16_t read(uint64_t, uint16_t, uint8_t *) override;
+  uint16_t write(uint64_t, uint16_t, uint8_t *) override;
 };
 
 }  // namespace SimpleSSD

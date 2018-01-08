@@ -36,6 +36,8 @@ const char NAME_USE_MULTI_PLANE_OP[] = "EnableMultiPlaneOperation";
 const char NAME_DMA_SPEED[] = "DMASpeed";
 const char NAME_DMA_WIDTH[] = "DMAWidth";
 const char NAME_FLASH_TYPE[] = "NANDType";
+const char NAME_PAGE_ALLOCATION[] = "PageAllocation";
+const char NAME_SUPER_BLOCK[] = "SuperblockSize";
 
 Config::Config() {
   channel = 8;
@@ -49,6 +51,9 @@ Config::Config() {
   dmaSpeed = 400;
   dmaWidth = 8;
   nandType = NAND_MLC;
+
+  superblock = INDEX_CHANNEL | INDEX_PACKAGE | INDEX_DIE | INDEX_PLANE;
+  memset(PageAllocation, 0, 4);
 }
 
 bool Config::setConfig(const char *name, const char *value) {
@@ -87,6 +92,12 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_FLASH_TYPE)) {
     nandType = (NAND_TYPE)strtoul(value, nullptr, 10);
   }
+  else if (MATCH_NAME(NAME_SUPER_BLOCK)) {
+    _superblock = value;
+  }
+  else if (MATCH_NAME(NAME_PAGE_ALLOCATION)) {
+    _pageAllocation = value;
+  }
   else {
     ret = false;
   }
@@ -97,6 +108,95 @@ bool Config::setConfig(const char *name, const char *value) {
 void Config::update() {
   if (dmaWidth & 0x07) {
     Logger::panic("dmaWidth should be multiple of 8.");
+  }
+
+  // Parse page allocation setting
+  int i = 0;
+  uint8_t check = 0;
+  bool fail = false;
+
+  for (auto iter : _pageAllocation) {
+    if ((iter == 'C') | (iter == 'c')) {
+      if (check & INDEX_CHANNEL) {
+        fail = true;
+      }
+
+      PageAllocation[i++] = INDEX_CHANNEL;
+      check |= INDEX_CHANNEL;
+    }
+    else if ((iter == 'W') | (iter == 'w')) {
+      if (check & INDEX_PACKAGE) {
+        fail = true;
+      }
+
+      PageAllocation[i++] = INDEX_PACKAGE;
+      check |= INDEX_PACKAGE;
+    }
+    else if ((iter == 'D') | (iter == 'd')) {
+      if (check & INDEX_DIE) {
+        fail = true;
+      }
+
+      PageAllocation[i++] = INDEX_DIE;
+      check |= INDEX_DIE;
+    }
+    else if ((iter == 'P') | (iter == 'p')) {
+      if (check & INDEX_PLANE) {
+        fail = true;
+      }
+
+      PageAllocation[i++] = INDEX_PLANE;
+      check |= INDEX_PLANE;
+    }
+
+    if (i == 4) {
+      break;
+    }
+  }
+
+  if (check != (INDEX_CHANNEL | INDEX_PACKAGE | INDEX_DIE | INDEX_PLANE)) {
+    fail = true;
+  }
+
+  if (useMultiPlaneOperation) {
+    // Move P to front
+    for (i = 0; i < 4; i++) {
+      if (PageAllocation[i] == INDEX_PLANE) {
+        for (int j = i; j > 0; j--) {
+          PageAllocation[j] = PageAllocation[j - 1];
+        }
+
+        PageAllocation[0] = INDEX_PLANE;
+
+        break;
+      }
+    }
+  }
+
+  if (fail) {
+    Logger::panic("Invalid page allocation string");
+  }
+
+  // Parse super block size setting
+  superblock = 0x00;
+
+  for (auto iter : _pageAllocation) {
+    if ((iter == 'C') | (iter == 'c')) {
+      superblock |= INDEX_CHANNEL;
+    }
+    else if ((iter == 'W') | (iter == 'w')) {
+      superblock |= INDEX_PACKAGE;
+    }
+    else if ((iter == 'D') | (iter == 'd')) {
+      superblock |= INDEX_DIE;
+    }
+    else if ((iter == 'P') | (iter == 'p')) {
+      superblock |= INDEX_PLANE;
+    }
+  }
+
+  if (useMultiPlaneOperation) {
+    superblock |= INDEX_PLANE;
   }
 }
 
@@ -148,18 +248,6 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-float Config::readFloat(uint32_t idx) {
-  float ret = 0.f;
-
-  return ret;
-}
-
-std::string Config::readString(uint32_t idx) {
-  std::string ret("");
-
-  return ret;
-}
-
 bool Config::readBoolean(uint32_t idx) {
   bool ret = false;
 
@@ -170,6 +258,16 @@ bool Config::readBoolean(uint32_t idx) {
   }
 
   return ret;
+}
+
+uint8_t Config::getSuperblockConfig() {
+  return superblock;
+}
+
+uint32_t Config::getPageAllocationConfig() {
+  return (uint32_t)PageAllocation[0] | ((uint32_t)PageAllocation[1] << 8) |
+         ((uint32_t)PageAllocation[2] << 16) |
+         ((uint32_t)PageAllocation[3] << 24);
 }
 
 }  // namespace PAL

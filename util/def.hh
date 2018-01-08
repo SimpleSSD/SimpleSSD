@@ -21,7 +21,9 @@
 #define __UTIL_DEF__
 
 #include <cinttypes>
-#include <list>
+#include <vector>
+
+#include "log/trace.hh"
 
 namespace SimpleSSD {
 
@@ -33,10 +35,78 @@ typedef struct _LPNRange {
   _LPNRange(uint64_t, uint64_t);
 } LPNRange;
 
+// TODO: use SIMD operation if possible
+class DynamicBitset {
+ private:
+  std::vector<uint8_t> data;
+  uint32_t dataSize;
+  uint32_t allocSize;
+
+  void boundCheck(uint32_t);
+
+ public:
+  DynamicBitset(uint32_t);
+
+  bool test(uint32_t);
+  bool all();
+  bool any();
+  bool none();
+  uint32_t count();
+  uint32_t size();
+  void set();
+  void set(uint32_t, bool = true);
+  void reset();
+  void reset(uint32_t);
+  void flip();
+  void flip(uint32_t);
+  void print();
+
+  bool operator[](uint32_t);
+  DynamicBitset &operator&=(const DynamicBitset &);
+  DynamicBitset &operator|=(const DynamicBitset &);
+  DynamicBitset &operator^=(const DynamicBitset &);
+  DynamicBitset operator~() const;
+
+  friend DynamicBitset operator&(DynamicBitset lhs, const DynamicBitset &rhs) {
+    return lhs &= rhs;
+  }
+
+  friend DynamicBitset operator|(DynamicBitset lhs, const DynamicBitset &rhs) {
+    return lhs |= rhs;
+  }
+
+  friend DynamicBitset operator^(DynamicBitset lhs, const DynamicBitset &rhs) {
+    return lhs ^= rhs;
+  }
+
+  friend bool operator==(const DynamicBitset &lhs, const DynamicBitset &rhs) {
+    bool ret = true;
+
+    if (lhs.dataSize != rhs.dataSize) {
+      Logger::panic("Size does not match");
+    }
+
+    for (uint32_t i = 0; i < lhs.allocSize; i++) {
+      if (lhs.data[i] != rhs.data[i]) {
+        ret = false;
+
+        break;
+      }
+    }
+
+    return ret;
+  }
+
+  friend bool operator!=(const DynamicBitset &lhs, const DynamicBitset &rhs) {
+    return !operator==(lhs, rhs);
+  }
+};
+
 namespace ICL {
 
 typedef struct _Request {
   uint64_t reqID;
+  uint64_t reqSubID;
   uint64_t offset;
   uint64_t length;
   LPNRange range;
@@ -52,10 +122,10 @@ typedef struct _Request {
   uint64_t reqID;  // ID of ICL::Request
   uint64_t reqSubID;
   uint64_t lpn;
-  uint32_t offset;
-  uint32_t length;
+  DynamicBitset ioFlag;
 
-  _Request();
+  _Request(uint32_t);
+  _Request(uint32_t, ICL::Request &);
 } Request;
 
 }  // namespace FTL
@@ -67,10 +137,9 @@ typedef struct _Request {
   uint64_t reqSubID;
   uint32_t blockIndex;
   uint32_t pageIndex;
-  uint32_t offset;
-  uint32_t length;
+  DynamicBitset ioFlag;
 
-  _Request();
+  _Request(uint32_t);
   _Request(FTL::Request &);
 } Request;
 

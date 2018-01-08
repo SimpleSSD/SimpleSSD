@@ -18,6 +18,8 @@
  */
 
 #include "hil/nvme/dma.hh"
+
+#include "log/trace.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
@@ -25,104 +27,17 @@ namespace SimpleSSD {
 namespace HIL {
 
 namespace NVMe {
-/*
-DMAScheduler::DMAScheduler(Interface *intr, Config *conf)
-    : interface(intr), lastReadEndAt(0), lastWriteEndAt(0) {
-  psPerByte = conf->readFloat(NVME_DMA_DELAY);
-}
 
-uint64_t DMAScheduler::read(uint64_t addr, uint64_t length, uint8_t *buffer,
-                            uint64_t &tick) {
-  uint64_t latency = (uint64_t)(psPerByte * length + 0.5);
-  uint64_t delay = 0;
+DMAInterface::DMAInterface(ConfigData *cfg) : pInterface(cfg->pInterface) {}
 
-  // DMA Scheduling
-  if (tick == 0) {
-    tick = lastReadEndAt;
-  }
+DMAInterface::~DMAInterface() {}
 
-  if (lastReadEndAt <= tick) {
-    lastReadEndAt = tick + latency;
-  }
-  else {
-    delay = lastReadEndAt - tick;
-    lastReadEndAt += latency;
-  }
-
-  // Read data
-  // DPRINTF(NVMeDMA, "DMAPORT | READ  | %016" PRIX64 " + %" PRIX64 "\n",
-  // dmaAddr + offset, size);
-
-  if (buffer) {
-    interface->dmaRead(addr, length, buffer);
-
-    // // Print data
-    // if (size <= 64) {
-    //   DPRINTF(NVMeDMA, "DMAPORT | READ  | ----------------\n");
-    //   for (int i = 0; i < size / 8; i++) {
-    //     DPRINTF(NVMeDMA, "DMAPORT | READ  | %016" PRIX64 "\n", *((uint64_t
-    //     *)buffer + i));
-    //   }
-    //   DPRINTF(NVMeDMA, "DMAPORT | READ  | ----------------\n");
-    // }
-  }
-
-  delay += tick;
-  tick = delay + latency;
-
-  return delay;
-}
-
-uint64_t DMAScheduler::write(uint64_t addr, uint64_t length, uint8_t *buffer,
-                             uint64_t &tick) {
-  uint64_t latency = (uint64_t)(psPerByte * length + 0.5);
-  uint64_t delay = 0;
-
-  // DMA Scheduling
-  if (tick == 0) {
-    tick = lastWriteEndAt;
-  }
-
-  if (lastWriteEndAt <= tick) {
-    lastWriteEndAt = tick + latency;
-  }
-  else {
-    delay = lastWriteEndAt - tick;
-    lastWriteEndAt += latency;
-  }
-
-  // Read data
-  // DPRINTF(NVMeDMA, "DMAPORT | READ  | %016" PRIX64 " + %" PRIX64 "\n",
-  // dmaAddr + offset, size);
-
-  if (buffer) {
-    interface->dmaWrite(addr, length, buffer);
-
-    // // Print data
-    // if (size <= 64) {
-    //   DPRINTF(NVMeDMA, "DMAPORT | READ  | ----------------\n");
-    //   for (int i = 0; i < size / 8; i++) {
-    //     DPRINTF(NVMeDMA, "DMAPORT | READ  | %016" PRIX64 "\n", *((uint64_t
-    //     *)buffer + i));
-    //   }
-    //   DPRINTF(NVMeDMA, "DMAPORT | READ  | ----------------\n");
-    // }
-  }
-
-  delay += tick;
-  tick = delay + latency;
-
-  return delay;
-}
-*/
 PRP::PRP() : addr(0), size(0) {}
 
 PRP::PRP(uint64_t address, uint64_t s) : addr(address), size(s) {}
 
 PRPList::PRPList(ConfigData *cfg, uint64_t prp1, uint64_t prp2, uint64_t size)
-    : pInterface(cfg->pInterface),
-      totalSize(size),
-      pagesize(cfg->memoryPageSize) {
+    : DMAInterface(cfg), totalSize(size), pagesize(cfg->memoryPageSize) {
   uint64_t prp1Size = getPRPSize(prp1);
   uint64_t prp2Size = getPRPSize(prp2);
 
@@ -166,9 +81,7 @@ PRPList::PRPList(ConfigData *cfg, uint64_t prp1, uint64_t prp2, uint64_t size)
 }
 
 PRPList::PRPList(ConfigData *cfg, uint64_t base, uint64_t size, bool cont)
-    : pInterface(cfg->pInterface),
-      totalSize(size),
-      pagesize(cfg->memoryPageSize) {
+    : DMAInterface(cfg), totalSize(size), pagesize(cfg->memoryPageSize) {
   if (cont) {
     prpList.push_back(PRP(base, size));
   }
@@ -176,6 +89,8 @@ PRPList::PRPList(ConfigData *cfg, uint64_t base, uint64_t size, bool cont)
     getPRPListFromPRP(base, size);
   }
 }
+
+PRPList::~PRPList() {}
 
 void PRPList::getPRPListFromPRP(uint64_t base, uint64_t size) {
   uint64_t currentSize = 0;
@@ -298,6 +213,193 @@ uint64_t PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
     }
 
     currentOffset += iter.size;
+  }
+
+  // TODO: DPRINTF(NVMeDMA, "DMAPORT | WRITE | Tick %" PRIu64 "\n",
+  // totalDMATime);
+
+  return delay;
+}
+
+SGLDescriptor::SGLDescriptor() {
+  memset(data, 0, 16);
+}
+
+Chunk::Chunk() : addr(0), length(0), ignore(true) {}
+
+Chunk::Chunk(uint64_t a, uint32_t l, bool i) : addr(a), length(l), ignore(i) {}
+
+SGL::SGL(ConfigData *cfg, uint64_t prp1, uint64_t prp2)
+    : DMAInterface(cfg), totalSize(0) {
+  SGLDescriptor desc;
+
+  // Create first SGL descriptor from PRP pointers
+  memcpy(desc.data, &prp1, 8);
+  memcpy(desc.data + 8, &prp2, 8);
+
+  // Check type
+  if (SGL_TYPE(desc.id) == TYPE_DATA_BLOCK_DESCRIPTOR ||
+      SGL_TYPE(desc.id) == TYPE_KEYED_DATA_BLOCK_DESCRIPTOR) {
+    // This is entire buffer
+    parseSGLDescriptor(desc);
+  }
+  else if (SGL_TYPE(desc.id) == TYPE_SEGMENT_DESCRIPTOR ||
+           SGL_TYPE(desc.id) == TYPE_LAST_SEGMENT_DESCRIPTOR) {
+    // This points segment
+    parseSGLSegment(desc.address, desc.length);
+  }
+}
+
+SGL::~SGL() {}
+
+void SGL::parseSGLDescriptor(SGLDescriptor &desc) {
+  switch (SGL_TYPE(desc.id)) {
+    case TYPE_DATA_BLOCK_DESCRIPTOR:
+    case TYPE_KEYED_DATA_BLOCK_DESCRIPTOR:
+      list.push_back(Chunk(desc.address, desc.length, false));
+      totalSize += desc.length;
+
+      break;
+    case TYPE_BIT_BUCKET_DESCRIPTOR:
+      list.push_back(Chunk(desc.address, desc.length, true));
+      totalSize += desc.length;
+
+      break;
+    default:
+      Logger::panic("Invalid SGL descriptor");
+      break;
+  }
+
+  if (SGL_SUBTYPE(desc.id) != SUBTYPE_ADDRESS) {
+    Logger::panic("Unexpected SGL subtype");
+  }
+}
+
+void SGL::parseSGLSegment(uint64_t address, uint32_t length) {
+  uint8_t *buffer = nullptr;
+  uint64_t tick = 0;
+  bool next = false;
+
+  // Allocate buffer
+  buffer = (uint8_t *)calloc(length, 1);
+
+  // Read segment
+  pInterface->dmaRead(address, length, buffer, tick);
+
+  // Parse SGL descriptor
+  SGLDescriptor desc;
+
+  for (uint32_t i = 0; i < length; i += 16) {
+    memcpy(desc.data, buffer + i, 16);
+
+    switch (SGL_TYPE(desc.id)) {
+      case TYPE_DATA_BLOCK_DESCRIPTOR:
+      case TYPE_KEYED_DATA_BLOCK_DESCRIPTOR:
+      case TYPE_BIT_BUCKET_DESCRIPTOR:
+        parseSGLDescriptor(desc);
+
+        break;
+      case TYPE_SEGMENT_DESCRIPTOR:
+      case TYPE_LAST_SEGMENT_DESCRIPTOR:
+        if (i != length - 16) {
+          Logger::panic("Invalid SGL segment");
+        }
+        next = true;
+
+        break;
+    }
+  }
+
+  // Go to next
+  // TODO: fix potential stack overflow
+  if (next) {
+    parseSGLSegment(desc.address, desc.length);
+  }
+}
+
+uint64_t SGL::read(uint64_t offset, uint64_t length, uint8_t *buffer,
+                   uint64_t &tick) {
+  uint64_t delay = 0;
+  uint64_t totalRead = 0;
+  uint64_t currentOffset = 0;
+  uint64_t read;
+  bool begin = false;
+
+  for (auto &iter : list) {
+    if (begin) {
+      read = MIN(iter.length, length - totalRead);
+
+      if (!iter.ignore) {
+        pInterface->dmaRead(iter.addr, read, buffer ? buffer + totalRead : NULL,
+                            tick);
+      }
+
+      totalRead += read;
+
+      if (totalRead == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.length > offset) {
+      begin = true;
+      totalRead = offset - currentOffset;
+      read = MIN(iter.length - totalRead, length);
+
+      if (!iter.ignore) {
+        delay = pInterface->dmaRead(iter.addr + totalRead, read, buffer, tick);
+      }
+
+      totalRead = read;
+    }
+
+    currentOffset += iter.length;
+  }
+
+  // TODO: DPRINTF(NVMeDMA, "DMAPORT | READ  | Tick %" PRIu64 "\n",
+  // totalDMATime);
+
+  return delay;
+}
+
+uint64_t SGL::write(uint64_t offset, uint64_t length, uint8_t *buffer,
+                    uint64_t &tick) {
+  uint64_t delay = 0;
+  uint64_t totalWritten = 0;
+  uint64_t currentOffset = 0;
+  uint64_t written;
+  bool begin = false;
+
+  for (auto &iter : list) {
+    if (begin) {
+      written = MIN(iter.length, length - totalWritten);
+
+      if (!iter.ignore) {
+        pInterface->dmaWrite(iter.addr, written,
+                             buffer ? buffer + totalWritten : NULL, tick);
+      }
+
+      totalWritten += written;
+
+      if (totalWritten == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.length > offset) {
+      begin = true;
+      totalWritten = offset - currentOffset;
+      written = MIN(iter.length - totalWritten, length);
+
+      if (!iter.ignore) {
+        delay = pInterface->dmaWrite(iter.addr + totalWritten, written, buffer,
+                                     tick);
+      }
+
+      totalWritten = written;
+    }
+
+    currentOffset += iter.length;
   }
 
   // TODO: DPRINTF(NVMeDMA, "DMAPORT | WRITE | Tick %" PRIu64 "\n",

@@ -17,22 +17,47 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "icl/cache.hh"
+#ifndef __ICL_CACHE__
+#define __ICL_CACHE__
+
+#include "ftl/ftl.hh"
+#include "util/config.hh"
+#include "util/def.hh"
 
 namespace SimpleSSD {
 
 namespace ICL {
 
-Line::_Line()
-    : tag(0), lastAccessed(0), insertedAt(0), dirty(false), valid(false) {}
+typedef struct _Line {
+  uint64_t tag;
+  uint64_t lastAccessed;
+  uint64_t insertedAt;
+  DynamicBitset dirtyBits;
+  DynamicBitset validBits;
 
-Line::_Line(uint64_t t, bool d)
-    : tag(t), lastAccessed(0), insertedAt(0), dirty(d), valid(true) {}
+  _Line(uint32_t);
+  _Line(uint32_t, uint64_t, bool);
+} Line;
 
-Cache::Cache(ConfigReader *c, FTL::FTL *f) : conf(c), pFTL(f) {}
+class AbstractCache {
+ protected:
+  ConfigReader *conf;
+  FTL::FTL *pFTL;
 
-Cache::~Cache() {}
+ public:
+  AbstractCache(ConfigReader *, FTL::FTL *);
+  virtual ~AbstractCache();
+
+  virtual bool read(Request &, uint64_t &) = 0;
+  virtual bool write(Request &, uint64_t &) = 0;
+  virtual bool flush(Request &, uint64_t &) = 0;
+  virtual bool trim(Request &, uint64_t &) = 0;
+
+  virtual void format(LPNRange &, uint64_t &) = 0;
+};
 
 }  // namespace ICL
 
 }  // namespace SimpleSSD
+
+#endif

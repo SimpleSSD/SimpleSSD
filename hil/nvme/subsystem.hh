@@ -74,8 +74,8 @@ class Subsystem {
   void getNVMCapacity(uint64_t &, uint64_t &);
   uint32_t validNamespaceCount();
 
-  void read(Namespace *, uint64_t, uint64_t, PRPList &, uint64_t &);
-  void write(Namespace *, uint64_t, uint64_t, PRPList &, uint64_t &);
+  void read(Namespace *, uint64_t, uint64_t, uint64_t &);
+  void write(Namespace *, uint64_t, uint64_t, uint64_t &);
   void flush(Namespace *, uint64_t &);
   void trim(Namespace *, uint64_t, uint64_t, uint64_t &);
 };

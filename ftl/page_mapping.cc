@@ -32,14 +32,17 @@ namespace SimpleSSD {
 namespace FTL {
 
 PageMapping::PageMapping(Parameter *p, PAL::PAL *l, ConfigReader *c)
-    : AbstractFTL(p, l), pPAL(l), conf(c->ftlConfig), pFTLParam(p) {
-  Block temp(pFTLParam->pagesInBlock);
-
+    : AbstractFTL(p, l),
+      pPAL(l),
+      conf(c->ftlConfig),
+      pFTLParam(p),
+      bReclaimMore(false) {
   for (uint32_t i = 0; i < pFTLParam->totalPhysicalBlocks; i++) {
-    freeBlocks.insert({i, temp});
+    freeBlocks.insert(
+        {i, Block(pFTLParam->pagesInBlock, pFTLParam->ioUnitInPage)});
   }
 
-  lastFreeBlock.first = false;
+  lastFreeBlock = getFreeBlock();
 }
 
 PageMapping::~PageMapping() {}
@@ -48,11 +51,12 @@ bool PageMapping::initialize() {
   uint64_t nPagesToWarmup;
   uint64_t nTotalPages;
   uint64_t tick = 0;
-  Request req;
+  Request req(pFTLParam->ioUnitInPage);
 
   nTotalPages = pFTLParam->totalLogicalBlocks * pFTLParam->pagesInBlock;
   nPagesToWarmup = nTotalPages * conf.readFloat(FTL_WARM_UP_RATIO);
   nPagesToWarmup = MIN(nPagesToWarmup, nTotalPages);
+  req.ioFlag.set();
 
   for (uint64_t lpn = 0; lpn < pFTLParam->totalLogicalBlocks;
        lpn += nTotalPages) {
@@ -100,8 +104,10 @@ void PageMapping::trim(Request &req, uint64_t &tick) {
 }
 
 void PageMapping::format(LPNRange &range, uint64_t &tick) {
-  PAL::Request req;
+  PAL::Request req(pFTLParam->ioUnitInPage);
   std::vector<uint32_t> list;
+
+  req.ioFlag.set();
 
   for (auto iter = table.begin(); iter != table.end();) {
     if (iter->first >= range.slpn && iter->first < range.slpn + range.nlp) {
@@ -171,6 +177,24 @@ uint32_t PageMapping::getFreeBlock() {
   return blockIndex;
 }
 
+uint32_t PageMapping::getLastFreeBlock() {
+  auto freeBlock = blocks.find(lastFreeBlock);
+
+  // Sanity check
+  if (freeBlock == blocks.end()) {
+    Logger::panic("Corrupted");
+  }
+
+  // If current free block is full, get next block
+  if (freeBlock->second.getNextWritePageIndex() == pFTLParam->pagesInBlock) {
+    lastFreeBlock = getFreeBlock();
+
+    bReclaimMore = true;
+  }
+
+  return lastFreeBlock;
+}
+
 void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
                                     uint64_t tick) {
   static const GC_MODE mode = (GC_MODE)conf.readInt(FTL_GC_MODE);
@@ -183,13 +207,23 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   list.clear();
 
   // Calculate number of blocks to reclaim
-  if (mode == GC_MODE_1) {
+  if (mode == GC_MODE_0) {
+    // DO NOTHING
+  }
+  else if (mode == GC_MODE_1) {
     static const float t = conf.readFloat(FTL_GC_RECLAIM_THRESHOLD);
 
     nBlocks = pFTLParam->totalPhysicalBlocks * t - freeBlocks.size();
   }
   else {
     Logger::panic("Invalid GC mode");
+  }
+
+  // reclaim one more if last free block fully used
+  if (bReclaimMore) {
+    bReclaimMore = false;
+
+    nBlocks++;
   }
 
   // Calculate weights of all blocks
@@ -238,7 +272,7 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
 
 uint64_t PageMapping::doGarbageCollection(
     std::vector<uint32_t> &blocksToReclaim, uint64_t tick) {
-  PAL::Request req;
+  PAL::Request req(pFTLParam->ioUnitInPage);
   uint64_t beginAt;
   uint64_t finishedAt = tick;
 
@@ -246,15 +280,7 @@ uint64_t PageMapping::doGarbageCollection(
     return tick;
   }
 
-  // Allocate new free block
-  if (!lastFreeBlock.first) {
-    lastFreeBlock.first = true;
-    lastFreeBlock.second = getFreeBlock();
-  }
-
-  // Get block
-  auto freeBlock = blocks.find(lastFreeBlock.second);
-
+  // For all blocks to reclaim
   for (auto &iter : blocksToReclaim) {
     auto block = blocks.find(iter);
     uint64_t lpn;
@@ -269,7 +295,10 @@ uint64_t PageMapping::doGarbageCollection(
     for (uint32_t pageIndex = 0; pageIndex < pFTLParam->pagesInBlock;
          pageIndex++) {
       // Valid?
-      if (block->second.read(pageIndex, &lpn, tick)) {
+      if (block->second.getPageInfo(pageIndex, lpn, req.ioFlag)) {
+        // Retrive free block
+        auto freeBlock = blocks.find(getLastFreeBlock());
+
         // Get mapping table entry
         auto mapping = table.find(lpn);
 
@@ -287,21 +316,17 @@ uint64_t PageMapping::doGarbageCollection(
         block->second.invalidate(pageIndex);
 
         // Update mapping table
-        mapping->second.first = lastFreeBlock.second;
+        mapping->second.first = freeBlock->first;
         mapping->second.second = freeBlock->second.getNextWritePageIndex();
+
+        freeBlock->second.write(mapping->second.second, lpn, req.ioFlag,
+                                beginAt);
 
         // Issue Write
         req.blockIndex = mapping->second.first;
         req.pageIndex = mapping->second.second;
 
         pPAL->write(req, beginAt);
-
-        // If this block is full, invalidate lastFreeBlock
-        if (freeBlock->second.getNextWritePageIndex() == 0) {
-          lastFreeBlock.second = getFreeBlock();
-
-          freeBlock = blocks.find(lastFreeBlock.second);
-        }
       }
     }
 
@@ -313,11 +338,6 @@ uint64_t PageMapping::doGarbageCollection(
 
     // Merge timing
     finishedAt = MAX(finishedAt, beginAt);
-  }
-
-  // If this block is full, invalidate lastFreeBlock
-  if (freeBlock->second.getNextWritePageIndex() == 0) {
-    lastFreeBlock.first = false;
   }
 
   return finishedAt;
@@ -338,7 +358,7 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
       Logger::panic("Block is not in use");
     }
 
-    block->second.read(palRequest.pageIndex, nullptr, tick);
+    block->second.read(palRequest.pageIndex, palRequest.ioFlag, tick);
 
     pPAL->read(palRequest, tick);
   }
@@ -346,24 +366,45 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
 
 void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   PAL::Request palRequest(req);
-
-  // Allocate new free block
-  if (!lastFreeBlock.first) {
-    lastFreeBlock.first = true;
-    lastFreeBlock.second = getFreeBlock();
-  }
-
   auto mapping = table.find(req.lpn);
 
   if (mapping != table.end()) {
-    // Invalidate current page
+    // Check I/O map
+    uint32_t max;
+
     auto block = blocks.find(mapping->second.first);
 
     if (block == blocks.end()) {
       Logger::panic("No such block");
     }
 
-    block->second.invalidate(mapping->second.second);
+    max = block->second.getNextWritePageIndex(palRequest.ioFlag);
+
+    if (max <= mapping->second.second) {
+      // We can write data to same page
+      block->second.write(mapping->second.second, req.lpn, req.ioFlag, tick);
+
+      if (sendToPAL) {
+        palRequest.blockIndex = mapping->second.first;
+        palRequest.pageIndex = mapping->second.second;
+
+        pPAL->write(palRequest, tick);
+      }
+
+      // GC if needed
+      if (freeBlockRatio() < conf.readFloat(FTL_GC_THRESHOLD_RATIO)) {
+        std::vector<uint32_t> list;
+
+        selectVictimBlock(list, tick);
+        doGarbageCollection(list, tick);
+      }
+
+      return;
+    }
+    else {
+      // Invalidate current page
+      block->second.invalidate(mapping->second.second);
+    }
   }
   else {
     // Create empty mapping
@@ -373,7 +414,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
 
   // Write data to free block
-  auto block = blocks.find(lastFreeBlock.second);
+  auto block = blocks.find(getLastFreeBlock());
 
   if (block == blocks.end()) {
     Logger::panic("No such block");
@@ -381,7 +422,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
 
   uint32_t pageIndex = block->second.getNextWritePageIndex();
 
-  block->second.write(pageIndex, req.lpn, tick);
+  block->second.write(pageIndex, req.lpn, req.ioFlag, tick);
 
   // update mapping to table
   mapping->second.first = block->first;
@@ -392,13 +433,6 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
     palRequest.pageIndex = mapping->second.second;
 
     pPAL->write(palRequest, tick);
-  }
-
-  // If this block is full, invalidate lastFreeBlock
-  pageIndex = block->second.getNextWritePageIndex();
-
-  if (pageIndex == 0) {
-    lastFreeBlock.first = false;
   }
 
   // GC if needed

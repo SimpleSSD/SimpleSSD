@@ -21,7 +21,7 @@
 #define __ICL_ICL__
 
 #include "ftl/ftl.hh"
-#include "icl/cache.hh"
+#include "icl/abstract_cache.hh"
 #include "util/config.hh"
 #include "util/def.hh"
 
@@ -34,7 +34,7 @@ class ICL {
   FTL::FTL *pFTL;
 
   ConfigReader *pConf;
-  Cache *pCache;
+  AbstractCache *pCache;
 
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;

@@ -21,22 +21,33 @@
 #define __ICL_GENERIC_CACHE__
 
 #include <random>
+#include <vector>
 
-#include "icl/cache.hh"
+#include "icl/abstract_cache.hh"
 
 namespace SimpleSSD {
 
 namespace ICL {
 
-class GenericCache : public Cache {
+class GenericCache : public AbstractCache {
  private:
   uint32_t setSize;
   uint32_t waySize;
   uint32_t lineSize;
 
+  uint32_t partialIOUnitCount;
+  uint32_t partialIOUnitSize;
+
+  uint32_t prefetchIOCount;
+
   bool useReadCaching;
   bool useWriteCaching;
   bool useReadPrefetch;
+  bool usePartialIO;
+
+  Request lastRequest;
+  bool prefetchEnabled;
+  uint32_t hitCounter;
 
   EVICT_POLICY policy;
   std::random_device rd;
@@ -47,20 +58,23 @@ class GenericCache : public Cache {
   Config::DRAMTiming *pTiming;
   Config::DRAMStructure *pStructure;
 
-  Line **ppCache;
+  std::vector<std::vector<Line>> ppCache;
 
   uint32_t calcSet(uint64_t);
-  uint32_t flushVictim(FTL::Request, uint64_t &, bool * = nullptr);
+  uint32_t flushVictim(Request, uint64_t &, bool * = nullptr);
   uint64_t calculateDelay(uint64_t);
+  void convertIOFlag(DynamicBitset &, uint64_t, uint64_t);
+  static void setBits(DynamicBitset &, uint64_t, uint64_t, bool);
+  void checkPrefetch(Request &);
 
  public:
   GenericCache(ConfigReader *, FTL::FTL *);
-  ~GenericCache() override;
+  ~GenericCache();
 
-  bool read(FTL::Request &, uint64_t &) override;
-  bool write(FTL::Request &, uint64_t &) override;
-  bool flush(FTL::Request &, uint64_t &) override;
-  bool trim(FTL::Request &, uint64_t &) override;
+  bool read(Request &, uint64_t &) override;
+  bool write(Request &, uint64_t &) override;
+  bool flush(Request &, uint64_t &) override;
+  bool trim(Request &, uint64_t &) override;
 
   void format(LPNRange &, uint64_t &) override;
 };
