@@ -178,20 +178,22 @@ void Config::update() {
   }
 
   // Parse super block size setting
-  superblock = 0x00;
+  if (_superblock.length() > 0) {
+    superblock = 0x00;
 
-  for (auto iter : _pageAllocation) {
-    if ((iter == 'C') | (iter == 'c')) {
-      superblock |= INDEX_CHANNEL;
-    }
-    else if ((iter == 'W') | (iter == 'w')) {
-      superblock |= INDEX_PACKAGE;
-    }
-    else if ((iter == 'D') | (iter == 'd')) {
-      superblock |= INDEX_DIE;
-    }
-    else if ((iter == 'P') | (iter == 'p')) {
-      superblock |= INDEX_PLANE;
+    for (auto iter : _superblock) {
+      if ((iter == 'C') | (iter == 'c')) {
+        superblock |= INDEX_CHANNEL;
+      }
+      else if ((iter == 'W') | (iter == 'w')) {
+        superblock |= INDEX_PACKAGE;
+      }
+      else if ((iter == 'D') | (iter == 'd')) {
+        superblock |= INDEX_DIE;
+      }
+      else if ((iter == 'P') | (iter == 'p')) {
+        superblock |= INDEX_PLANE;
+      }
     }
   }
 

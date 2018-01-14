@@ -33,6 +33,7 @@ const char NAME_EVICT_POLICY[] = "EvictPolicy";
 const char NAME_CACHE_SIZE[] = "CacheSize";
 const char NAME_WAY_SIZE[] = "CacheWaySize";
 const char NAME_PREFETCH_COUNT[] = "ReadPrefetchCount";
+const char NAME_PREFETCH_RATIO[] = "ReadPrefetchRatio";
 
 // TODO: seperate This
 const char NAME_DRAM_CHANNEL[] = "DRAMChannel";
@@ -51,6 +52,7 @@ Config::Config() {
   cacheSize = 33554432;
   cacheWaySize = 1;
   prefetchCount = 1;
+  prefetchRatio = 0.5;
 
   /* LPDDR3-1600 4Gbit 1x32 */
   dram.channel = 1;
@@ -127,6 +129,9 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_PREFETCH_COUNT)) {
     prefetchCount = strtoul(value, nullptr, 10);
   }
+  else if (MATCH_NAME(NAME_PREFETCH_RATIO)) {
+    prefetchRatio = strtof(value, nullptr);
+  }
   else if (MATCH_NAME(NAME_EVICT_POLICY)) {
     evictPolicy = (EVICT_POLICY)strtoul(value, nullptr, 10);
   }
@@ -167,6 +172,9 @@ bool Config::setConfig(const char *name, const char *value) {
 void Config::update() {
   if (prefetchCount == 0) {
     Logger::panic("Invalid ReadPrefetchCount");
+  }
+  if (prefetchRatio <= 0.f || prefetchRatio > 1.f) {
+    Logger::panic("Invalid ReadPrefetchRatio");
   }
 }
 
@@ -294,6 +302,9 @@ float Config::readFloat(uint32_t idx) {
   float ret = 0.f;
 
   switch (idx) {
+    case ICL_PREFETCH_RATIO:
+      ret = prefetchRatio;
+      break;
     case DRAM_POWER_IDD0:
       ret = dramPower.pIDD0[0];
       break;

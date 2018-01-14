@@ -70,7 +70,7 @@ void PALOLD::read(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    printCPDPBP(iter, "READ");
+    // printCPDPBP(iter, "READ");
 
     pal->submit(cmd, iter);
 
@@ -90,7 +90,7 @@ void PALOLD::write(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    printCPDPBP(iter, "WRITE");
+    // printCPDPBP(iter, "WRITE");
 
     pal->submit(cmd, iter);
 
@@ -110,7 +110,7 @@ void PALOLD::erase(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    printCPDPBP(iter, "ERASE");
+    // printCPDPBP(iter, "ERASE");
 
     pal->submit(cmd, iter);
 
@@ -275,9 +275,6 @@ void PALOLD::printCPDPBP(::CPDPBP &addr, const char *prefix) {
 void PALOLD::printPPN(Request &req, const char *prefix) {
   Logger::debugprint(Logger::LOG_PAL_OLD, "%-5s | Block %u | Page %u", prefix,
                      req.blockIndex, req.pageIndex);
-
-  Logger::debugprint(Logger::LOG_PAL_OLD, "%-5s | Partial I/O map", prefix);
-  req.ioFlag.print();
 }
 
 }  // namespace PAL

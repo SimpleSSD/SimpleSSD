@@ -32,6 +32,7 @@ typedef enum {
   ICL_USE_WRITE_CACHE,
   ICL_USE_READ_PREFETCH,
   ICL_PREFETCH_COUNT,
+  ICL_PREFETCH_RATIO,
   ICL_EVICT_POLICY,
   ICL_CACHE_SIZE,
   ICL_WAY_SIZE,
@@ -167,6 +168,7 @@ class Config : public BaseConfig {
   uint64_t cacheWaySize;     //!< Default: 1
   uint64_t cacheSize;        //!< Default: 33554432 (32MiB)
   uint64_t prefetchCount;    //!< Default: 1
+  float prefetchRatio;       //!< Default: 0.5
 
   DRAMStructure dram;
   DRAMTiming dramTiming;

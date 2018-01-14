@@ -33,8 +33,9 @@ ICL::ICL(ConfigReader *c) : pConf(c) {
 
   FTL::Parameter *param = pFTL->getInfo();
 
-  totalLogicalPages = param->totalLogicalBlocks * param->pagesInBlock;
-  logicalPageSize = param->pageSize;
+  totalLogicalPages =
+      param->totalLogicalBlocks * param->pagesInBlock * param->ioUnitInPage;
+  logicalPageSize = param->pageSize / param->ioUnitInPage;
 
   pCache = new GenericCache(pConf, pFTL);
 }
@@ -176,8 +177,7 @@ void ICL::format(LPNRange &range, uint64_t &tick) {
   Logger::debugprint(Logger::LOG_ICL,
                      "FORMAT| LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
-                     range.slpn, range.nlp, beginAt, tick,
-                     tick - beginAt);
+                     range.slpn, range.nlp, beginAt, tick, tick - beginAt);
 }
 
 void ICL::getLPNInfo(uint64_t &t, uint32_t &s) {

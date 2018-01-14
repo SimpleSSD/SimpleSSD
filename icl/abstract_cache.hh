@@ -32,8 +32,8 @@ typedef struct _Line {
   uint64_t tag;
   uint64_t lastAccessed;
   uint64_t insertedAt;
-  DynamicBitset dirtyBits;
-  DynamicBitset validBits;
+  bool dirty;
+  bool valid;
 
   _Line(uint32_t);
   _Line(uint32_t, uint64_t, bool);

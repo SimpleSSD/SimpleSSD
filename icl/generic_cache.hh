@@ -35,19 +35,21 @@ class GenericCache : public AbstractCache {
   uint32_t waySize;
   uint32_t lineSize;
 
-  uint32_t partialIOUnitCount;
-  uint32_t partialIOUnitSize;
+  uint32_t lbaInLine;
+  uint32_t lineCountInSuperPage;
+  uint32_t superPageSize;
 
   uint32_t prefetchIOCount;
+  float prefetchIORatio;
 
   bool useReadCaching;
   bool useWriteCaching;
   bool useReadPrefetch;
-  bool usePartialIO;
 
   Request lastRequest;
   bool prefetchEnabled;
   uint32_t hitCounter;
+  uint32_t accessCounter;
 
   EVICT_POLICY policy;
   std::random_device rd;
@@ -61,10 +63,8 @@ class GenericCache : public AbstractCache {
   std::vector<std::vector<Line>> ppCache;
 
   uint32_t calcSet(uint64_t);
-  uint32_t flushVictim(Request, uint64_t &, bool * = nullptr);
+  uint32_t flushVictim(uint32_t, uint64_t &, bool * = nullptr, bool = true);
   uint64_t calculateDelay(uint64_t);
-  void convertIOFlag(DynamicBitset &, uint64_t, uint64_t);
-  static void setBits(DynamicBitset &, uint64_t, uint64_t, bool);
   void checkPrefetch(Request &);
 
  public:

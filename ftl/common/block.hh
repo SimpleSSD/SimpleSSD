@@ -49,6 +49,7 @@ class Block {
   uint64_t getLastAccessedTime();
   uint32_t getEraseCount();
   uint32_t getValidPageCount();
+  uint32_t getDirtyPageCount();
   uint32_t getNextWritePageIndex();
   uint32_t getNextWritePageIndex(DynamicBitset &);
   bool getPageInfo(uint32_t, uint64_t &, DynamicBitset &);

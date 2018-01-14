@@ -45,7 +45,6 @@ typedef enum {
 
 typedef enum {
   PAGE_MAPPING,
-  NK_MAPPING,
 } MAPPING;
 
 typedef enum {
@@ -60,7 +59,7 @@ typedef enum {
 
 class Config : public BaseConfig {
  private:
-  MAPPING mapping;             //!< Default: FTL_NK_MAPPING
+  MAPPING mapping;             //!< Default: PAGE_MAPPING
   float overProvision;         //!< Default: 0.25 (25%)
   float gcThreshold;           //!< Default: 0.05 (5%)
   uint64_t badBlockThreshold;  //!< Default: 100000
@@ -69,9 +68,6 @@ class Config : public BaseConfig {
   float reclaimThreshold;      //!< Default: 0.1 (10%)
   GC_MODE gcMode;              //!< Default: FTL_GC_MODE_0
   EVICT_POLICY evictPolicy;    //!< Default: POLICY_GREEDY
-
-  uint64_t N;  //!< Default: 32
-  uint64_t K;  //!< Default: 32
 
  public:
   Config();

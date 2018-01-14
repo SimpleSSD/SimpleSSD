@@ -22,8 +22,6 @@
 #include <algorithm>
 #include <limits>
 
-#include "ftl/old/ftl.hh"
-#include "ftl/old/ftl_defs.hh"
 #include "log/trace.hh"
 #include "util/algorithm.hh"
 
@@ -136,7 +134,7 @@ void PageMapping::format(LPNRange &range, uint64_t &tick) {
   list.erase(last, list.end());
 
   // Do GC only in specified blocks
-  tick = doGarbageCollection(list, tick);
+  doGarbageCollection(list, tick);
 }
 
 float PageMapping::freeBlockRatio() {
@@ -196,11 +194,11 @@ uint32_t PageMapping::getLastFreeBlock() {
 }
 
 void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
-                                    uint64_t tick) {
+                                    uint64_t &tick) {
   static const GC_MODE mode = (GC_MODE)conf.readInt(FTL_GC_MODE);
   static const EVICT_POLICY policy =
       (EVICT_POLICY)conf.readInt(FTL_GC_EVICT_POLICY);
-  static uint64_t nBlocks = conf.readInt(FTL_GC_RECLAIM_BLOCK);
+  uint64_t nBlocks = conf.readInt(FTL_GC_RECLAIM_BLOCK);
   std::vector<std::pair<uint32_t, float>> weight;
   uint64_t i = 0;
 
@@ -232,7 +230,8 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   if (policy == POLICY_GREEDY) {
     for (auto &iter : blocks) {
       weight.at(i).first = iter.first;
-      weight.at(i).second = iter.second.getValidPageCount();
+      weight.at(i).second =
+          pFTLParam->pagesInBlock - iter.second.getDirtyPageCount();
 
       i++;
     }
@@ -241,7 +240,9 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
     float temp;
 
     for (auto &iter : blocks) {
-      temp = (float)iter.second.getValidPageCount() / pFTLParam->pagesInBlock;
+      temp =
+          (float)(pFTLParam->pagesInBlock - iter.second.getDirtyPageCount()) /
+          pFTLParam->pagesInBlock;
 
       weight.at(i).first = iter.first;
       weight.at(i).second =
@@ -270,14 +271,14 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   }
 }
 
-uint64_t PageMapping::doGarbageCollection(
-    std::vector<uint32_t> &blocksToReclaim, uint64_t tick) {
+void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
+                                      uint64_t &tick) {
   PAL::Request req(pFTLParam->ioUnitInPage);
   uint64_t beginAt;
   uint64_t finishedAt = tick;
 
   if (blocksToReclaim.size() == 0) {
-    return tick;
+    return;
   }
 
   // For all blocks to reclaim
@@ -333,6 +334,7 @@ uint64_t PageMapping::doGarbageCollection(
     // Erase block
     req.blockIndex = block->first;
     req.pageIndex = 0;
+    req.ioFlag.set();
 
     eraseInternal(req, beginAt);
 
@@ -340,7 +342,7 @@ uint64_t PageMapping::doGarbageCollection(
     finishedAt = MAX(finishedAt, beginAt);
   }
 
-  return finishedAt;
+  tick = finishedAt;
 }
 
 void PageMapping::readInternal(Request &req, uint64_t &tick) {
@@ -366,45 +368,38 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
 
 void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   PAL::Request palRequest(req);
+  std::unordered_map<uint32_t, Block>::iterator block;
   auto mapping = table.find(req.lpn);
 
   if (mapping != table.end()) {
-    // Check I/O map
-    uint32_t max;
+    uint64_t lpn;
+    PAL::Request read(pFTLParam->ioUnitInPage);
 
-    auto block = blocks.find(mapping->second.first);
+    block = blocks.find(mapping->second.first);
 
     if (block == blocks.end()) {
       Logger::panic("No such block");
     }
 
-    max = block->second.getNextWritePageIndex(palRequest.ioFlag);
+    // Read data of original block if valid
+    read.blockIndex = mapping->second.first;
+    read.pageIndex = mapping->second.second;
 
-    if (max <= mapping->second.second) {
-      // We can write data to same page
-      block->second.write(mapping->second.second, req.lpn, req.ioFlag, tick);
+    if (block->second.getPageInfo(read.pageIndex, lpn, read.ioFlag)) {
+      read.ioFlag &= ~req.ioFlag;
 
-      if (sendToPAL) {
-        palRequest.blockIndex = mapping->second.first;
-        palRequest.pageIndex = mapping->second.second;
+      if (read.ioFlag.any()) {
+        block->second.read(read.pageIndex, read.ioFlag, tick);
 
-        pPAL->write(palRequest, tick);
+        pPAL->read(read, tick);
       }
 
-      // GC if needed
-      if (freeBlockRatio() < conf.readFloat(FTL_GC_THRESHOLD_RATIO)) {
-        std::vector<uint32_t> list;
-
-        selectVictimBlock(list, tick);
-        doGarbageCollection(list, tick);
-      }
-
-      return;
+      req.ioFlag |= read.ioFlag;
+      palRequest.ioFlag = req.ioFlag;
     }
-    else {
-      // Invalidate current page
-      block->second.invalidate(mapping->second.second);
-    }
+
+    // Invalidate current page
+    block->second.invalidate(mapping->second.second);
   }
   else {
     // Create empty mapping
@@ -414,7 +409,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
 
   // Write data to free block
-  auto block = blocks.find(getLastFreeBlock());
+  block = blocks.find(getLastFreeBlock());
 
   if (block == blocks.end()) {
     Logger::panic("No such block");
@@ -438,9 +433,16 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   // GC if needed
   if (freeBlockRatio() < conf.readFloat(FTL_GC_THRESHOLD_RATIO)) {
     std::vector<uint32_t> list;
+    uint64_t beginAt = tick;
 
-    selectVictimBlock(list, tick);
-    doGarbageCollection(list, tick);
+    Logger::debugprint(Logger::LOG_FTL_PAGE_MAPPING, "GC   | On-demand");
+
+    selectVictimBlock(list, beginAt);
+    doGarbageCollection(list, beginAt);
+
+    Logger::debugprint(Logger::LOG_FTL_PAGE_MAPPING,
+                       "GC   | Done | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                       tick, beginAt, beginAt - tick);
   }
 }
 

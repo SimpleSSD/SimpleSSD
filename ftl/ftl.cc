@@ -19,7 +19,6 @@
 
 #include "ftl/ftl.hh"
 
-#include "ftl/ftl_old.hh"
 #include "ftl/page_mapping.hh"
 #include "log/trace.hh"
 
@@ -45,9 +44,6 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
     case PAGE_MAPPING:
       pFTL = new PageMapping(&param, pPAL, pConf);
       break;
-    case NK_MAPPING:
-      pFTL = new FTLOLD(&param, pPAL, pConf);
-      break;
   }
 
   if (param.totalPhysicalBlocks <=
@@ -61,8 +57,7 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
                      param.totalPhysicalBlocks);
   Logger::debugprint(Logger::LOG_FTL, "Total logical blocks %u",
                      param.totalLogicalBlocks);
-  Logger::debugprint(Logger::LOG_FTL, "Logical page size %u",
-                     param.pageSize);
+  Logger::debugprint(Logger::LOG_FTL, "Logical page size %u", param.pageSize);
 
   // Initialize pFTL
   pFTL->initialize();

@@ -64,6 +64,19 @@ uint32_t Block::getValidPageCount() {
   return ret;
 }
 
+uint32_t Block::getDirtyPageCount() {
+  uint32_t ret = 0;
+
+  for (uint32_t i = 0; i < pageCount; i++) {
+    // Dirty: Valid(false), Erased(false)
+    if ((~(validBits.at(i) | erasedBits.at(i))).any()) {
+      ret++;
+    }
+  }
+
+  return ret;
+}
+
 uint32_t Block::getNextWritePageIndex() {
   return *std::max_element(nextWritePageIndex.begin(),
                            nextWritePageIndex.end());

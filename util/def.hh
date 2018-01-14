@@ -25,6 +25,8 @@
 
 #include "log/trace.hh"
 
+#define MIN_LBA_SIZE 512
+
 namespace SimpleSSD {
 
 typedef struct _LPNRange {
@@ -125,7 +127,6 @@ typedef struct _Request {
   DynamicBitset ioFlag;
 
   _Request(uint32_t);
-  _Request(uint32_t, ICL::Request &);
 } Request;
 
 }  // namespace FTL

@@ -24,10 +24,10 @@
 
 #include "Latency.h"
 #include "PAL2_TimeSlot.h"
-#include "ftl/old/ftl.hh"
 
 #include "util/config.hh"
 
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -40,6 +40,43 @@ using namespace std;
 
 #define OPER_ALL (OPER_NUM + 1)
 #define PAGE_ALL (PAGE_NUM + 1)
+
+// From ftl_command.hh
+typedef struct _Command {
+  Tick arrived;
+  Tick finished;
+  Addr ppn;
+  PAL_OPERATION operation;
+  bool mergeSnapshot;
+  uint64_t size;
+
+  _Command()
+      : arrived(0),
+        finished(0),
+        ppn(0),
+        operation(OPER_NUM),
+        mergeSnapshot(false),
+        size(0) {}
+  _Command(Tick t, Addr a, PAL_OPERATION op, uint64_t s)
+      : arrived(t),
+        finished(0),
+        ppn(a),
+        operation(op),
+        mergeSnapshot(false),
+        size(s) {}
+
+  Tick getLatency() {
+    if (finished > 0) {
+      return finished - arrived;
+    }
+    else {
+      return 0;
+    }
+  }
+} Command;
+
+// From ftl_defs.hh
+#define EPOCH_INTERVAL 100000000000
 
 class PALStatistics {
  public:
