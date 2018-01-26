@@ -22,6 +22,7 @@
 
 #include <cinttypes>
 #include <unordered_map>
+#include <vector>
 
 #include "ftl/abstract_ftl.hh"
 #include "ftl/common/block.hh"
@@ -39,15 +40,18 @@ class PageMapping : public AbstractFTL {
   Config &conf;
   Parameter *pFTLParam;
 
-  std::unordered_map<uint64_t, std::pair<uint32_t, uint32_t>> table;
+  std::unordered_map<uint64_t, std::vector<std::pair<uint32_t, uint32_t>>>
+      table;
   std::unordered_map<uint32_t, Block> blocks;
   std::unordered_map<uint32_t, Block> freeBlocks;
-  uint32_t lastFreeBlock;
+  std::vector<uint32_t> lastFreeBlock;
+  uint32_t lastFreeBlockIndex;
 
   bool bReclaimMore;
 
   float freeBlockRatio();
-  uint32_t getFreeBlock();
+  uint32_t convertBlockIdx(uint32_t);
+  uint32_t getFreeBlock(uint32_t);
   uint32_t getLastFreeBlock();
   void selectVictimBlock(std::vector<uint32_t> &, uint64_t &);
   void doGarbageCollection(std::vector<uint32_t> &, uint64_t &);
@@ -68,6 +72,8 @@ class PageMapping : public AbstractFTL {
   void trim(Request &, uint64_t &) override;
 
   void format(LPNRange &, uint64_t &) override;
+
+  Status *getStatus() override;
 };
 
 }  // namespace FTL

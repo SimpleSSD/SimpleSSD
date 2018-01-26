@@ -39,6 +39,7 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
   param.pagesInBlock = palparam->page;
   param.pageSize = palparam->superPageSize;
   param.ioUnitInPage = palparam->pageInSuperPage;
+  param.pageCountToMaxPerf = palparam->superBlock / palparam->block;
 
   switch (pConf->ftlConfig.readInt(FTL_MAPPING_MODE)) {
     case PAGE_MAPPING:
@@ -47,8 +48,7 @@ FTL::FTL(ConfigReader *c) : pConf(c) {
   }
 
   if (param.totalPhysicalBlocks <=
-      param.totalLogicalBlocks +
-          pConf->ftlConfig.readUint(FTL_GC_RECLAIM_BLOCK)) {
+      param.totalLogicalBlocks + param.pageCountToMaxPerf) {
     Logger::panic("FTL Over-Provision Ratio is too small");
   }
 
@@ -92,6 +92,10 @@ void FTL::format(LPNRange &range, uint64_t &tick) {
 
 Parameter *FTL::getInfo() {
   return &param;
+}
+
+uint64_t FTL::getUsedPageCount() {
+  return pFTL->getStatus()->mappedLogicalPages;
 }
 
 }  // namespace FTL

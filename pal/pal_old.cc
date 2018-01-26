@@ -70,7 +70,7 @@ void PALOLD::read(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    // printCPDPBP(iter, "READ");
+    printCPDPBP(iter, "READ");
 
     pal->submit(cmd, iter);
 
@@ -90,7 +90,7 @@ void PALOLD::write(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    // printCPDPBP(iter, "WRITE");
+    printCPDPBP(iter, "WRITE");
 
     pal->submit(cmd, iter);
 
@@ -110,7 +110,7 @@ void PALOLD::erase(Request &req, uint64_t &tick) {
   convertCPDPBP(req, list);
 
   for (auto &iter : list) {
-    // printCPDPBP(iter, "ERASE");
+    printCPDPBP(iter, "ERASE");
 
     pal->submit(cmd, iter);
 

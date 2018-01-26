@@ -75,6 +75,8 @@ class Controller {
   std::list<SQEntryWrapper> lSQFIFO;  //!< Internal FIFO queue for submission
   std::list<CQEntryWrapper> lCQFIFO;  //!< Internal FIFO queue for completion
 
+  bool shutdownReserved;
+
   ConfigData cfgdata;
   Config &conf;
 

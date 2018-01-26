@@ -185,6 +185,12 @@ void ICL::getLPNInfo(uint64_t &t, uint32_t &s) {
   s = logicalPageSize;
 }
 
+uint64_t ICL::getUsedPageCount() {
+  static uint32_t ratio = pFTL->getInfo()->ioUnitInPage;
+
+  return pFTL->getUsedPageCount() * ratio;
+}
+
 }  // namespace ICL
 
 }  // namespace SimpleSSD

@@ -51,6 +51,7 @@ class ICL {
   void format(LPNRange &, uint64_t &);
 
   void getLPNInfo(uint64_t &, uint32_t &);
+  uint64_t getUsedPageCount();
 };
 
 }  // namespace ICL

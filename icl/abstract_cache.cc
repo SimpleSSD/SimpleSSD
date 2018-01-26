@@ -23,10 +23,10 @@ namespace SimpleSSD {
 
 namespace ICL {
 
-Line::_Line(uint32_t count)
+Line::_Line()
     : tag(0), lastAccessed(0), insertedAt(0), dirty(false), valid(false) {}
 
-Line::_Line(uint32_t count, uint64_t t, bool d)
+Line::_Line(uint64_t t, bool d)
     : tag(t), lastAccessed(0), insertedAt(0), dirty(d), valid(true) {}
 
 AbstractCache::AbstractCache(ConfigReader *c, FTL::FTL *f) : conf(c), pFTL(f) {}

@@ -36,6 +36,7 @@ typedef struct {
   uint64_t pagesInBlock;  //!< (PAL::Parameter::page)
   uint32_t pageSize;      //!< Mapping unit (PAL::Parameter::superPageSize)
   uint32_t ioUnitInPage;  //!< # smallest I/O unit in one page
+  uint32_t pageCountToMaxPerf;  //!< # pages to fully utilize internal parallism
 } Parameter;
 
 class FTL {
@@ -57,6 +58,7 @@ class FTL {
   void format(LPNRange &, uint64_t &);
 
   Parameter *getInfo();
+  uint64_t getUsedPageCount();
 };
 
 }  // namespace FTL

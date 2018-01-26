@@ -35,8 +35,8 @@ typedef struct _Line {
   bool dirty;
   bool valid;
 
-  _Line(uint32_t);
-  _Line(uint32_t, uint64_t, bool);
+  _Line();
+  _Line(uint64_t, bool);
 } Line;
 
 class AbstractCache {

@@ -208,6 +208,14 @@ namespace FTL {
 Request::_Request(uint32_t iocount)
     : reqID(0), reqSubID(0), lpn(0), ioFlag(iocount) {}
 
+Request::_Request(uint32_t iocount, ICL::Request &req)
+    : reqID(req.reqID),
+      reqSubID(req.reqSubID),
+      lpn(req.range.slpn / iocount),
+      ioFlag(iocount) {
+  ioFlag.set(req.range.slpn % iocount);
+}
+
 }  // namespace FTL
 
 namespace PAL {

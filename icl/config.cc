@@ -173,7 +173,7 @@ void Config::update() {
   if (prefetchCount == 0) {
     Logger::panic("Invalid ReadPrefetchCount");
   }
-  if (prefetchRatio <= 0.f || prefetchRatio > 1.f) {
+  if (prefetchRatio <= 0.f) {
     Logger::panic("Invalid ReadPrefetchRatio");
   }
 }

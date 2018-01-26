@@ -127,6 +127,7 @@ typedef struct _Request {
   DynamicBitset ioFlag;
 
   _Request(uint32_t);
+  _Request(uint32_t, ICL::Request &);
 } Request;
 
 }  // namespace FTL

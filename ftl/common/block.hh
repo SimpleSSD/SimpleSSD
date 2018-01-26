@@ -37,7 +37,7 @@ class Block {
 
   std::vector<DynamicBitset> validBits;
   std::vector<DynamicBitset> erasedBits;
-  std::vector<uint64_t> lpns;
+  std::vector<std::vector<uint64_t>> lpns;
 
   uint64_t lastAccessed;
   uint32_t eraseCount;
@@ -51,12 +51,12 @@ class Block {
   uint32_t getValidPageCount();
   uint32_t getDirtyPageCount();
   uint32_t getNextWritePageIndex();
-  uint32_t getNextWritePageIndex(DynamicBitset &);
-  bool getPageInfo(uint32_t, uint64_t &, DynamicBitset &);
-  bool read(uint32_t, DynamicBitset &, uint64_t);
-  bool write(uint32_t, uint64_t, DynamicBitset &, uint64_t);
+  uint32_t getNextWritePageIndex(uint32_t);
+  bool getPageInfo(uint32_t, std::vector<uint64_t> &, DynamicBitset &);
+  bool read(uint32_t, uint32_t, uint64_t);
+  bool write(uint32_t, uint64_t, uint32_t, uint64_t);
   void erase();
-  void invalidate(uint32_t);
+  void invalidate(uint32_t, uint32_t);
 };
 
 }  // namespace FTL

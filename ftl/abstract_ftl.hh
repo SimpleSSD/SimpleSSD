@@ -28,10 +28,17 @@ namespace SimpleSSD {
 
 namespace FTL {
 
+typedef struct _Status {
+  uint64_t totalLogicalPages;
+  uint64_t mappedLogicalPages;
+  uint64_t freePhysicalBlocks;
+} Status;
+
 class AbstractFTL {
  protected:
   Parameter *pParam;
   PAL::PAL *pPAL;
+  Status status;
 
  public:
   AbstractFTL(Parameter *p, PAL::PAL *l) : pParam(p), pPAL(l) {}
@@ -44,6 +51,8 @@ class AbstractFTL {
   virtual void trim(Request &, uint64_t &) = 0;
 
   virtual void format(LPNRange &, uint64_t &) = 0;
+
+  virtual Status *getStatus() = 0;
 };
 
 }  // namespace FTL

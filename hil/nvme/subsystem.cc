@@ -222,7 +222,9 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   memcpy(buffer + 8, &info->capacity, 8);
 
   // Namespace Utilization
-  memcpy(buffer + 16, &info->capacity, 8);
+  info->utilization =
+      pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
+  memcpy(buffer + 16, &info->utilization, 8);
 
   // Namespace Features
   buffer[24] = 0x04;  // Trim supported
@@ -998,6 +1000,9 @@ bool Subsystem::formatNVM(SQEntryWrapper &req, CQEntryWrapper &resp,
 
       // Reset health stat and set format progress
       (*iter)->format(tick);
+
+      info->utilization =
+          pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
     }
     else {
       resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,

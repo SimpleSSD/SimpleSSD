@@ -40,6 +40,7 @@ Controller::Controller(Interface *intrface, ConfigReader *c)
     : pParent(intrface),
       adminQueueInited(false),
       interruptMask(0),
+      shutdownReserved(false),
       conf(c->nvmeConfig) {
   // Allocate array for Command Queues
   ppCQueue = (CQueue **)calloc(conf.readUint(NVME_MAX_IO_CQUEUE) + 1,
@@ -216,8 +217,15 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
               sqstride);
         }
 
+        // Shotdown notification
+        if (registers.configuration & 0x0000C000) {
+          registers.status &= 0xFFFFFFF2;  // RDY = 1
+          registers.status |= 0x00000005;  // Shutdown processing occurring
+
+          shutdownReserved = true;
+        }
         // If EN = 1, Set CSTS.RDY = 1
-        if (registers.configuration & 0x00000001) {
+        else if (registers.configuration & 0x00000001) {
           registers.status |= 0x00000001;
 
           pParent->enableController(conf.readUint(NVME_QUEUE_INTERVAL),
@@ -1173,7 +1181,18 @@ void Controller::work(uint64_t &tick) {
   }
 
   // Check CQFIFO
-  if (lCQFIFO.size() > 0) {
+  if (shutdownReserved) {
+    pParent->disableController();
+
+    registers.status &= 0xFFFFFFF2;  // RDY = 0
+    registers.status |= 0x00000008;  // Shutdown processing complete
+
+    shutdownReserved = false;
+
+    lCQFIFO.clear();
+    lSQFIFO.clear();
+  }
+  else if (lCQFIFO.size() > 0) {
     CQueue *pQueue;
 
     for (auto iter = lCQFIFO.begin(); iter != lCQFIFO.end(); iter++) {

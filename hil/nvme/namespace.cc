@@ -358,6 +358,10 @@ void Namespace::datasetManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
     // Just ignore
   }
 
+  Logger::debugprint(Logger::LOG_HIL_NVME,
+                     "NVM     | TRIM  | NSID %-5d| %d ranges | Attr %1X", nsid,
+                     nr, req.entry.dword11 & 0x0F);
+
   if (!err) {
     static DatasetManagementRange range;
     uint64_t beginAt = tick;
@@ -367,7 +371,7 @@ void Namespace::datasetManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
     }
     else {
       dma = new PRPList(pCfgdata, req.entry.data1, req.entry.data2,
-                        (uint64_t)0x1000);
+                        (uint64_t)nr * 0x10);
     }
 
     for (int i = 0; i < nr; i++) {
