@@ -32,25 +32,26 @@
 #include <string>
 using namespace std;
 
+#include "pal/config.hh"
+
 /*==============================
     Latency
 ==============================*/
 class Latency {
+ protected:
+  SimpleSSD::PAL::Config::NANDTiming timing;
+
  public:
-  uint32_t SPDIV;  // 50 to 100mhz
-  uint32_t PGDIV;
+  Latency(SimpleSSD::PAL::Config::NANDTiming);
+  virtual ~Latency();
 
   // Get Latency for PageAddress(L/C/MSBpage), Operation(RWE),
   // BusyFor(Ch.DMA/Mem.Work)
-  virtual uint64_t GetLatency(uint32_t AddrPage, uint8_t Oper,
-                              uint8_t BusyFor) {
-    return 0;
-  };
-  virtual inline uint8_t GetPageType(uint32_t AddrPage) { return PAGE_NUM; };
+  virtual uint64_t GetLatency(uint32_t, uint8_t, uint8_t) { return 0; };
+  virtual inline uint8_t GetPageType(uint32_t) { return PAGE_NUM; };
 
   // Setup DMA speed and pagesize
-  virtual uint64_t GetPower(uint8_t Oper, uint8_t BusyFor) { return 0; };
-  Latency(uint32_t mhz, uint32_t pagesize);
+  virtual uint64_t GetPower(uint8_t, uint8_t) { return 0; };
 };
 
 #endif  //__Latency_h__

@@ -31,13 +31,13 @@ namespace ICL {
 
 EvictData::EvictData() : setIdx(0), wayIdx(0), tag(0) {}
 
-GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f)
-    : AbstractCache(c, f),
+GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f, DRAM::AbstractDRAM *d)
+    : AbstractCache(c, f, d),
       lineCountInSuperPage(f->getInfo()->ioUnitInPage),
       superPageSize(f->getInfo()->pageSize),
-      waySize(c->iclConfig.readUint(ICL_WAY_SIZE)),
       lineSize(superPageSize / lineCountInSuperPage),
       lineCountInMaxIO(f->getInfo()->pageCountToMaxPerf * lineCountInSuperPage),
+      waySize(c->iclConfig.readUint(ICL_WAY_SIZE)),
       prefetchIOCount(c->iclConfig.readUint(ICL_PREFETCH_COUNT)),
       prefetchIORatio(c->iclConfig.readFloat(ICL_PREFETCH_RATIO)),
       useReadCaching(c->iclConfig.readBoolean(ICL_USE_READ_CACHE)),
@@ -47,7 +47,14 @@ GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f)
       dist(std::uniform_int_distribution<>(0, waySize - 1)) {
   uint64_t cacheSize = c->iclConfig.readUint(ICL_CACHE_SIZE);
 
-  setSize = MAX(cacheSize / lineSize / waySize, 1);
+  // Fully-associated?
+  if (waySize == 0) {
+    setSize = lineCountInMaxIO;
+    waySize = MAX(cacheSize / lineSize / setSize, 1);
+  }
+  else {
+    setSize = MAX(cacheSize / lineSize / waySize, 1);
+  }
 
   // Set size should multiples of lineCountInSuperPage
   uint32_t left = setSize % lineCountInMaxIO;
@@ -73,10 +80,6 @@ GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f)
       Logger::LOG_ICL_GENERIC_CACHE,
       "CREATE  | line count in super page %u | line count in max I/O %u",
       lineCountInSuperPage, lineCountInMaxIO);
-
-  // TODO: replace this with DRAM model
-  pTiming = c->iclConfig.getDRAMTiming();
-  pStructure = c->iclConfig.getDRAMStructure();
 
   ppCache.resize(setSize);
 
@@ -268,19 +271,8 @@ bool GenericCache::compareEvictList(std::vector<EvictData> &a,
   return ret;
 }
 
-uint64_t GenericCache::calculateDelay(uint64_t bytesize) {
-  uint64_t pageCount =
-      (bytesize > 0) ? (bytesize - 1) / pStructure->pageSize + 1 : 0;
-  uint64_t pageFetch = pTiming->tRP + pTiming->tRCD + pTiming->tCL;
-  double bandwidth =
-      2.0 * pStructure->busWidth * pStructure->channel / 8.0 / pTiming->tCK;
-
-  return (uint64_t)(pageFetch + pageCount * pStructure->pageSize / bandwidth);
-}
-
 void GenericCache::evictVictim(std::vector<EvictData> &list, bool isRead,
                                uint64_t &tick) {
-  static uint64_t lat = calculateDelay(sizeof(Line) + lineSize) * waySize;
   std::vector<FTL::Request> reqList;
 
   if (list.size() == 0) {
@@ -313,8 +305,6 @@ void GenericCache::evictVictim(std::vector<EvictData> &list, bool isRead,
   if (reqList.size() == 0) {
     Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
                        "----- | Cache line is clean, no need to flush");
-
-    tick += lat;
   }
   else {
     uint64_t size = reqList.size();
@@ -360,17 +350,18 @@ void GenericCache::evictVictim(std::vector<EvictData> &list, bool isRead,
 
     if (isRead) {
       // On read, make this cacheline valid and clean
+      // insertedAt and lastAccessed will filled at read function
       line.valid = true;
     }
     else {
       // On write, make this cacheline empty
       line.valid = false;
+      line.insertedAt = tick;
+      line.lastAccessed = tick;
     }
 
     line.dirty = false;
     line.tag = iter.tag;
-    line.insertedAt = tick;
-    line.lastAccessed = tick;
   }
 }
 
@@ -391,7 +382,7 @@ void GenericCache::checkPrefetch(Request &req) {
       accessCounter += req.length;
 
       if (hitCounter >= prefetchIOCount &&
-          (float)accessCounter / superPageSize > prefetchIORatio) {
+          (float)accessCounter / superPageSize >= prefetchIORatio) {
         prefetchEnabled = true;
       }
     }
@@ -408,6 +399,7 @@ void GenericCache::checkPrefetch(Request &req) {
 // True when hit
 bool GenericCache::read(Request &req, uint64_t &tick) {
   bool ret = false;
+  uint64_t dramAt = tick;
 
   Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
                      "READ  | REQ %7u-%-4u | LCA %" PRIu64 " | SIZE %" PRIu64,
@@ -416,8 +408,6 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
   if (useReadCaching) {
     uint32_t setIdx = calcSet(req.range.slpn);
     uint32_t wayIdx;
-    static uint64_t lat = calculateDelay(sizeof(Line) + lineSize) * waySize;
-
     // Check prefetch
     if (useReadPrefetch) {
       checkPrefetch(req);
@@ -438,7 +428,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
       ppCache[setIdx][wayIdx].lastAccessed = tick;
 
       // Add tDRAM
-      tick += lat;
+      pDRAM->read(lineSize * (wayIdx * setSize + setIdx), req.length, tick);
 
       Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
                          "READ  | Cache hit at (%u, %u) | %" PRIu64
@@ -451,9 +441,11 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
     else {
       FTL::Request reqInternal(lineCountInSuperPage, req);
       std::vector<EvictData> list;
+      std::vector<EvictData> timing;
       EvictData data;
       uint64_t beginAt;
       uint64_t finishedAt = tick;
+      uint64_t finishedAllAt = tick;
 
       if (prefetchEnabled) {
         static const uint32_t mapSize = lineCountInMaxIO / lineCountInSuperPage;
@@ -470,9 +462,15 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
               data.wayIdx = getVictimWay(data.tag);
 
               list.push_back(data);
+              timing.push_back(data);
             }
             else {
               reqInternal.ioFlag.set(i, false);
+            }
+
+            if (data.tag == req.range.slpn) {
+              setIdx = data.setIdx;
+              wayIdx = data.wayIdx;
             }
           }
 
@@ -480,33 +478,79 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 
           pFTL->read(reqInternal, beginAt);
 
+          // Do we can return at this tick?
           if (reqInternal.lpn == req.range.slpn / lineCountInSuperPage) {
-            finishedAt = beginAt;
+            dramAt = tick;
+            pDRAM->read(lineSize * (wayIdx * setSize + setIdx), lineSize,
+                        dramAt);
+
+            // Requested data read
+            finishedAt = MAX(beginAt, dramAt);
           }
 
+          // Update timing of lines
+          for (auto &iter : timing) {
+            ppCache[iter.setIdx][iter.wayIdx].insertedAt = beginAt;
+            ppCache[iter.setIdx][iter.wayIdx].lastAccessed = beginAt;
+          }
+
+          timing.clear();
+
           reqInternal.lpn++;
+
+          finishedAllAt = MAX(finishedAllAt, beginAt);
         }
+
+        Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
+                           "READ  | Prefetch done | LCA %" PRIu64 " - %" PRIu64
+                           " | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                           list.front().tag, list.back().tag, tick,
+                           finishedAllAt, finishedAllAt - tick);
+
+        finishedAllAt = finishedAt;
       }
       else {
         data.tag = req.range.slpn;
         data.setIdx = setIdx;
         data.wayIdx = getVictimWay(data.tag);
 
+        dramAt = tick;
+        pDRAM->read(lineSize * (data.wayIdx * setSize + data.setIdx), lineSize,
+                    dramAt);
+
         list.push_back(data);
 
-        pFTL->read(reqInternal, finishedAt);
+        pFTL->read(reqInternal, finishedAllAt);
+
+        // Update line
+        ppCache[data.setIdx][data.wayIdx].insertedAt = finishedAllAt;
+        ppCache[data.setIdx][data.wayIdx].lastAccessed = finishedAllAt;
+
+        finishedAllAt = MAX(finishedAllAt, dramAt);
       }
 
       // Flush collected lines
       evictVictim(list, true, tick);
 
-      tick = finishedAt;
+      Logger::debugprint(
+          Logger::LOG_ICL_GENERIC_CACHE,
+          "READ  | Cache miss and read from NAND to (%u, %u) | %" PRIu64
+          " - %" PRIu64 " (%" PRIu64 ")",
+          setIdx, getValidWay(req.range.slpn), tick, finishedAllAt,
+          finishedAllAt - tick);
+
+      tick = finishedAllAt;
     }
   }
   else {
     FTL::Request reqInternal(lineCountInSuperPage, req);
 
+    dramAt = tick;
+    pDRAM->read(0, req.length, dramAt);
+
     pFTL->read(reqInternal, tick);
+
+    tick = MAX(tick, dramAt);
   }
 
   return ret;
@@ -523,7 +567,6 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
   if (useWriteCaching) {
     uint32_t setIdx = calcSet(req.range.slpn);
     uint32_t wayIdx;
-    static uint64_t lat = calculateDelay(sizeof(Line) + lineSize) * waySize;
 
     // Check cache that we have data for corresponding LCA
     wayIdx = getValidWay(req.range.slpn);
@@ -542,7 +585,7 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       ppCache[setIdx][wayIdx].dirty = true;
 
       // Add tDRAM
-      tick += lat;
+      pDRAM->write(lineSize * (wayIdx * setSize + setIdx), req.length, tick);
 
       Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
                          "WRITE | Cache hit at (%u, %u) | %" PRIu64
@@ -572,7 +615,7 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
         ppCache[setIdx][wayIdx].lastAccessed = tick;
 
         // Add tDRAM
-        tick += lat;
+        pDRAM->write(lineSize * (wayIdx * setSize + setIdx), req.length, tick);
 
         Logger::debugprint(Logger::LOG_ICL_GENERIC_CACHE,
                            "WRITE | Cache miss at (%u, %u) | %" PRIu64
@@ -688,10 +731,16 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
           }
         }
 
-        tick = finishedAt;
-
         // Update cacheline
         wayIdx = getEmptyWay(setIdx);
+
+        if (tick < finishedAt) {
+          tick = finishedAt;
+        }
+        else {
+          pDRAM->write(lineSize * (wayIdx * setSize + setIdx), req.length,
+                       tick);
+        }
 
         if (wayIdx != waySize) {
           ppCache[setIdx][wayIdx].valid = true;
@@ -708,8 +757,13 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
   }
   else {
     FTL::Request reqInternal(lineCountInSuperPage, req);
+    uint64_t dramAt = tick;
+
+    pDRAM->write(0, req.length, dramAt);
 
     pFTL->write(reqInternal, tick);
+
+    tick = MAX(tick, dramAt);
   }
 
   return ret;

@@ -26,6 +26,13 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
     : pParam(p), lat(l), stats(statistics) {
   uint32_t OriginalSizes[7];
 
+  uint32_t SPDIV = c->readUint(SimpleSSD::PAL::NAND_DMA_SPEED) / 50;
+  uint32_t PGDIV = 16384 / c->readUint(SimpleSSD::PAL::NAND_PAGE_SIZE);
+
+  if (SPDIV == 0 || PGDIV == 0) {
+    SimpleSSD::Logger::panic("SPDIV or PGDIV is 0");
+  }
+
   OriginalSizes[ADDR_CHANNEL] = pParam->channel;
   OriginalSizes[ADDR_PACKAGE] = pParam->package;
   OriginalSizes[ADDR_DIE] = pParam->die;
@@ -86,42 +93,39 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
     switch (c->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
       case SimpleSSD::PAL::NAND_SLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV + 100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV)] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV)] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV) +
-                       100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV) + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][1500000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][1500000 / SPDIV] = tmp;
         break;
       case SimpleSSD::PAL::NAND_MLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV + 100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV)] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV)] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV) +
-                       100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV) + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][1500000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][1500000 / SPDIV] = tmp;
         break;
       case SimpleSSD::PAL::NAND_TLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][100000 / lat->SPDIV + 100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][100000 / SPDIV + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV)] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV)] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][185000000 / (lat->PGDIV * lat->SPDIV) +
-                       100000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][185000000 / (PGDIV * SPDIV) + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        ChFreeSlots[i][1500000 / lat->SPDIV] = tmp;
+        ChFreeSlots[i][1500000 / SPDIV] = tmp;
         break;
       default:
         printf("unsupported NAND types!\n");
@@ -135,39 +139,39 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
     switch (c->readUint(SimpleSSD::PAL::NAND_FLASH_TYPE)) {
       case SimpleSSD::PAL::NAND_SLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][25000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][25000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][300000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][300000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][2000000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][2000000000 + 100000 / SPDIV] = tmp;
         break;
       case SimpleSSD::PAL::NAND_MLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][40000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][40000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][90000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][90000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][500000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][500000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][1300000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][1300000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][3500000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][3500000000 + 100000 / SPDIV] = tmp;
         break;
       case SimpleSSD::PAL::NAND_TLC:
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][58000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][58000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][78000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][78000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][107000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][107000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][558000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][558000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][2201000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][2201000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][5001000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][5001000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
-        DieFreeSlots[i][2274000000 + 100000 / lat->SPDIV] = tmp;
+        DieFreeSlots[i][2274000000 + 100000 / SPDIV] = tmp;
         break;
       default:
         printf("unsupported NAND types!\n");

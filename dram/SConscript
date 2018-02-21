@@ -23,6 +23,4 @@ if env['TARGET_ISA'] == 'null':
     Return()
 
 Source('config.cc')
-Source('disk.cc')
-Source('def.cc')
-Source('interface.cc')
+Source('simple.cc')

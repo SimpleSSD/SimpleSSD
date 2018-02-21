@@ -19,6 +19,7 @@
 
 #include "icl/icl.hh"
 
+#include "dram/simple.hh"
 #include "icl/generic_cache.hh"
 #include "log/trace.hh"
 #include "util/algorithm.hh"
@@ -37,12 +38,24 @@ ICL::ICL(ConfigReader *c) : pConf(c) {
       param->totalLogicalBlocks * param->pagesInBlock * param->ioUnitInPage;
   logicalPageSize = param->pageSize / param->ioUnitInPage;
 
-  pCache = new GenericCache(pConf, pFTL);
+  switch (pConf->dramConfig.readInt(DRAM::DRAM_MODEL)) {
+    case DRAM::SIMPLE_MODEL:
+      pDRAM = new DRAM::SimpleDRAM(pConf->dramConfig);
+
+      break;
+    default:
+      Logger::panic("Undefined DRAM model");
+
+      break;
+  }
+
+  pCache = new GenericCache(pConf, pFTL, pDRAM);
 }
 
 ICL::~ICL() {
   delete pCache;
   delete pFTL;
+  delete pDRAM;
 }
 
 void ICL::read(Request &req, uint64_t &tick) {
@@ -68,7 +81,7 @@ void ICL::read(Request &req, uint64_t &tick) {
   }
 
   Logger::debugprint(Logger::LOG_ICL,
-                     "READ  | LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     "READ  | LCA %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
                      req.range.slpn, req.range.nlp, tick, finishedAt,
                      finishedAt - tick);
@@ -99,7 +112,7 @@ void ICL::write(Request &req, uint64_t &tick) {
   }
 
   Logger::debugprint(Logger::LOG_ICL,
-                     "WRITE | LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     "WRITE | LCA %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
                      req.range.slpn, req.range.nlp, tick, finishedAt,
                      finishedAt - tick);
@@ -130,7 +143,7 @@ void ICL::flush(Request &req, uint64_t &tick) {
   }
 
   Logger::debugprint(Logger::LOG_ICL,
-                     "FLUSH | LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     "FLUSH | LCA %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
                      req.range.slpn, req.range.nlp, tick, finishedAt,
                      finishedAt - tick);
@@ -161,7 +174,7 @@ void ICL::trim(Request &req, uint64_t &tick) {
   }
 
   Logger::debugprint(Logger::LOG_ICL,
-                     "TRIM  | LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     "TRIM  | LCA %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
                      req.range.slpn, req.range.nlp, tick, finishedAt,
                      finishedAt - tick);
@@ -175,7 +188,7 @@ void ICL::format(LPNRange &range, uint64_t &tick) {
   pCache->format(range, tick);
 
   Logger::debugprint(Logger::LOG_ICL,
-                     "FORMAT| LPN %" PRIu64 " + %" PRIu64 " | %" PRIu64
+                     "FORMAT| LCA %" PRIu64 " + %" PRIu64 " | %" PRIu64
                      " - %" PRIu64 " (%" PRIu64 ")",
                      range.slpn, range.nlp, beginAt, tick, tick - beginAt);
 }

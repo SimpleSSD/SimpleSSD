@@ -27,6 +27,10 @@ namespace PAL {
 
 const char NAME_CHANNEL[] = "Channel";
 const char NAME_PACKAGE[] = "Package";
+const char NAME_PAGE_ALLOCATION[] = "PageAllocation";
+const char NAME_SUPER_BLOCK[] = "SuperblockSize";
+
+/* NAND config TODO: seperate this */
 const char NAME_DIE[] = "Die";
 const char NAME_PLANE[] = "Plane";
 const char NAME_BLOCK[] = "Block";
@@ -36,8 +40,23 @@ const char NAME_USE_MULTI_PLANE_OP[] = "EnableMultiPlaneOperation";
 const char NAME_DMA_SPEED[] = "DMASpeed";
 const char NAME_DMA_WIDTH[] = "DMAWidth";
 const char NAME_FLASH_TYPE[] = "NANDType";
-const char NAME_PAGE_ALLOCATION[] = "PageAllocation";
-const char NAME_SUPER_BLOCK[] = "SuperblockSize";
+
+/* NAND timing TODO: seperate this */
+const char NAME_NAND_LSB_READ[] = "LSBRead";
+const char NAME_NAND_LSB_WRITE[] = "LSBWrite";
+const char NAME_NAND_CSB_READ[] = "CSBRead";
+const char NAME_NAND_CSB_WRITE[] = "CSBWrite";
+const char NAME_NAND_MSB_READ[] = "MSBRead";
+const char NAME_NAND_MSB_WRITE[] = "MSBWrite";
+const char NAME_NAND_ERASE[] = "Erase";
+
+/* Constants for calculating DMA time based on ONFI 3.x spec */
+// READ : <00h> <C1> <C2> <R1> <R2> <R3> <30h> [tWB] [tR] [tRR] <DATA>
+// WRITE: <80h> <C1> <C2> <R1> <R2> <R3> [tADL] <DATA> <10h> [tWB] [tPROG]
+// ERASE: <60h> <R1> <R2> <R3> <D0h> [tWB] [tBERS]
+const uint8_t readCycle = 7;
+const uint8_t writeCycle = 7;
+const uint8_t eraseCycle = 5;
 
 Config::Config() {
   channel = 8;
@@ -51,6 +70,15 @@ Config::Config() {
   dmaSpeed = 400;
   dmaWidth = 8;
   nandType = NAND_MLC;
+
+  // Set NAND timing (Default: MLC, csb is not used)
+  nandTiming.lsb.read = 40000000;    // 40us
+  nandTiming.lsb.write = 500000000;  // 500us
+  nandTiming.csb.read = 0;
+  nandTiming.csb.write = 0;
+  nandTiming.msb.read = 65000000;     // 65us
+  nandTiming.msb.write = 1300000000;  // 1300us
+  nandTiming.erase = 3500000000;      // 3.5ms
 
   superblock = INDEX_CHANNEL | INDEX_PACKAGE | INDEX_DIE | INDEX_PLANE;
   memset(PageAllocation, 0, 4);
@@ -98,6 +126,27 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_PAGE_ALLOCATION)) {
     _pageAllocation = value;
   }
+  else if (MATCH_NAME(NAME_NAND_LSB_READ)) {
+    nandTiming.lsb.read = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_LSB_WRITE)) {
+    nandTiming.lsb.write = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CSB_READ)) {
+    nandTiming.csb.read = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CSB_WRITE)) {
+    nandTiming.csb.write = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_MSB_READ)) {
+    nandTiming.msb.read = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_MSB_WRITE)) {
+    nandTiming.msb.write = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_ERASE)) {
+    nandTiming.erase = strtoul(value, nullptr, 10);
+  }
   else {
     ret = false;
   }
@@ -109,6 +158,17 @@ void Config::update() {
   if (dmaWidth & 0x07) {
     Logger::panic("dmaWidth should be multiple of 8.");
   }
+
+  // DMA time calculation
+  //                 MT/s       MT -> T    ms     us     ns     ps
+  float tCK = 1.f / (dmaSpeed * 1048576) * 1000 * 1000 * 1000 * 1000;
+
+  nandTiming.dma0.read = readCycle * tCK / (dmaWidth / 8);
+  nandTiming.dma0.write = (writeCycle + pageSize) * tCK / (dmaWidth / 8);
+  nandTiming.dma0.erase = eraseCycle * tCK / (dmaWidth / 8);
+  nandTiming.dma1.read = pageSize * tCK / (dmaWidth / 8);
+  nandTiming.dma1.write = 1 * tCK / (dmaWidth / 8);
+  nandTiming.dma1.erase = 1 * tCK / (dmaWidth / 8);
 
   // Parse page allocation setting
   int i = 0;
@@ -270,6 +330,10 @@ uint32_t Config::getPageAllocationConfig() {
   return (uint32_t)PageAllocation[0] | ((uint32_t)PageAllocation[1] << 8) |
          ((uint32_t)PageAllocation[2] << 16) |
          ((uint32_t)PageAllocation[3] << 24);
+}
+
+Config::NANDTiming *Config::getNANDTiming() {
+  return &nandTiming;
 }
 
 }  // namespace PAL

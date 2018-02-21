@@ -42,10 +42,10 @@ class GenericCache : public AbstractCache {
  private:
   const uint32_t lineCountInSuperPage;
   const uint32_t superPageSize;
-  const uint32_t waySize;
   const uint32_t lineSize;
   const uint32_t lineCountInMaxIO;
   uint32_t setSize;
+  uint32_t waySize;
 
   const uint32_t prefetchIOCount;
   const float prefetchIORatio;
@@ -65,10 +65,6 @@ class GenericCache : public AbstractCache {
   std::mt19937 gen;
   std::uniform_int_distribution<> dist;
 
-  // TODO: replace this with DRAM model
-  Config::DRAMTiming *pTiming;
-  Config::DRAMStructure *pStructure;
-
   std::vector<std::vector<Line>> ppCache;
 
   uint32_t calcSet(uint64_t);
@@ -77,12 +73,11 @@ class GenericCache : public AbstractCache {
   uint32_t getVictimWay(uint64_t);
   uint32_t getDirtyEntryCount(uint64_t, std::vector<EvictData> &);
   bool compareEvictList(std::vector<EvictData> &, std::vector<EvictData> &);
-  uint64_t calculateDelay(uint64_t);
   void evictVictim(std::vector<EvictData> &, bool, uint64_t &);
   void checkPrefetch(Request &);
 
  public:
-  GenericCache(ConfigReader *, FTL::FTL *);
+  GenericCache(ConfigReader *, FTL::FTL *, DRAM::AbstractDRAM *);
   ~GenericCache();
 
   bool read(Request &, uint64_t &) override;

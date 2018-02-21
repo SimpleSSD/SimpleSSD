@@ -439,9 +439,6 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
 
           finishedAt = MAX(finishedAt, beginAt);
         }
-        else {
-          Logger::panic("Invalid mapping table");
-        }
       }
     }
 

@@ -33,6 +33,7 @@ const char SECTION_NVME[] = "nvme";
 const char SECTION_FTL[] = "ftl";
 const char SECTION_ICL[] = "icl";
 const char SECTION_PAL[] = "pal";
+const char SECTION_DRAM[] = "dram";
 
 bool BaseConfig::convertBool(const char *value) {
   bool ret = false;
@@ -54,6 +55,7 @@ bool ConfigReader::init(std::string file) {
   ftlConfig.update();
   iclConfig.update();
   palConfig.update();
+  dramConfig.update();
 
   return true;
 }
@@ -61,7 +63,7 @@ bool ConfigReader::init(std::string file) {
 int ConfigReader::parserHandler(void *context, const char *section,
                                 const char *name, const char *value) {
   ConfigReader *pThis = (ConfigReader *)context;
-  bool handled = true;
+  bool handled = false;
 
   if (MATCH_SECTION(SECTION_NVME)) {
     handled = pThis->nvmeConfig.setConfig(name, value);
@@ -74,6 +76,9 @@ int ConfigReader::parserHandler(void *context, const char *section,
   }
   else if (MATCH_SECTION(SECTION_PAL)) {
     handled = pThis->palConfig.setConfig(name, value);
+  }
+  else if (MATCH_SECTION(SECTION_DRAM)) {
+    handled = pThis->dramConfig.setConfig(name, value);
   }
 
   if (!handled) {

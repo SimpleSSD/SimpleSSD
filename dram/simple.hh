@@ -17,34 +17,37 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTIL_CONFIG_READER__
-#define __UTIL_CONFIG_READER__
+#ifndef __DRAM_SIMPLE__
+#define __DRAM_SIMPLE__
 
-#include <cinttypes>
-#include <string>
-
-#include "dram/config.hh"
-#include "ftl/config.hh"
-#include "hil/nvme/config.hh"
-#include "icl/config.hh"
-#include "lib/ini/ini.h"
-#include "pal/config.hh"
+#include "dram/abstract_dram.hh"
 
 namespace SimpleSSD {
 
-class ConfigReader {
+namespace DRAM {
+
+class SimpleDRAM : public AbstractDRAM {
  private:
-  static int parserHandler(void *, const char *, const char *, const char *);
+  Config::DRAMStructure *pStructure;
+  Config::DRAMTiming *pTiming;
+  Config::DRAMPower *pPower;
+
+  uint64_t pageFetchLatency;
+  double interfaceBandwidth;
+
+  uint64_t lastDRAMAccess;
 
  public:
-  FTL::Config ftlConfig;
-  HIL::NVMe::Config nvmeConfig;
-  ICL::Config iclConfig;
-  PAL::Config palConfig;
-  DRAM::Config dramConfig;
+  SimpleDRAM(Config &p);
+  ~SimpleDRAM();
 
-  bool init(std::string);
+  void updateDelay(uint64_t, uint64_t &);
+
+  void read(uint64_t, uint64_t, uint64_t &) override;
+  void write(uint64_t, uint64_t, uint64_t &) override;
 };
+
+}  // namespace DRAM
 
 }  // namespace SimpleSSD
 

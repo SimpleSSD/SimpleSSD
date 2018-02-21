@@ -20,6 +20,7 @@
 #ifndef __ICL_ICL__
 #define __ICL_ICL__
 
+#include "dram/abstract_dram.hh"
 #include "ftl/ftl.hh"
 #include "icl/abstract_cache.hh"
 #include "util/config.hh"
@@ -32,6 +33,7 @@ namespace ICL {
 class ICL {
  private:
   FTL::FTL *pFTL;
+  DRAM::AbstractDRAM *pDRAM;
 
   ConfigReader *pConf;
   AbstractCache *pCache;

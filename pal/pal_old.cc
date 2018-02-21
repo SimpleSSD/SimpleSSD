@@ -35,20 +35,38 @@ namespace SimpleSSD {
 namespace PAL {
 
 PALOLD::PALOLD(Parameter &p, Config &c) : AbstractPAL(p, c) {
+  Config::NANDTiming *pTiming = c.getNANDTiming();
+
   switch (c.readInt(NAND_FLASH_TYPE)) {
     case NAND_SLC:
-      lat = new LatencySLC(c.readUint(NAND_DMA_SPEED),
-                           c.readUint(NAND_PAGE_SIZE));
+      lat = new LatencySLC(*pTiming);
       break;
     case NAND_MLC:
-      lat = new LatencyMLC(c.readUint(NAND_DMA_SPEED),
-                           c.readUint(NAND_PAGE_SIZE));
+      lat = new LatencyMLC(*pTiming);
       break;
     case NAND_TLC:
-      lat = new LatencyTLC(c.readUint(NAND_DMA_SPEED),
-                           c.readUint(NAND_PAGE_SIZE));
+      lat = new LatencyTLC(*pTiming);
       break;
   }
+
+  Logger::debugprint(Logger::LOG_PAL_OLD, "NAND timing:");
+  Logger::debugprint(Logger::LOG_PAL_OLD, "Operation |     LSB    |     CSB   "
+                                          " |     MSB    |    DMA 0   |    DMA "
+                                          "1");
+  Logger::debugprint(Logger::LOG_PAL_OLD,
+                     "   READ   | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+                     " | %10" PRIu64 " | %10" PRIu64,
+                     pTiming->lsb.read, pTiming->csb.read, pTiming->msb.read,
+                     pTiming->dma0.read, pTiming->dma1.read);
+  Logger::debugprint(Logger::LOG_PAL_OLD,
+                     "   WRITE  | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+                     " | %10" PRIu64 " | %10" PRIu64,
+                     pTiming->lsb.write, pTiming->csb.write, pTiming->msb.write,
+                     pTiming->dma0.write, pTiming->dma1.write);
+  Logger::debugprint(Logger::LOG_PAL_OLD,
+                     "   ERASE  |                           %10" PRIu64
+                     " | %10" PRIu64 " | %10" PRIu64,
+                     pTiming->erase, pTiming->dma0.erase, pTiming->dma1.erase);
 
   stats = new PALStatistics(&c, lat);
   pal = new PAL2(stats, &param, &c, lat);
@@ -57,7 +75,7 @@ PALOLD::PALOLD(Parameter &p, Config &c) : AbstractPAL(p, c) {
 PALOLD::~PALOLD() {
   delete pal;
   delete stats;
-  // delete lat;
+  delete lat;
 }
 
 void PALOLD::read(Request &req, uint64_t &tick) {

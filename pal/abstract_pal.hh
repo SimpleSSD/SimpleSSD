@@ -35,7 +35,7 @@ class AbstractPAL {
 
  public:
   AbstractPAL(Parameter &p, Config &c) : param(p), conf(c) {}
-  virtual ~AbstractPAL(){};
+  virtual ~AbstractPAL() {}
 
   virtual void read(Request &, uint64_t &) = 0;
   virtual void write(Request &, uint64_t &) = 0;

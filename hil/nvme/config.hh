@@ -29,7 +29,6 @@ namespace HIL {
 namespace NVMe {
 
 typedef enum {
-  NVME_QUEUE_INTERVAL,
   NVME_WORK_INTERVAL,
   NVME_MAX_IO_CQUEUE,
   NVME_MAX_IO_SQUEUE,
@@ -45,7 +44,6 @@ typedef enum {
 
 class Config : public BaseConfig {
  private:
-  uint64_t queueInterval;       //!< Default: 1000000 (1us)
   uint64_t workInterval;        //!< Default: 50000 (50ns)
   uint16_t maxIOCQueue;         //!< Default: 16
   uint16_t maxIOSQueue;         //!< Default: 16

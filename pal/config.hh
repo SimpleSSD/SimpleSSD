@@ -57,6 +57,27 @@ typedef enum : uint8_t {
 } ADDR_INDEX;
 
 class Config : public BaseConfig {
+ public:
+  typedef struct {
+    uint64_t read;
+    uint64_t write;
+  } PAGETiming;
+
+  typedef struct {
+    uint64_t read;
+    uint64_t write;
+    uint64_t erase;
+  } DMATiming;
+
+  typedef struct {
+    PAGETiming lsb;
+    PAGETiming csb;
+    PAGETiming msb;
+    DMATiming dma0;
+    DMATiming dma1;
+    uint64_t erase;
+  } NANDTiming;
+
  private:
   uint32_t channel;  //!< Default: 8
   uint32_t package;  //!< Default: 4
@@ -72,6 +93,8 @@ class Config : public BaseConfig {
   NAND_TYPE nandType;           //!< Default: NAND_MLC
   uint8_t superblock;           //!< Default: All (0x0F)
   uint8_t PageAllocation[4];    //!< Default: CWDP (0x01, 0x02, 0x04, 0x08)
+
+  NANDTiming nandTiming;
 
   // Raw variable
   std::string _superblock;
@@ -89,6 +112,8 @@ class Config : public BaseConfig {
 
   uint8_t getSuperblockConfig();
   uint32_t getPageAllocationConfig();
+
+  NANDTiming *getNANDTiming();
 };
 
 }  // namespace PAL

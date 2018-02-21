@@ -17,34 +17,25 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTIL_CONFIG_READER__
-#define __UTIL_CONFIG_READER__
+#ifndef __UTIL_INTERFACE__
+#define __UTIL_INTERFACE__
 
 #include <cinttypes>
-#include <string>
-
-#include "dram/config.hh"
-#include "ftl/config.hh"
-#include "hil/nvme/config.hh"
-#include "icl/config.hh"
-#include "lib/ini/ini.h"
-#include "pal/config.hh"
 
 namespace SimpleSSD {
 
-class ConfigReader {
- private:
-  static int parserHandler(void *, const char *, const char *, const char *);
+namespace PCIExpress {
 
- public:
-  FTL::Config ftlConfig;
-  HIL::NVMe::Config nvmeConfig;
-  ICL::Config iclConfig;
-  PAL::Config palConfig;
-  DRAM::Config dramConfig;
+typedef enum {
+  PCIE_1_X,  // PCI Express Gen. 1.x
+  PCIE_2_X,  // PCI Express Gen. 2.x
+  PCIE_3_X,  // PCI Express Gen. 3.x
+  PCIE_NUM
+} PCIE_GEN;
 
-  bool init(std::string);
-};
+uint64_t calculateDelay(PCIE_GEN, uint8_t, uint64_t);
+
+}  // namespace PCIExpress
 
 }  // namespace SimpleSSD
 

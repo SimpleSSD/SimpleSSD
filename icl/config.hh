@@ -36,68 +36,6 @@ typedef enum {
   ICL_EVICT_POLICY,
   ICL_CACHE_SIZE,
   ICL_WAY_SIZE,
-
-  /* DRAM config for dram_ctrl TODO: seperate this */
-  /* Structure */
-  DRAM_CHANNEL,
-  DRAM_RANK,              //!< Ranks / Channel
-  DRAM_BANK,              //!< Banks / Rank
-  DRAM_CHIP,              //!< Chips / Rank
-  DRAM_CHIP_SIZE,         //!< Chip size in bytes
-  DRAM_CHIP_BUS_WIDTH,    //!< Bus width / Channel in bits
-  DRAM_DLL,               //!< DLL is enabled
-  DRAM_BURST_LENGTH,      //!< Burst length
-  DRAM_ACTIVATION_LIMIT,  //!< Max number of activations in window
-  DRAM_PAGE_SIZE,         //!< Page size of DRAM (Typically 4KB)
-
-  /* Timing in ps */
-  DRAM_TIMING_CK,     //!< Clock period
-  DRAM_TIMING_RCD,    //!< RAS to CAS delay
-  DRAM_TIMING_CL,     //!< CAS latency
-  DRAM_TIMING_RP,     //!< Row Precharging time
-  DRAM_TIMING_RAS,    //!< ACT to PRE delay
-  DRAM_TIMING_WR,     //!< Write recovery time
-  DRAM_TIMING_RTP,    //!< Read to precharge
-  DRAM_TIMING_BURST,  //!< Burst duration
-  DRAM_TIMING_CCD_L,  //!< Same bank group CAS to CAS delay
-  DRAM_TIMING_RFC,    //!< Refrech cycle time
-  DRAM_TIMING_REFI,   //!< Refresh command interval
-  DRAM_TIMING_WTR,    //!< Write to read, same rank switching time
-  DRAM_TIMING_RTW,    //!< Read to write, same rank switching time
-  DRAM_TIMING_CS,     //!< Rank to rank switching time
-  DRAM_TIMING_RRD,    //!< ACT to ACT delay
-  DRAM_TIMING_RRD_L,  //!< Same bank group ACT to ACT delay
-  DRAM_TIMING_XAW,    //!< X activation window
-  DRAM_TIMING_XP,     //!< Power-up delay
-  DRAM_TIMING_XPDLL,  //!< Power-up delay with locked DLL
-  DRAM_TIMING_XS,     //!< Self-refresh exit latency
-  DRAM_TIMING_XSDLL,  //!< Self-refresh exit latency with locked DLL
-
-  /* Power in mA or V */
-  DRAM_POWER_IDD0,     //!< Active precharge current
-  DRAM_POWER_IDD02,    //!< Active precharge current VDD2
-  DRAM_POWER_IDD2P0,   //!< Precharge powerdown slow
-  DRAM_POWER_IDD2P02,  //!< Precharge powerdown slow VDD2
-  DRAM_POWER_IDD2P1,   //!< Precharge powerdown fast
-  DRAM_POWER_IDD2P12,  //!< Precharge powerdown fast VDD2
-  DRAM_POWER_IDD2N,    //!< Precharge standby current
-  DRAM_POWER_IDD2N2,   //!< Precharge standby current VDD2
-  DRAM_POWER_IDD3P0,   //!< Active powerdown slow
-  DRAM_POWER_IDD3P02,  //!< Active powerdown slow VDD2
-  DRAM_POWER_IDD3P1,   //!< Active powerdown fast
-  DRAM_POWER_IDD3P12,  //!< Active powerdown fast VDD2
-  DRAM_POWER_IDD3N,    //!< Active standby current
-  DRAM_POWER_IDD3N2,   //!< Active standby current VDD2
-  DRAM_POWER_IDD4R,    //!< READ current
-  DRAM_POWER_IDD4R2,   //!< READ current VDD2
-  DRAM_POWER_IDD4W,    //!< WRITE current
-  DRAM_POWER_IDD4W2,   //!< WRITE current VDD2
-  DRAM_POWER_IDD5,     //!< Refresh current
-  DRAM_POWER_IDD52,    //!< Refresh current VDD2
-  DRAM_POWER_IDD6,     //!< Self-refresh current
-  DRAM_POWER_IDD62,    //!< Self-refresh current VDD2
-  DRAM_POWER_VDD,      //!< Main voltage
-  DRAM_POWER_VDD2      //!< Second voltage
 } ICL_CONFIG;
 
 typedef enum {
@@ -107,59 +45,6 @@ typedef enum {
 } EVICT_POLICY;
 
 class Config : public BaseConfig {
- public:
-  typedef struct {
-    uint32_t channel;
-    uint32_t rank;
-    uint32_t bank;
-    uint32_t chip;
-    uint32_t busWidth;
-    uint32_t burstLength;
-    uint32_t activationLimit;
-    bool useDLL;
-    uint64_t chipSize;
-    uint64_t pageSize;
-  } DRAMStructure;
-
-  typedef struct {
-    uint32_t tCK;
-    uint32_t tRCD;
-    uint32_t tCL;
-    uint32_t tRP;
-    uint32_t tRAS;
-    uint32_t tWR;
-    uint32_t tRTP;
-    uint32_t tBURST;
-    uint32_t tCCD_L;
-    uint32_t tRFC;
-    uint32_t tREFI;
-    uint32_t tWTR;
-    uint32_t tRTW;
-    uint32_t tCS;
-    uint32_t tRRD;
-    uint32_t tRRD_L;
-    uint32_t tXAW;
-    uint32_t tXP;
-    uint32_t tXPDLL;
-    uint32_t tXS;
-    uint32_t tXSDLL;
-  } DRAMTiming;
-
-  typedef struct {
-    float pIDD0[2];
-    float pIDD2P0[2];
-    float pIDD2P1[2];
-    float pIDD2N[2];
-    float pIDD3P0[2];
-    float pIDD3P1[2];
-    float pIDD3N[2];
-    float pIDD4R[2];
-    float pIDD4W[2];
-    float pIDD5[2];
-    float pIDD6[2];
-    float pVDD[2];
-  } DRAMPower;
-
  private:
   bool readCaching;          //!< Default: false
   bool writeCaching;         //!< Default: true
@@ -169,10 +54,6 @@ class Config : public BaseConfig {
   uint64_t cacheSize;        //!< Default: 33554432 (32MiB)
   uint64_t prefetchCount;    //!< Default: 1
   float prefetchRatio;       //!< Default: 0.5
-
-  DRAMStructure dram;
-  DRAMTiming dramTiming;
-  DRAMPower dramPower;
 
  public:
   Config();
@@ -184,10 +65,6 @@ class Config : public BaseConfig {
   uint64_t readUint(uint32_t) override;
   float readFloat(uint32_t) override;
   bool readBoolean(uint32_t) override;
-
-  DRAMStructure *getDRAMStructure();
-  DRAMTiming *getDRAMTiming();
-  DRAMPower *getDRAMPower();
 };
 
 }  // namespace ICL

@@ -36,7 +36,7 @@ class BaseConfig {
 
  public:
   virtual bool setConfig(const char *, const char *) = 0;
-  virtual void update(){};
+  virtual void update() {}
 
   virtual int64_t readInt(uint32_t) { return 0; };
   virtual uint64_t readUint(uint32_t) { return 0; };

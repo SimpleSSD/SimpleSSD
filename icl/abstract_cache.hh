@@ -20,6 +20,7 @@
 #ifndef __ICL_CACHE__
 #define __ICL_CACHE__
 
+#include "dram/abstract_dram.hh"
 #include "ftl/ftl.hh"
 #include "util/config.hh"
 #include "util/def.hh"
@@ -43,9 +44,10 @@ class AbstractCache {
  protected:
   ConfigReader *conf;
   FTL::FTL *pFTL;
+  DRAM::AbstractDRAM *pDRAM;
 
  public:
-  AbstractCache(ConfigReader *, FTL::FTL *);
+  AbstractCache(ConfigReader *, FTL::FTL *, DRAM::AbstractDRAM *);
   virtual ~AbstractCache();
 
   virtual bool read(Request &, uint64_t &) = 0;

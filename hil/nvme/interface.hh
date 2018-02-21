@@ -41,7 +41,7 @@ class Interface {
   virtual uint64_t dmaRead(uint64_t, uint64_t, uint8_t *, uint64_t &) = 0;
   virtual uint64_t dmaWrite(uint64_t, uint64_t, uint8_t *, uint64_t &) = 0;
 
-  virtual void enableController(uint64_t, uint64_t) = 0;
+  virtual void enableController(uint64_t) = 0;
   virtual void disableController() = 0;
 };
 

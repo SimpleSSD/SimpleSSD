@@ -17,34 +17,30 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTIL_CONFIG_READER__
-#define __UTIL_CONFIG_READER__
+#ifndef __DRAM_ABSTRACT_DRAM__
+#define __DRAM_ABSTRACT_DRAM__
 
 #include <cinttypes>
-#include <string>
 
 #include "dram/config.hh"
-#include "ftl/config.hh"
-#include "hil/nvme/config.hh"
-#include "icl/config.hh"
-#include "lib/ini/ini.h"
-#include "pal/config.hh"
 
 namespace SimpleSSD {
 
-class ConfigReader {
- private:
-  static int parserHandler(void *, const char *, const char *, const char *);
+namespace DRAM {
+
+class AbstractDRAM {
+ protected:
+  Config &conf;
 
  public:
-  FTL::Config ftlConfig;
-  HIL::NVMe::Config nvmeConfig;
-  ICL::Config iclConfig;
-  PAL::Config palConfig;
-  DRAM::Config dramConfig;
+  AbstractDRAM(Config &p) : conf(p) {}
+  virtual ~AbstractDRAM() {}
 
-  bool init(std::string);
+  virtual void read(uint64_t, uint64_t, uint64_t &) = 0;
+  virtual void write(uint64_t, uint64_t, uint64_t &) = 0;
 };
+
+}  // namespace DRAM
 
 }  // namespace SimpleSSD
 

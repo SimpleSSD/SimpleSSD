@@ -20,50 +20,67 @@
 
 #include "LatencyMLC.h"
 
-LatencyMLC::LatencyMLC(uint32_t mhz, uint32_t pagesize)
-    : Latency(mhz, pagesize) {
-  ;
-}
+LatencyMLC::LatencyMLC(SimpleSSD::PAL::Config::NANDTiming t) : Latency(t) {}
+
+LatencyMLC::~LatencyMLC() {}
 
 inline uint8_t LatencyMLC::GetPageType(uint32_t AddrPage) {
   return AddrPage % 2;
 }
 
 uint64_t LatencyMLC::GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy) {
-#if 1
-  // ps
-  uint32_t lat_tbl[3][5] = {
-      /*  LSB         MSB         DMA0,                     DMA1*/
-      /* Read  */ {40000000, 65000000, 100000 / SPDIV,
-                   185000000 * 2 / (PGDIV * SPDIV)},
-      /* Write */
-      {500000000, 1300000000, 185000000 * 2 / (PGDIV * SPDIV), 100000 / SPDIV},
-      /* Erase */ {3500000000, 3500000000, 1500000 / SPDIV, 100000 / SPDIV}};
-#else
-  // ns
-  uint32_t lat_tbl[3][5] = {
-      /*  LSB      MSB    DMA0,  DMA1*/
-      /* Read  */ {58000, 78000, 100 / SPDIV, 185000 / (PGDIV * SPDIV)},
-      /* Write */ {558000, 2201000, 185000 / (PGDIV * SPDIV), 100 / SPDIV},
-      /* Erase */ {2274000, 2274000, 1500 / SPDIV, 100 / SPDIV}};
-#endif
+  SimpleSSD::PAL::Config::PAGETiming *pTiming = nullptr;
 
   switch (Busy) {
     case BUSY_DMA0:
-      return lat_tbl[Oper][2];
+      if (Oper == OPER_READ) {
+        return timing.dma0.read;
+      }
+      else if (Oper == OPER_WRITE) {
+        return timing.dma0.write;
+      }
+      else {
+        return timing.dma0.erase;
+      }
+
+      break;
     case BUSY_DMA1:
-      return lat_tbl[Oper][3];
+      if (Oper == OPER_READ) {
+        return timing.dma1.read;
+      }
+      else if (Oper == OPER_WRITE) {
+        return timing.dma1.write;
+      }
+      else {
+        return timing.dma1.erase;
+      }
+
+      break;
     case BUSY_MEM: {
-      uint64_t ret = lat_tbl[Oper][AddrPage % 2];
-#if DBG_PRINT_TICK
-//    printf("LAT %s page_%u(%s) = %llu\n", OPER_STRINFO[Oper], AddrPage,
-//    PAGE_STRINFO[ptype], ret);
-#endif
-      return ret;
+      if (Oper == OPER_ERASE) {
+        return timing.erase;
+      }
+
+      if (GetPageType(AddrPage) == PAGE_LSB) {
+        pTiming = &timing.lsb;
+      }
+      else {
+        pTiming = &timing.msb;
+      }
+
+      if (Oper == OPER_READ) {
+        return pTiming->read;
+      }
+      else {
+        return pTiming->write;
+      }
+
+      break;
     }
     default:
       break;
   }
+
   return 10;
 }
 
@@ -73,7 +90,7 @@ uint64_t LatencyMLC::GetPower(uint8_t Oper, uint8_t Busy) {
   // NAND for MEM: Micron NAND Flash Memory -  MT29F64G08EBAA
   // DDR for RD-DMA1/WR-DMA0: Micron Double Data Rate (DDR) SDRAM - MT46V64M4
   // LATCH for RD-DMA0/WR-DMA1: TexasInstrument LATCH - SN54ALVTH
-  uint64_t power_tbl[4][3] = {
+  static const uint64_t power_tbl[4][3] = {
       /*  		DMA0	      	  MEM	 	DMA1	*/
       /* Read */ {2700 * 10, 3300 * 25000, 2600 * 500000},
       /* Write */ {2600 * 500000, 3300 * 25000, 2700 * 10},
