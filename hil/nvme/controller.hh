@@ -21,6 +21,7 @@
 #define __HIL_NVME_CONTROLLER__
 
 #include <list>
+#include <unordered_map>
 
 #include "hil/nvme/def.hh"
 #include "hil/nvme/dma.hh"
@@ -57,6 +58,12 @@ typedef union _RegisterTable {
   _RegisterTable();
 } RegisterTable;
 
+typedef struct {
+  uint64_t nextTime;
+  uint32_t requestCount;
+  bool valid;
+} AggregationInfo;
+
 class Controller {
  private:
   Interface *pParent;     //!< NVMe::Interface passed from constructor
@@ -77,6 +84,10 @@ class Controller {
 
   bool shutdownReserved;
 
+  uint64_t aggregationTime;
+  uint32_t aggregationThreshold;
+  std::unordered_map<uint16_t, AggregationInfo> aggregationMap;
+
   ConfigData cfgdata;
   Config &conf;
 
@@ -95,12 +106,17 @@ class Controller {
   void updateInterrupt(uint16_t, bool);
 
   void submit(CQEntryWrapper &);
+  void completion(uint64_t);
   int createCQueue(uint16_t, uint16_t, uint16_t, bool, bool, uint64_t);
   int createSQueue(uint16_t, uint16_t, uint16_t, uint8_t, bool, uint64_t);
   int deleteCQueue(uint16_t);
   int deleteSQueue(uint16_t);
   int abort(uint16_t, uint16_t);
   void identify(uint8_t *);
+  void setCoalescingParameter(uint8_t, uint8_t);
+  void getCoalescingParameter(uint8_t *, uint8_t *);
+  void setCoalescing(uint16_t, bool);
+  bool getCoalescing(uint16_t);
 
   void collectSQueue(uint64_t &);
   void work(uint64_t &);

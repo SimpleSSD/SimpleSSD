@@ -34,6 +34,8 @@ const char NAME_GC_MODE[] = "GCMode";
 const char NAME_GC_RECLAIM_BLOCK[] = "GCReclaimBlocks";
 const char NAME_GC_RECLAIM_THRESHOLD[] = "GCReclaimThreshold";
 const char NAME_GC_EVICT_POLICY[] = "EvictPolicy";
+const char NAME_LATENCY[] = "Latency";
+const char NAME_REQUEST_QUEUE[] = "RequestQueue";
 
 Config::Config() {
   mapping = PAGE_MAPPING;
@@ -44,6 +46,8 @@ Config::Config() {
   reclaimBlock = 1;
   reclaimThreshold = 0.1f;
   gcMode = GC_MODE_0;
+  latency = 50000000;
+  requestQueue = 1;
 }
 
 bool Config::setConfig(const char *name, const char *value) {
@@ -75,6 +79,12 @@ bool Config::setConfig(const char *name, const char *value) {
   }
   else if (MATCH_NAME(NAME_GC_EVICT_POLICY)) {
     evictPolicy = (EVICT_POLICY)strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_LATENCY)) {
+    latency = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_REQUEST_QUEUE)) {
+    requestQueue = strtoul(value, nullptr, 10);
   }
   else {
     ret = false;
@@ -120,6 +130,12 @@ uint64_t Config::readUint(uint32_t idx) {
       break;
     case FTL_GC_RECLAIM_BLOCK:
       ret = reclaimBlock;
+      break;
+    case FTL_LATENCY:
+      ret = latency;
+      break;
+    case FTL_REQUEST_QUEUE:
+      ret = requestQueue;
       break;
   }
 

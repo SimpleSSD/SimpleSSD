@@ -34,6 +34,7 @@ PageMapping::PageMapping(Parameter *p, PAL::PAL *l, ConfigReader *c)
       pPAL(l),
       conf(c->ftlConfig),
       pFTLParam(p),
+      latency(conf.readUint(FTL_LATENCY), conf.readUint(FTL_REQUEST_QUEUE)),
       lastFreeBlock(pFTLParam->pageCountToMaxPerf),
       bReclaimMore(false) {
   for (uint32_t i = 0; i < pFTLParam->totalPhysicalBlocks; i++) {
@@ -415,6 +416,8 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
   auto mappingList = table.find(req.lpn);
 
   if (mappingList != table.end()) {
+    latency.access(req.ioFlag.count(), tick);
+
     for (uint32_t idx = 0; idx < pFTLParam->ioUnitInPage; idx++) {
       if (req.ioFlag.test(idx)) {
         auto &mapping = mappingList->second.at(idx);
@@ -452,6 +455,8 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   auto mappingList = table.find(req.lpn);
   uint64_t beginAt;
   uint64_t finishedAt = tick;
+
+  latency.access(req.ioFlag.count(), tick);
 
   if (mappingList != table.end()) {
     for (uint32_t idx = 0; idx < pFTLParam->ioUnitInPage; idx++) {

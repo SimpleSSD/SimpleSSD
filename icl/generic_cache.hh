@@ -30,19 +30,12 @@ namespace SimpleSSD {
 
 namespace ICL {
 
-struct EvictData {
-  uint32_t setIdx;
-  uint32_t wayIdx;
-  uint64_t tag;
-
-  EvictData();
-};
-
 class GenericCache : public AbstractCache {
  private:
   const uint32_t lineCountInSuperPage;
   const uint32_t superPageSize;
   const uint32_t lineSize;
+  const uint32_t parallelIO;
   const uint32_t lineCountInMaxIO;
   uint32_t setSize;
   uint32_t waySize;
@@ -60,21 +53,23 @@ class GenericCache : public AbstractCache {
   uint32_t accessCounter;
 
   EVICT_POLICY policy;
-  std::function<uint32_t(uint32_t)> evictFunction;
+  std::function<uint32_t(uint32_t, uint64_t &)> evictFunction;
+  std::function<Line *(Line *, Line *)> compareFunction;
   std::random_device rd;
   std::mt19937 gen;
   std::uniform_int_distribution<> dist;
 
-  std::vector<std::vector<Line>> ppCache;
+  std::vector<Line *> cacheData;
+  std::vector<Line **> evictData;
 
-  uint32_t calcSet(uint64_t);
-  uint32_t getEmptyWay(uint32_t);
-  uint32_t getValidWay(uint64_t);
-  uint32_t getVictimWay(uint64_t);
-  uint32_t getDirtyEntryCount(uint64_t, std::vector<EvictData> &);
-  bool compareEvictList(std::vector<EvictData> &, std::vector<EvictData> &);
-  void evictVictim(std::vector<EvictData> &, bool, uint64_t &);
+  uint32_t calcSetIndex(uint64_t);
+  void calcIOPosition(uint64_t, uint32_t &, uint32_t &);
+
+  uint32_t getEmptyWay(uint32_t, uint64_t &);
+  uint32_t getValidWay(uint64_t, uint64_t &);
   void checkPrefetch(Request &);
+
+  void evictCache(uint64_t);
 
  public:
   GenericCache(ConfigReader *, FTL::FTL *, DRAM::AbstractDRAM *);

@@ -26,6 +26,7 @@
 
 #include "ftl/abstract_ftl.hh"
 #include "ftl/common/block.hh"
+#include "ftl/common/latency.hh"
 #include "ftl/ftl.hh"
 #include "pal/pal.hh"
 
@@ -39,6 +40,7 @@ class PageMapping : public AbstractFTL {
 
   Config &conf;
   Parameter *pFTLParam;
+  Latency latency;
 
   std::unordered_map<uint64_t, std::vector<std::pair<uint32_t, uint32_t>>>
       table;

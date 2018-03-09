@@ -29,6 +29,7 @@ namespace HIL {
 namespace NVMe {
 
 const char NAME_WORK_INTERVAL[] = "WorkInterval";
+const char NAME_MAX_REQUEST_COUNT[] = "MaxRequestCount";
 const char NAME_MAX_IO_CQUEUE[] = "MaxIOCQueue";
 const char NAME_MAX_IO_SQUEUE[] = "MaxIOSQueue";
 const char NAME_WRR_HIGH[] = "WRRHigh";
@@ -42,6 +43,7 @@ const char NAME_USE_COW_DISK[] = "UseCopyOnWriteDisk";
 
 Config::Config() {
   workInterval = 50000;
+  maxRequestCount = 4;
   maxIOCQueue = 16;
   maxIOSQueue = 16;
   wrrHigh = 2;
@@ -59,6 +61,9 @@ bool Config::setConfig(const char *name, const char *value) {
 
   if (MATCH_NAME(NAME_WORK_INTERVAL)) {
     workInterval = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_MAX_REQUEST_COUNT)) {
+    maxRequestCount = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_MAX_IO_CQUEUE)) {
     maxIOCQueue = (uint16_t)strtoul(value, nullptr, 10);
@@ -101,6 +106,9 @@ void Config::update() {
   if (popcount(lbaSize) != 1) {
     Logger::panic("Invalid LBA size");
   }
+  if (maxRequestCount == 0) {
+    Logger::panic("MaxRequestCount should be larger then 0");
+  }
 }
 
 int64_t Config::readInt(uint32_t idx) {
@@ -130,6 +138,9 @@ uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
     case NVME_WORK_INTERVAL:
       ret = workInterval;
+      break;
+    case NVME_MAX_REQUEST_COUNT:
+      ret = maxRequestCount;
       break;
     case NVME_MAX_IO_CQUEUE:
       ret = maxIOCQueue;

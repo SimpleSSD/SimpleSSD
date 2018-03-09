@@ -17,39 +17,31 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __DRAM_SIMPLE__
-#define __DRAM_SIMPLE__
+#ifndef __FTL_LATENCY__
+#define __FTL_LATENCY__
 
-#include <list>
-
-#include "dram/abstract_dram.hh"
+#include <cinttypes>
+#include <queue>
+#include <vector>
 
 namespace SimpleSSD {
 
-namespace DRAM {
+namespace FTL {
 
-class SimpleDRAM : public AbstractDRAM {
+class Latency {
  private:
-  Config::DRAMStructure *pStructure;
-  Config::DRAMTiming *pTiming;
-  Config::DRAMPower *pPower;
-
-  uint64_t pageFetchLatency;
-  double interfaceBandwidth;
-
-  uint64_t lastDRAMAccess;
+  std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>
+      lastFTLRequestAt;
+  uint64_t latency;
 
  public:
-  SimpleDRAM(Config &p);
-  ~SimpleDRAM();
+  Latency(uint64_t, uint64_t);
+  ~Latency();
 
-  void updateDelay(uint64_t, uint64_t &);
-
-  void read(void *, uint64_t, uint64_t &) override;
-  void write(void *, uint64_t, uint64_t &) override;
+  void access(uint32_t size, uint64_t &tick);
 };
 
-}  // namespace DRAM
+}  // namespace FTL
 
 }  // namespace SimpleSSD
 

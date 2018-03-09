@@ -311,8 +311,19 @@ bool Subsystem::submitCommand(SQEntryWrapper &req, CQEntryWrapper &resp,
 
   // NVM commands or Namespace specific Admin commands
   if (!processed) {
-    for (auto &iter : lNamespaces) {
-      return iter->submitCommand(req, resp, beginAt);
+    if (req.entry.namespaceID < NSID_ALL) {
+      for (auto &iter : lNamespaces) {
+        if (iter->getNSID() == req.entry.namespaceID) {
+          return iter->submitCommand(req, resp, beginAt);
+        }
+      }
+    }
+    else {
+      for (auto &iter : lNamespaces) {
+        iter->submitCommand(req, resp, beginAt);
+      }
+
+      return true;
     }
   }
 
@@ -735,6 +746,14 @@ bool Subsystem::setFeatures(SQEntryWrapper &req, CQEntryWrapper &resp,
         }
 
         break;
+      case FEATURE_INTERRUPT_COALESCING:
+        pParent->setCoalescingParameter((req.entry.dword11 >> 8) & 0xFF,
+                                        req.entry.dword11 & 0xFF);
+        break;
+      case FEATURE_INTERRUPT_VECTOR_CONFIGURATION:
+        pParent->setCoalescing(req.entry.dword11 & 0xFFFF,
+                               req.entry.dword11 & 0x10000);
+        break;
       default:
         resp.makeStatus(true, false, TYPE_GENERIC_COMMAND_STATUS,
                         STATUS_INVALID_FIELD);
@@ -769,6 +788,17 @@ bool Subsystem::getFeatures(SQEntryWrapper &req, CQEntryWrapper &resp,
       break;
     case FEATURE_NUMBER_OF_QUEUES:
       resp.entry.dword0 = queueAllocated;
+      break;
+    case FEATURE_INTERRUPT_COALESCING:
+      pParent->getCoalescingParameter(resp.entry.data + 1, resp.entry.data);
+      break;
+    case FEATURE_INTERRUPT_VECTOR_CONFIGURATION:
+      resp.entry.dword0 = (req.entry.dword11 & 0xFFFF) | 0;
+
+      if (pParent->getCoalescing(req.entry.dword11 & 0xFFFF)) {
+        resp.entry.dword0 |= 0x10000;
+      }
+
       break;
     default:
       resp.makeStatus(true, false, TYPE_GENERIC_COMMAND_STATUS,

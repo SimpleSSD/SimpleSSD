@@ -50,7 +50,7 @@ void SimpleDRAM::updateDelay(uint64_t latency, uint64_t &tick) {
   }
 }
 
-void SimpleDRAM::read(uint64_t addr, uint64_t size, uint64_t &tick) {
+void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency = (uint64_t)(
       pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);
@@ -58,7 +58,7 @@ void SimpleDRAM::read(uint64_t addr, uint64_t size, uint64_t &tick) {
   updateDelay(latency, tick);
 }
 
-void SimpleDRAM::write(uint64_t addr, uint64_t size, uint64_t &tick) {
+void SimpleDRAM::write(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency = (uint64_t)(
       pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);

@@ -36,8 +36,8 @@ class AbstractDRAM {
   AbstractDRAM(Config &p) : conf(p) {}
   virtual ~AbstractDRAM() {}
 
-  virtual void read(uint64_t, uint64_t, uint64_t &) = 0;
-  virtual void write(uint64_t, uint64_t, uint64_t &) = 0;
+  virtual void read(void *, uint64_t, uint64_t &) = 0;
+  virtual void write(void *, uint64_t, uint64_t &) = 0;
 };
 
 }  // namespace DRAM

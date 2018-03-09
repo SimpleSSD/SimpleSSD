@@ -30,6 +30,7 @@ namespace NVMe {
 
 typedef enum {
   NVME_WORK_INTERVAL,
+  NVME_MAX_REQUEST_COUNT,
   NVME_MAX_IO_CQUEUE,
   NVME_MAX_IO_SQUEUE,
   NVME_WRR_HIGH,
@@ -45,6 +46,7 @@ typedef enum {
 class Config : public BaseConfig {
  private:
   uint64_t workInterval;        //!< Default: 50000 (50ns)
+  uint64_t maxRequestCount;     //!< Default: 4
   uint16_t maxIOCQueue;         //!< Default: 16
   uint16_t maxIOSQueue;         //!< Default: 16
   uint16_t wrrHigh;             //!< Default: 2
