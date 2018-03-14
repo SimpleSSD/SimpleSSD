@@ -51,6 +51,11 @@ class PageMapping : public AbstractFTL {
 
   bool bReclaimMore;
 
+  struct {
+    uint64_t gcCount;
+    uint64_t reclaimedBlocks;
+  } stat;
+
   float freeBlockRatio();
   uint32_t convertBlockIdx(uint32_t);
   uint32_t getFreeBlock(uint32_t);
@@ -76,6 +81,10 @@ class PageMapping : public AbstractFTL {
   void format(LPNRange &, uint64_t &) override;
 
   Status *getStatus() override;
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace FTL

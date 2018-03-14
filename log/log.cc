@@ -18,7 +18,6 @@
  */
 
 #include "log/log.hh"
-#include "log/stat.hh"
 #include "log/trace.hh"
 
 #include <cstdarg>
@@ -40,24 +39,7 @@ struct Logger {
       : outfile(o), errfile(e), curTick(t) {}
 };
 
-struct StatFunction {
-  std::function<void(uint64_t)> &fct;
-  uint64_t period;
-  uint64_t callAt;
-
-  StatFunction(std::function<void(uint64_t)> &f, uint64_t p)
-      : fct(f), period(p), callAt(p) {}
-};
-
-struct Stat {
-  std::ostream &outfile;
-  std::vector<StatFunction> fctList;
-
-  Stat(std::ostream &o) : outfile(o) {}
-};
-
 Logger *logger = nullptr;
-Stat *stat = nullptr;
 
 void panic(const char *format, ...) {
   va_list args, copied;
@@ -162,33 +144,6 @@ void initLogSystem(std::ostream &out, std::ostream &err,
 
 void destroyLogSystem() {
   delete logger;
-}
-
-void initStatSystem(std::ostream &out) {
-  destroyStatSystem();
-
-  stat = new Stat(out);
-}
-
-void statHandler(uint64_t tick) {
-  if (stat) {
-    for (auto &item : stat->fctList) {
-      if (item.callAt <= tick) {
-        item.fct(tick);
-        item.callAt = tick + item.period;
-      }
-    }
-  }
-}
-
-void destroyStatSystem() {
-  delete stat;
-}
-
-void registerStat(uint64_t period, std::function<void(uint64_t)> fct) {
-  if (stat) {
-    stat->fctList.push_back(StatFunction(fct, period));
-  }
 }
 
 }  // namespace Logger

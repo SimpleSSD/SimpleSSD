@@ -21,6 +21,7 @@
 #define __UTIL_DEF__
 
 #include <cinttypes>
+#include <string>
 #include <vector>
 
 #include "log/trace.hh"
@@ -28,6 +29,21 @@
 #define MIN_LBA_SIZE 512
 
 namespace SimpleSSD {
+
+typedef struct _Stats {
+  std::string name;
+  std::string desc;
+} Stats;
+
+class StatObject {
+ public:
+  StatObject() {}
+  virtual ~StatObject() {}
+
+  virtual void getStats(std::vector<Stats> &) {}
+  virtual void getStatValues(std::vector<uint64_t> &) {}
+  virtual void resetStats() {}
+};
 
 typedef struct _LPNRange {
   uint64_t slpn;

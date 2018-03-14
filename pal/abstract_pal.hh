@@ -28,7 +28,7 @@ namespace SimpleSSD {
 
 namespace PAL {
 
-class AbstractPAL {
+class AbstractPAL : public StatObject {
  protected:
   Parameter &param;
   Config &conf;

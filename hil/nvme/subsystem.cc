@@ -50,7 +50,8 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
     : pParent(ctrl),
       pCfgdata(cfg),
       conf(cfg->pConfigReader->nvmeConfig),
-      allocatedLogicalPages(0) {
+      allocatedLogicalPages(0),
+      commandCount(0) {
   pHIL = new HIL(cfg->pConfigReader);
 
   pHIL->getLPNInfo(totalLogicalPages, logicalPageSize);
@@ -259,6 +260,8 @@ bool Subsystem::submitCommand(SQEntryWrapper &req, CQEntryWrapper &resp,
 
   // TODO: change this
   tick += 1000000;  // 1us of command delay
+
+  commandCount++;
 
   // Admin command
   if (req.sqID == 0) {
@@ -521,6 +524,8 @@ bool Subsystem::getLogPage(SQEntryWrapper &req, CQEntryWrapper &resp,
       break;
   }
 
+  delete dma;
+
   return ret;
 }
 
@@ -677,6 +682,8 @@ bool Subsystem::identify(SQEntryWrapper &req, CQEntryWrapper &resp,
   if (ret && !err) {
     dma->write(0, 0x1000, data, tick);
   }
+
+  delete dma;
 
   return ret;
 }
@@ -864,6 +871,8 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req, CQEntryWrapper &resp,
 
         dma->read(0, 0x1000, data, tick);
 
+        delete dma;
+
         // Copy data
         memcpy(&info.size, data + 0, 8);
         memcpy(&info.capacity, data + 8, 8);
@@ -932,6 +941,8 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req, CQEntryWrapper &resp,
   }
 
   dma->read(0, 4, (uint8_t *)&ctrlList, tick);
+
+  delete dma;
 
   if (ctrlList != 0x00000001) {
     err = true;
@@ -1041,6 +1052,28 @@ bool Subsystem::formatNVM(SQEntryWrapper &req, CQEntryWrapper &resp,
   }
 
   return true;
+}
+
+void Subsystem::getStats(std::vector<Stats> &list) {
+  Stats temp;
+
+  temp.name = "command_count";
+  temp.desc = "Total number of NVMe command handled";
+  list.push_back(temp);
+
+  pHIL->getStats(list);
+}
+
+void Subsystem::getStatValues(std::vector<uint64_t> &values) {
+  values.push_back(commandCount);
+
+  pHIL->getStatValues(values);
+}
+
+void Subsystem::resetStats() {
+  commandCount = 0;
+
+  pHIL->resetStats();
 }
 
 }  // namespace NVMe

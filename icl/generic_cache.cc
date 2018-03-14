@@ -186,6 +186,8 @@ GenericCache::GenericCache(ConfigReader *c, FTL::FTL *f, DRAM::AbstractDRAM *d)
 
       break;
   }
+
+  memset(&stat, 0, sizeof(stat));
 }
 
 GenericCache::~GenericCache() {
@@ -451,6 +453,12 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
     pFTL->read(reqInternal, tick);
   }
 
+  stat.request[0]++;
+
+  if (ret) {
+    stat.cache[0]++;
+  }
+
   return ret;
 }
 
@@ -567,6 +575,12 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
     pFTL->write(reqInternal, tick);
   }
 
+  stat.request[1]++;
+
+  if (ret) {
+    stat.cache[1]++;
+  }
+
   return ret;
 }
 
@@ -662,6 +676,37 @@ void GenericCache::format(LPNRange &range, uint64_t &tick) {
   range.nlp = (range.nlp - 1) / lineCountInSuperPage + 1;
 
   pFTL->format(range, tick);
+}
+
+void GenericCache::getStats(std::vector<Stats> &list) {
+  Stats temp;
+
+  temp.name = "icl.generic_cache.read.request_count";
+  temp.desc = "Read request count";
+  list.push_back(temp);
+
+  temp.name = "icl.generic_cache.read.from_cache";
+  temp.desc = "Read requests that served from cache";
+  list.push_back(temp);
+
+  temp.name = "icl.generic_cache.write.request_count";
+  temp.desc = "Write request count";
+  list.push_back(temp);
+
+  temp.name = "icl.generic_cache.write.to_cache";
+  temp.desc = "Write requests that served to cache";
+  list.push_back(temp);
+}
+
+void GenericCache::getStatValues(std::vector<uint64_t> &values) {
+  values.push_back(stat.request[0]);
+  values.push_back(stat.cache[0]);
+  values.push_back(stat.request[1]);
+  values.push_back(stat.cache[1]);
+}
+
+void GenericCache::resetStats() {
+  memset(&stat, 0, sizeof(stat));
 }
 
 }  // namespace ICL

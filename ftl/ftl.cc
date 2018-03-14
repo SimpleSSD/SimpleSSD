@@ -98,6 +98,21 @@ uint64_t FTL::getUsedPageCount() {
   return pFTL->getStatus()->mappedLogicalPages;
 }
 
+void FTL::getStats(std::vector<Stats> &list) {
+  pFTL->getStats(list);
+  pPAL->getStats(list);
+}
+
+void FTL::getStatValues(std::vector<uint64_t> &values) {
+  pFTL->getStatValues(values);
+  pPAL->getStatValues(values);
+}
+
+void FTL::resetStats() {
+  pFTL->resetStats();
+  pPAL->resetStats();
+}
+
 }  // namespace FTL
 
 }  // namespace SimpleSSD

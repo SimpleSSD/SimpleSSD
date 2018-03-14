@@ -51,6 +51,8 @@ PageMapping::PageMapping(Parameter *p, PAL::PAL *l, ConfigReader *c)
   }
 
   lastFreeBlockIndex = 0;
+
+  memset(&stat, 0, sizeof(stat));
 }
 
 PageMapping::~PageMapping() {}
@@ -538,6 +540,9 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
     Logger::debugprint(Logger::LOG_FTL_PAGE_MAPPING,
                        "GC   | Done | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                        tick, beginAt, beginAt - tick);
+
+    stat.gcCount++;
+    stat.reclaimedBlocks += list.size();
   }
 }
 
@@ -592,6 +597,27 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
 
   // Remove block from block list
   blocks.erase(block);
+}
+
+void PageMapping::getStats(std::vector<Stats> &list) {
+  Stats temp;
+
+  temp.name = "ftl.page_mapping.gc_count";
+  temp.desc = "Total GC count";
+  list.push_back(temp);
+
+  temp.name = "ftl.page_mapping.reclaimed_blocks";
+  temp.desc = "Total reclaimed blocks in GC";
+  list.push_back(temp);
+}
+
+void PageMapping::getStatValues(std::vector<uint64_t> &values) {
+  values.push_back(stat.gcCount);
+  values.push_back(stat.reclaimedBlocks);
+}
+
+void PageMapping::resetStats() {
+  memset(&stat, 0, sizeof(stat));
 }
 
 }  // namespace FTL

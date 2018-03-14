@@ -204,6 +204,21 @@ uint64_t ICL::getUsedPageCount() {
   return pFTL->getUsedPageCount() * ratio;
 }
 
+void ICL::getStats(std::vector<Stats> &list) {
+  pCache->getStats(list);
+  pFTL->getStats(list);
+}
+
+void ICL::getStatValues(std::vector<uint64_t> &values) {
+  pCache->getStatValues(values);
+  pFTL->getStatValues(values);
+}
+
+void ICL::resetStats() {
+  pCache->resetStats();
+  pFTL->resetStats();
+}
+
 }  // namespace ICL
 
 }  // namespace SimpleSSD

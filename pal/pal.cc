@@ -141,6 +141,18 @@ Parameter *PAL::getInfo() {
   return &param;
 }
 
+void PAL::getStats(std::vector<Stats> &list) {
+  pPAL->getStats(list);
+}
+
+void PAL::getStatValues(std::vector<uint64_t> &values) {
+  pPAL->getStatValues(values);
+}
+
+void PAL::resetStats() {
+  pPAL->resetStats();
+}
+
 }  // namespace PAL
 
 }  // namespace SimpleSSD

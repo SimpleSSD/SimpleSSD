@@ -42,7 +42,7 @@ typedef struct {
   uint32_t pageInSuperPage;  //!< # pages in one superpage
 } Parameter;
 
-class PAL {
+class PAL : public StatObject {
  private:
   Parameter param;
   AbstractPAL *pPAL;
@@ -59,6 +59,10 @@ class PAL {
   void copyback(uint32_t, uint32_t, uint32_t, uint64_t &);
 
   Parameter *getInfo();
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace PAL

@@ -39,7 +39,7 @@ typedef struct {
   uint32_t pageCountToMaxPerf;  //!< # pages to fully utilize internal parallism
 } Parameter;
 
-class FTL {
+class FTL : public StatObject {
  private:
   Parameter param;
   PAL::PAL *pPAL;
@@ -59,6 +59,10 @@ class FTL {
 
   Parameter *getInfo();
   uint64_t getUsedPageCount();
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace FTL

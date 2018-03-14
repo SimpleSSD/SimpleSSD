@@ -440,7 +440,7 @@ void Controller::submit(CQEntryWrapper &entry) {
 
   lCQFIFO.insert(iter, entry);
 
-  pParent->submitCompletion(lCQFIFO.front().submitAt);
+  reserveCompletion();
 }
 
 void Controller::completion(uint64_t tick) {
@@ -473,6 +473,7 @@ void Controller::completion(uint64_t tick) {
               if (iter->submitAt < map->second.nextTime &&
                   map->second.requestCount <= aggregationThreshold) {
                 post = false;
+                map->second.pending = true;
               }
 
               if (post) {
@@ -491,6 +492,17 @@ void Controller::completion(uint64_t tick) {
     }
   }
 
+  for (auto &iter : aggregationMap) {
+    if (iter.second.valid && iter.second.nextTime <= tick &&
+        iter.second.pending) {
+      iter.second.nextTime = tick + aggregationTime;
+      iter.second.requestCount = 0;
+      iter.second.pending = false;
+
+      ivToPost.push_back(iter.first);
+    }
+  }
+
   if (ivToPost.size() > 0) {
     std::sort(ivToPost.begin(), ivToPost.end());
     auto end = std::unique(ivToPost.begin(), ivToPost.end());
@@ -501,9 +513,7 @@ void Controller::completion(uint64_t tick) {
     }
   }
 
-  if (lCQFIFO.size() > 0) {
-    pParent->submitCompletion(lCQFIFO.front().submitAt);
-  }
+  reserveCompletion();
 }
 
 int Controller::createCQueue(uint16_t cqid, uint16_t size, uint16_t iv,
@@ -1170,6 +1180,7 @@ void Controller::setCoalescing(uint16_t iv, bool enable) {
     iter->second.valid = enable;
     iter->second.nextTime = 0;
     iter->second.requestCount = 0;
+    iter->second.pending = false;
   }
 }
 
@@ -1380,6 +1391,44 @@ bool Controller::checkQueue(SQueue *pQueue, std::list<SQEntryWrapper> &fifo,
   }
 
   return false;
+}
+
+void Controller::reserveCompletion() {
+  uint64_t tick = std::numeric_limits<uint64_t>::max();
+  bool valid = false;
+
+  if (lCQFIFO.size() > 0) {
+    valid = true;
+    tick = lCQFIFO.front().submitAt;
+  }
+
+  for (auto &iter : aggregationMap) {
+    if (iter.second.valid && iter.second.pending) {
+      if (!valid) {
+        valid = true;
+        tick = iter.second.nextTime;
+      }
+      else if (tick > iter.second.nextTime) {
+        tick = iter.second.nextTime;
+      }
+    }
+  }
+
+  if (valid) {
+    pParent->submitCompletion(tick);
+  }
+}
+
+void Controller::getStats(std::vector<Stats> &list) {
+  pSubsystem->getStats(list);
+}
+
+void Controller::getStatValues(std::vector<uint64_t> &values) {
+  pSubsystem->getStatValues(values);
+}
+
+void Controller::resetStats() {
+  pSubsystem->resetStats();
 }
 
 }  // namespace NVMe

@@ -28,6 +28,8 @@ namespace HIL {
 
 HIL::HIL(ConfigReader *c) : pConf(c), reqCount(0) {
   pICL = new ICL::ICL(pConf);
+
+  memset(&stat, 0, sizeof(stat));
 }
 
 HIL::~HIL() {
@@ -35,7 +37,7 @@ HIL::~HIL() {
 }
 
 void HIL::read(ICL::Request &req, uint64_t &tick) {
-  // TODO: stat
+  uint64_t beginAt = tick;
 
   req.reqID = ++reqCount;
 
@@ -46,10 +48,15 @@ void HIL::read(ICL::Request &req, uint64_t &tick) {
                      req.length);
 
   pICL->read(req, tick);
+
+  stat.request[0]++;
+  stat.iosize[0] += req.length;
+  updateBusyTime(0, beginAt, tick);
+  updateBusyTime(2, beginAt, tick);
 }
 
 void HIL::write(ICL::Request &req, uint64_t &tick) {
-  // TODO: stat
+  uint64_t beginAt = tick;
 
   req.reqID = ++reqCount;
 
@@ -60,6 +67,11 @@ void HIL::write(ICL::Request &req, uint64_t &tick) {
                      req.length);
 
   pICL->write(req, tick);
+
+  stat.request[1]++;
+  stat.iosize[1] += req.length;
+  updateBusyTime(1, beginAt, tick);
+  updateBusyTime(2, beginAt, tick);
 }
 
 void HIL::flush(ICL::Request &req, uint64_t &tick) {
@@ -108,6 +120,83 @@ void HIL::getLPNInfo(uint64_t &totalLogicalPages, uint32_t &logicalPageSize) {
 
 uint64_t HIL::getUsedPageCount() {
   return pICL->getUsedPageCount();
+}
+
+void HIL::updateBusyTime(int idx, uint64_t begin, uint64_t end) {
+  if (end <= stat.lastBusyAt[idx]) {
+    return;
+  }
+
+  if (begin < stat.lastBusyAt[idx]) {
+    stat.busy[idx] += end - stat.lastBusyAt[idx];
+  }
+  else {
+    stat.busy[idx] += end - begin;
+  }
+
+  stat.lastBusyAt[idx] = end;
+}
+
+void HIL::getStats(std::vector<Stats> &list) {
+  Stats temp;
+
+  temp.name = "hil.read.request_count";
+  temp.desc = "Read request count";
+  list.push_back(temp);
+
+  temp.name = "hil.read.bytes";
+  temp.desc = "Read data size in byte";
+  list.push_back(temp);
+
+  temp.name = "hil.read.busy";
+  temp.desc = "Device busy time when read";
+  list.push_back(temp);
+
+  temp.name = "hil.write.request_count";
+  temp.desc = "Write request count";
+  list.push_back(temp);
+
+  temp.name = "hil.write.bytes";
+  temp.desc = "Write data size in byte";
+  list.push_back(temp);
+
+  temp.name = "hil.write.busy";
+  temp.desc = "Device busy time when write";
+  list.push_back(temp);
+
+  temp.name = "hil.request_count";
+  temp.desc = "Total request count";
+  list.push_back(temp);
+
+  temp.name = "hil.bytes";
+  temp.desc = "Total data size in byte";
+  list.push_back(temp);
+
+  temp.name = "hil.busy";
+  temp.desc = "Total device busy time";
+  list.push_back(temp);
+
+  pICL->getStats(list);
+}
+
+void HIL::getStatValues(std::vector<uint64_t> &values) {
+  values.push_back(stat.request[0]);
+  values.push_back(stat.iosize[0]);
+  values.push_back(stat.busy[0]);
+  values.push_back(stat.request[1]);
+  values.push_back(stat.iosize[1]);
+  values.push_back(stat.busy[1]);
+  values.push_back(stat.request[0] + stat.request[1]);
+  values.push_back(stat.iosize[0] + stat.iosize[1]);
+  values.push_back(stat.busy[2]);
+
+  pICL->getStatValues(values);
+}
+
+void HIL::resetStats() {
+  memset(&stat, 0, sizeof(stat));
+
+  pICL->resetStats();
 }
 
 }  // namespace HIL

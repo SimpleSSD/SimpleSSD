@@ -71,6 +71,12 @@ class GenericCache : public AbstractCache {
 
   void evictCache(uint64_t);
 
+  // Stats
+  struct {
+    uint64_t request[2];
+    uint64_t cache[2];
+  } stat;
+
  public:
   GenericCache(ConfigReader *, FTL::FTL *, DRAM::AbstractDRAM *);
   ~GenericCache();
@@ -81,6 +87,10 @@ class GenericCache : public AbstractCache {
   bool trim(Request &, uint64_t &) override;
 
   void format(LPNRange &, uint64_t &) override;
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace ICL

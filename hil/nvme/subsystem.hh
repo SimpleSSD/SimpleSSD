@@ -31,7 +31,7 @@ namespace NVMe {
 
 class Controller;
 
-class Subsystem {
+class Subsystem : public StatObject {
  private:
   Controller *pParent;
   HIL *pHIL;
@@ -46,6 +46,9 @@ class Subsystem {
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
   uint64_t allocatedLogicalPages;
+
+  // Stats
+  uint64_t commandCount;
 
   bool createNamespace(uint32_t, Namespace::Information *);
   bool destroyNamespace(uint32_t);
@@ -78,6 +81,10 @@ class Subsystem {
   void write(Namespace *, uint64_t, uint64_t, uint64_t &);
   void flush(Namespace *, uint64_t &);
   void trim(Namespace *, uint64_t, uint64_t, uint64_t &);
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace NVMe

@@ -40,7 +40,7 @@ typedef struct _Line {
   _Line(uint64_t, bool);
 } Line;
 
-class AbstractCache {
+class AbstractCache : public StatObject {
  protected:
   ConfigReader *conf;
   FTL::FTL *pFTL;

@@ -34,7 +34,7 @@ typedef struct _Status {
   uint64_t freePhysicalBlocks;
 } Status;
 
-class AbstractFTL {
+class AbstractFTL : public StatObject {
  protected:
   Parameter *pParam;
   PAL::PAL *pPAL;

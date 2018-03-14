@@ -30,7 +30,7 @@ namespace SimpleSSD {
 
 namespace ICL {
 
-class ICL {
+class ICL : public StatObject {
  private:
   FTL::FTL *pFTL;
   DRAM::AbstractDRAM *pDRAM;
@@ -54,6 +54,10 @@ class ICL {
 
   void getLPNInfo(uint64_t &, uint32_t &);
   uint64_t getUsedPageCount();
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace ICL

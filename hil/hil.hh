@@ -30,12 +30,21 @@ namespace SimpleSSD {
 
 namespace HIL {
 
-class HIL {
+class HIL : public StatObject {
  private:
   ConfigReader *pConf;
   ICL::ICL *pICL;
 
   uint64_t reqCount;
+
+  struct {
+    uint64_t request[2];
+    uint64_t busy[3];
+    uint64_t iosize[2];
+    uint64_t lastBusyAt[3];
+  } stat;
+
+  void updateBusyTime(int, uint64_t, uint64_t);
 
  public:
   HIL(ConfigReader *);
@@ -50,6 +59,10 @@ class HIL {
 
   void getLPNInfo(uint64_t &, uint32_t &);
   uint64_t getUsedPageCount();
+
+  void getStats(std::vector<Stats> &) override;
+  void getStatValues(std::vector<uint64_t> &) override;
+  void resetStats() override;
 };
 
 }  // namespace HIL
