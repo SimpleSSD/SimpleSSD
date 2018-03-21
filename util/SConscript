@@ -25,4 +25,5 @@ if env['TARGET_ISA'] == 'null':
 Source('bitset.cc')
 Source('def.cc')
 Source('disk.cc')
+Source('fifo.cc')
 Source('interface.cc')

@@ -28,11 +28,11 @@ namespace HIL {
 
 namespace NVMe {
 
-Namespace::Namespace(Subsystem *p, ConfigData *c)
+Namespace::Namespace(Subsystem *p, ConfigData &c)
     : pParent(p),
       pDisk(nullptr),
-      pCfgdata(c),
-      conf(*c->pConfigReader),
+      cfgdata(c),
+      conf(*c.pConfigReader),
       nsid(NSID_NONE),
       attached(false),
       allocated(false),
@@ -200,12 +200,12 @@ void Namespace::getLogPage(SQEntryWrapper &req, RequestFunction &func) {
         pContext->buffer = health.data;
 
         if (req.useSGL) {
-          pContext->dma = new SGL(pCfgdata, smartInfo, pContext,
-                                  req.entry.data1, req.entry.data2);
+          pContext->dma = new SGL(cfgdata, smartInfo, pContext, req.entry.data1,
+                                  req.entry.data2);
         }
         else {
           pContext->dma =
-              new PRPList(pCfgdata, smartInfo, pContext, req.entry.data1,
+              new PRPList(cfgdata, smartInfo, pContext, req.entry.data1,
                           req.entry.data2, (uint64_t)req_size);
         }
       }
@@ -343,11 +343,11 @@ void Namespace::write(SQEntryWrapper &req, RequestFunction &func) {
 
     if (req.useSGL) {
       pContext->dma =
-          new SGL(pCfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
     }
     else {
       pContext->dma =
-          new PRPList(pCfgdata, doRead, pContext, req.entry.data1,
+          new PRPList(cfgdata, doRead, pContext, req.entry.data1,
                       req.entry.data2, (uint64_t)nlb * info.lbaSize);
     }
   }
@@ -435,11 +435,11 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
 
     if (req.useSGL) {
       pContext->dma =
-          new SGL(pCfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
     }
     else {
       pContext->dma =
-          new PRPList(pCfgdata, doRead, pContext, req.entry.data1,
+          new PRPList(cfgdata, doRead, pContext, req.entry.data1,
                       req.entry.data2, pContext->nlb * info.lbaSize);
     }
   }
@@ -530,10 +530,10 @@ void Namespace::datasetManagement(SQEntryWrapper &req, RequestFunction &func) {
 
     if (req.useSGL) {
       pContext->dma =
-          new SGL(pCfgdata, doTrim, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, doTrim, pContext, req.entry.data1, req.entry.data2);
     }
     else {
-      pContext->dma = new PRPList(pCfgdata, doTrim, pContext, req.entry.data1,
+      pContext->dma = new PRPList(cfgdata, doTrim, pContext, req.entry.data1,
                                   req.entry.data2, (uint64_t)nr * 0x10);
     }
   }

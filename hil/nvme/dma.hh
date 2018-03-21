@@ -39,7 +39,7 @@ class Controller;
 
 typedef struct {
   ConfigReader *pConfigReader;
-  Controller *pController;
+  DMAInterface *pInterface;
   uint64_t memoryPageSize;
   uint8_t memoryPageSizeOrder;
   uint16_t maxQueueEntry;
@@ -47,7 +47,7 @@ typedef struct {
 
 class DMAInterface {
  protected:
-  Controller *pController;
+  SimpleSSD::DMAInterface *pInterface;
   DMAFunction initFunction;
   uint64_t callCounter;
   void *context;
@@ -58,7 +58,7 @@ class DMAInterface {
   static void commonDMAHandler(uint64_t, void *);
 
  public:
-  DMAInterface(ConfigData *, DMAFunction &, void *);
+  DMAInterface(ConfigData &, DMAFunction &, void *);
   virtual ~DMAInterface();
 
   virtual void read(uint64_t, uint64_t, uint8_t *, DMAFunction &,
@@ -92,8 +92,8 @@ class PRPList : public DMAInterface {
   uint64_t getPRPSize(uint64_t);
 
  public:
-  PRPList(ConfigData *, DMAFunction &, void *, uint64_t, uint64_t, uint64_t);
-  PRPList(ConfigData *, DMAFunction &, void *, uint64_t, uint64_t, bool);
+  PRPList(ConfigData &, DMAFunction &, void *, uint64_t, uint64_t, uint64_t);
+  PRPList(ConfigData &, DMAFunction &, void *, uint64_t, uint64_t, bool);
   ~PRPList();
 
   void read(uint64_t, uint64_t, uint8_t *, DMAFunction &,
@@ -133,7 +133,7 @@ class SGL : public DMAInterface {
   void parseSGLSegment(uint64_t, uint32_t);
 
  public:
-  SGL(ConfigData *, DMAFunction &, void *, uint64_t, uint64_t);
+  SGL(ConfigData &, DMAFunction &, void *, uint64_t, uint64_t);
   ~SGL();
 
   void read(uint64_t, uint64_t, uint8_t *, DMAFunction &,

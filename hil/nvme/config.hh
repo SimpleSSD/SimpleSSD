@@ -23,6 +23,7 @@
 #define __HIL_NVME_CONFIG__
 
 #include "sim/base_config.hh"
+#include "util/interface.hh"
 
 namespace SimpleSSD {
 
@@ -31,6 +32,10 @@ namespace HIL {
 namespace NVMe {
 
 typedef enum {
+  NVME_PCIE_GEN,
+  NVME_PCIE_LANE,
+  NVME_AXI_BUS_WIDTH,
+  NVME_AXI_CLOCK,
   NVME_WORK_INTERVAL,
   NVME_MAX_REQUEST_COUNT,
   NVME_MAX_IO_CQUEUE,
@@ -47,18 +52,22 @@ typedef enum {
 
 class Config : public BaseConfig {
  private:
-  uint64_t workInterval;        //!< Default: 50000 (50ns)
-  uint64_t maxRequestCount;     //!< Default: 4
-  uint16_t maxIOCQueue;         //!< Default: 16
-  uint16_t maxIOSQueue;         //!< Default: 16
-  uint16_t wrrHigh;             //!< Default: 2
-  uint16_t wrrMedium;           //!< Default: 2
-  uint64_t lbaSize;             //!< Default: 512
-  bool enableDefaultNamespace;  //!< Default: True
-  bool enableDiskImage;         //!< Default: False
-  bool strictDiskSize;          //!< Default: False
-  bool useCopyOnWriteDisk;      //!< Default: False
-  std::string diskImagePath;    //!< Default: ""
+  PCIExpress::PCIE_GEN pcieGen;  //!< Default: PCIE_3_X
+  uint8_t pcieLane;              //!< Default: 4
+  ARM::AXI::BUS_WIDTH axiWidth;  //!< Default: BUS_128BIT
+  uint64_t axiClock;             //!< Default: 250000000 (250MHz)
+  uint64_t workInterval;         //!< Default: 50000 (50ns)
+  uint64_t maxRequestCount;      //!< Default: 4
+  uint16_t maxIOCQueue;          //!< Default: 16
+  uint16_t maxIOSQueue;          //!< Default: 16
+  uint16_t wrrHigh;              //!< Default: 2
+  uint16_t wrrMedium;            //!< Default: 2
+  uint64_t lbaSize;              //!< Default: 512
+  bool enableDefaultNamespace;   //!< Default: True
+  bool enableDiskImage;          //!< Default: False
+  bool strictDiskSize;           //!< Default: False
+  bool useCopyOnWriteDisk;       //!< Default: False
+  std::string diskImagePath;     //!< Default: ""
 
  public:
   Config();

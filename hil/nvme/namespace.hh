@@ -90,7 +90,7 @@ class Namespace {
   Subsystem *pParent;
   Disk *pDisk;
 
-  ConfigData *pCfgdata;
+  ConfigData &cfgdata;
   ConfigReader &conf;
 
   Information info;
@@ -112,7 +112,7 @@ class Namespace {
   void datasetManagement(SQEntryWrapper &, RequestFunction &);
 
  public:
-  Namespace(Subsystem *, ConfigData *);
+  Namespace(Subsystem *, ConfigData &);
   ~Namespace();
 
   void submitCommand(SQEntryWrapper &, RequestFunction &);

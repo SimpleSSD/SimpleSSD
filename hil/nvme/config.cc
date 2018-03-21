@@ -28,6 +28,10 @@ namespace HIL {
 
 namespace NVMe {
 
+const char NAME_PCIE_GEN[] = "PCIEGeneration";
+const char NAME_PCIE_LANE[] = "PCIELane";
+const char NAME_AXI_BUS_WIDTH[] = "AXIBusWidth";
+const char NAME_AXI_CLOCK[] = "AXIClock";
 const char NAME_WORK_INTERVAL[] = "WorkInterval";
 const char NAME_MAX_REQUEST_COUNT[] = "MaxRequestCount";
 const char NAME_MAX_IO_CQUEUE[] = "MaxIOCQueue";
@@ -42,6 +46,10 @@ const char NAME_DISK_IMAGE_PATH[] = "DiskImageFile";
 const char NAME_USE_COW_DISK[] = "UseCopyOnWriteDisk";
 
 Config::Config() {
+  pcieGen = PCIExpress::PCIE_3_X;
+  pcieLane = 4;
+  axiWidth = ARM::AXI::BUS_128BIT;
+  axiClock = 250000000;
   workInterval = 50000;
   maxRequestCount = 4;
   maxIOCQueue = 16;
@@ -59,7 +67,54 @@ Config::Config() {
 bool Config::setConfig(const char *name, const char *value) {
   bool ret = true;
 
-  if (MATCH_NAME(NAME_WORK_INTERVAL)) {
+  if (MATCH_NAME(NAME_PCIE_GEN)) {
+    switch (strtoul(value, nullptr, 10)) {
+      case 0:
+        pcieGen = PCIExpress::PCIE_1_X;
+        break;
+      case 1:
+        pcieGen = PCIExpress::PCIE_2_X;
+        break;
+      case 2:
+        pcieGen = PCIExpress::PCIE_3_X;
+        break;
+      default:
+        panic("Invalid PCI Express Generation");
+        break;
+    }
+  }
+  else if (MATCH_NAME(NAME_PCIE_LANE)) {
+    pcieLane = (uint8_t)strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_AXI_BUS_WIDTH)) {
+    switch (strtoul(value, nullptr, 10)) {
+      case 0:
+        axiWidth = ARM::AXI::BUS_32BIT;
+        break;
+      case 1:
+        axiWidth = ARM::AXI::BUS_64BIT;
+        break;
+      case 2:
+        axiWidth = ARM::AXI::BUS_128BIT;
+        break;
+      case 3:
+        axiWidth = ARM::AXI::BUS_256BIT;
+        break;
+      case 4:
+        axiWidth = ARM::AXI::BUS_512BIT;
+        break;
+      case 5:
+        axiWidth = ARM::AXI::BUS_1024BIT;
+        break;
+      default:
+        panic("Invalid AXI Stream Bus Width");
+        break;
+    }
+  }
+  else if (MATCH_NAME(NAME_AXI_CLOCK)) {
+    axiClock = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_WORK_INTERVAL)) {
     workInterval = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_MAX_REQUEST_COUNT)) {
@@ -103,7 +158,7 @@ bool Config::setConfig(const char *name, const char *value) {
 }
 
 void Config::update() {
-  if (popcount(lbaSize) != 1) {
+  if (popcount(lbaSize) != 1 || lbaSize < 512) {
     panic("Invalid LBA size");
   }
   if (maxRequestCount == 0) {
@@ -115,17 +170,11 @@ int64_t Config::readInt(uint32_t idx) {
   int64_t ret = 0;
 
   switch (idx) {
-    case NVME_MAX_IO_CQUEUE:
-      ret = maxIOCQueue;
+    case NVME_PCIE_GEN:
+      ret = pcieGen;
       break;
-    case NVME_MAX_IO_SQUEUE:
-      ret = maxIOSQueue;
-      break;
-    case NVME_WRR_HIGH:
-      ret = wrrHigh;
-      break;
-    case NVME_WRR_MEDIUM:
-      ret = wrrMedium;
+    case NVME_AXI_BUS_WIDTH:
+      ret = axiWidth;
       break;
   }
 
@@ -136,6 +185,12 @@ uint64_t Config::readUint(uint32_t idx) {
   uint64_t ret = 0;
 
   switch (idx) {
+    case NVME_PCIE_LANE:
+      ret = pcieLane;
+      break;
+    case NVME_AXI_CLOCK:
+      ret = axiClock;
+      break;
     case NVME_WORK_INTERVAL:
       ret = workInterval;
       break;

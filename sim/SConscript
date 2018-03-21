@@ -25,3 +25,4 @@ if env['TARGET_ISA'] == 'null':
 Source('config_reader.cc')
 Source('log.cc')
 Source('simulator.cc')
+Source('state.cc')

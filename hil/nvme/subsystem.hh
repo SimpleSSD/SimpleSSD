@@ -39,7 +39,7 @@ class Subsystem : public StatObject {
 
   std::list<Namespace *> lNamespaces;
 
-  ConfigData *pCfgData;
+  ConfigData &cfgdata;
   ConfigReader &conf;
   uint32_t queueAllocated;
 
@@ -72,7 +72,7 @@ class Subsystem : public StatObject {
   bool formatNVM(SQEntryWrapper &, RequestFunction &);
 
  public:
-  Subsystem(Controller *, ConfigData *);
+  Subsystem(Controller *, ConfigData &);
   ~Subsystem();
 
   void submitCommand(SQEntryWrapper &, RequestFunction);

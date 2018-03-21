@@ -145,9 +145,6 @@ class Controller : public StatObject {
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;
   void resetStatValues() override;
-
-  void dmaRead(uint64_t, uint64_t, uint8_t *, DMAFunction &, void * = nullptr);
-  void dmaWrite(uint64_t, uint64_t, uint8_t *, DMAFunction &, void * = nullptr);
 };
 
 }  // namespace NVMe

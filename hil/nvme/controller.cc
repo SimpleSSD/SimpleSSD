@@ -24,6 +24,8 @@
 
 #include "hil/nvme/interface.hh"
 #include "util/algorithm.hh"
+#include "util/fifo.hh"
+#include "util/interface.hh"
 
 #define BOOLEAN_STRING(b) ((b) ? "true" : "false")
 
@@ -45,6 +47,13 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
       aggregationTime(0),
       aggregationThreshold(0),
       conf(c) {
+  ARM::AXI::BUS_WIDTH axiWidth;
+  uint64_t axiClock;
+
+  // Get AXI setting
+  axiWidth = (ARM::AXI::BUS_WIDTH)conf.readInt(CONFIG_NVME, NVME_AXI_BUS_WIDTH);
+  axiClock = conf.readUint(CONFIG_NVME, NVME_AXI_CLOCK);
+
   // Allocate array for Command Queues
   cqsize = conf.readUint(CONFIG_NVME, NVME_MAX_IO_CQUEUE) + 1;
   sqsize = conf.readUint(CONFIG_NVME, NVME_MAX_IO_SQUEUE) + 1;
@@ -68,8 +77,18 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   registers.capabilities = 0x0020002028010FFF;
   registers.version = 0x00010201;  // NVMe 1.2.1
 
+  FIFOParam fifoParam;
+
+  // See Xilinx Gen3 Integrated Block for PCIe
+  fifoParam.rqSize = 8192;
+  fifoParam.wqSize = 8192;
+  fifoParam.transferUnit = 256;
+  fifoParam.latency = [axiWidth, axiClock](uint64_t size) -> uint64_t {
+    return ARM::AXI::Stream::calculateDelay(axiClock, axiWidth, size);
+  };
+
   cfgdata.pConfigReader = &c;
-  cfgdata.pController = this;
+  cfgdata.pInterface = new FIFO(pParent, fifoParam);
   cfgdata.maxQueueEntry = (registers.capabilities & 0xFFFF) + 1;
 
   workEvent = allocate([this](uint64_t) { work(); });
@@ -80,7 +99,7 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   workInterval = conf.readUint(CONFIG_NVME, NVME_WORK_INTERVAL);
   requestInterval = workInterval / maxRequest;
 
-  pSubsystem = new Subsystem(this, &cfgdata);
+  pSubsystem = new Subsystem(this, cfgdata);
 }
 
 Controller::~Controller() {
@@ -100,6 +119,8 @@ Controller::~Controller() {
 
   free(ppCQueue);
   free(ppSQueue);
+
+  delete cfgdata.pInterface;
 }
 
 void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
@@ -209,14 +230,14 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
         // Apply to admin queue
         if (ppCQueue[0]) {
           ppCQueue[0]->setBase(
-              new PRPList(&cfgdata, empty, nullptr,
+              new PRPList(cfgdata, empty, nullptr,
                           registers.adminCQueueBaseAddress,
                           ppCQueue[0]->getSize() * cqstride, true),
               cqstride);
         }
         if (ppSQueue[0]) {
           ppSQueue[0]->setBase(
-              new PRPList(&cfgdata, empty, nullptr,
+              new PRPList(cfgdata, empty, nullptr,
                           registers.adminSQueueBaseAddress,
                           ppSQueue[0]->getSize() * sqstride, true),
               sqstride);
@@ -420,7 +441,7 @@ int Controller::createCQueue(uint16_t cqid, uint16_t size, uint16_t iv,
   if (ppCQueue[cqid] == NULL) {
     ppCQueue[cqid] = new CQueue(iv, ien, cqid, size);
     ppCQueue[cqid]->setBase(
-        new PRPList(&cfgdata, func, context, prp1, size * cqstride, pc),
+        new PRPList(cfgdata, func, context, prp1, size * cqstride, pc),
         cqstride);
 
     ret = 0;
@@ -457,7 +478,7 @@ int Controller::createSQueue(uint16_t sqid, uint16_t cqid, uint16_t size,
     if (ppCQueue[cqid] != NULL) {
       ppSQueue[sqid] = new SQueue(cqid, priority, sqid, size);
       ppSQueue[sqid]->setBase(
-          new PRPList(&cfgdata, func, context, prp1, size * sqstride, pc),
+          new PRPList(cfgdata, func, context, prp1, size * sqstride, pc),
           sqstride);
 
       ret = 0;
@@ -1509,16 +1530,6 @@ void Controller::getStatValues(std::vector<double> &values) {
 
 void Controller::resetStatValues() {
   pSubsystem->resetStatValues();
-}
-
-void Controller::dmaRead(uint64_t addr, uint64_t size, uint8_t *buffer,
-                         DMAFunction &func, void *context) {
-  pParent->dmaRead(addr, size, buffer, func, context);
-}
-
-void Controller::dmaWrite(uint64_t addr, uint64_t size, uint8_t *buffer,
-                          DMAFunction &func, void *context) {
-  pParent->dmaWrite(addr, size, buffer, func, context);
 }
 
 }  // namespace NVMe

@@ -24,8 +24,8 @@
 
 #include <cinttypes>
 
-#include "util/bitset.hh"
 #include "sim/dma_interface.hh"
+#include "util/bitset.hh"
 
 namespace SimpleSSD {
 

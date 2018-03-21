@@ -45,10 +45,10 @@ const uint32_t lbaSize[nLBAFormat] = {
     4096,  // 4KB
 };
 
-Subsystem::Subsystem(Controller *ctrl, ConfigData *cfg)
+Subsystem::Subsystem(Controller *ctrl, ConfigData &cfg)
     : pParent(ctrl),
-      pCfgData(cfg),
-      conf(*cfg->pConfigReader),
+      cfgdata(cfg),
+      conf(*cfg.pConfigReader),
       allocatedLogicalPages(0),
       commandCount(0) {
   pHIL = new HIL(conf);
@@ -195,7 +195,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
   info->sizeInByteH = 0;
 
   // Create namespace
-  Namespace *pNS = new Namespace(this, pCfgData);
+  Namespace *pNS = new Namespace(this, cfgdata);
   pNS->setData(nsid, info);
 
   lNamespaces.push_back(pNS);
@@ -427,7 +427,7 @@ bool Subsystem::createSQueue(SQEntryWrapper &req, RequestFunction &func) {
 
   debugprint(LOG_HIL_NVME, "ADMIN   | Create I/O Submission Queue");
 
-  if (entrySize > pCfgData->maxQueueEntry) {
+  if (entrySize > cfgdata.maxQueueEntry) {
     err = true;
     resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
                     STATUS_INVALID_QUEUE_SIZE);
@@ -506,12 +506,12 @@ bool Subsystem::getLogPage(SQEntryWrapper &req, RequestFunction &func) {
         pContext->buffer = globalHealth.data;
 
         if (req.useSGL) {
-          pContext->dma = new SGL(pCfgData, smartInfo, pContext,
-                                  req.entry.data1, req.entry.data2);
+          pContext->dma = new SGL(cfgdata, smartInfo, pContext, req.entry.data1,
+                                  req.entry.data2);
         }
         else {
           pContext->dma =
-              new PRPList(pCfgData, smartInfo, pContext, req.entry.data1,
+              new PRPList(cfgdata, smartInfo, pContext, req.entry.data1,
                           req.entry.data2, (uint64_t)req_size);
         }
       }
@@ -567,7 +567,7 @@ bool Subsystem::createCQueue(SQEntryWrapper &req, RequestFunction &func) {
 
   debugprint(LOG_HIL_NVME, "ADMIN   | Create I/O Completion Queue");
 
-  if (entrySize > pCfgData->maxQueueEntry) {
+  if (entrySize > cfgdata.maxQueueEntry) {
     err = true;
     resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
                     STATUS_INVALID_QUEUE_SIZE);
@@ -702,11 +702,11 @@ bool Subsystem::identify(SQEntryWrapper &req, RequestFunction &func) {
 
   if (ret && !err) {
     if (req.useSGL) {
-      pContext->dma = new SGL(pCfgData, doWrite, pContext, req.entry.data1,
-                              req.entry.data2);
+      pContext->dma =
+          new SGL(cfgdata, doWrite, pContext, req.entry.data1, req.entry.data2);
     }
     else {
-      pContext->dma = new PRPList(pCfgData, doWrite, pContext, req.entry.data1,
+      pContext->dma = new PRPList(cfgdata, doWrite, pContext, req.entry.data1,
                                   req.entry.data2, (uint64_t)0x1000);
     }
   }
@@ -954,12 +954,12 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req,
         pContext->buffer = (uint8_t *)calloc(0x1000, sizeof(uint8_t));
 
         if (req.useSGL) {
-          pContext->dma = new SGL(pCfgData, doRead, pContext, req.entry.data1,
+          pContext->dma = new SGL(cfgdata, doRead, pContext, req.entry.data1,
                                   req.entry.data2);
         }
         else {
           pContext->dma =
-              new PRPList(pCfgData, doRead, pContext, req.entry.data1,
+              new PRPList(cfgdata, doRead, pContext, req.entry.data1,
                           req.entry.data2, (uint64_t)0x1000);
         }
       }
@@ -1056,10 +1056,10 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req,
 
   if (req.useSGL) {
     pContext->dma =
-        new SGL(pCfgData, doRead, pContext, req.entry.data1, req.entry.data2);
+        new SGL(cfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
   }
   else {
-    pContext->dma = new PRPList(pCfgData, doRead, pContext, req.entry.data1,
+    pContext->dma = new PRPList(cfgdata, doRead, pContext, req.entry.data1,
                                 req.entry.data2, (uint64_t)0x1000);
   }
 

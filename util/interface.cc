@@ -43,4 +43,42 @@ uint64_t calculateDelay(PCIE_GEN gen, uint8_t lane, uint64_t bytesize) {
 
 }  // namespace PCIExpress
 
+namespace ARM {
+
+namespace AXI {
+
+// Two cycles per one data beat
+// Two cycles for address, one cycle for write response
+// One burst request should contain 1, 2, 4, 8 .. of beats
+
+static const uint32_t maxPayloadSize = 4096;  // Bytes
+
+uint64_t calculateDelay(uint64_t clock, BUS_WIDTH width, uint64_t bytesize) {
+  uint32_t nBeats = MAX((bytesize - 1) / width + 1, 1);
+  uint32_t nBursts = popcount(nBeats) + (bytesize - 1) / maxPayloadSize;
+  uint32_t nClocks = nBeats * 2 + nBursts * 3;
+  uint64_t period = (uint64_t)(1000000000000.0 / clock + 0.5);
+
+  return nClocks * period;
+}
+
+namespace Stream {
+
+// Unlimited bursts
+// If master and slave can handle data sufficiently fast,
+// one cycle per one data beat
+// No address and responses
+
+uint64_t calculateDelay(uint64_t clock, BUS_WIDTH width, uint64_t bytesize) {
+  uint64_t period = (uint64_t)(1000000000000.0 / clock + 0.5);
+
+  return bytesize / width * period;
+}
+
+}  // namespace Stream
+
+}  // namespace AXI
+
+}  // namespace ARM
+
 }  // namespace SimpleSSD

@@ -28,8 +28,8 @@ namespace HIL {
 
 namespace NVMe {
 
-DMAInterface::DMAInterface(ConfigData *cfg, DMAFunction &f, void *c)
-    : pController(cfg->pController),
+DMAInterface::DMAInterface(ConfigData &cfg, DMAFunction &f, void *c)
+    : pInterface(cfg.pInterface),
       initFunction(f),
       callCounter(0),
       context(c),
@@ -55,9 +55,9 @@ PRP::PRP() : addr(0), size(0) {}
 
 PRP::PRP(uint64_t address, uint64_t s) : addr(address), size(s) {}
 
-PRPList::PRPList(ConfigData *cfg, DMAFunction &f, void *c, uint64_t prp1,
+PRPList::PRPList(ConfigData &cfg, DMAFunction &f, void *c, uint64_t prp1,
                  uint64_t prp2, uint64_t size)
-    : DMAInterface(cfg, f, c), totalSize(size), pagesize(cfg->memoryPageSize) {
+    : DMAInterface(cfg, f, c), totalSize(size), pagesize(cfg.memoryPageSize) {
   bool immediate = true;
   uint64_t prp1Size = getPRPSize(prp1);
   uint64_t prp2Size = getPRPSize(prp2);
@@ -109,9 +109,9 @@ PRPList::PRPList(ConfigData *cfg, DMAFunction &f, void *c, uint64_t prp1,
   }
 }
 
-PRPList::PRPList(ConfigData *cfg, DMAFunction &f, void *c, uint64_t base,
+PRPList::PRPList(ConfigData &cfg, DMAFunction &f, void *c, uint64_t base,
                  uint64_t size, bool cont)
-    : DMAInterface(cfg, f, c), totalSize(size), pagesize(cfg->memoryPageSize) {
+    : DMAInterface(cfg, f, c), totalSize(size), pagesize(cfg.memoryPageSize) {
   if (cont) {
     prpList.push_back(PRP(base, size));
 
@@ -185,8 +185,8 @@ void PRPList::getPRPListFromPRP(uint64_t base, uint64_t size) {
 
   if (pContext->buffer) {
     // Read PRP
-    pController->dmaRead(base, pContext->currentSize, pContext->buffer, doRead,
-                         pContext);
+    pInterface->dmaRead(base, pContext->currentSize, pContext->buffer, doRead,
+                        pContext);
   }
   else {
     delete pContext;
@@ -214,8 +214,8 @@ void PRPList::read(uint64_t offset, uint64_t length, uint8_t *buffer,
     if (begin) {
       read = MIN(iter.size, length - totalRead);
       readContext->counter++;
-      pController->dmaRead(iter.addr, read, buffer ? buffer + totalRead : NULL,
-                           dmaHandler, readContext);
+      pInterface->dmaRead(iter.addr, read, buffer ? buffer + totalRead : NULL,
+                          dmaHandler, readContext);
       totalRead += read;
 
       if (totalRead == length) {
@@ -228,8 +228,8 @@ void PRPList::read(uint64_t offset, uint64_t length, uint8_t *buffer,
       totalRead = offset - currentOffset;
       read = MIN(iter.size - totalRead, length);
       readContext->counter++;
-      pController->dmaRead(iter.addr + totalRead, read, buffer, dmaHandler,
-                           readContext);
+      pInterface->dmaRead(iter.addr + totalRead, read, buffer, dmaHandler,
+                          readContext);
       totalRead = read;
     }
 
@@ -252,9 +252,9 @@ void PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
     if (begin) {
       written = MIN(iter.size, length - totalWritten);
       writeContext->counter++;
-      pController->dmaWrite(iter.addr, written,
-                            buffer ? buffer + totalWritten : NULL, dmaHandler,
-                            writeContext);
+      pInterface->dmaWrite(iter.addr, written,
+                           buffer ? buffer + totalWritten : NULL, dmaHandler,
+                           writeContext);
       totalWritten += written;
 
       if (totalWritten == length) {
@@ -267,8 +267,8 @@ void PRPList::write(uint64_t offset, uint64_t length, uint8_t *buffer,
       totalWritten = offset - currentOffset;
       written = MIN(iter.size - totalWritten, length);
       writeContext->counter++;
-      pController->dmaWrite(iter.addr + totalWritten, written, buffer,
-                            dmaHandler, writeContext);
+      pInterface->dmaWrite(iter.addr + totalWritten, written, buffer,
+                           dmaHandler, writeContext);
       totalWritten = written;
     }
 
@@ -284,7 +284,7 @@ Chunk::Chunk() : addr(0), length(0), ignore(true) {}
 
 Chunk::Chunk(uint64_t a, uint32_t l, bool i) : addr(a), length(l), ignore(i) {}
 
-SGL::SGL(ConfigData *cfg, DMAFunction &f, void *c, uint64_t prp1, uint64_t prp2)
+SGL::SGL(ConfigData &cfg, DMAFunction &f, void *c, uint64_t prp1, uint64_t prp2)
     : DMAInterface(cfg, f, c), totalSize(0) {
   SGLDescriptor desc;
 
@@ -387,7 +387,7 @@ void SGL::parseSGLSegment(uint64_t address, uint32_t length) {
 
   if (pContext->buffer) {
     // Read segment
-    pController->dmaRead(address, length, pContext->buffer, doRead, pContext);
+    pInterface->dmaRead(address, length, pContext->buffer, doRead, pContext);
   }
   else {
     delete pContext;
@@ -413,9 +413,8 @@ void SGL::read(uint64_t offset, uint64_t length, uint8_t *buffer,
 
       if (!iter.ignore) {
         readContext->counter++;
-        pController->dmaRead(iter.addr, read,
-                             buffer ? buffer + totalRead : NULL, dmaHandler,
-                             readContext);
+        pInterface->dmaRead(iter.addr, read, buffer ? buffer + totalRead : NULL,
+                            dmaHandler, readContext);
       }
 
       totalRead += read;
@@ -432,8 +431,8 @@ void SGL::read(uint64_t offset, uint64_t length, uint8_t *buffer,
 
       if (!iter.ignore) {
         readContext->counter++;
-        pController->dmaRead(iter.addr + totalRead, read, buffer, dmaHandler,
-                             readContext);
+        pInterface->dmaRead(iter.addr + totalRead, read, buffer, dmaHandler,
+                            readContext);
       }
 
       totalRead = read;
@@ -460,9 +459,9 @@ void SGL::write(uint64_t offset, uint64_t length, uint8_t *buffer,
 
       if (!iter.ignore) {
         writeContext->counter++;
-        pController->dmaWrite(iter.addr, written,
-                              buffer ? buffer + totalWritten : NULL, dmaHandler,
-                              writeContext);
+        pInterface->dmaWrite(iter.addr, written,
+                             buffer ? buffer + totalWritten : NULL, dmaHandler,
+                             writeContext);
       }
 
       totalWritten += written;
@@ -479,8 +478,8 @@ void SGL::write(uint64_t offset, uint64_t length, uint8_t *buffer,
 
       if (!iter.ignore) {
         writeContext->counter++;
-        pController->dmaWrite(iter.addr + totalWritten, written, buffer,
-                              dmaHandler, writeContext);
+        pInterface->dmaWrite(iter.addr + totalWritten, written, buffer,
+                             dmaHandler, writeContext);
       }
 
       totalWritten = written;

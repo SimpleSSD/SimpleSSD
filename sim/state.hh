@@ -19,50 +19,28 @@
 
 #pragma once
 
-#ifndef __UTIL_INTERFACE__
-#define __UTIL_INTERFACE__
+#ifndef __SIM_STATE__
+#define __SIM_STATE__
 
 #include <cinttypes>
+#include <vector>
 
 namespace SimpleSSD {
 
-namespace PCIExpress {
+class StateObject {
+ protected:
+  template <class T>
+  static void pushValue(std::vector<uint8_t> &, T);
+  template <class T>
+  static void popValue(std::vector<uint8_t> &, T);
 
-typedef enum {
-  PCIE_1_X,  // PCI Express Gen. 1.x
-  PCIE_2_X,  // PCI Express Gen. 2.x
-  PCIE_3_X,  // PCI Express Gen. 3.x
-  PCIE_NUM
-} PCIE_GEN;
+ public:
+  StateObject() {}
+  virtual ~StateObject() {}
 
-uint64_t calculateDelay(PCIE_GEN, uint8_t, uint64_t);
-
-}  // namespace PCIExpress
-
-namespace ARM {
-
-namespace AXI {
-
-typedef enum {
-  BUS_32BIT = 4,
-  BUS_64BIT = 8,
-  BUS_128BIT = 16,
-  BUS_256BIT = 32,
-  BUS_512BIT = 64,
-  BUS_1024BIT = 128,
-} BUS_WIDTH;
-
-uint64_t calculateDelay(uint64_t, BUS_WIDTH, uint64_t);
-
-namespace Stream {
-
-uint64_t calculateDelay(uint64_t, BUS_WIDTH, uint64_t);
-
-}  // namespace Stream
-
-}  // namespace AXI
-
-}  // namespace ARM
+  virtual void saveState(std::vector<uint8_t> &) {}
+  virtual void loadState(std::vector<uint8_t> &) {}
+};
 
 }  // namespace SimpleSSD
 
