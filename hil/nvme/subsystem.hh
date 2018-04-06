@@ -21,8 +21,7 @@
 #define __HIL_NVME_SUBSYSTEM__
 
 #include "hil/hil.hh"
-#include "hil/nvme/namespace.hh"
-#include "util/simplessd.hh"
+#include "hil/nvme/abstract_subsystem.hh"
 
 namespace SimpleSSD {
 
@@ -30,17 +29,11 @@ namespace HIL {
 
 namespace NVMe {
 
-class Controller;
-
-class Subsystem : public StatObject {
- private:
-  Controller *pParent;
+class Subsystem : public AbstractSubsystem {
+ protected:
   HIL *pHIL;
 
   std::list<Namespace *> lNamespaces;
-
-  ConfigData &cfgdata;
-  ConfigReader &conf;
   uint32_t queueAllocated;
 
   HealthInfo globalHealth;
@@ -75,9 +68,11 @@ class Subsystem : public StatObject {
   Subsystem(Controller *, ConfigData &);
   ~Subsystem();
 
-  void submitCommand(SQEntryWrapper &, RequestFunction);
-  void getNVMCapacity(uint64_t &, uint64_t &);
-  uint32_t validNamespaceCount();
+  void init() override;
+
+  void submitCommand(SQEntryWrapper &, RequestFunction) override;
+  void getNVMCapacity(uint64_t &, uint64_t &) override;
+  uint32_t validNamespaceCount() override;
 
   void read(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);
   void write(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);

@@ -50,6 +50,14 @@ const char NAME_NAND_MSB_READ[] = "MSBRead";
 const char NAME_NAND_MSB_WRITE[] = "MSBWrite";
 const char NAME_NAND_ERASE[] = "Erase";
 
+/* NAND power TODO: seperate this */
+const char NAME_NAND_VOLTAGE[] = "Voltage";
+const char NAME_NAND_CURRENT_READ[] = "ReadCurrent";
+const char NAME_NAND_CURRENT_PROGRAM[] = "ProgramCurrent";
+const char NAME_NAND_CURRENT_ERASE[] = "EraseCurrent";
+const char NAME_NAND_CURRENT_IDLE[] = "IdleCurrent";
+const char NAME_NAND_CURRENT_STANDBY[] = "StandbyCurrent";
+
 /* Constants for calculating DMA time based on ONFI 3.x spec */
 // READ : <00h> <C1> <C2> <R1> <R2> <R3> <30h> [tWB] [tR] [tRR] <DATA>
 // WRITE: <80h> <C1> <C2> <R1> <R2> <R3> [tADL] <DATA> <10h> [tWB] [tPROG]
@@ -80,7 +88,15 @@ Config::Config() {
   nandTiming.msb.write = 1300000000;  // 1300us
   nandTiming.erase = 3500000000;      // 3.5ms
 
-  superblock = INDEX_CHANNEL | INDEX_PACKAGE | INDEX_DIE | INDEX_PLANE;
+  // Set NAND power (From: Micron's MT29F64*)
+  nandPower.voltage = 3300;           // 3.3V
+  nandPower.current.read = 25000;     // 25mA
+  nandPower.current.program = 25000;  // 25mA
+  nandPower.current.erase = 25000;    // 25mA
+  nandPower.current.busIdle = 5000;   // 5mA
+  nandPower.current.standby = 10;     // 10uA
+
+  superblock = 0;
   memset(PageAllocation, 0, 4);
 }
 
@@ -146,6 +162,24 @@ bool Config::setConfig(const char *name, const char *value) {
   }
   else if (MATCH_NAME(NAME_NAND_ERASE)) {
     nandTiming.erase = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_VOLTAGE)) {
+    nandPower.voltage = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CURRENT_READ)) {
+    nandPower.current.read = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CURRENT_PROGRAM)) {
+    nandPower.current.program = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CURRENT_ERASE)) {
+    nandPower.current.erase = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CURRENT_IDLE)) {
+    nandPower.current.busIdle = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_NAND_CURRENT_STANDBY)) {
+    nandPower.current.standby = strtoul(value, nullptr, 10);
   }
   else {
     ret = false;
@@ -334,6 +368,10 @@ uint32_t Config::getPageAllocationConfig() {
 
 Config::NANDTiming *Config::getNANDTiming() {
   return &nandTiming;
+}
+
+Config::NANDPower *Config::getNANDPower() {
+  return &nandPower;
 }
 
 }  // namespace PAL

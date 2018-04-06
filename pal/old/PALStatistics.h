@@ -188,6 +188,8 @@ class PALStatistics {
   void ResetStats();
   void PrintFinalStats(uint64_t sim_time_ps);
 
+  void getEnergyStat(double &, double &, double &);
+
   ///////////////////////////////// polished stats
   class Counter {
    public:

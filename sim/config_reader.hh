@@ -25,9 +25,12 @@
 #include <cinttypes>
 #include <string>
 
+#include "cpu/config.hh"
 #include "dram/config.hh"
 #include "ftl/config.hh"
 #include "hil/nvme/config.hh"
+#include "hil/sata/config.hh"
+#include "hil/ufs/config.hh"
 #include "icl/config.hh"
 #include "lib/inih/ini.h"
 #include "pal/config.hh"
@@ -35,18 +38,24 @@
 namespace SimpleSSD {
 
 typedef enum {
+  CONFIG_CPU,
   CONFIG_DRAM,
   CONFIG_FTL,
   CONFIG_NVME,
+  CONFIG_SATA,
+  CONFIG_UFS,
   CONFIG_ICL,
   CONFIG_PAL,
 } CONFIG_SECTION;
 
 class ConfigReader {
  private:
+  CPU::Config cpuConfig;
   DRAM::Config dramConfig;
   FTL::Config ftlConfig;
   HIL::NVMe::Config nvmeConfig;
+  HIL::SATA::Config sataConfig;
+  HIL::UFS::Config ufsConfig;
   ICL::Config iclConfig;
   PAL::Config palConfig;
 
@@ -71,6 +80,7 @@ class ConfigReader {
   uint32_t getPageAllocationConfig();
 
   PAL::Config::NANDTiming *getNANDTiming();
+  PAL::Config::NANDPower *getNANDPower();
 };
 
 }  // namespace SimpleSSD

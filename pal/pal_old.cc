@@ -35,16 +35,17 @@ namespace PAL {
 
 PALOLD::PALOLD(Parameter &p, ConfigReader &c) : AbstractPAL(p, c) {
   Config::NANDTiming *pTiming = c.getNANDTiming();
+  Config::NANDPower *pPower = c.getNANDPower();
 
   switch (conf.readInt(CONFIG_PAL, NAND_FLASH_TYPE)) {
     case NAND_SLC:
-      lat = new LatencySLC(*pTiming);
+      lat = new LatencySLC(*pTiming, *pPower);
       break;
     case NAND_MLC:
-      lat = new LatencyMLC(*pTiming);
+      lat = new LatencyMLC(*pTiming, *pPower);
       break;
     case NAND_TLC:
-      lat = new LatencyTLC(*pTiming);
+      lat = new LatencyTLC(*pTiming, *pPower);
       break;
   }
 
@@ -118,7 +119,7 @@ void PALOLD::write(Request &req, uint64_t &tick) {
 
 void PALOLD::erase(Request &req, uint64_t &tick) {
   uint64_t finishedAt = tick;
-  ::Command cmd(tick, 0, OPER_ERASE, param.superPageSize);
+  ::Command cmd(tick, 0, OPER_ERASE, param.superPageSize * param.page);
   std::vector<::CPDPBP> list;
 
   printPPN(req, "ERASE");
@@ -292,6 +293,68 @@ void PALOLD::printCPDPBP(::CPDPBP &addr, const char *prefix) {
 void PALOLD::printPPN(Request &req, const char *prefix) {
   debugprint(LOG_PAL_OLD, "%-5s | Block %u | Page %u", prefix, req.blockIndex,
              req.pageIndex);
+}
+
+void PALOLD::getStatList(std::vector<Stats> &list, std::string prefix) {
+  Stats temp;
+
+  temp.name = prefix + "energy.read";
+  temp.desc = "NAND power used on read transaction (uJ)";
+  list.push_back(temp);
+
+  temp.name = prefix + "energy.program";
+  temp.desc = "NAND power used on program transaction (uJ)";
+  list.push_back(temp);
+
+  temp.name = prefix + "energy.erase";
+  temp.desc = "NAND power used on erase transaction (uJ)";
+  list.push_back(temp);
+
+  temp.name = prefix + "energy.total";
+  temp.desc = "NAND power used on all transaction (uJ)";
+  list.push_back(temp);
+}
+
+void PALOLD::getStatValues(std::vector<double> &values) {
+  double read, program, erase;
+
+  stats->getEnergyStat(read, program, erase);
+
+  values.push_back(read);
+  values.push_back(program);
+  values.push_back(erase);
+  values.push_back(read + program + erase);
+}
+
+void PALOLD::resetStatValues() {
+  stats->ResetStats();
+}
+
+void PALOLD::read(::CPDPBP &addr, uint64_t &tick) {
+  ::Command cmd(tick, 0, OPER_READ, param.superPageSize);
+
+  printCPDPBP(addr, "READ");
+  pal->submit(cmd, addr);
+
+  tick = cmd.finished;
+}
+
+void PALOLD::write(::CPDPBP &addr, uint64_t &tick) {
+  ::Command cmd(tick, 0, OPER_WRITE, param.superPageSize);
+
+  printCPDPBP(addr, "WRITE");
+  pal->submit(cmd, addr);
+
+  tick = cmd.finished;
+}
+
+void PALOLD::erase(::CPDPBP &addr, uint64_t &tick) {
+  ::Command cmd(tick, 0, OPER_ERASE, param.superPageSize * param.page);
+
+  printCPDPBP(addr, "ERASE");
+  pal->submit(cmd, addr);
+
+  tick = cmd.finished;
 }
 
 }  // namespace PAL

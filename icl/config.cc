@@ -30,10 +30,12 @@ const char NAME_USE_READ_CACHE[] = "EnableReadCache";
 const char NAME_USE_WRITE_CACHE[] = "EnableWriteCache";
 const char NAME_USE_READ_PREFETCH[] = "EnableReadPrefetch";
 const char NAME_EVICT_POLICY[] = "EvictPolicy";
+const char NAME_EVICT_MODE[] = "EvictMode";
 const char NAME_CACHE_SIZE[] = "CacheSize";
 const char NAME_WAY_SIZE[] = "CacheWaySize";
 const char NAME_PREFETCH_COUNT[] = "ReadPrefetchCount";
 const char NAME_PREFETCH_RATIO[] = "ReadPrefetchRatio";
+const char NAME_PREFETCH_MODE[] = "ReadPrefetchMode";
 
 Config::Config() {
   readCaching = false;
@@ -44,6 +46,8 @@ Config::Config() {
   cacheWaySize = 1;
   prefetchCount = 1;
   prefetchRatio = 0.5;
+  prefetchMode = MODE_ALL;
+  evictMode = MODE_ALL;
 }
 
 bool Config::setConfig(const char *name, const char *value) {
@@ -67,11 +71,17 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_EVICT_POLICY)) {
     evictPolicy = (EVICT_POLICY)strtoul(value, nullptr, 10);
   }
+  else if (MATCH_NAME(NAME_EVICT_MODE)) {
+    evictMode = (EVICT_MODE)strtoul(value, nullptr, 10);
+  }
   else if (MATCH_NAME(NAME_CACHE_SIZE)) {
     cacheSize = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_WAY_SIZE)) {
     cacheWaySize = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_PREFETCH_MODE)) {
+    prefetchMode = (PREFETCH_MODE)strtoul(value, nullptr, 10);
   }
   else {
     ret = false;
@@ -95,6 +105,12 @@ int64_t Config::readInt(uint32_t idx) {
   switch (idx) {
     case ICL_EVICT_POLICY:
       ret = evictPolicy;
+      break;
+    case ICL_PREFETCH_GRANULARITY:
+      ret = prefetchMode;
+      break;
+    case ICL_EVICT_GRANULARITY:
+      ret = evictMode;
       break;
   }
 

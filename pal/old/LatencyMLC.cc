@@ -13,14 +13,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Gieseo Park <gieseo@camelab.org>
- *          Jie Zhang <jie@camelab.org>
  */
 
 #include "LatencyMLC.h"
 
-LatencyMLC::LatencyMLC(SimpleSSD::PAL::Config::NANDTiming t) : Latency(t) {}
+LatencyMLC::LatencyMLC(SimpleSSD::PAL::Config::NANDTiming t,
+                       SimpleSSD::PAL::Config::NANDPower p)
+    : Latency(t, p) {}
 
 LatencyMLC::~LatencyMLC() {}
 
@@ -82,34 +81,4 @@ uint64_t LatencyMLC::GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy) {
   }
 
   return 10;
-}
-
-// power
-uint64_t LatencyMLC::GetPower(uint8_t Oper, uint8_t Busy) {
-  // Unit(nW) = voltage(mV) x current(uA)
-  // NAND for MEM: Micron NAND Flash Memory -  MT29F64G08EBAA
-  // DDR for RD-DMA1/WR-DMA0: Micron Double Data Rate (DDR) SDRAM - MT46V64M4
-  // LATCH for RD-DMA0/WR-DMA1: TexasInstrument LATCH - SN54ALVTH
-  static const uint64_t power_tbl[4][3] = {
-      /*  		DMA0	      	  MEM	 	DMA1	*/
-      /* Read */ {2700 * 10, 3300 * 25000, 2600 * 500000},
-      /* Write */ {2600 * 500000, 3300 * 25000, 2700 * 10},
-      /* Erase */ {2700 * 10, 3300 * 25000, 2700 * 10},
-      /* idle */ {3300 * 3000, 3300 * 10, 3300 * 3000}};
-
-  // idle when Oper == 10
-  if (Oper != 10) {
-    switch (Busy) {
-      case BUSY_DMA0:
-        return power_tbl[Oper][0];
-      case BUSY_DMA1:
-        return power_tbl[Oper][2];
-      case BUSY_MEM:
-        return power_tbl[Oper][1];
-      default:
-        break;
-    }
-  }
-
-  return power_tbl[3][1];
 }

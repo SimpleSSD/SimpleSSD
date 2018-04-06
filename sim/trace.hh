@@ -28,8 +28,11 @@ namespace SimpleSSD {
 
 typedef enum {
   LOG_COMMON,
+  LOG_CPU,
   LOG_HIL,
   LOG_HIL_NVME,
+  LOG_HIL_SATA,
+  LOG_HIL_UFS,
   LOG_ICL,
   LOG_ICL_GENERIC_CACHE,
   LOG_FTL,

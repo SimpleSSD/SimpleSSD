@@ -177,6 +177,12 @@ void PALStatistics::ValueOper::printstat(
   // }
 }
 
+void PALStatistics::getEnergyStat(double &read, double &write, double &erase) {
+  read = Energy_Total.vals[0].sum / 1000000;   // uJ
+  write = Energy_Total.vals[1].sum / 1000000;  // uJ
+  erase = Energy_Total.vals[2].sum / 1000000;  // uJ
+}
+
 void PALStatistics::ValueOper::printstat_energy(const char *namestr) {
   /*     char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
        printf( "[ %s ]:\n", namestr);

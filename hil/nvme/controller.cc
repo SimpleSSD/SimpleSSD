@@ -23,6 +23,8 @@
 #include <cmath>
 
 #include "hil/nvme/interface.hh"
+#include "hil/nvme/ocssd.hh"
+#include "hil/nvme/subsystem.hh"
 #include "util/algorithm.hh"
 #include "util/fifo.hh"
 #include "util/interface.hh"
@@ -82,13 +84,29 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   // See Xilinx Gen3 Integrated Block for PCIe
   fifoParam.rqSize = 8192;
   fifoParam.wqSize = 8192;
-  fifoParam.transferUnit = 256;
-  fifoParam.latency = [axiWidth, axiClock](uint64_t size) -> uint64_t {
-    return ARM::AXI::Stream::calculateDelay(axiClock, axiWidth, size);
+  fifoParam.transferUnit = 2048;
+  fifoParam.latency = [](uint64_t size) -> uint64_t {
+    return ARM::AXI::Stream::calculateDelay(250000000, ARM::AXI::BUS_128BIT,
+                                            size);
   };
 
+  pcieFIFO = new FIFO(pParent, fifoParam);
+
+  if (axiWidth * axiClock == (uint64_t)250000000 * ARM::AXI::BUS_128BIT) {
+    // We don't need interconnect FIFO
+    interconnect = pcieFIFO;
+    pcieFIFO = nullptr;  // Prefent double delete(free)
+  }
+  else {
+    fifoParam.latency = [axiWidth, axiClock](uint64_t size) -> uint64_t {
+      return ARM::AXI::Stream::calculateDelay(axiClock, axiWidth, size);
+    };
+
+    interconnect = new FIFO(pcieFIFO, fifoParam);
+  }
+
   cfgdata.pConfigReader = &c;
-  cfgdata.pInterface = new FIFO(pParent, fifoParam);
+  cfgdata.pInterface = interconnect;
   cfgdata.maxQueueEntry = (registers.capabilities & 0xFFFF) + 1;
 
   workEvent = allocate([this](uint64_t) { work(); });
@@ -99,7 +117,22 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   workInterval = conf.readUint(CONFIG_NVME, NVME_WORK_INTERVAL);
   requestInterval = workInterval / maxRequest;
 
-  pSubsystem = new Subsystem(this, cfgdata);
+  // Which subsystem should we use
+  uint16_t vid, ssvid;
+
+  bUseOCSSD = false;
+  pParent->getVendorID(vid, ssvid);
+
+  if (vid == OCSSD_VENDOR) {
+    bUseOCSSD = true;
+    pSubsystem = new OpenChannelSSD(this, cfgdata);
+  }
+  else {
+    pSubsystem = new Subsystem(this, cfgdata);
+  }
+
+  // Initialize Subsystem
+  pSubsystem->init();
 }
 
 Controller::~Controller() {
@@ -120,7 +153,8 @@ Controller::~Controller() {
   free(ppCQueue);
   free(ppSQueue);
 
-  delete cfgdata.pInterface;
+  delete interconnect;
+  delete pcieFIFO;
 }
 
 void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
@@ -437,11 +471,13 @@ int Controller::createCQueue(uint16_t cqid, uint16_t size, uint16_t iv,
                              bool ien, bool pc, uint64_t prp1,
                              DMAFunction &func, void *context) {
   int ret = 1;  // Invalid Queue ID
+  CPUContext *pContext =
+      new CPUContext(func, context, CPU::NVME__CONTROLLER, CPU::CREATE_CQ);
 
   if (ppCQueue[cqid] == NULL) {
     ppCQueue[cqid] = new CQueue(iv, ien, cqid, size);
     ppCQueue[cqid]->setBase(
-        new PRPList(cfgdata, func, context, prp1, size * cqstride, pc),
+        new PRPList(cfgdata, cpuHandler, pContext, prp1, size * cqstride, pc),
         cqstride);
 
     ret = 0;
@@ -473,12 +509,14 @@ int Controller::createSQueue(uint16_t sqid, uint16_t cqid, uint16_t size,
                              uint8_t priority, bool pc, uint64_t prp1,
                              DMAFunction &func, void *context) {
   int ret = 1;  // Invalid Queue ID
+  CPUContext *pContext =
+      new CPUContext(func, context, CPU::NVME__CONTROLLER, CPU::CREATE_SQ);
 
   if (ppSQueue[sqid] == NULL) {
     if (ppCQueue[cqid] != NULL) {
       ppSQueue[sqid] = new SQueue(cqid, priority, sqid, size);
       ppSQueue[sqid]->setBase(
-          new PRPList(cfgdata, func, context, prp1, size * sqstride, pc),
+          new PRPList(cfgdata, cpuHandler, pContext, prp1, size * sqstride, pc),
           sqstride);
 
       ret = 0;
@@ -629,11 +667,17 @@ void Controller::identify(uint8_t *data) {
     strncpy((char *)data + 0x0004, "00000000000000000000", 0x14);
 
     // Model Number
-    strncpy((char *)data + 0x0018, "gem5 NVMe Controller by Donghyun Gouk   ",
-            0x28);
+    if (bUseOCSSD) {
+      strncpy((char *)data + 0x0018, "SimpleSSD OCSSD Controller by CAMELab   ",
+              0x28);
+    }
+    else {
+      strncpy((char *)data + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ",
+              0x28);
+    }
 
     // Firmware Revision
-    strncpy((char *)data + 0x0040, "v01.0000", 0x08);
+    strncpy((char *)data + 0x0040, "02.01.00", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;
@@ -724,7 +768,12 @@ void Controller::identify(uint8_t *data) {
       //         commands
       // [01:01] 1 for Support Format NVM command
       // [00:00] 1 for Support Security Send and Security Receive commands
-      data[0x0100] = 0x0A;
+      if (bUseOCSSD) {
+        data[0x0100] = 0x00;
+      }
+      else {
+        data[0x0100] = 0x0A;
+      }
       data[0x0101] = 0x00;
     }
 
@@ -1111,25 +1160,18 @@ bool Controller::getCoalescing(uint16_t iv) {
   return false;
 }
 
-void Controller::collectSQueue(EventFunction &func) {
-  struct CollectContext {
-    EventFunction function;
-    int counter;
-
-    CollectContext(EventFunction &f) : function(f), counter(0) {}
-  };
-
+void Controller::collectSQueue(DMAFunction &func, void *context) {
   static uint16_t wrrHigh = conf.readUint(CONFIG_NVME, NVME_WRR_HIGH);
   static uint16_t wrrMedium = conf.readUint(CONFIG_NVME, NVME_WRR_MEDIUM);
-  CollectContext *pContext = new CollectContext(func);
+  DMAContext *pContext = new DMAContext(func, context);
 
   static DMAFunction doQueue = [](uint64_t now, void *context) {
-    CollectContext *pContext = (CollectContext *)context;
+    DMAContext *pContext = (DMAContext *)context;
 
     pContext->counter--;
 
     if (pContext->counter == 0) {
-      pContext->function(now);
+      pContext->function(now, pContext->context);
 
       delete pContext;
     }
@@ -1279,12 +1321,20 @@ void Controller::collectSQueue(EventFunction &func) {
 
   if (pContext->counter == 0) {
     // No item in submission queues
-    func(getTick());
+    func(getTick(), context);
+
+    delete pContext;
   }
 }
 
 void Controller::work() {
-  static EventFunction queueFunction = [this](uint64_t now) {
+  DMAFunction queueFunction = [this](uint64_t now, void *) {
+    DMAFunction doRequest = [this](uint64_t, void *) {
+      DMAFunction handle = [this](uint64_t now, void *) { handleRequest(now); };
+
+      execute(CPU::NVME__CONTROLLER, CPU::HANDLE_REQUEST, handle);
+    };
+
     lastWorkAt = now;
 
     // Check NVMe shutdown
@@ -1302,7 +1352,7 @@ void Controller::work() {
     // Call request event
     requestCounter = 0;
 
-    handleRequest(now);
+    execute(CPU::NVME__CONTROLLER, CPU::COLLECT_SQ, doRequest);
   };
 
   // Check ready
@@ -1311,18 +1361,34 @@ void Controller::work() {
   }
 
   // Collect requests in SQs
-  collectSQueue(queueFunction);
+  CPUContext *pContext =
+      new CPUContext(queueFunction, nullptr, CPU::NVME__CONTROLLER, CPU::WORK);
+
+  collectSQueue(cpuHandler, pContext);
 }
 
 void Controller::handleRequest(uint64_t now) {
   // Check SQFIFO
   if (lSQFIFO.size() > 0) {
-    SQEntryWrapper front = lSQFIFO.front();
+    SQEntryWrapper *front = new SQEntryWrapper(lSQFIFO.front());
     lSQFIFO.pop_front();
 
     // Process command
-    pSubsystem->submitCommand(
-        front, [this](CQEntryWrapper &response) { submit(response); });
+    DMAFunction doSubmit = [this](uint64_t, void *context) {
+      SQEntryWrapper *req = (SQEntryWrapper *)context;
+
+      pSubsystem->submitCommand(
+          *req, [this](CQEntryWrapper &response) { submit(response); });
+
+      delete req;
+    };
+
+    if (bUseOCSSD) {
+      execute(CPU::NVME__OCSSD, CPU::SUBMIT_COMMAND, doSubmit, front);
+    }
+    else {
+      execute(CPU::NVME__SUBSYSTEM, CPU::SUBMIT_COMMAND, doSubmit, front);
+    }
   }
 
   // Call request event
@@ -1365,6 +1431,9 @@ bool Controller::checkQueue(SQueue *pQueue, DMAFunction &func, void *context) {
     pQueue->getData(&queueContext->entry, doRead, queueContext);
 
     return true;
+  }
+  else {
+    delete queueContext;
   }
 
   return false;
@@ -1436,19 +1505,27 @@ void Controller::completion() {
     pContext->counter--;
 
     if (pContext->counter == 0) {
-      if (pData->ivToPost.size() > 0) {
-        std::sort(pData->ivToPost.begin(), pData->ivToPost.end());
-        auto end = std::unique(pData->ivToPost.begin(), pData->ivToPost.end());
+      DMAFunction send = [this](uint64_t, void *context) {
+        CompletionContext *pData = (CompletionContext *)context;
 
-        for (auto iter = pData->ivToPost.begin(); iter != end; iter++) {
-          // Update interrupt
-          updateInterrupt(*iter, true);
+        if (pData->ivToPost.size() > 0) {
+          std::sort(pData->ivToPost.begin(), pData->ivToPost.end());
+          auto end =
+              std::unique(pData->ivToPost.begin(), pData->ivToPost.end());
+
+          for (auto iter = pData->ivToPost.begin(); iter != end; iter++) {
+            // Update interrupt
+            updateInterrupt(*iter, true);
+          }
         }
-      }
 
-      reserveCompletion();
+        reserveCompletion();
 
-      delete pData;
+        delete pData;
+      };
+
+      execute(CPU::NVME__CONTROLLER, CPU::COMPLETION, send, pData);
+
       delete pContext;
     }
   };
@@ -1517,6 +1594,11 @@ void Controller::completion() {
 
       pData->ivToPost.push_back(iter.first);
     }
+  }
+
+  if (submitContext->counter == 0) {
+    delete pData;
+    delete submitContext;
   }
 }
 

@@ -25,7 +25,7 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-FTL::FTL(ConfigReader &c) : conf(c) {
+FTL::FTL(ConfigReader &c, DRAM::AbstractDRAM *d) : conf(c), pDRAM(d) {
   PAL::Parameter *palparam;
 
   pPAL = new PAL::PAL(conf);
@@ -42,7 +42,7 @@ FTL::FTL(ConfigReader &c) : conf(c) {
 
   switch (conf.readInt(CONFIG_FTL, FTL_MAPPING_MODE)) {
     case PAGE_MAPPING:
-      pFTL = new PageMapping(param, pPAL, conf);
+      pFTL = new PageMapping(conf, param, pPAL, pDRAM);
       break;
   }
 
@@ -69,22 +69,30 @@ void FTL::read(Request &req, uint64_t &tick) {
   debugprint(LOG_FTL, "READ  | LPN %" PRIu64, req.lpn);
 
   pFTL->read(req, tick);
+
+  tick += applyLatency(CPU::FTL, CPU::READ);
 }
 
 void FTL::write(Request &req, uint64_t &tick) {
   debugprint(LOG_FTL, "WRITE | LPN %" PRIu64, req.lpn);
 
   pFTL->write(req, tick);
+
+  tick += applyLatency(CPU::FTL, CPU::WRITE);
 }
 
 void FTL::trim(Request &req, uint64_t &tick) {
   debugprint(LOG_FTL, "TRIM  | LPN %" PRIu64, req.lpn);
 
   pFTL->trim(req, tick);
+
+  tick += applyLatency(CPU::FTL, CPU::TRIM);
 }
 
 void FTL::format(LPNRange &range, uint64_t &tick) {
   pFTL->format(range, tick);
+
+  tick += applyLatency(CPU::FTL, CPU::FORMAT);
 }
 
 Parameter *FTL::getInfo() {

@@ -13,9 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Gieseo Park <gieseo@camelab.org>
- *          Jie Zhang <jie@camelab.org>
  */
 
 #include "Latency.h"
@@ -31,6 +28,30 @@
     - SLC
 */
 
-Latency::Latency(SimpleSSD::PAL::Config::NANDTiming t) : timing(t) {}
+Latency::Latency(SimpleSSD::PAL::Config::NANDTiming t,
+                 SimpleSSD::PAL::Config::NANDPower p)
+    : timing(t), power(p) {}
 
 Latency::~Latency() {}
+
+uint64_t Latency::GetPower(uint8_t Oper, uint8_t Busy) {
+  switch (Busy) {
+    case BUSY_DMA0:
+    case BUSY_DMA1:
+      return power.voltage * power.current.busIdle;
+    case BUSY_MEM:
+      if (Oper == OPER_READ) {
+        return power.voltage * power.current.read;
+      }
+      else if (Oper == OPER_WRITE) {
+        return power.voltage * power.current.program;
+      }
+      else {
+        return power.voltage * power.current.erase;
+      }
+
+      break;
+    default:
+      return power.voltage * power.current.standby;
+  }
+}

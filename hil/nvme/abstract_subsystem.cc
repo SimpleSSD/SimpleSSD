@@ -17,38 +17,23 @@
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ftl/common/latency.hh"
+#include "hil/nvme/abstract_subsystem.hh"
+
+#include "hil/nvme/controller.hh"
 
 namespace SimpleSSD {
 
-namespace FTL {
+namespace HIL {
 
-Latency::Latency(uint64_t l, uint64_t queueSize) : latency(l) {
-  for (uint64_t i = 0; i < queueSize; i++) {
-    lastFTLRequestAt.push(0);
-  }
-}
+namespace NVMe {
 
-Latency::~Latency() {}
+AbstractSubsystem::AbstractSubsystem(Controller *c, ConfigData &cfg)
+    : pParent(c), cfgdata(cfg), conf(*cfg.pConfigReader) {}
 
-void Latency::access(uint32_t size, uint64_t &tick) {
-  if (tick > 0) {
-    uint64_t smallest = lastFTLRequestAt.top();
+AbstractSubsystem::~AbstractSubsystem() {}
 
-    if (smallest <= tick) {
-      smallest = tick + latency * size;
-    }
-    else {
-      smallest += latency * size;
-    }
+}  // namespace NVMe
 
-    tick = smallest;
-
-    lastFTLRequestAt.pop();
-    lastFTLRequestAt.push(smallest);
-  }
-}
-
-}  // namespace FTL
+}  // namespace HIL
 
 }  // namespace SimpleSSD

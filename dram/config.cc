@@ -26,14 +26,60 @@ namespace SimpleSSD {
 
 namespace DRAM {
 
-const char NAME_DRAM_MODEL[] = "DRAMModel";
-const char NAME_DRAM_CHANNEL[] = "DRAMChannel";
-const char NAME_DRAM_BUS_WIDTH[] = "DRAMBusWidth";
-const char NAME_DRAM_PAGE_SIZE[] = "DRAMPageSize";
-const char NAME_DRAM_TIMING_CK[] = "DRAMtCK";
-const char NAME_DRAM_TIMING_RCD[] = "DRAMtRCD";
-const char NAME_DRAM_TIMING_CL[] = "DRAMtCL";
-const char NAME_DRAM_TIMING_RP[] = "DRAMtRP";
+const char NAME_DRAM_MODEL[] = "Model";
+const char NAME_DRAM_STRUCTURE_CHANNEL[] = "Channel";
+const char NAME_DRAM_STRUCTURE_RANK[] = "Rank";
+const char NAME_DRAM_STRUCTURE_BANK[] = "Bank";
+const char NAME_DRAM_STRUCTURE_CHIP[] = "Chip";
+const char NAME_DRAM_STRUCTURE_BUS_WIDTH[] = "BusWidth";
+const char NAME_DRAM_STRUCTURE_BURST_LENGTH[] = "BurstLength";
+const char NAME_DRAM_STRUCTURE_CHIP_SIZE[] = "ChipSize";
+const char NAME_DRAM_STRUCTURE_PAGE_SIZE[] = "PageSize";
+const char NAME_DRAM_TIMING_CK[] = "tCK";
+const char NAME_DRAM_TIMING_RCD[] = "tRCD";
+const char NAME_DRAM_TIMING_CL[] = "tCL";
+const char NAME_DRAM_TIMING_RP[] = "tRP";
+const char NAME_DRAM_TIMING_RAS[] = "tRAS";
+const char NAME_DRAM_TIMING_WR[] = "tWR";
+const char NAME_DRAM_TIMING_RTP[] = "tRTP";
+const char NAME_DRAM_TIMING_BURST[] = "tBURST";
+const char NAME_DRAM_TIMING_CCD_L[] = "tCCD_L";
+const char NAME_DRAM_TIMING_RFC[] = "tRFC";
+const char NAME_DRAM_TIMING_REFI[] = "tREFI";
+const char NAME_DRAM_TIMING_WTR[] = "tWTR";
+const char NAME_DRAM_TIMING_RTW[] = "tRTW";
+const char NAME_DRAM_TIMING_CS[] = "tCS";
+const char NAME_DRAM_TIMING_RRD[] = "tRRD";
+const char NAME_DRAM_TIMING_RRD_L[] = "tRRD_L";
+const char NAME_DRAM_TIMING_XAW[] = "tXAW";
+const char NAME_DRAM_TIMING_XP[] = "tXP";
+const char NAME_DRAM_TIMING_XPDLL[] = "tXPDLL";
+const char NAME_DRAM_TIMING_XS[] = "tXS";
+const char NAME_DRAM_TIMING_XSDLL[] = "tXSDLL";
+const char NAME_DRAM_POWER_IDD0_0[] = "IDD0_0";
+const char NAME_DRAM_POWER_IDD0_1[] = "IDD0_1";
+const char NAME_DRAM_POWER_IDD2P0_0[] = "IDD2P0_0";
+const char NAME_DRAM_POWER_IDD2P0_1[] = "IDD2P0_1";
+const char NAME_DRAM_POWER_IDD2P1_0[] = "IDD2P1_0";
+const char NAME_DRAM_POWER_IDD2P1_1[] = "IDD2P1_1";
+const char NAME_DRAM_POWER_IDD2N_0[] = "IDD2N_0";
+const char NAME_DRAM_POWER_IDD2N_1[] = "IDD2N_1";
+const char NAME_DRAM_POWER_IDD3P0_0[] = "IDD3P0_0";
+const char NAME_DRAM_POWER_IDD3P0_1[] = "IDD3P0_1";
+const char NAME_DRAM_POWER_IDD3P1_0[] = "IDD3P1_0";
+const char NAME_DRAM_POWER_IDD3P1_1[] = "IDD3P1_1";
+const char NAME_DRAM_POWER_IDD3N_0[] = "IDD3N_0";
+const char NAME_DRAM_POWER_IDD3N_1[] = "IDD3N_1";
+const char NAME_DRAM_POWER_IDD4R_0[] = "IDD4R_0";
+const char NAME_DRAM_POWER_IDD4R_1[] = "IDD4R_1";
+const char NAME_DRAM_POWER_IDD4W_0[] = "IDD4W_0";
+const char NAME_DRAM_POWER_IDD4W_1[] = "IDD4W_1";
+const char NAME_DRAM_POWER_IDD5_0[] = "IDD5_0";
+const char NAME_DRAM_POWER_IDD5_1[] = "IDD5_1";
+const char NAME_DRAM_POWER_IDD6_0[] = "IDD6_0";
+const char NAME_DRAM_POWER_IDD6_1[] = "IDD6_1";
+const char NAME_DRAM_POWER_VDD_0[] = "VDD_0";
+const char NAME_DRAM_POWER_VDD_1[] = "VDD_1";
 
 Config::Config() {
   model = SIMPLE_MODEL;
@@ -104,13 +150,28 @@ bool Config::setConfig(const char *name, const char *value) {
   if (MATCH_NAME(NAME_DRAM_MODEL)) {
     model = (MODEL)strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_DRAM_CHANNEL)) {
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_CHANNEL)) {
     dram.channel = strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_DRAM_BUS_WIDTH)) {
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_RANK)) {
+    dram.rank = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_BANK)) {
+    dram.bank = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_CHIP)) {
+    dram.chip = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_BUS_WIDTH)) {
     dram.busWidth = strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_DRAM_PAGE_SIZE)) {
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_BURST_LENGTH)) {
+    dram.burstLength = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_CHIP_SIZE)) {
+    dram.chipSize = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_STRUCTURE_PAGE_SIZE)) {
     dram.pageSize = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_DRAM_TIMING_CK)) {
@@ -124,6 +185,129 @@ bool Config::setConfig(const char *name, const char *value) {
   }
   else if (MATCH_NAME(NAME_DRAM_TIMING_RP)) {
     dramTiming.tRP = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RAS)) {
+    dramTiming.tRAS = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_WR)) {
+    dramTiming.tWR = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RTP)) {
+    dramTiming.tRTP = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_BURST)) {
+    dramTiming.tBURST = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_CCD_L)) {
+    dramTiming.tCCD_L = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RFC)) {
+    dramTiming.tRFC = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_REFI)) {
+    dramTiming.tREFI = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_WTR)) {
+    dramTiming.tWTR = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RTW)) {
+    dramTiming.tRTW = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_CS)) {
+    dramTiming.tCS = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RRD)) {
+    dramTiming.tRRD = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_RRD_L)) {
+    dramTiming.tRRD_L = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_XAW)) {
+    dramTiming.tXAW = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_XP)) {
+    dramTiming.tXP = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_XPDLL)) {
+    dramTiming.tXPDLL = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_XS)) {
+    dramTiming.tXS = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_TIMING_XSDLL)) {
+    dramTiming.tXSDLL = strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD0_0)) {
+    dramPower.pIDD0[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD0_1)) {
+    dramPower.pIDD0[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2P0_0)) {
+    dramPower.pIDD2P0[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2P0_1)) {
+    dramPower.pIDD2P0[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2P1_0)) {
+    dramPower.pIDD2P1[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2P1_1)) {
+    dramPower.pIDD2P1[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2N_0)) {
+    dramPower.pIDD2N[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD2N_1)) {
+    dramPower.pIDD2N[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3P0_0)) {
+    dramPower.pIDD3P0[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3P0_1)) {
+    dramPower.pIDD3P0[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3P1_0)) {
+    dramPower.pIDD3P1[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3P1_1)) {
+    dramPower.pIDD3P1[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3N_0)) {
+    dramPower.pIDD3N[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD3N_1)) {
+    dramPower.pIDD3N[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD4R_0)) {
+    dramPower.pIDD4R[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD4R_1)) {
+    dramPower.pIDD4R[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD4W_0)) {
+    dramPower.pIDD4W[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD4W_1)) {
+    dramPower.pIDD4W[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD5_0)) {
+    dramPower.pIDD5[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD5_1)) {
+    dramPower.pIDD5[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD6_0)) {
+    dramPower.pIDD6[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_IDD6_1)) {
+    dramPower.pIDD6[1] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_VDD_0)) {
+    dramPower.pVDD[0] = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_DRAM_POWER_VDD_1)) {
+    dramPower.pVDD[1] = strtof(value, nullptr);
   }
   else {
     ret = false;

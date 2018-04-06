@@ -37,11 +37,11 @@ typedef enum {
 class Config : public BaseConfig {
  public:
   typedef struct {
-    uint32_t channel;
-    uint32_t rank;
-    uint32_t bank;
-    uint32_t chip;
-    uint32_t busWidth;
+    uint32_t channel;   //!< # of channel
+    uint32_t rank;      //!< Rank / Channel
+    uint32_t bank;      //!< Bank / Rank
+    uint32_t chip;      //!< Chips / Rank
+    uint32_t busWidth;  //!< Bus / Chip
     uint32_t burstLength;
     uint32_t activationLimit;
     bool useDLL;
@@ -49,43 +49,43 @@ class Config : public BaseConfig {
     uint64_t pageSize;
   } DRAMStructure;
 
-  typedef struct {
-    uint32_t tCK;
-    uint32_t tRCD;
-    uint32_t tCL;
-    uint32_t tRP;
-    uint32_t tRAS;
-    uint32_t tWR;
-    uint32_t tRTP;
-    uint32_t tBURST;
-    uint32_t tCCD_L;
-    uint32_t tRFC;
-    uint32_t tREFI;
-    uint32_t tWTR;
-    uint32_t tRTW;
-    uint32_t tCS;
-    uint32_t tRRD;
-    uint32_t tRRD_L;
-    uint32_t tXAW;
-    uint32_t tXP;
-    uint32_t tXPDLL;
-    uint32_t tXS;
-    uint32_t tXSDLL;
+  typedef struct {    // Unit: ps
+    uint32_t tCK;     //!< Clock period
+    uint32_t tRCD;    //!< RAS to CAS delay
+    uint32_t tCL;     //!< CAS latency
+    uint32_t tRP;     //!< Row precharge time
+    uint32_t tRAS;    //!< ACT to PRE delay
+    uint32_t tWR;     //!< Write recovery time
+    uint32_t tRTP;    //!< Read to precharge delay
+    uint32_t tBURST;  //!< Burst duration
+    uint32_t tCCD_L;  //!< Same bank group CAS to CAS delay
+    uint32_t tRFC;    //!< Refresh cycle time
+    uint32_t tREFI;   //!< Refresh command interval
+    uint32_t tWTR;    //!< Write to read, same rank switching time
+    uint32_t tRTW;    //!< Read to write, same rank switching time
+    uint32_t tCS;     //!< Rank to rank switching time
+    uint32_t tRRD;    //!< ACT to ACT delay
+    uint32_t tRRD_L;  //!< Same bank group RRD
+    uint32_t tXAW;    //!< X activation window
+    uint32_t tXP;     //!< Power-up delay
+    uint32_t tXPDLL;  //!< Power-up delay with locked DLL
+    uint32_t tXS;     //!< Self-refresh exit latency
+    uint32_t tXSDLL;  //!< Self-refresh exit latency DLL
   } DRAMTiming;
 
-  typedef struct {
-    float pIDD0[2];
-    float pIDD2P0[2];
-    float pIDD2P1[2];
-    float pIDD2N[2];
-    float pIDD3P0[2];
-    float pIDD3P1[2];
-    float pIDD3N[2];
-    float pIDD4R[2];
-    float pIDD4W[2];
-    float pIDD5[2];
-    float pIDD6[2];
-    float pVDD[2];
+  typedef struct {     // Unit: mA
+    float pIDD0[2];    //!< Active precharge current
+    float pIDD2P0[2];  //!< Precharge powerdown slow
+    float pIDD2P1[2];  //!< Precharge powerdown fast
+    float pIDD2N[2];   //!< Precharge standby current
+    float pIDD3P0[2];  //!< Active powerdown slow
+    float pIDD3P1[2];  //!< Active powerdown fast
+    float pIDD3N[2];   //!< Active standby current
+    float pIDD4R[2];   //!< READ current
+    float pIDD4W[2];   //!< WRITE current
+    float pIDD5[2];    //!< Refresh current
+    float pIDD6[2];    //!< Self-refresh current
+    float pVDD[2];     //!< Main voltage (Unit: V)
   } DRAMPower;
 
  private:

@@ -22,5 +22,6 @@ Import('*')
 if env['TARGET_ISA'] == 'null':
     Return()
 
+Source('abstract_dram.cc')
 Source('config.cc')
 Source('simple.cc')

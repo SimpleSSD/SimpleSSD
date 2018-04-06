@@ -37,6 +37,7 @@ class HIL : public StatObject {
 
   uint64_t reqCount;
 
+  uint64_t lastScheduled;
   Event completionEvent;
   std::priority_queue<Request, std::vector<Request>, Request> completionQueue;
 

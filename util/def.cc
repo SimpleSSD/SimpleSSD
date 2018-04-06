@@ -72,10 +72,9 @@ Request::_Request(uint32_t iocount)
     : reqID(0), reqSubID(0), lpn(0), ioFlag(iocount) {}
 
 Request::_Request(uint32_t iocount, ICL::Request &r)
-    : reqID(r.reqID),
-      reqSubID(r.reqSubID),
-      lpn(r.range.slpn),
-      ioFlag(iocount) {}
+    : reqID(r.reqID), reqSubID(r.reqSubID), lpn(r.range.slpn), ioFlag(iocount) {
+  ioFlag.set(lpn % iocount);
+}
 
 }  // namespace FTL
 

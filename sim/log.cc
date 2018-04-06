@@ -91,8 +91,11 @@ void info(const char *format, ...) {
 
 const std::string logName[LOG_NUM] = {
     "global",             //!< LOG_COMMON
+    "CPU",                //!< LOG_CPU
     "HIL",                //!< LOG_HIL
     "HIL::NVMe",          //!< LOG_HIL_NVME
+    "HIL::SATA",          //!< LOG_HIL_SATA
+    "HIL::UFS",           //!< LOG_HIL_UFS
     "ICL",                //!< LOG_ICL
     "ICL::GenericCache",  //!< LOG_ICL_GENERIC_CACHE
     "FTL",                //!< LOG_FTL
@@ -132,9 +135,7 @@ void debugprint(LOG_ID id, const uint8_t *buffer, uint64_t size) {
 void initLogSystem(std::ostream &out, std::ostream &err) {
   destroyLogSystem();
 
-  if (sim != nullptr) {
-    logger = new Logger(out, err);
-  }
+  logger = new Logger(out, err);
 }
 
 void destroyLogSystem() {

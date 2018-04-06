@@ -13,9 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Gieseo Park <gieseo@camelab.org>
- *          Jie Zhang <jie@camelab.org>
  */
 
 #ifndef __LatencyTLC_h__
@@ -25,11 +22,11 @@
 
 class LatencyTLC : public Latency {
  public:
-  LatencyTLC(SimpleSSD::PAL::Config::NANDTiming);
+  LatencyTLC(SimpleSSD::PAL::Config::NANDTiming,
+             SimpleSSD::PAL::Config::NANDPower);
   ~LatencyTLC();
 
   uint64_t GetLatency(uint32_t, uint8_t, uint8_t) override;
-  uint64_t GetPower(uint8_t, uint8_t) override;
   inline uint8_t GetPageType(uint32_t) override;
 };
 

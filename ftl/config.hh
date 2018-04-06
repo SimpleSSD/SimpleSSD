@@ -37,8 +37,7 @@ typedef enum {
   FTL_GC_RECLAIM_BLOCK,
   FTL_GC_RECLAIM_THRESHOLD,
   FTL_GC_EVICT_POLICY,
-  FTL_LATENCY,
-  FTL_REQUEST_QUEUE,
+  FTL_USE_RANDOM_IO_TWEAK,
 
   /* N+K Mapping configuration*/
   FTL_NKMAP_N,
@@ -70,8 +69,7 @@ class Config : public BaseConfig {
   float reclaimThreshold;      //!< Default: 0.1 (10%)
   GC_MODE gcMode;              //!< Default: FTL_GC_MODE_0
   EVICT_POLICY evictPolicy;    //!< Default: POLICY_GREEDY
-  uint64_t latency;            //!< Default: 50us
-  uint64_t requestQueue;       //!< Default: 1
+  bool randomIOTweak;          //!< Default: true
 
  public:
   Config();
@@ -82,6 +80,7 @@ class Config : public BaseConfig {
   int64_t readInt(uint32_t) override;
   uint64_t readUint(uint32_t) override;
   float readFloat(uint32_t) override;
+  bool readBoolean(uint32_t) override;
 };
 
 }  // namespace FTL

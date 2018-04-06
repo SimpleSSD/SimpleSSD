@@ -25,7 +25,7 @@ namespace SimpleSSD {
 
 namespace HIL {
 
-HIL::HIL(ConfigReader &c) : conf(c), reqCount(0) {
+HIL::HIL(ConfigReader &c) : conf(c), reqCount(0), lastScheduled(0) {
   pICL = new ICL::ICL(conf);
 
   memset(&stat, 0, sizeof(stat));
@@ -38,112 +38,136 @@ HIL::~HIL() {
 }
 
 void HIL::read(Request &req) {
-  uint64_t beginAt = getTick();
-  uint64_t tick = beginAt;
+  DMAFunction doRead = [this](uint64_t beginAt, void *context) {
+    auto pReq = (Request *)context;
+    uint64_t tick = beginAt;
 
-  req.reqID = ++reqCount;
+    pReq->reqID = ++reqCount;
 
-  debugprint(LOG_HIL,
-             "READ  | REQ %7u | LCA %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
-             " + %" PRIu64,
-             req.reqID, req.range.slpn, req.range.nlp, req.offset, req.length);
+    debugprint(LOG_HIL,
+               "READ  | REQ %7u | LCA %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+               " + %" PRIu64,
+               pReq->reqID, pReq->range.slpn, pReq->range.nlp, pReq->offset,
+               pReq->length);
 
-  ICL::Request reqInternal(req);
-  pICL->read(reqInternal, tick);
+    ICL::Request reqInternal(*pReq);
+    pICL->read(reqInternal, tick);
 
-  stat.request[0]++;
-  stat.iosize[0] += req.length;
-  updateBusyTime(0, beginAt, tick);
-  updateBusyTime(2, beginAt, tick);
+    stat.request[0]++;
+    stat.iosize[0] += pReq->length;
+    updateBusyTime(0, beginAt, tick);
+    updateBusyTime(2, beginAt, tick);
 
-  req.finishedAt = tick;
-  completionQueue.push(req);
+    pReq->finishedAt = tick;
+    completionQueue.push(*pReq);
 
-  updateCompletion();
+    updateCompletion();
+
+    delete pReq;
+  };
+
+  execute(CPU::HIL, CPU::READ, doRead, new Request(req));
 }
 
 void HIL::write(Request &req) {
-  uint64_t beginAt = getTick();
-  uint64_t tick = beginAt;
+  DMAFunction doWrite = [this](uint64_t beginAt, void *context) {
+    auto pReq = (Request *)context;
+    uint64_t tick = beginAt;
 
-  req.reqID = ++reqCount;
+    pReq->reqID = ++reqCount;
 
-  debugprint(LOG_HIL,
-             "WRITE | REQ %7u | LCA %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
-             " + %" PRIu64,
-             req.reqID, req.range.slpn, req.range.nlp, req.offset, req.length);
+    debugprint(LOG_HIL,
+               "WRITE | REQ %7u | LCA %" PRIu64 " + %" PRIu64 " | BYTE %" PRIu64
+               " + %" PRIu64,
+               pReq->reqID, pReq->range.slpn, pReq->range.nlp, pReq->offset,
+               pReq->length);
 
-  ICL::Request reqInternal(req);
-  pICL->write(reqInternal, tick);
+    ICL::Request reqInternal(*pReq);
+    pICL->write(reqInternal, tick);
 
-  stat.request[1]++;
-  stat.iosize[1] += req.length;
-  updateBusyTime(1, beginAt, tick);
-  updateBusyTime(2, beginAt, tick);
+    stat.request[1]++;
+    stat.iosize[0] += pReq->length;
+    updateBusyTime(1, beginAt, tick);
+    updateBusyTime(2, beginAt, tick);
 
-  req.finishedAt = tick;
-  completionQueue.push(req);
+    pReq->finishedAt = tick;
+    completionQueue.push(*pReq);
 
-  updateCompletion();
+    updateCompletion();
+
+    delete pReq;
+  };
+
+  execute(CPU::HIL, CPU::WRITE, doWrite, new Request(req));
 }
 
 void HIL::flush(Request &req) {
-  uint64_t tick = getTick();
+  DMAFunction doFlush = [this](uint64_t tick, void *context) {
+    auto pReq = (Request *)context;
 
-  // TODO: stat
+    pReq->reqID = ++reqCount;
 
-  req.reqID = ++reqCount;
+    debugprint(LOG_HIL, "FLUSH | REQ %7u | LCA %" PRIu64 " + %" PRIu64,
+               pReq->reqID, pReq->range.slpn, pReq->range.nlp);
 
-  debugprint(LOG_HIL, "FLUSH | REQ %7u | LCA %" PRIu64 " + %" PRIu64, req.reqID,
-             req.range.slpn, req.range.nlp);
+    pICL->flush(pReq->range, tick);
 
-  ICL::Request reqInternal(req);
-  pICL->flush(reqInternal, tick);
+    pReq->finishedAt = tick;
+    completionQueue.push(*pReq);
 
-  req.finishedAt = tick;
-  completionQueue.push(req);
+    updateCompletion();
 
-  updateCompletion();
+    delete pReq;
+  };
+
+  execute(CPU::HIL, CPU::FLUSH, doFlush, new Request(req));
 }
 
 void HIL::trim(Request &req) {
-  uint64_t tick = getTick();
+  DMAFunction doFlush = [this](uint64_t tick, void *context) {
+    auto pReq = (Request *)context;
 
-  // TODO: stat
+    pReq->reqID = ++reqCount;
 
-  req.reqID = ++reqCount;
+    debugprint(LOG_HIL, "TRIM  | REQ %7u | LCA %" PRIu64 " + %" PRIu64,
+               pReq->reqID, pReq->range.slpn, pReq->range.nlp);
 
-  debugprint(LOG_HIL, "TRIM  | REQ %7u | LCA %" PRIu64 " + %" PRIu64, req.reqID,
-             req.range.slpn, req.range.nlp);
+    pICL->trim(pReq->range, tick);
 
-  ICL::Request reqInternal(req);
-  pICL->trim(reqInternal, tick);
+    pReq->finishedAt = tick;
+    completionQueue.push(*pReq);
 
-  req.finishedAt = tick;
-  completionQueue.push(req);
+    updateCompletion();
 
-  updateCompletion();
+    delete pReq;
+  };
+
+  execute(CPU::HIL, CPU::FLUSH, doFlush, new Request(req));
 }
 
 void HIL::format(Request &req, bool erase) {
-  uint64_t tick = getTick();
+  DMAFunction doFlush = [this, erase](uint64_t tick, void *context) {
+    auto pReq = (Request *)context;
 
-  debugprint(LOG_HIL, "FORMAT| LCA %" PRIu64 " + %" PRIu64, req.range.slpn,
-             req.range.nlp);
+    debugprint(LOG_HIL, "FORMAT| LCA %" PRIu64 " + %" PRIu64, pReq->reqID,
+               pReq->range.slpn, pReq->range.nlp);
 
-  if (erase) {
-    pICL->format(req.range, tick);
-  }
-  else {
-    ICL::Request reqInternal(req);
+    if (erase) {
+      pICL->format(pReq->range, tick);
+    }
+    else {
+      pICL->trim(pReq->range, tick);
+    }
 
-    pICL->trim(reqInternal, tick);
-  }
+    pReq->finishedAt = tick;
+    completionQueue.push(*pReq);
 
-  req.finishedAt = tick;
-  completionQueue.push(req);
+    updateCompletion();
 
-  updateCompletion();
+    delete pReq;
+  };
+
+  execute(CPU::HIL, CPU::FLUSH, doFlush, new Request(req));
 }
 
 void HIL::getLPNInfo(uint64_t &totalLogicalPages, uint32_t &logicalPageSize) {
@@ -171,7 +195,10 @@ void HIL::updateBusyTime(int idx, uint64_t begin, uint64_t end) {
 
 void HIL::updateCompletion() {
   if (completionQueue.size() > 0) {
-    schedule(completionEvent, completionQueue.top().finishedAt);
+    if (lastScheduled != completionQueue.top().finishedAt) {
+      lastScheduled = completionQueue.top().finishedAt;
+      schedule(completionEvent, lastScheduled);
+    }
   }
 }
 

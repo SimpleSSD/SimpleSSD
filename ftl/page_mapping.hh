@@ -26,7 +26,6 @@
 
 #include "ftl/abstract_ftl.hh"
 #include "ftl/common/block.hh"
-#include "ftl/common/latency.hh"
 #include "ftl/ftl.hh"
 #include "pal/pal.hh"
 
@@ -39,7 +38,6 @@ class PageMapping : public AbstractFTL {
   PAL::PAL *pPAL;
 
   ConfigReader &conf;
-  Latency latency;
 
   std::unordered_map<uint64_t, std::vector<std::pair<uint32_t, uint32_t>>>
       table;
@@ -49,6 +47,8 @@ class PageMapping : public AbstractFTL {
   uint32_t lastFreeBlockIndex;
 
   bool bReclaimMore;
+  bool bRandomTweak;
+  uint32_t bitsetSize;
 
   struct {
     uint64_t gcCount;
@@ -68,7 +68,7 @@ class PageMapping : public AbstractFTL {
   void eraseInternal(PAL::Request &, uint64_t &);
 
  public:
-  PageMapping(Parameter &, PAL::PAL *, ConfigReader &);
+  PageMapping(ConfigReader &, Parameter &, PAL::PAL *, DRAM::AbstractDRAM *);
   ~PageMapping();
 
   bool initialize() override;

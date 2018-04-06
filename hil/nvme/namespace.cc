@@ -240,17 +240,21 @@ void Namespace::flush(SQEntryWrapper &req, RequestFunction &func) {
   }
 
   if (!err) {
-    DMAFunction doFlush = [this](uint64_t now, void *context) {
-      IOContext *pContext = (IOContext *)context;
+    DMAFunction begin = [this](uint64_t, void *context) {
+      DMAFunction doFlush = [this](uint64_t now, void *context) {
+        IOContext *pContext = (IOContext *)context;
 
-      debugprint(LOG_HIL_NVME,
-                 "NVM     | FLUSH | NSID %-5d| %" PRIu64 " - %" PRIu64
-                 " (%" PRIu64 ")",
-                 nsid, pContext->beginAt, now, now - pContext->beginAt);
+        debugprint(LOG_HIL_NVME,
+                   "NVM     | FLUSH | NSID %-5d| %" PRIu64 " - %" PRIu64
+                   " (%" PRIu64 ")",
+                   nsid, pContext->beginAt, now, now - pContext->beginAt);
 
-      pContext->function(pContext->resp);
+        pContext->function(pContext->resp);
 
-      delete pContext;
+        delete pContext;
+      };
+
+      pParent->flush(this, doFlush, context);
     };
 
     debugprint(LOG_HIL_NVME, "NVM     | FLUSH | NSID %-5d", nsid);
@@ -259,7 +263,7 @@ void Namespace::flush(SQEntryWrapper &req, RequestFunction &func) {
 
     pContext->beginAt = getTick();
 
-    pParent->flush(this, doFlush, pContext);
+    execute(CPU::NVME__NAMESPACE, CPU::FLUSH, begin, pContext);
   }
 }
 
@@ -341,13 +345,16 @@ void Namespace::write(SQEntryWrapper &req, RequestFunction &func) {
     pContext->slba = slba;
     pContext->nlb = nlb;
 
+    CPUContext *pCPU =
+        new CPUContext(doRead, pContext, CPU::NVME__NAMESPACE, CPU::WRITE);
+
     if (req.useSGL) {
       pContext->dma =
-          new SGL(cfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, cpuHandler, pCPU, req.entry.data1, req.entry.data2);
     }
     else {
       pContext->dma =
-          new PRPList(cfgdata, doRead, pContext, req.entry.data1,
+          new PRPList(cfgdata, cpuHandler, pCPU, req.entry.data1,
                       req.entry.data2, (uint64_t)nlb * info.lbaSize);
     }
   }
@@ -433,13 +440,16 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
     pContext->slba = slba;
     pContext->nlb = nlb;
 
+    CPUContext *pCPU =
+        new CPUContext(doRead, pContext, CPU::NVME__NAMESPACE, CPU::READ);
+
     if (req.useSGL) {
       pContext->dma =
-          new SGL(cfgdata, doRead, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, cpuHandler, pCPU, req.entry.data1, req.entry.data2);
     }
     else {
       pContext->dma =
-          new PRPList(cfgdata, doRead, pContext, req.entry.data1,
+          new PRPList(cfgdata, cpuHandler, pCPU, req.entry.data1,
                       req.entry.data2, pContext->nlb * info.lbaSize);
     }
   }
@@ -510,6 +520,12 @@ void Namespace::datasetManagement(SQEntryWrapper &req, RequestFunction &func) {
           pParent->trim(this, range.slba, range.nlb, eachTrimDone, pDMA);
         }
 
+        if (pDMA->counter == 0) {
+          pDMA->counter = 1;
+
+          eachTrimDone(getTick(), pDMA);
+        }
+
         free(pContext->buffer);
         delete pContext->dma;
       };
@@ -528,12 +544,15 @@ void Namespace::datasetManagement(SQEntryWrapper &req, RequestFunction &func) {
     pContext->beginAt = getTick();
     pContext->slba = nr;
 
+    CPUContext *pCPU = new CPUContext(doTrim, pContext, CPU::NVME__NAMESPACE,
+                                      CPU::DATASET_MANAGEMENT);
+
     if (req.useSGL) {
       pContext->dma =
-          new SGL(cfgdata, doTrim, pContext, req.entry.data1, req.entry.data2);
+          new SGL(cfgdata, cpuHandler, pCPU, req.entry.data1, req.entry.data2);
     }
     else {
-      pContext->dma = new PRPList(cfgdata, doTrim, pContext, req.entry.data1,
+      pContext->dma = new PRPList(cfgdata, cpuHandler, pCPU, req.entry.data1,
                                   req.entry.data2, (uint64_t)nr * 0x10);
     }
   }

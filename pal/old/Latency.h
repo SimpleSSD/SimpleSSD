@@ -13,9 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Gieseo Park <gieseo@camelab.org>
- *          Jie Zhang <jie@camelab.org>
  */
 
 #ifndef __Latency_h__
@@ -40,9 +37,11 @@ using namespace std;
 class Latency {
  protected:
   SimpleSSD::PAL::Config::NANDTiming timing;
+  SimpleSSD::PAL::Config::NANDPower power;
 
  public:
-  Latency(SimpleSSD::PAL::Config::NANDTiming);
+  Latency(SimpleSSD::PAL::Config::NANDTiming,
+          SimpleSSD::PAL::Config::NANDPower);
   virtual ~Latency();
 
   // Get Latency for PageAddress(L/C/MSBpage), Operation(RWE),
@@ -51,7 +50,7 @@ class Latency {
   virtual inline uint8_t GetPageType(uint32_t) { return PAGE_NUM; };
 
   // Setup DMA speed and pagesize
-  virtual uint64_t GetPower(uint8_t, uint8_t) { return 0; };
+  virtual uint64_t GetPower(uint8_t, uint8_t);
 };
 
 #endif  //__Latency_h__

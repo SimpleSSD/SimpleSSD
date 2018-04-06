@@ -19,35 +19,71 @@
 
 #include "dram/simple.hh"
 
+#include "util/algorithm.hh"
+
 namespace SimpleSSD {
 
 namespace DRAM {
 
-SimpleDRAM::SimpleDRAM(ConfigReader &p) : AbstractDRAM(p), lastDRAMAccess(0) {
-  pStructure = conf.getDRAMStructure();
-  pTiming = conf.getDRAMTiming();
-  pPower = conf.getDRAMPower();
+#define REFRESH_PERIOD 64000000000
 
+SimpleDRAM::Stat::Stat() {
+  memset(this, 0, sizeof(Stat));
+}
+
+SimpleDRAM::SimpleDRAM(ConfigReader &p) : AbstractDRAM(p), lastDRAMAccess(0) {
   pageFetchLatency = pTiming->tRP + pTiming->tRCD + pTiming->tCL;
-  interfaceBandwidth =
-      2.0 * pStructure->busWidth * pStructure->channel / 8.0 / pTiming->tCK;
+  interfaceBandwidth = 2.0 * pStructure->busWidth * pStructure->chip *
+                       pStructure->rank * pStructure->channel / 8.0 /
+                       pTiming->tCK;
+
+  autoRefresh = allocate([this](uint64_t now) {
+    dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
+
+    lastDRAMAccess = MAX(lastDRAMAccess, now + pTiming->tRFC);
+
+    schedule(autoRefresh, now + REFRESH_PERIOD);
+  });
+
+  schedule(autoRefresh, getTick() + REFRESH_PERIOD);
 }
 
 SimpleDRAM::~SimpleDRAM() {
   // DO NOTHING
 }
 
-void SimpleDRAM::updateDelay(uint64_t latency, uint64_t &tick) {
+uint64_t SimpleDRAM::updateDelay(uint64_t latency, uint64_t &tick) {
+  uint64_t beginAt = 0;
+
   if (tick > 0) {
     if (lastDRAMAccess <= tick) {
+      beginAt = tick;
       lastDRAMAccess = tick + latency;
     }
     else {
+      beginAt = lastDRAMAccess;
       lastDRAMAccess += latency;
     }
 
     tick = lastDRAMAccess;
   }
+
+  return beginAt;
+}
+
+void SimpleDRAM::updateStats(uint64_t cycle) {
+  dramPower->calcWindowEnergy(cycle);
+
+  auto &energy = dramPower->getEnergy();
+
+  stat.act += energy.act_energy;
+  stat.pre += energy.pre_energy;
+  stat.read += energy.read_energy;
+  stat.write += energy.write_energy;
+  stat.actStandby += energy.act_stdby_energy;
+  stat.preStandby += energy.pre_stdby_energy;
+  stat.refresh += energy.ref_energy;
+  stat.total += energy.total_energy;
 }
 
 void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
@@ -55,7 +91,29 @@ void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t latency = (uint64_t)(
       pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);
 
-  updateDelay(latency, tick);
+  uint64_t beginAt = updateDelay(latency, tick);
+
+  // DRAMPower uses cycle unit
+  beginAt /= pTiming->tCK;
+
+  dramPower->doCommand(Data::MemCommand::ACT, 0, beginAt);
+
+  for (uint64_t i = 0; i < pageCount; i++) {
+    dramPower->doCommand(Data::MemCommand::RD, 0,
+                         beginAt + spec.memTimingSpec.RCD);
+
+    beginAt += spec.memTimingSpec.RCD;
+  }
+
+  beginAt -= spec.memTimingSpec.RCD;
+
+  dramPower->doCommand(Data::MemCommand::PRE, 0,
+                       beginAt + spec.memTimingSpec.RAS);
+
+  // Stat Update
+  updateStats(beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
+  readStat.count++;
+  readStat.size += size;
 }
 
 void SimpleDRAM::write(void *addr, uint64_t size, uint64_t &tick) {
@@ -63,7 +121,77 @@ void SimpleDRAM::write(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t latency = (uint64_t)(
       pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);
 
-  updateDelay(latency, tick);
+  uint64_t beginAt = updateDelay(latency, tick);
+
+  // DRAMPower uses cycle unit
+  beginAt /= pTiming->tCK;
+
+  dramPower->doCommand(Data::MemCommand::ACT, 0, beginAt);
+
+  for (uint64_t i = 0; i < pageCount; i++) {
+    dramPower->doCommand(Data::MemCommand::WR, 0,
+                         beginAt + spec.memTimingSpec.RCD);
+
+    beginAt += spec.memTimingSpec.RCD;
+  }
+
+  beginAt -= spec.memTimingSpec.RCD;
+
+  dramPower->doCommand(Data::MemCommand::PRE, 0,
+                       beginAt + spec.memTimingSpec.RAS);
+
+  // Stat Update
+  updateStats(beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
+  writeStat.count++;
+  writeStat.size += size;
+}
+
+void SimpleDRAM::getStatList(std::vector<Stats> &list, std::string prefix) {
+  Stats temp;
+
+  AbstractDRAM::getStatList(list, prefix);
+
+  temp.name = prefix + "read.request_count";
+  temp.desc = "Read request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.bytes";
+  temp.desc = "Read data size in byte";
+  list.push_back(temp);
+
+  temp.name = prefix + "write.request_count";
+  temp.desc = "Write request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "write.bytes";
+  temp.desc = "Write data size in byte";
+  list.push_back(temp);
+
+  temp.name = prefix + "request_count";
+  temp.desc = "Total request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "bytes";
+  temp.desc = "Total data size in byte";
+  list.push_back(temp);
+}
+
+void SimpleDRAM::getStatValues(std::vector<double> &values) {
+  AbstractDRAM::getStatValues(values);
+
+  values.push_back(readStat.count);
+  values.push_back(readStat.size);
+  values.push_back(writeStat.count);
+  values.push_back(writeStat.size);
+  values.push_back(readStat.count + writeStat.count);
+  values.push_back(readStat.size + writeStat.size);
+}
+
+void SimpleDRAM::resetStatValues() {
+  AbstractDRAM::resetStatValues();
+
+  memset(&readStat, 0, sizeof(Stat));
+  memset(&writeStat, 0, sizeof(Stat));
 }
 
 }  // namespace DRAM

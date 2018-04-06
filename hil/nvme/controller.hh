@@ -25,10 +25,10 @@
 #include <list>
 #include <unordered_map>
 
+#include "hil/nvme/abstract_subsystem.hh"
 #include "hil/nvme/def.hh"
 #include "hil/nvme/dma.hh"
 #include "hil/nvme/queue.hh"
-#include "hil/nvme/subsystem.hh"
 #include "util/bitset.hh"
 #include "util/def.hh"
 #include "util/simplessd.hh"
@@ -71,8 +71,13 @@ typedef struct {
 
 class Controller : public StatObject {
  private:
-  Interface *pParent;     //!< NVMe::Interface passed from constructor
-  Subsystem *pSubsystem;  //!< NVMe::Subsystem allocate in constructor
+  Interface *pParent;             //!< NVMe::Interface passed from constructor
+  AbstractSubsystem *pSubsystem;  //!< NVMe::Subsystem allocate in constructor
+
+  bool bUseOCSSD;
+
+  SimpleSSD::DMAInterface *pcieFIFO;
+  SimpleSSD::DMAInterface *interconnect;
 
   RegisterTable registers;   //!< Table for NVMe Controller Registers
   uint64_t sqstride;         //!< Calculated SQ Stride
@@ -134,7 +139,7 @@ class Controller : public StatObject {
   void setCoalescing(uint16_t, bool);
   bool getCoalescing(uint16_t);
 
-  void collectSQueue(EventFunction &);
+  void collectSQueue(DMAFunction &, void *);
   void handleRequest(uint64_t);
   void work();
 

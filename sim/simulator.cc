@@ -24,4 +24,50 @@ namespace SimpleSSD {
 // Defined in sim/simulator.hh
 Simulator *sim = nullptr;
 
+void setSimulator(Simulator *p) {
+  sim = p;
+}
+
+uint64_t getTick() {
+  if (sim) {
+    return sim->getCurrentTick();
+  }
+
+  return 0;
+}
+
+Event allocate(EventFunction f) {
+  if (sim) {
+    return sim->allocateEvent(f);
+  }
+
+  return 0;
+}
+
+void schedule(Event e, uint64_t t) {
+  if (sim) {
+    sim->scheduleEvent(e, t);
+  }
+}
+
+void deschedule(Event e) {
+  if (sim) {
+    sim->descheduleEvent(e);
+  }
+}
+
+bool scheduled(Event e) {
+  if (sim) {
+    return sim->isScheduled(e);
+  }
+
+  return false;
+}
+
+void deallocate(Event e) {
+  if (sim) {
+    sim->deallocateEvent(e);
+  }
+}
+
 }  // namespace SimpleSSD

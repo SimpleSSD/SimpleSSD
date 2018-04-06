@@ -23,36 +23,14 @@
 #define __UTIL_SIMPLESSD__
 
 #include "sim/config_reader.hh"
+#include "sim/cpu.hh"
 #include "sim/simulator.hh"
 #include "sim/statistics.hh"
 #include "sim/trace.hh"
 
-namespace SimpleSSD {
-
-inline uint64_t getTick() {
-  return sim->getCurrentTick();
-}
-
-inline Event allocate(EventFunction f) {
-  return sim->allocateEvent(f);
-}
-
-inline void schedule(Event e, uint64_t t) {
-  sim->scheduleEvent(e, t);
-}
-
-inline void deschedule(Event e) {
-  sim->descheduleEvent(e);
-}
-
-inline bool scheduled(Event e) {
-  return sim->isScheduled(e);
-}
-
-inline void deallocate(Event e) {
-  sim->deallocateEvent(e);
-}
-
-}  // namespace SimpleSSD
+SimpleSSD::ConfigReader initSimpleSSDEngine(SimpleSSD::Simulator *,
+                                            std::ostream &, std::ostream &,
+                                            std::string);
+void releaseSimpleSSDEngine();
 
 #endif

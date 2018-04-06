@@ -35,6 +35,7 @@ typedef struct _DMAContext {
   void *context;
 
   _DMAContext(DMAFunction &f) : counter(0), function(f), context(nullptr) {}
+  _DMAContext(DMAFunction &f, void *c) : counter(0), function(f), context(c) {}
 } DMAContext;
 
 class DMAInterface {

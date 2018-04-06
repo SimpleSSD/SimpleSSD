@@ -23,7 +23,7 @@
 
 #include "sim/trace.hh"
 
-namespace SimpleSSD{
+namespace SimpleSSD {
 
 template <class T>
 void StateObject::pushValue(std::vector<uint8_t> &data, T value) {
@@ -53,4 +53,4 @@ void StateObject::popValue(std::vector<uint8_t> &data, T value) {
   data.erase(data.begin() + data.size() - valueSize, data.end());
 }
 
-}
+}  // namespace SimpleSSD

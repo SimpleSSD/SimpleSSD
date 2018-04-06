@@ -30,11 +30,14 @@
 
 namespace SimpleSSD {
 
+const char SECTION_CPU[] = "cpu";
 const char SECTION_DRAM[] = "dram";
 const char SECTION_FTL[] = "ftl";
 const char SECTION_NVME[] = "nvme";
 const char SECTION_ICL[] = "icl";
 const char SECTION_PAL[] = "pal";
+const char SECTION_SATA[] = "sata";
+const char SECTION_UFS[] = "ufs";
 
 bool BaseConfig::convertBool(const char *value) {
   bool ret = false;
@@ -52,23 +55,32 @@ bool ConfigReader::init(std::string file) {
   }
 
   // Update all
+  cpuConfig.update();
   dramConfig.update();
   ftlConfig.update();
   nvmeConfig.update();
   iclConfig.update();
   palConfig.update();
+  sataConfig.update();
+  ufsConfig.update();
 
   return true;
 }
 
 int64_t ConfigReader::readInt(CONFIG_SECTION section, uint32_t idx) {
   switch (section) {
+    case CONFIG_CPU:
+      return cpuConfig.readInt(idx);
     case CONFIG_DRAM:
       return dramConfig.readInt(idx);
     case CONFIG_FTL:
       return ftlConfig.readInt(idx);
     case CONFIG_NVME:
       return nvmeConfig.readInt(idx);
+    case CONFIG_SATA:
+      return sataConfig.readInt(idx);
+    case CONFIG_UFS:
+      return ufsConfig.readInt(idx);
     case CONFIG_ICL:
       return iclConfig.readInt(idx);
     case CONFIG_PAL:
@@ -80,12 +92,18 @@ int64_t ConfigReader::readInt(CONFIG_SECTION section, uint32_t idx) {
 
 uint64_t ConfigReader::readUint(CONFIG_SECTION section, uint32_t idx) {
   switch (section) {
+    case CONFIG_CPU:
+      return cpuConfig.readUint(idx);
     case CONFIG_DRAM:
       return dramConfig.readUint(idx);
     case CONFIG_FTL:
       return ftlConfig.readUint(idx);
     case CONFIG_NVME:
       return nvmeConfig.readUint(idx);
+    case CONFIG_SATA:
+      return sataConfig.readUint(idx);
+    case CONFIG_UFS:
+      return ufsConfig.readUint(idx);
     case CONFIG_ICL:
       return iclConfig.readUint(idx);
     case CONFIG_PAL:
@@ -97,12 +115,18 @@ uint64_t ConfigReader::readUint(CONFIG_SECTION section, uint32_t idx) {
 
 float ConfigReader::readFloat(CONFIG_SECTION section, uint32_t idx) {
   switch (section) {
+    case CONFIG_CPU:
+      return cpuConfig.readFloat(idx);
     case CONFIG_DRAM:
       return dramConfig.readFloat(idx);
     case CONFIG_FTL:
       return ftlConfig.readFloat(idx);
     case CONFIG_NVME:
       return nvmeConfig.readFloat(idx);
+    case CONFIG_SATA:
+      return sataConfig.readFloat(idx);
+    case CONFIG_UFS:
+      return ufsConfig.readFloat(idx);
     case CONFIG_ICL:
       return iclConfig.readFloat(idx);
     case CONFIG_PAL:
@@ -114,12 +138,18 @@ float ConfigReader::readFloat(CONFIG_SECTION section, uint32_t idx) {
 
 std::string ConfigReader::readString(CONFIG_SECTION section, uint32_t idx) {
   switch (section) {
+    case CONFIG_CPU:
+      return cpuConfig.readString(idx);
     case CONFIG_DRAM:
       return dramConfig.readString(idx);
     case CONFIG_FTL:
       return ftlConfig.readString(idx);
     case CONFIG_NVME:
       return nvmeConfig.readString(idx);
+    case CONFIG_SATA:
+      return sataConfig.readString(idx);
+    case CONFIG_UFS:
+      return ufsConfig.readString(idx);
     case CONFIG_ICL:
       return iclConfig.readString(idx);
     case CONFIG_PAL:
@@ -131,12 +161,18 @@ std::string ConfigReader::readString(CONFIG_SECTION section, uint32_t idx) {
 
 bool ConfigReader::readBoolean(CONFIG_SECTION section, uint32_t idx) {
   switch (section) {
+    case CONFIG_CPU:
+      return cpuConfig.readBoolean(idx);
     case CONFIG_DRAM:
       return dramConfig.readBoolean(idx);
     case CONFIG_FTL:
       return ftlConfig.readBoolean(idx);
     case CONFIG_NVME:
       return nvmeConfig.readBoolean(idx);
+    case CONFIG_SATA:
+      return sataConfig.readBoolean(idx);
+    case CONFIG_UFS:
+      return ufsConfig.readBoolean(idx);
     case CONFIG_ICL:
       return iclConfig.readBoolean(idx);
     case CONFIG_PAL:
@@ -151,7 +187,10 @@ int ConfigReader::parserHandler(void *context, const char *section,
   ConfigReader *pThis = (ConfigReader *)context;
   bool handled = false;
 
-  if (MATCH_SECTION(SECTION_DRAM)) {
+  if (MATCH_SECTION(SECTION_CPU)) {
+    handled = pThis->cpuConfig.setConfig(name, value);
+  }
+  else if (MATCH_SECTION(SECTION_DRAM)) {
     handled = pThis->dramConfig.setConfig(name, value);
   }
   else if (MATCH_SECTION(SECTION_FTL)) {
@@ -159,6 +198,12 @@ int ConfigReader::parserHandler(void *context, const char *section,
   }
   else if (MATCH_SECTION(SECTION_NVME)) {
     handled = pThis->nvmeConfig.setConfig(name, value);
+  }
+  else if (MATCH_SECTION(SECTION_SATA)) {
+    handled = pThis->sataConfig.setConfig(name, value);
+  }
+  else if (MATCH_SECTION(SECTION_UFS)) {
+    handled = pThis->ufsConfig.setConfig(name, value);
   }
   else if (MATCH_SECTION(SECTION_ICL)) {
     handled = pThis->iclConfig.setConfig(name, value);
@@ -196,6 +241,10 @@ uint32_t ConfigReader::getPageAllocationConfig() {
 
 PAL::Config::NANDTiming *ConfigReader::getNANDTiming() {
   return palConfig.getNANDTiming();
+}
+
+PAL::Config::NANDPower *ConfigReader::getNANDPower() {
+  return palConfig.getNANDPower();
 }
 
 }  // namespace SimpleSSD

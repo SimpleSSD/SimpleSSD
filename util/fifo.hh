@@ -22,6 +22,7 @@
 #ifndef __UTIL_FIFO__
 #define __UTIL_FIFO__
 
+#include <list>
 #include <queue>
 
 #include "sim/dma_interface.hh"
@@ -39,6 +40,9 @@ struct FIFOParam {
 };
 
 struct FIFOEntry {
+  bool last;  //!< This is last entry of splitted request
+  uint64_t id;
+
   uint64_t addr;
   uint64_t size;
   uint8_t *buffer;
@@ -54,6 +58,15 @@ struct FIFOEntry {
   FIFOEntry(uint64_t, uint64_t, uint8_t *, DMAFunction &, void *);
 };
 
+struct ReadEntry {
+  uint64_t id;
+  uint64_t insertEndAt;
+  uint64_t dmaEndAt;
+
+  ReadEntry();
+  ReadEntry(uint64_t, uint64_t, uint64_t);
+};
+
 class FIFO : public DMAInterface {
  protected:
   class Queue {
@@ -61,7 +74,7 @@ class FIFO : public DMAInterface {
     uint64_t capacity;
     uint64_t usage;
 
-    std::queue<FIFOEntry> waitQueue;
+    std::list<FIFOEntry> waitQueue;
     std::queue<FIFOEntry> transferQueue;
 
     Event insertDone;
@@ -82,11 +95,27 @@ class FIFO : public DMAInterface {
   Queue readQueue;
   Queue writeQueue;
 
-  void beginInsert(Queue &);
-  void insertDone(Queue &);
-  void beginTransfer(Queue &, bool);
-  void transferDone(Queue &, bool);
-  void transferDoneNext(Queue &, bool);
+  uint64_t counter;
+  std::list<ReadEntry> readCompletion;
+
+  std::list<ReadEntry>::iterator find(uint64_t);
+
+  uint64_t calcSize(uint64_t);
+
+  // Write
+  void insertWrite();
+  void insertWriteDone();
+  void transferWrite();
+  void transferWriteDone();
+  void transferWriteDoneNext();
+
+  // Read
+  void transferRead();
+  void transferReadDone();
+  void insertRead();
+  void insertReadDone();
+  void insertReadDoneMerge(std::list<ReadEntry>::iterator);
+  void insertReadDoneNext();
 
  public:
   FIFO(DMAInterface *, FIFOParam &);

@@ -178,15 +178,14 @@ uint16_t Disk::write(uint64_t slba, uint16_t nlblk, uint8_t *buffer) {
   return ret;
 }
 
-CoWDisk::CoWDisk() : Disk() {}
+uint16_t Disk::erase(uint64_t slba, uint16_t nlblk) {
+  return nlblk;
+}
+
+CoWDisk::CoWDisk() {}
 
 CoWDisk::~CoWDisk() {
   close();
-}
-
-uint64_t CoWDisk::open(std::string path, uint64_t desiredSize,
-                       uint32_t lbaSize) {
-  return Disk::open(path, desiredSize, lbaSize);
 }
 
 void CoWDisk::close() {
@@ -235,6 +234,81 @@ uint16_t CoWDisk::write(uint64_t slba, uint16_t nlblk, uint8_t *buffer) {
   }
 
   return write;
+}
+
+uint64_t MemDisk::open(std::string, uint64_t size, uint32_t lbaSize) {
+  diskSize = size;
+  sectorSize = lbaSize;
+
+  return size;
+}
+
+void MemDisk::close() {
+  table.clear();
+}
+
+MemDisk::MemDisk() {}
+
+MemDisk::~MemDisk() {
+  close();
+}
+
+uint16_t MemDisk::read(uint64_t slba, uint16_t nlblk, uint8_t *buffer) {
+  uint16_t read = 0;
+
+  for (uint64_t i = 0; i < nlblk; i++) {
+    auto block = table.find(slba + i);
+
+    if (block != table.end()) {
+      memcpy(buffer + i * sectorSize, block->second.data(), sectorSize);
+    }
+    else {
+      memset(buffer + i * sectorSize, 0, sectorSize);
+    }
+
+    read++;
+  }
+
+  return read;
+}
+
+uint16_t MemDisk::write(uint64_t slba, uint16_t nlblk, uint8_t *buffer) {
+  uint16_t write = 0;
+
+  for (uint64_t i = 0; i < nlblk; i++) {
+    auto block = table.find(slba + i);
+
+    if (block != table.end()) {
+      memcpy(block->second.data(), buffer + i * sectorSize, sectorSize);
+    }
+    else {
+      std::vector<uint8_t> data;
+
+      data.resize(sectorSize);
+      memcpy(data.data(), buffer + i * sectorSize, sectorSize);
+
+      table.insert({slba + i, data});
+    }
+
+    write++;
+  }
+
+  return write;
+}
+uint16_t MemDisk::erase(uint64_t slba, uint16_t nlblk) {
+  uint16_t erase = 0;
+
+  for (uint64_t i = 0; i < nlblk; i++) {
+    auto block = table.find(slba + i);
+
+    if (block != table.end()) {
+      table.erase(block);
+    }
+
+    erase++;
+  }
+
+  return erase;
 }
 
 }  // namespace SimpleSSD

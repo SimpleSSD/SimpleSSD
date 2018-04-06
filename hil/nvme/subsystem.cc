@@ -46,11 +46,20 @@ const uint32_t lbaSize[nLBAFormat] = {
 };
 
 Subsystem::Subsystem(Controller *ctrl, ConfigData &cfg)
-    : pParent(ctrl),
-      cfgdata(cfg),
-      conf(*cfg.pConfigReader),
+    : AbstractSubsystem(ctrl, cfg),
+      pHIL(nullptr),
       allocatedLogicalPages(0),
-      commandCount(0) {
+      commandCount(0) {}
+
+Subsystem::~Subsystem() {
+  for (auto &iter : lNamespaces) {
+    delete iter;
+  }
+
+  delete pHIL;
+}
+
+void Subsystem::init() {
   pHIL = new HIL(conf);
 
   pHIL->getLPNInfo(totalLogicalPages, logicalPageSize);
@@ -85,14 +94,6 @@ Subsystem::Subsystem(Controller *ctrl, ConfigData &cfg)
       panic("Failed to create namespace");
     }
   }
-}
-
-Subsystem::~Subsystem() {
-  for (auto &iter : lNamespaces) {
-    delete iter;
-  }
-
-  delete pHIL;
 }
 
 void Subsystem::convertUnit(Namespace *ns, uint64_t slba, uint64_t nlblk,
@@ -239,8 +240,12 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   memcpy(buffer + 8, &info->capacity, 8);
 
   // Namespace Utilization
-  info->utilization =
-      pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
+  // This function also called from OpenChannelSSD subsystem
+  if (pHIL) {
+    info->utilization =
+        pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
+  }
+
   memcpy(buffer + 16, &info->utilization, 8);
 
   // Namespace Features
@@ -266,9 +271,21 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   for (uint32_t i = 0; i < nLBAFormat; i++) {
     memcpy(buffer + 128 + i * 4, lbaFormat + i, 4);
   }
+
+  // OpenChannel SSD
+  if (!pHIL) {
+    buffer[384] = 0x01;
+  }
 }
 
 void Subsystem::submitCommand(SQEntryWrapper &req, RequestFunction func) {
+  struct CommandContext {
+    SQEntryWrapper req;
+    RequestFunction func;
+
+    CommandContext(SQEntryWrapper &r, RequestFunction &f) : req(r), func(f) {}
+  };
+
   CQEntryWrapper resp(req);
   bool processed = false;
 
@@ -327,15 +344,36 @@ void Subsystem::submitCommand(SQEntryWrapper &req, RequestFunction func) {
     if (req.entry.namespaceID < NSID_ALL) {
       for (auto &iter : lNamespaces) {
         if (iter->getNSID() == req.entry.namespaceID) {
-          iter->submitCommand(req, func);
+          auto pContext = new CommandContext(req, func);
+          DMAFunction doSubmit = [iter](uint64_t, void *context) {
+            auto pContext = (CommandContext *)context;
+
+            iter->submitCommand(pContext->req, pContext->func);
+
+            delete pContext;
+          };
+
+          execute(CPU::NVME__NAMESPACE, CPU::SUBMIT_COMMAND, doSubmit,
+                  pContext);
 
           return;
         }
       }
     }
     else {
-      for (auto &iter : lNamespaces) {
-        iter->submitCommand(req, func);
+      if (lNamespaces.size() > 0) {
+        auto pContext = new CommandContext(req, func);
+        DMAFunction doSubmit = [this](uint64_t, void *context) {
+          auto pContext = (CommandContext *)context;
+
+          lNamespaces.front()->submitCommand(pContext->req, pContext->func);
+
+          delete pContext;
+        };
+
+        execute(CPU::NVME__NAMESPACE, CPU::SUBMIT_COMMAND, doSubmit, pContext);
+
+        processed = true;
       }
     }
   }
@@ -360,20 +398,34 @@ uint32_t Subsystem::validNamespaceCount() {
 
 void Subsystem::read(Namespace *ns, uint64_t slba, uint64_t nlblk,
                      DMAFunction &func, void *context) {
-  Request req(func, context);
+  Request *req = new Request(func, context);
+  DMAFunction doRead = [this](uint64_t, void *context) {
+    auto req = (Request *)context;
 
-  convertUnit(ns, slba, nlblk, req);
+    pHIL->read(*req);
 
-  pHIL->read(req);
+    delete req;
+  };
+
+  convertUnit(ns, slba, nlblk, *req);
+
+  execute(CPU::NVME__SUBSYSTEM, CPU::CONVERT_UNIT, doRead, req);
 }
 
 void Subsystem::write(Namespace *ns, uint64_t slba, uint64_t nlblk,
                       DMAFunction &func, void *context) {
-  Request req(func, context);
+  Request *req = new Request(func, context);
+  DMAFunction doWrite = [this](uint64_t, void *context) {
+    auto req = (Request *)context;
 
-  convertUnit(ns, slba, nlblk, req);
+    pHIL->write(*req);
 
-  pHIL->write(req);
+    delete req;
+  };
+
+  convertUnit(ns, slba, nlblk, *req);
+
+  execute(CPU::NVME__SUBSYSTEM, CPU::CONVERT_UNIT, doWrite, req);
 }
 
 void Subsystem::flush(Namespace *ns, DMAFunction &func, void *context) {
@@ -390,11 +442,18 @@ void Subsystem::flush(Namespace *ns, DMAFunction &func, void *context) {
 
 void Subsystem::trim(Namespace *ns, uint64_t slba, uint64_t nlblk,
                      DMAFunction &func, void *context) {
-  Request req(func, context);
+  Request *req = new Request(func, context);
+  DMAFunction doTrim = [this](uint64_t, void *context) {
+    auto req = (Request *)context;
 
-  convertUnit(ns, slba, nlblk, req);
+    pHIL->trim(*req);
 
-  pHIL->trim(req);
+    delete req;
+  };
+
+  convertUnit(ns, slba, nlblk, *req);
+
+  execute(CPU::NVME__SUBSYSTEM, CPU::CONVERT_UNIT, doTrim, req);
 }
 
 bool Subsystem::deleteSQueue(SQEntryWrapper &req, RequestFunction &func) {
@@ -1134,11 +1193,19 @@ bool Subsystem::formatNVM(SQEntryWrapper &req, RequestFunction &func) {
 
       // Send format command to HIL
       RequestContext *pContext = new RequestContext(func, resp);
-      Request req(doFormat, pContext);
+      Request *req = new Request(doFormat, pContext);
 
-      req.range = info->range;
+      req->range = info->range;
 
-      pHIL->format(req, ses == 0x01);
+      DMAFunction job = [this, ses](uint64_t, void *context) {
+        auto req = (Request *)context;
+
+        pHIL->format(*req, ses == 0x01);
+
+        delete req;
+      };
+
+      execute(CPU::NVME__SUBSYSTEM, CPU::FORMAT_NVM, job, req);
     }
     else {
       resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
@@ -1160,19 +1227,19 @@ void Subsystem::getStatList(std::vector<Stats> &list, std::string prefix) {
   temp.desc = "Total number of NVMe command handled";
   list.push_back(temp);
 
-  // pHIL->getStats(list, prefix + "hil.");
+  pHIL->getStatList(list, prefix);
 }
 
 void Subsystem::getStatValues(std::vector<double> &values) {
   values.push_back(commandCount);
 
-  // pHIL->getStatValues(values);
+  pHIL->getStatValues(values);
 }
 
 void Subsystem::resetStatValues() {
   commandCount = 0;
 
-  // pHIL->resetStats();
+  pHIL->resetStatValues();
 }
 
 }  // namespace NVMe

@@ -22,22 +22,59 @@
 
 #include <cinttypes>
 
+#include "libdrampower/LibDRAMPower.h"
 #include "util/simplessd.hh"
 
 namespace SimpleSSD {
 
 namespace DRAM {
 
-class AbstractDRAM {
+typedef enum : uint8_t {
+  ACTIVE,                //!< Row active
+  IDLE,                  //!< Precharged
+  POWER_DOWN_PRECHARGE,  //!< Precharge power down
+  POWER_DOWN_ACTIVE,     //!< Active power down
+  SELF_REFRESH,          //!< Self refresh
+} DRAMState;
+
+class AbstractDRAM : public StatObject {
  protected:
+  struct EnergeStat {
+    double act;
+    double pre;
+    double read;
+    double write;
+    double actStandby;
+    double preStandby;
+    double refresh;
+    double total;
+
+    EnergeStat();
+  };
+
   ConfigReader &conf;
 
+  Config::DRAMStructure *pStructure;
+  Config::DRAMTiming *pTiming;
+  Config::DRAMPower *pPower;
+
+  Data::MemorySpecification spec;
+  libDRAMPower *dramPower;
+
+  void convertMemspec();
+
+  EnergeStat stat;
+
  public:
-  AbstractDRAM(ConfigReader &p) : conf(p) {}
-  virtual ~AbstractDRAM() {}
+  AbstractDRAM(ConfigReader &);
+  virtual ~AbstractDRAM();
 
   virtual void read(void *, uint64_t, uint64_t &) = 0;
   virtual void write(void *, uint64_t, uint64_t &) = 0;
+
+  void getStatList(std::vector<Stats> &, std::string) override;
+  void getStatValues(std::vector<double> &) override;
+  void resetStatValues() override;
 };
 
 }  // namespace DRAM

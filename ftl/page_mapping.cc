@@ -29,14 +29,15 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-PageMapping::PageMapping(Parameter &p, PAL::PAL *l, ConfigReader &c)
-    : AbstractFTL(p, l),
+PageMapping::PageMapping(ConfigReader &c, Parameter &p, PAL::PAL *l,
+                         DRAM::AbstractDRAM *d)
+    : AbstractFTL(p, l, d),
       pPAL(l),
       conf(c),
-      latency(conf.readUint(CONFIG_FTL, FTL_LATENCY),
-              conf.readUint(CONFIG_FTL, FTL_REQUEST_QUEUE)),
       lastFreeBlock(param.pageCountToMaxPerf),
       bReclaimMore(false) {
+  bitsetSize = bRandomTweak ? param.ioUnitInPage : 1;
+
   for (uint32_t i = 0; i < param.totalPhysicalBlocks; i++) {
     freeBlocks.insert({i, Block(param.pagesInBlock, param.ioUnitInPage)});
   }
@@ -51,6 +52,8 @@ PageMapping::PageMapping(Parameter &p, PAL::PAL *l, ConfigReader &c)
   lastFreeBlockIndex = 0;
 
   memset(&stat, 0, sizeof(stat));
+
+  bRandomTweak = conf.readBoolean(CONFIG_FTL, FTL_USE_RANDOM_IO_TWEAK);
 }
 
 PageMapping::~PageMapping() {}
@@ -78,23 +81,37 @@ bool PageMapping::initialize() {
 void PageMapping::read(Request &req, uint64_t &tick) {
   uint64_t begin = tick;
 
-  readInternal(req, tick);
+  if (req.ioFlag.count() > 0) {
+    readInternal(req, tick);
 
-  debugprint(LOG_FTL_PAGE_MAPPING,
-             "READ  | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
-             ")",
-             req.lpn, begin, tick, tick - begin);
+    debugprint(LOG_FTL_PAGE_MAPPING,
+               "READ  | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+               ")",
+               req.lpn, begin, tick, tick - begin);
+  }
+  else {
+    warn("FTL got empty request");
+  }
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::READ);
 }
 
 void PageMapping::write(Request &req, uint64_t &tick) {
   uint64_t begin = tick;
 
-  writeInternal(req, tick);
+  if (req.ioFlag.count() > 0) {
+    writeInternal(req, tick);
 
-  debugprint(LOG_FTL_PAGE_MAPPING,
-             "WRITE | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
-             ")",
-             req.lpn, begin, tick, tick - begin);
+    debugprint(LOG_FTL_PAGE_MAPPING,
+               "WRITE | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+               ")",
+               req.lpn, begin, tick, tick - begin);
+  }
+  else {
+    warn("FTL got empty request");
+  }
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::WRITE);
 }
 
 void PageMapping::trim(Request &req, uint64_t &tick) {
@@ -106,6 +123,8 @@ void PageMapping::trim(Request &req, uint64_t &tick) {
              "TRIM  | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
              ")",
              req.lpn, begin, tick, tick - begin);
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::TRIM);
 }
 
 void PageMapping::format(LPNRange &range, uint64_t &tick) {
@@ -119,7 +138,7 @@ void PageMapping::format(LPNRange &range, uint64_t &tick) {
       auto &mappingList = iter->second;
 
       // Do trim
-      for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+      for (uint32_t idx = 0; idx < bitsetSize; idx++) {
         auto &mapping = mappingList.at(idx);
         auto block = blocks.find(mapping.first);
 
@@ -147,6 +166,8 @@ void PageMapping::format(LPNRange &range, uint64_t &tick) {
 
   // Do GC only in specified blocks
   doGarbageCollection(list, tick);
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::FORMAT);
 }
 
 Status *PageMapping::getStatus() {
@@ -313,6 +334,8 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   for (auto &iter : list) {
     iter = weight.at(i++).first;
   }
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::SELECT_VICTIM_BLOCK);
 }
 
 void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
@@ -344,6 +367,10 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
         // Retrive free block
         auto freeBlock = blocks.find(getLastFreeBlock());
 
+        if (!bRandomTweak) {
+          bit.set();
+        }
+
         // Issue Read
         req.blockIndex = block->first;
         req.pageIndex = pageIndex;
@@ -356,7 +383,7 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
         // Update mapping table
         uint32_t newBlockIdx = freeBlock->first;
 
-        for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+        for (uint32_t idx = 0; idx < bitsetSize; idx++) {
           if (bit.test(idx)) {
             // Invalidate
             block->second.invalidate(pageIndex, idx);
@@ -366,6 +393,8 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
             if (mappingList == table.end()) {
               panic("Invalid mapping table entry");
             }
+
+            pDRAM->read(&(*mappingList), 8 * param.ioUnitInPage, tick);
 
             auto &mapping = mappingList->second.at(idx);
 
@@ -379,8 +408,14 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
             // Issue Write
             req.blockIndex = newBlockIdx;
             req.pageIndex = newPageIdx;
-            req.ioFlag.reset();
-            req.ioFlag.set(idx);
+
+            if (bRandomTweak) {
+              req.ioFlag.reset();
+              req.ioFlag.set(idx);
+            }
+            else {
+              req.ioFlag.set();
+            }
 
             beginAt2 = beginAt;
 
@@ -404,6 +439,7 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
   }
 
   tick = finishedAt;
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::DO_GARBAGE_COLLECTION);
 }
 
 void PageMapping::readInternal(Request &req, uint64_t &tick) {
@@ -414,9 +450,14 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
   auto mappingList = table.find(req.lpn);
 
   if (mappingList != table.end()) {
-    latency.access(req.ioFlag.count(), tick);
+    if (bRandomTweak) {
+      pDRAM->read(&(*mappingList), 8 * req.ioFlag.count(), tick);
+    }
+    else {
+      pDRAM->read(&(*mappingList), 8, tick);
+    }
 
-    for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+    for (uint32_t idx = 0; idx < bitsetSize; idx++) {
       if (req.ioFlag.test(idx)) {
         auto &mapping = mappingList->second.at(idx);
 
@@ -424,8 +465,14 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
             mapping.second < param.pagesInBlock) {
           palRequest.blockIndex = mapping.first;
           palRequest.pageIndex = mapping.second;
-          palRequest.ioFlag.reset();
-          palRequest.ioFlag.set(idx);
+
+          if (bRandomTweak) {
+            palRequest.ioFlag.reset();
+            palRequest.ioFlag.set(idx);
+          }
+          else {
+            palRequest.ioFlag.set();
+          }
 
           auto block = blocks.find(palRequest.blockIndex);
 
@@ -444,6 +491,7 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
     }
 
     tick = finishedAt;
+    tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::READ_INTERNAL);
   }
 }
 
@@ -453,11 +501,10 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   auto mappingList = table.find(req.lpn);
   uint64_t beginAt;
   uint64_t finishedAt = tick;
-
-  latency.access(req.ioFlag.count(), tick);
+  bool readBeforeWrite = false;
 
   if (mappingList != table.end()) {
-    for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+    for (uint32_t idx = 0; idx < bitsetSize; idx++) {
       if (req.ioFlag.test(idx)) {
         auto &mapping = mappingList->second.at(idx);
 
@@ -474,9 +521,9 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   else {
     // Create empty mapping
     auto ret = table.insert(
-        {req.lpn, std::vector<std::pair<uint32_t, uint32_t>>(
-                      param.ioUnitInPage,
-                      {param.totalPhysicalBlocks, param.pagesInBlock})});
+        {req.lpn,
+         std::vector<std::pair<uint32_t, uint32_t>>(
+             bitsetSize, {param.totalPhysicalBlocks, param.pagesInBlock})});
 
     if (!ret.second) {
       panic("Failed to insert new mapping");
@@ -492,7 +539,23 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
     panic("No such block");
   }
 
-  for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+  if (sendToPAL) {
+    if (bRandomTweak) {
+      pDRAM->read(&(*mappingList), 8 * req.ioFlag.count(), tick);
+      pDRAM->write(&(*mappingList), 8 * req.ioFlag.count(), tick);
+    }
+    else {
+      pDRAM->read(&(*mappingList), 8, tick);
+      pDRAM->write(&(*mappingList), 8, tick);
+    }
+  }
+
+  if (!bRandomTweak && !req.ioFlag.all()) {
+    // We have to read old data
+    readBeforeWrite = true;
+  }
+
+  for (uint32_t idx = 0; idx < bitsetSize; idx++) {
     if (req.ioFlag.test(idx)) {
       uint32_t pageIndex = block->second.getNextWritePageIndex(idx);
       auto &mapping = mappingList->second.at(idx);
@@ -501,6 +564,15 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
 
       block->second.write(pageIndex, req.lpn, idx, beginAt);
 
+      // Read old data if needed (Only executed when bRandomTweak = false)
+      if (readBeforeWrite) {
+        palRequest.blockIndex = mapping.first;
+        palRequest.pageIndex = mapping.second;
+        palRequest.ioFlag.set();
+
+        pPAL->read(palRequest, beginAt);
+      }
+
       // update mapping to table
       mapping.first = block->first;
       mapping.second = pageIndex;
@@ -508,8 +580,14 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
       if (sendToPAL) {
         palRequest.blockIndex = block->first;
         palRequest.pageIndex = pageIndex;
-        palRequest.ioFlag.reset();
-        palRequest.ioFlag.set(idx);
+
+        if (bRandomTweak) {
+          palRequest.ioFlag.reset();
+          palRequest.ioFlag.set(idx);
+        }
+        else {
+          palRequest.ioFlag.set();
+        }
 
         pPAL->write(palRequest, beginAt);
       }
@@ -519,6 +597,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
 
   tick = finishedAt;
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::WRITE_INTERNAL);
 
   // GC if needed
   static float gcThreshold = conf.readFloat(CONFIG_FTL, FTL_GC_THRESHOLD_RATIO);
@@ -547,8 +626,15 @@ void PageMapping::trimInternal(Request &req, uint64_t &tick) {
   auto mappingList = table.find(req.lpn);
 
   if (mappingList != table.end()) {
+    if (bRandomTweak) {
+      pDRAM->read(&(*mappingList), 8 * req.ioFlag.count(), tick);
+    }
+    else {
+      pDRAM->read(&(*mappingList), 8, tick);
+    }
+
     // Do trim
-    for (uint32_t idx = 0; idx < param.ioUnitInPage; idx++) {
+    for (uint32_t idx = 0; idx < bitsetSize; idx++) {
       auto &mapping = mappingList->second.at(idx);
       auto block = blocks.find(mapping.first);
 
@@ -561,6 +647,8 @@ void PageMapping::trimInternal(Request &req, uint64_t &tick) {
 
     // Remove mapping
     table.erase(mappingList);
+
+    tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::TRIM_INTERNAL);
   }
 }
 
@@ -595,6 +683,8 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
 
   // Remove block from block list
   blocks.erase(block);
+
+  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::ERASE_INTERNAL);
 }
 
 void PageMapping::getStatList(std::vector<Stats> &list, std::string prefix) {

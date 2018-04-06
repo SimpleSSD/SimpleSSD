@@ -25,6 +25,8 @@
 #include <cinttypes>
 #include <functional>
 
+#include "sim/config_reader.hh"
+
 namespace SimpleSSD {
 
 typedef uint64_t Event;
@@ -44,12 +46,13 @@ class Simulator {
   virtual void deallocateEvent(Event) = 0;
 };
 
-// Defined in sim/simulator.cc
-extern Simulator *sim;
-
-inline void setSimulator(Simulator *p) {
-  sim = p;
-}
+void setSimulator(Simulator *p);
+uint64_t getTick();
+Event allocate(EventFunction f);
+void schedule(Event e, uint64_t t);
+void deschedule(Event e);
+bool scheduled(Event e);
+void deallocate(Event e);
 
 }  // namespace SimpleSSD
 

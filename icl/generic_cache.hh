@@ -52,6 +52,8 @@ class GenericCache : public AbstractCache {
   uint32_t hitCounter;
   uint32_t accessCounter;
 
+  PREFETCH_MODE prefetchMode;
+  EVICT_MODE evictMode;
   EVICT_POLICY policy;
   std::function<uint32_t(uint32_t, uint64_t &)> evictFunction;
   std::function<Line *(Line *, Line *)> compareFunction;
@@ -69,7 +71,7 @@ class GenericCache : public AbstractCache {
   uint32_t getValidWay(uint64_t, uint64_t &);
   void checkPrefetch(Request &);
 
-  void evictCache(uint64_t);
+  void evictCache(uint64_t, bool = true);
 
   // Stats
   struct {
@@ -83,9 +85,9 @@ class GenericCache : public AbstractCache {
 
   bool read(Request &, uint64_t &) override;
   bool write(Request &, uint64_t &) override;
-  bool flush(Request &, uint64_t &) override;
-  bool trim(Request &, uint64_t &) override;
 
+  void flush(LPNRange &, uint64_t &) override;
+  void trim(LPNRange &, uint64_t &) override;
   void format(LPNRange &, uint64_t &) override;
 
   void getStatList(std::vector<Stats> &, std::string) override;

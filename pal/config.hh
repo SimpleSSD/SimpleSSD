@@ -78,6 +78,17 @@ class Config : public BaseConfig {
     uint64_t erase;
   } NANDTiming;
 
+  typedef struct {
+    uint64_t voltage;  //!< Unit: mV
+    struct {           //!< Unit: uA
+      uint64_t read;
+      uint64_t program;
+      uint64_t erase;
+      uint64_t busIdle;
+      uint64_t standby;
+    } current;
+  } NANDPower;
+
  private:
   uint32_t channel;  //!< Default: 8
   uint32_t package;  //!< Default: 4
@@ -95,6 +106,7 @@ class Config : public BaseConfig {
   uint8_t PageAllocation[4];    //!< Default: CWDP (0x01, 0x02, 0x04, 0x08)
 
   NANDTiming nandTiming;
+  NANDPower nandPower;
 
   // Raw variable
   std::string _superblock;
@@ -114,6 +126,7 @@ class Config : public BaseConfig {
   uint32_t getPageAllocationConfig();
 
   NANDTiming *getNANDTiming();
+  NANDPower *getNANDPower();
 };
 
 }  // namespace PAL

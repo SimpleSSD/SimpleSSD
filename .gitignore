@@ -23,3 +23,7 @@ CTestTestfile.cmake
 
 # Atom editor specific
 .clang_complete
+
+# Python
+*.pyc
+temp_build/

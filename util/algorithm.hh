@@ -24,6 +24,7 @@
 
 #include <cinttypes>
 #include <climits>
+#include <cmath>
 
 #ifndef MIN
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
@@ -32,6 +33,8 @@
 #ifndef MAX
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #endif
+
+#define DIVCEIL(x, y) (((x)-1) / (y) + 1)
 
 namespace SimpleSSD {
 
@@ -43,6 +46,31 @@ uint8_t popcount(T v) {
   v = (T)(v * ((T) ~(T)0 / 255)) >> (sizeof(T) - 1) * CHAR_BIT;
 
   return (uint8_t)v;
+}
+
+inline uint64_t generateMask(uint32_t val, uint32_t &count) {
+  uint64_t mask = (uint64_t)-1;
+  uint32_t tmp = 0;
+
+  if (val > 0) {
+    int shift = __builtin_clzl(val);
+
+    if (shift + __builtin_ffsl(val) == 64) {
+      shift++;
+    }
+
+    tmp = 64 - shift;
+    mask = (mask << tmp);
+  }
+
+  mask = (~mask) << count;
+  count += tmp;
+
+  return mask;
+}
+
+inline uint16_t bswap16(uint16_t val) {
+  return __builtin_bswap16(val);
 }
 
 }  // namespace SimpleSSD

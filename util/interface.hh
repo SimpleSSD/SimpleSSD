@@ -39,6 +39,43 @@ uint64_t calculateDelay(PCIE_GEN, uint8_t, uint64_t);
 
 }  // namespace PCIExpress
 
+namespace SATA {
+
+typedef enum {
+  SATA_1_0,  // SATA 1.0 (1.5Gbps)
+  SATA_2_0,  // SATA 2.0 (3Gbps)
+  SATA_3_0,  // SATA 3.0/3.1 (6Gbps)
+  SATA_NUM
+} SATA_GEN;
+
+uint64_t calculateDelay(SATA_GEN, uint64_t);
+
+}  // namespace SATA
+
+namespace MIPI {
+
+namespace M_PHY {
+
+typedef enum {
+  HS_G1,  // High Speed Gear 1
+  HS_G2,  // High Speed Gear 2
+  HS_G3,  // High Speed Gear 3
+  HS_G4,  // High Speed Gear 4
+  HS_NUM
+} M_PHY_MODE;
+
+uint64_t calculateDelay(M_PHY_MODE, uint8_t, uint64_t);
+
+}  // namespace M_PHY
+
+namespace UniPro {
+
+uint64_t calculateDelay(M_PHY::M_PHY_MODE, uint8_t, uint64_t);
+
+}  // namespace UniPro
+
+}  // namespace MIPI
+
 namespace ARM {
 
 namespace AXI {

@@ -23,4 +23,3 @@ if env['TARGET_ISA'] == 'null':
     Return()
 
 Source('block.cc')
-Source('latency.cc')
