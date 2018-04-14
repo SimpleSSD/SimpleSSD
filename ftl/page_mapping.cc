@@ -35,9 +35,8 @@ PageMapping::PageMapping(ConfigReader &c, Parameter &p, PAL::PAL *l,
       pPAL(l),
       conf(c),
       lastFreeBlock(param.pageCountToMaxPerf),
+      lastFreeBlockIOMap(param.ioUnitInPage),
       bReclaimMore(false) {
-  bitsetSize = bRandomTweak ? param.ioUnitInPage : 1;
-
   for (uint32_t i = 0; i < param.totalPhysicalBlocks; i++) {
     freeBlocks.insert({i, Block(param.pagesInBlock, param.ioUnitInPage)});
   }
@@ -54,6 +53,7 @@ PageMapping::PageMapping(ConfigReader &c, Parameter &p, PAL::PAL *l,
   memset(&stat, 0, sizeof(stat));
 
   bRandomTweak = conf.readBoolean(CONFIG_FTL, FTL_USE_RANDOM_IO_TWEAK);
+  bitsetSize = bRandomTweak ? param.ioUnitInPage : 1;
 }
 
 PageMapping::~PageMapping() {}
@@ -231,9 +231,22 @@ uint32_t PageMapping::getFreeBlock(uint32_t idx) {
   return blockIndex;
 }
 
-uint32_t PageMapping::getLastFreeBlock() {
+uint32_t PageMapping::getLastFreeBlock(Bitset &iomap) {
+  if ((lastFreeBlockIOMap & iomap).any() || !bRandomTweak) {
+    // Update lastFreeBlockIndex
+    lastFreeBlockIndex++;
+
+    if (lastFreeBlockIndex == param.pageCountToMaxPerf) {
+      lastFreeBlockIndex = 0;
+    }
+
+    lastFreeBlockIOMap = iomap;
+  }
+  else {
+    lastFreeBlockIOMap |= iomap;
+  }
+
   auto freeBlock = blocks.find(lastFreeBlock.at(lastFreeBlockIndex));
-  uint32_t blockIndex = 0;
 
   // Sanity check
   if (freeBlock == blocks.end()) {
@@ -247,16 +260,7 @@ uint32_t PageMapping::getLastFreeBlock() {
     bReclaimMore = true;
   }
 
-  blockIndex = lastFreeBlock.at(lastFreeBlockIndex);
-
-  // Update lastFreeBlockIndex
-  lastFreeBlockIndex++;
-
-  if (lastFreeBlockIndex == param.pageCountToMaxPerf) {
-    lastFreeBlockIndex = 0;
-  }
-
-  return blockIndex;
+  return lastFreeBlock.at(lastFreeBlockIndex);
 }
 
 void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
@@ -364,12 +368,12 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
     for (uint32_t pageIndex = 0; pageIndex < param.pagesInBlock; pageIndex++) {
       // Valid?
       if (block->second.getPageInfo(pageIndex, lpns, bit)) {
-        // Retrive free block
-        auto freeBlock = blocks.find(getLastFreeBlock());
-
         if (!bRandomTweak) {
           bit.set();
         }
+
+        // Retrive free block
+        auto freeBlock = blocks.find(getLastFreeBlock(bit));
 
         // Issue Read
         req.blockIndex = block->first;
@@ -533,7 +537,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
 
   // Write data to free block
-  block = blocks.find(getLastFreeBlock());
+  block = blocks.find(getLastFreeBlock(req.ioFlag));
 
   if (block == blocks.end()) {
     panic("No such block");

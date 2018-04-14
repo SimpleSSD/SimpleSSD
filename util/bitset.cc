@@ -28,7 +28,7 @@ Bitset::Bitset(uint32_t size) : dataSize(size) {
     panic("Invalid size of Bitset");
   }
 
-  allocSize = (dataSize - 1) / 8 + 1;
+  allocSize = DIVCEIL(dataSize, 8);
   data.resize(allocSize);
 }
 

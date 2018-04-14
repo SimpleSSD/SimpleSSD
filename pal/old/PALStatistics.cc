@@ -178,6 +178,7 @@ void PALStatistics::ValueOper::printstat(
 }
 
 void PALStatistics::getEnergyStat(double &read, double &write, double &erase) {
+  // val = [pJ] / [10^6] = [uJ]
   read = Energy_Total.vals[0].sum / 1000000;   // uJ
   write = Energy_Total.vals[1].sum / 1000000;  // uJ
   erase = Energy_Total.vals[2].sum / 1000000;  // uJ
@@ -596,13 +597,13 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   Ticks_DMA1.add(oper, time_all[TICK_DMA1]);
   Ticks_Total.add(oper, time_all[TICK_FULL]);
   //***********************************************
-  // power - energy unit (fJ) = n(-9) x ps(-12) / +6
-  uint64_t energy_dma0 =
-      lat->GetPower(CMD.operation, BUSY_DMA0) * time_all[TICK_DMA0] / 1000000;
+  // energy = [nW] * [ps] / [10^9] = [pJ]
+  uint64_t energy_dma0 = lat->GetPower(CMD.operation, BUSY_DMA0) *
+                         time_all[TICK_DMA0] / 1000000000;
   uint64_t energy_mem =
-      lat->GetPower(CMD.operation, BUSY_MEM) * time_all[TICK_MEM] / 1000000;
-  uint64_t energy_dma1 =
-      lat->GetPower(CMD.operation, BUSY_DMA1) * time_all[TICK_DMA1] / 1000000;
+      lat->GetPower(CMD.operation, BUSY_MEM) * time_all[TICK_MEM] / 1000000000;
+  uint64_t energy_dma1 = lat->GetPower(CMD.operation, BUSY_DMA1) *
+                         time_all[TICK_DMA1] / 1000000000;
   Energy_DMA0.add(oper, energy_dma0);
   Energy_MEM.add(oper, energy_mem);
   Energy_DMA1.add(oper, energy_dma1);

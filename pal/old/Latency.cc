@@ -34,6 +34,7 @@ Latency::Latency(SimpleSSD::PAL::Config::NANDTiming t,
 
 Latency::~Latency() {}
 
+// Unit conversion: mV * uA = nW
 uint64_t Latency::GetPower(uint8_t Oper, uint8_t Busy) {
   switch (Busy) {
     case BUSY_DMA0:

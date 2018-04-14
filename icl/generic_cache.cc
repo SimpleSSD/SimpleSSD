@@ -483,10 +483,23 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 // True when cold-miss/hit
 bool GenericCache::write(Request &req, uint64_t &tick) {
   bool ret = false;
+  uint64_t flash = tick;
 
   debugprint(LOG_ICL_GENERIC_CACHE,
              "WRITE | REQ %7u-%-4u | LCA %" PRIu64 " | SIZE %" PRIu64,
              req.reqID, req.reqSubID, req.range.slpn, req.length);
+
+  FTL::Request reqInternal(lineCountInSuperPage, req);
+
+  // TODO: TEMPORAL CODE
+  bool dirty = false;
+
+  if (req.length < lineSize) {
+    dirty = true;
+  }
+  else {
+    pFTL->write(reqInternal, flash);
+  }
 
   if (useWriteCaching) {
     uint32_t setIdx = calcSetIndex(req.range.slpn);
@@ -499,14 +512,24 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       uint64_t arrived = tick;
 
       // Wait cache to be valid
-      if (tick < cacheData[setIdx][wayIdx].insertedAt) {
-        tick = cacheData[setIdx][wayIdx].insertedAt;
+      // TODO: TEMPORAL CODE
+      // We should only show DRAM latency when cache become dirty
+      if (dirty) {
+        // Update last accessed time
+        cacheData[setIdx][wayIdx].insertedAt = tick;
+        cacheData[setIdx][wayIdx].lastAccessed = tick;
+      }
+      else {
+        if (tick < cacheData[setIdx][wayIdx].insertedAt) {
+          tick = cacheData[setIdx][wayIdx].insertedAt;
+        }
+
+        cacheData[setIdx][wayIdx].insertedAt = flash;
+        cacheData[setIdx][wayIdx].lastAccessed = flash;
       }
 
       // Update last accessed time
-      cacheData[setIdx][wayIdx].insertedAt = tick;
-      cacheData[setIdx][wayIdx].lastAccessed = tick;
-      cacheData[setIdx][wayIdx].dirty = true;
+      cacheData[setIdx][wayIdx].dirty = dirty;
 
       // DRAM access
       pDRAM->write(&cacheData[setIdx][wayIdx], req.length, tick);
@@ -526,15 +549,25 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       // Do we have place to write data?
       if (wayIdx != waySize) {
         // Wait cache to be valid
-        if (tick < cacheData[setIdx][wayIdx].insertedAt) {
-          tick = cacheData[setIdx][wayIdx].insertedAt;
+        // TODO: TEMPORAL CODE
+        // We should only show DRAM latency when cache become dirty
+        if (dirty) {
+          // Update last accessed time
+          cacheData[setIdx][wayIdx].insertedAt = tick;
+          cacheData[setIdx][wayIdx].lastAccessed = tick;
+        }
+        else {
+          if (tick < cacheData[setIdx][wayIdx].insertedAt) {
+            tick = cacheData[setIdx][wayIdx].insertedAt;
+          }
+
+          cacheData[setIdx][wayIdx].insertedAt = flash;
+          cacheData[setIdx][wayIdx].lastAccessed = flash;
         }
 
         // Update last accessed time
-        cacheData[setIdx][wayIdx].insertedAt = tick;
-        cacheData[setIdx][wayIdx].lastAccessed = tick;
         cacheData[setIdx][wayIdx].valid = true;
-        cacheData[setIdx][wayIdx].dirty = true;
+        cacheData[setIdx][wayIdx].dirty = dirty;
         cacheData[setIdx][wayIdx].tag = req.range.slpn;
 
         // DRAM access
@@ -545,6 +578,7 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       // We have to flush
       else {
         uint32_t row, col;  // Variable for I/O position (IOFlag)
+        uint32_t setToFlush = calcSetIndex(req.range.slpn);
 
         for (setIdx = 0; setIdx < setSize; setIdx++) {
           for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
@@ -569,12 +603,42 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
           }
         }
 
+        // We must flush setToFlush set
+        bool have = false;
+
+        for (row = 0; row < lineCountInSuperPage; row++) {
+          for (col = 0; col < parallelIO; col++) {
+            if (evictData[row][col] &&
+                calcSetIndex(evictData[row][col]->tag) == setToFlush) {
+              have = true;
+            }
+          }
+        }
+
+        // We don't have setToFlush
+        if (!have) {
+          Line *pLineToFlush = nullptr;
+
+          for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
+            if (cacheData[setToFlush][wayIdx].valid) {
+              pLineToFlush =
+                  compareFunction(pLineToFlush, cacheData[setToFlush] + wayIdx);
+            }
+          }
+
+          if (pLineToFlush) {
+            calcIOPosition(pLineToFlush->tag, row, col);
+
+            evictData[row][col] = pLineToFlush;
+          }
+        }
+
         tick += CACHE_DELAY * setSize * waySize * 8;
 
-        evictCache(tick);
+        evictCache(tick, true);
 
         // Update cacheline of current request
-        setIdx = calcSetIndex(req.range.slpn);
+        setIdx = setToFlush;
         wayIdx = getEmptyWay(setIdx, tick);
 
         if (wayIdx == waySize) {
@@ -600,41 +664,11 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
 
     tick += applyLatency(CPU::ICL__GENERIC_CACHE, CPU::WRITE);
   }
-  else {
-    FTL::Request reqInternal(lineCountInSuperPage, req);
-
-    pFTL->write(reqInternal, tick);
-  }
 
   stat.request[1]++;
 
   if (ret) {
     stat.cache[1]++;
-
-    // TODO: Make configurable
-    uint32_t setIdx, wayIdx;
-    uint32_t row, col;  // Variable for I/O position (IOFlag)
-    uint32_t count = 0;
-
-    for (setIdx = 0; setIdx < setSize; setIdx++) {
-      for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
-        if (cacheData[setIdx][wayIdx].valid) {
-          calcIOPosition(cacheData[setIdx][wayIdx].tag, row, col);
-
-          evictData[row][col] =
-              compareFunction(evictData[row][col], cacheData[setIdx] + wayIdx);
-
-          count++;
-        }
-      }
-    }
-
-    // 80%
-    if (count * 1.25 >= lineCountInSuperPage * parallelIO) {
-      tick += CACHE_DELAY * setSize * waySize * 8;
-
-      evictCache(tick, false);
-    }
   }
 
   return ret;

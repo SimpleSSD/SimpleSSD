@@ -44,6 +44,7 @@ class PageMapping : public AbstractFTL {
   std::unordered_map<uint32_t, Block> blocks;
   std::unordered_map<uint32_t, Block> freeBlocks;
   std::vector<uint32_t> lastFreeBlock;
+  Bitset lastFreeBlockIOMap;
   uint32_t lastFreeBlockIndex;
 
   bool bReclaimMore;
@@ -58,7 +59,7 @@ class PageMapping : public AbstractFTL {
   float freeBlockRatio();
   uint32_t convertBlockIdx(uint32_t);
   uint32_t getFreeBlock(uint32_t);
-  uint32_t getLastFreeBlock();
+  uint32_t getLastFreeBlock(Bitset &);
   void selectVictimBlock(std::vector<uint32_t> &, uint64_t &);
   void doGarbageCollection(std::vector<uint32_t> &, uint64_t &);
 
