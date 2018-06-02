@@ -38,6 +38,7 @@ typedef enum {
   ICL_EVICT_GRANULARITY,
   ICL_CACHE_SIZE,
   ICL_WAY_SIZE,
+  ICL_CACHE_LATENCY,
 } ICL_CONFIG;
 
 typedef enum {
@@ -65,6 +66,7 @@ class Config : public BaseConfig {
   float prefetchRatio;         //!< Default: 0.5
   PREFETCH_MODE prefetchMode;  //!< Default: MODE_ALL
   EVICT_MODE evictMode;        //!< Default: MODE_ALL
+  uint64_t cacheLatency;       //!< Default:
 
  public:
   Config();

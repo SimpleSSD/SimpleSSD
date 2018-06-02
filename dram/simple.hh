@@ -41,6 +41,7 @@ class SimpleDRAM : public AbstractDRAM {
   double interfaceBandwidth;
 
   uint64_t lastDRAMAccess;
+  bool ignoreScheduling;
 
   Event autoRefresh;
 
@@ -56,6 +57,9 @@ class SimpleDRAM : public AbstractDRAM {
 
   void read(void *, uint64_t, uint64_t &) override;
   void write(void *, uint64_t, uint64_t &) override;
+
+  void setScheduling(bool) override;
+  bool isScheduling() override;
 
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;

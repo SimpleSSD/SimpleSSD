@@ -29,8 +29,6 @@ namespace SimpleSSD {
 
 namespace ICL {
 
-#define CACHE_DELAY 40  // 1B / 40ps -> 64B / 2500ps (400MHz)
-
 GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
     : AbstractCache(c, f, d),
       lineCountInSuperPage(f->getInfo()->ioUnitInPage),
@@ -85,6 +83,7 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
   prefetchEnabled = false;
   hitCounter = 0;
   accessCounter = 0;
+  prefetchTrigger = std::numeric_limits<uint64_t>::max();
 
   evictMode = (EVICT_MODE)conf.readInt(CONFIG_ICL, ICL_EVICT_GRANULARITY);
   prefetchMode =
@@ -117,7 +116,7 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
         uint64_t min = std::numeric_limits<uint64_t>::max();
 
         for (uint32_t i = 0; i < waySize; i++) {
-          tick += CACHE_DELAY * 8;
+          tick += getCacheLatency() * 8;
           // pDRAM->read(MAKE_META_ADDR(setIdx, i, offsetof(Line, insertedAt)),
           // 8, tick);
 
@@ -153,7 +152,7 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
         uint64_t min = std::numeric_limits<uint64_t>::max();
 
         for (uint32_t i = 0; i < waySize; i++) {
-          tick += CACHE_DELAY * 8;
+          tick += getCacheLatency() * 8;
           // pDRAM->read(MAKE_META_ADDR(setIdx, i, offsetof(Line,
           // lastAccessed)), 8, tick);
 
@@ -202,6 +201,13 @@ GenericCache::~GenericCache() {
   }
 }
 
+uint64_t GenericCache::getCacheLatency() {
+  static uint64_t latency = conf.readUint(CONFIG_ICL, ICL_CACHE_LATENCY);
+  static uint64_t core = conf.readUint(CONFIG_CPU, CPU::CPU_CORE_ICL);
+
+  return (core == 0) ? 0 : latency / core;
+}
+
 uint32_t GenericCache::calcSetIndex(uint64_t lca) {
   return lca % setSize;
 }
@@ -221,7 +227,7 @@ uint32_t GenericCache::getEmptyWay(uint32_t setIdx, uint64_t &tick) {
     Line &line = cacheData[setIdx][wayIdx];
 
     if (!line.valid) {
-      tick += CACHE_DELAY * 8;
+      tick += getCacheLatency() * 8;
       // pDRAM->read(MAKE_META_ADDR(setIdx, wayIdx, offsetof(Line, insertedAt)),
       // 8, tick);
 
@@ -242,7 +248,7 @@ uint32_t GenericCache::getValidWay(uint64_t lca, uint64_t &tick) {
   for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
     Line &line = cacheData[setIdx][wayIdx];
 
-    tick += CACHE_DELAY * 8;
+    tick += getCacheLatency() * 8;
     // pDRAM->read(MAKE_META_ADDR(setIdx, wayIdx, offsetof(Line, tag)), 8,
     // tick);
 
@@ -268,7 +274,7 @@ void GenericCache::checkPrefetch(Request &req) {
       req.range.slpn * lineSize + req.offset) {
     if (!prefetchEnabled) {
       hitCounter++;
-      accessCounter += req.length;
+      accessCounter += lastRequest.offset + lastRequest.length;
 
       if (hitCounter >= prefetchIOCount &&
           (float)accessCounter / superPageSize >= prefetchIORatio) {
@@ -338,6 +344,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
   if (useReadCaching) {
     uint32_t setIdx = calcSetIndex(req.range.slpn);
     uint32_t wayIdx;
+    uint64_t arrived = tick;
 
     if (useReadPrefetch) {
       checkPrefetch(req);
@@ -347,7 +354,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 
     // Do we have valid data?
     if (wayIdx != waySize) {
-      uint64_t arrived = tick;
+      uint64_t tickBackup = tick;
 
       // Wait cache to be valid
       if (tick < cacheData[setIdx][wayIdx].insertedAt) {
@@ -366,9 +373,26 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
                  setIdx, wayIdx, arrived, tick, tick - arrived);
 
       ret = true;
+
+      // Do we need to prefetch data?
+      if (useReadPrefetch && req.range.slpn == prefetchTrigger) {
+        debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Prefetch triggered");
+
+        req.range.slpn = lastPrefetched;
+
+        // Backup tick
+        arrived = tick;
+        tick = tickBackup;
+
+        // TEMP: Disable DRAM calculation for prevent conflict
+        pDRAM->setScheduling(false);
+
+        goto ICL_GENERIC_CACHE_READ;
+      }
     }
     // We should read data from NVM
     else {
+    ICL_GENERIC_CACHE_READ:
       FTL::Request reqInternal(lineCountInSuperPage, req);
       std::vector<std::pair<uint64_t, uint64_t>> readList;
       uint32_t row, col;  // Variable for I/O position (IOFlag)
@@ -377,14 +401,22 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
       uint64_t beginAt, finishedAt = tick;
 
       if (prefetchEnabled) {
+        if (!ret) {
+          debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Read ahead triggered");
+        }
+
         beginLCA = req.range.slpn;
 
         if (prefetchMode == MODE_ALL) {
           endLCA = beginLCA + lineCountInMaxIO;
+          prefetchTrigger = beginLCA + lineCountInMaxIO / 2;
         }
         else {
           endLCA = beginLCA + lineCountInSuperPage;
+          prefetchTrigger = beginLCA + lineCountInSuperPage / 2;
         }
+
+        lastPrefetched = endLCA;
       }
       else {
         beginLCA = req.range.slpn;
@@ -461,6 +493,22 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
       }
 
       tick = finishedAt;
+
+      if (prefetchEnabled) {
+        if (ret) {
+          // This request was prefetch
+          debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Prefetch done");
+
+          // Restore tick
+          tick = arrived;
+        }
+        else {
+          debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Read ahead done");
+        }
+
+        // TEMP: Restore
+        pDRAM->setScheduling(true);
+      }
     }
 
     tick += applyLatency(CPU::ICL__GENERIC_CACHE, CPU::READ);
@@ -633,7 +681,7 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
           }
         }
 
-        tick += CACHE_DELAY * setSize * waySize * 8;
+        tick += getCacheLatency() * setSize * waySize * 8;
 
         evictCache(tick, true);
 
@@ -685,7 +733,7 @@ void GenericCache::flush(LPNRange &range, uint64_t &tick) {
       for (uint32_t wayIdx = 0; wayIdx < waySize; wayIdx++) {
         Line &line = cacheData[setIdx][wayIdx];
 
-        tick += CACHE_DELAY * 8;
+        tick += getCacheLatency() * 8;
 
         if (line.tag >= range.slpn && line.tag < range.slpn + range.nlp) {
           if (line.dirty) {
@@ -718,7 +766,7 @@ void GenericCache::trim(LPNRange &range, uint64_t &tick) {
       for (uint32_t wayIdx = 0; wayIdx < waySize; wayIdx++) {
         Line &line = cacheData[setIdx][wayIdx];
 
-        tick += CACHE_DELAY * 8;
+        tick += getCacheLatency() * 8;
 
         if (line.tag >= range.slpn && line.tag < range.slpn + range.nlp) {
           reqInternal.lpn = line.tag / lineCountInSuperPage;

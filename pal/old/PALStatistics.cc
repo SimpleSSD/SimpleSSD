@@ -725,11 +725,11 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
 #endif  // Polished stats
 }
 
-#define fDPRINTF(out_to, fmt, ...)    \
-  do {                                \
-    char buf[1024];                   \
-    sprintf(buf, fmt, ##__VA_ARGS__); \
-    DPRINTF(out_to, "%s", buf);       \
+#define fDPRINTF(out_to, fmt, ...)                                             \
+  do {                                                                         \
+    char buf[1024];                                                            \
+    sprintf(buf, fmt, ##__VA_ARGS__);                                          \
+    DPRINTF(out_to, "%s", buf);                                                \
   } while (0);
 
 void PALStatistics::PrintFinalStats(uint64_t sim_time_ps) {
@@ -833,24 +833,24 @@ void PALStatistics::PrintFinalStats(uint64_t sim_time_ps) {
 }
 
 void PALStatistics::PrintStats(uint64_t sim_time_ps) {
-// uint64_t elapsed_time_ps = (sim_time_ps - sim_start_time_ps) + 1;
-// if (LastExecutionTime == 0)
-//   LastExecutionTime = sim_start_time_ps;
-// DPRINTF(PAL, "Execution time = %" PRIu64 "\n", sim_time_ps);
-// DPRINTF(PAL, "Last Execution time = %" PRIu64 "\n", LastExecutionTime);
-// if (sim_start_time_ps >= sim_time_ps)  // abnormal case
-// {
-//   elapsed_time_ps = sim_time_ps + 1;
-// }
+  // uint64_t elapsed_time_ps = (sim_time_ps - sim_start_time_ps) + 1;
+  // if (LastExecutionTime == 0)
+  //   LastExecutionTime = sim_start_time_ps;
+  // DPRINTF(PAL, "Execution time = %" PRIu64 "\n", sim_time_ps);
+  // DPRINTF(PAL, "Last Execution time = %" PRIu64 "\n", LastExecutionTime);
+  // if (sim_start_time_ps >= sim_time_ps)  // abnormal case
+  // {
+  //   elapsed_time_ps = sim_time_ps + 1;
+  // }
 
-// DPRINTF(PAL, "[ PAL Stats ]\n");
+  // DPRINTF(PAL, "[ PAL Stats ]\n");
 
 #if 1
 #define SIM_TIME_SEC ((long double)elapsed_time_ps / PSEC)
 #define BUSY_TIME_SEC ((long double)ExactBusyTime / PSEC)
-#define TRANSFER_TOTAL_MB                                \
-  ((long double)(Access_Capacity.vals[OPER_READ].sum +   \
-                 Access_Capacity.vals[OPER_WRITE].sum) / \
+#define TRANSFER_TOTAL_MB                                                      \
+  ((long double)(Access_Capacity.vals[OPER_READ].sum +                         \
+                 Access_Capacity.vals[OPER_WRITE].sum) /                       \
    MBYTE)
 
 // fDPRINTF(PAL, "Sim.Time :  %Lf Sec. , %" PRIu64 " ps\n", SIM_TIME_SEC,

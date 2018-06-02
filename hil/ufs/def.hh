@@ -144,7 +144,7 @@ enum UFSLINK {
   UFSHCD_LINK_IS_UP
 };
 
-#define MAKE_UICARG(mib, selector) \
+#define MAKE_UICARG(mib, selector)                                             \
   (((uint32_t)(mib) << 16) | ((uint32_t)(selector)&0xFFFF))
 
 #define UFS_BIT(x) (1L << (x))

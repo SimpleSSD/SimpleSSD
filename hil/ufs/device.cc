@@ -152,10 +152,10 @@ Device::Device(DMAInterface *d, ConfigReader &c)
       lun(false, 0x00, c) {
   // Initialize Strings
   sprintf((char *)strManufacturer, "CAMELab");
-  sprintf((char *)strProductName, "gem5 UFS Device");
+  sprintf((char *)strProductName, "SimpleSSD UFS Device");
   sprintf((char *)strSerialNumber, "000000000000");
   sprintf((char *)strOEMID, "None");
-  sprintf((char *)strProductRevision, "1.0");
+  sprintf((char *)strProductRevision, "v02.01");
 
   // Initialize device descriptor
   memset(deviceDescriptor, 0, IDN_DEVICE_LENGTH);

@@ -31,7 +31,8 @@ SimpleDRAM::Stat::Stat() {
   memset(this, 0, sizeof(Stat));
 }
 
-SimpleDRAM::SimpleDRAM(ConfigReader &p) : AbstractDRAM(p), lastDRAMAccess(0) {
+SimpleDRAM::SimpleDRAM(ConfigReader &p)
+    : AbstractDRAM(p), lastDRAMAccess(0), ignoreScheduling(false) {
   pageFetchLatency = pTiming->tRP + pTiming->tRCD + pTiming->tCL;
   interfaceBandwidth = 2.0 * pStructure->busWidth * pStructure->chip *
                        pStructure->rank * pStructure->channel / 8.0 /
@@ -53,19 +54,23 @@ SimpleDRAM::~SimpleDRAM() {
 }
 
 uint64_t SimpleDRAM::updateDelay(uint64_t latency, uint64_t &tick) {
-  uint64_t beginAt = 0;
+  uint64_t beginAt = tick;
 
   if (tick > 0) {
-    if (lastDRAMAccess <= tick) {
-      beginAt = tick;
-      lastDRAMAccess = tick + latency;
+    if (ignoreScheduling) {
+      tick += latency;
     }
     else {
-      beginAt = lastDRAMAccess;
-      lastDRAMAccess += latency;
-    }
+      if (lastDRAMAccess <= tick) {
+        lastDRAMAccess = tick + latency;
+      }
+      else {
+        beginAt = lastDRAMAccess;
+        lastDRAMAccess += latency;
+      }
 
-    tick = lastDRAMAccess;
+      tick = lastDRAMAccess;
+    }
   }
 
   return beginAt;
@@ -84,6 +89,14 @@ void SimpleDRAM::updateStats(uint64_t cycle) {
   stat.preStandby += energy.pre_stdby_energy;
   stat.refresh += energy.ref_energy;
   stat.total += energy.total_energy;
+}
+
+void SimpleDRAM::setScheduling(bool enable) {
+  ignoreScheduling = !enable;
+}
+
+bool SimpleDRAM::isScheduling() {
+  return !ignoreScheduling;
 }
 
 void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {

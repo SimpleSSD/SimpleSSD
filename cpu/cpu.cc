@@ -663,12 +663,16 @@ void CPU::execute(NAMESPACE ns, FUNCTION fct, DMAFunction &func, void *context,
   switch (ns) {
     case FTL:
     case FTL__PAGE_MAPPING:
-      pCore = &ftlCore.at(leastBusyCPU(ftlCore));
+      if (ftlCore.size() > 0) {
+        pCore = &ftlCore.at(leastBusyCPU(ftlCore));
+      }
 
       break;
     case ICL:
     case ICL__GENERIC_CACHE:
-      pCore = &iclCore.at(leastBusyCPU(iclCore));
+      if (iclCore.size() > 0) {
+        pCore = &iclCore.at(leastBusyCPU(iclCore));
+      }
 
       break;
     case HIL:
@@ -680,7 +684,9 @@ void CPU::execute(NAMESPACE ns, FUNCTION fct, DMAFunction &func, void *context,
     case NVME__OCSSD:
     case UFS__DEVICE:
     case SATA__DEVICE:
-      pCore = &hilCore.at(leastBusyCPU(hilCore));
+      if (hilCore.size() > 0) {
+        pCore = &hilCore.at(leastBusyCPU(hilCore));
+      }
 
       break;
     default:
@@ -689,21 +695,26 @@ void CPU::execute(NAMESPACE ns, FUNCTION fct, DMAFunction &func, void *context,
       break;
   }
 
-  // Get CPI table
-  auto table = cpi.find(ns);
+  if (pCore) {
+    // Get CPI table
+    auto table = cpi.find(ns);
 
-  if (table == cpi.end()) {
-    panic("Namespace %u not defined in CPI table", ns);
+    if (table == cpi.end()) {
+      panic("Namespace %u not defined in CPI table", ns);
+    }
+
+    // Get CPI
+    auto inst = table->second.find(fct);
+
+    if (inst == table->second.end()) {
+      panic("Namespace %u does not have function %u", ns, fct);
+    }
+
+    pCore->submitJob(JobEntry(func, context, &inst->second), delay);
   }
-
-  // Get CPI
-  auto inst = table->second.find(fct);
-
-  if (inst == table->second.end()) {
-    panic("Namespace %u does not have function %u", ns, fct);
+  else {
+    func(getTick(), context);
   }
-
-  pCore->submitJob(JobEntry(func, context, &inst->second), delay);
 }
 
 uint64_t CPU::applyLatency(NAMESPACE ns, FUNCTION fct) {
@@ -713,12 +724,16 @@ uint64_t CPU::applyLatency(NAMESPACE ns, FUNCTION fct) {
   switch (ns) {
     case FTL:
     case FTL__PAGE_MAPPING:
-      pCore = &ftlCore.at(leastBusyCPU(ftlCore));
+      if (ftlCore.size() > 0) {
+        pCore = &ftlCore.at(leastBusyCPU(ftlCore));
+      }
 
       break;
     case ICL:
     case ICL__GENERIC_CACHE:
-      pCore = &iclCore.at(leastBusyCPU(iclCore));
+      if (iclCore.size() > 0) {
+        pCore = &iclCore.at(leastBusyCPU(iclCore));
+      }
 
       break;
     case HIL:
@@ -730,7 +745,9 @@ uint64_t CPU::applyLatency(NAMESPACE ns, FUNCTION fct) {
     case NVME__OCSSD:
     case UFS__DEVICE:
     case SATA__DEVICE:
-      pCore = &hilCore.at(leastBusyCPU(hilCore));
+      if (hilCore.size() > 0) {
+        pCore = &hilCore.at(leastBusyCPU(hilCore));
+      }
 
       break;
     default:
@@ -739,23 +756,27 @@ uint64_t CPU::applyLatency(NAMESPACE ns, FUNCTION fct) {
       break;
   }
 
-  // Get CPI table
-  auto table = cpi.find(ns);
+  if (pCore) {
+    // Get CPI table
+    auto table = cpi.find(ns);
 
-  if (table == cpi.end()) {
-    panic("Namespace %u not defined in CPI table", ns);
+    if (table == cpi.end()) {
+      panic("Namespace %u not defined in CPI table", ns);
+    }
+
+    // Get CPI
+    auto inst = table->second.find(fct);
+
+    if (inst == table->second.end()) {
+      panic("Namespace %u does not have function %u", ns, fct);
+    }
+
+    pCore->addStat(inst->second);
+
+    return inst->second.latency;
   }
 
-  // Get CPI
-  auto inst = table->second.find(fct);
-
-  if (inst == table->second.end()) {
-    panic("Namespace %u does not have function %u", ns, fct);
-  }
-
-  pCore->addStat(inst->second);
-
-  return inst->second.latency;
+  return 0;
 }
 
 void CPU::getStatList(std::vector<Stats> &list, std::string prefix) {

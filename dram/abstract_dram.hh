@@ -72,6 +72,10 @@ class AbstractDRAM : public StatObject {
   virtual void read(void *, uint64_t, uint64_t &) = 0;
   virtual void write(void *, uint64_t, uint64_t &) = 0;
 
+  // TEMP: Should be removed on v2.2
+  virtual void setScheduling(bool) {};
+  virtual bool isScheduling() { return true; }
+
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;
   void resetStatValues() override;

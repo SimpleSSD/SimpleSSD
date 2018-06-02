@@ -27,12 +27,12 @@ namespace HIL {
 
 namespace SATA {
 
-#define MAKE_LBA(req)                                                   \
-  ((uint64_t)req.regH2D.lbaL[0] | ((uint64_t)req.regH2D.lbaL[1] << 8) | \
+#define MAKE_LBA(req)                                                          \
+  ((uint64_t)req.regH2D.lbaL[0] | ((uint64_t)req.regH2D.lbaL[1] << 8) |        \
    ((uint64_t)req.regH2D.lbaL[2] << 16))
-#define MAKE_LBA_EXT(req)                 \
-  (((uint64_t)req.regH2D.lbaH[0] << 24) | \
-   ((uint64_t)req.regH2D.lbaH[1] << 32) | \
+#define MAKE_LBA_EXT(req)                                                      \
+  (((uint64_t)req.regH2D.lbaH[0] << 24) |                                      \
+   ((uint64_t)req.regH2D.lbaH[1] << 32) |                                      \
    ((uint64_t)req.regH2D.lbaH[2] << 40) | MAKE_LBA(req))
 
 uint32_t makeCount(FIS &req) {

@@ -288,44 +288,36 @@ void Namespace::write(SQEntryWrapper &req, RequestFunction &func) {
              nsid, slba, nlb);
 
   if (!err) {
-    DMAFunction doRead = [this](uint64_t, void *context) {
+    DMAFunction doRead = [this](uint64_t tick, void *context) {
       DMAFunction dmaDone = [this](uint64_t tick, void *context) {
-        DMAFunction doWrite = [this](uint64_t tick, void *context) {
-          IOContext *pContext = (IOContext *)context;
+        IOContext *pContext = (IOContext *)context;
 
+        pContext->beginAt++;
+
+        if (pContext->beginAt == 2) {
           debugprint(LOG_HIL_NVME,
-                     "NVM     | WRITE | NSID %-5d | %" PRIX64
-                     " + %d | NAND %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                     "NVM     | WRITE | NSID %-5d | %" PRIX64 " + %d | %" PRIu64
+                     " - %" PRIu64 " (%" PRIu64 ")",
                      nsid, pContext->slba, pContext->nlb, pContext->tick, tick,
                      tick - pContext->tick);
 
           pContext->function(pContext->resp);
 
+          if (pContext->buffer) {
+            pDisk->write(pContext->slba, pContext->nlb, pContext->buffer);
+
+            free(pContext->buffer);
+          }
+
+          delete pContext->dma;
           delete pContext;
-        };
-
-        IOContext *pContext = (IOContext *)context;
-
-        pContext->tick = tick;
-
-        if (pContext->buffer) {
-          pDisk->write(pContext->slba, pContext->nlb, pContext->buffer);
-
-          free(pContext->buffer);
         }
-
-        debugprint(LOG_HIL_NVME,
-                   "NVM     | WRITE | NSID %-5d | %" PRIX64
-                   " + %d | DMA %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                   nsid, pContext->slba, pContext->nlb, pContext->beginAt, tick,
-                   tick - pContext->beginAt);
-
-        delete pContext->dma;
-
-        pParent->write(this, pContext->slba, pContext->nlb, doWrite, context);
       };
 
       IOContext *pContext = (IOContext *)context;
+
+      pContext->tick = tick;
+      pContext->beginAt = 0;
 
       if (pDisk) {
         pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
@@ -337,6 +329,8 @@ void Namespace::write(SQEntryWrapper &req, RequestFunction &func) {
         pContext->dma->read(0, pContext->nlb * info.lbaSize, nullptr, dmaDone,
                             context);
       }
+
+      pParent->write(this, pContext->slba, pContext->nlb, dmaDone, context);
     };
 
     IOContext *pContext = new IOContext(func, resp);
@@ -385,14 +379,16 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
              nsid, slba, nlb);
 
   if (!err) {
-    DMAFunction doRead = [this](uint64_t, void *context) {
-      DMAFunction doWrite = [this](uint64_t tick, void *context) {
-        DMAFunction dmaDone = [this](uint64_t tick, void *context) {
-          IOContext *pContext = (IOContext *)context;
+    DMAFunction doRead = [this](uint64_t tick, void *context) {
+      DMAFunction dmaDone = [this](uint64_t tick, void *context) {
+        IOContext *pContext = (IOContext *)context;
 
+        pContext->beginAt++;
+
+        if (pContext->beginAt == 2) {
           debugprint(LOG_HIL_NVME,
-                     "NVM     | READ  | NSID %-5d | %" PRIX64
-                     " + %d | DMA %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                     "NVM     | READ  | NSID %-5d | %" PRIX64 " + %d | %" PRIu64
+                     " - %" PRIu64 " (%" PRIu64 ")",
                      nsid, pContext->slba, pContext->nlb, pContext->tick, tick,
                      tick - pContext->tick);
 
@@ -404,34 +400,27 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
 
           delete pContext->dma;
           delete pContext;
-        };
-
-        IOContext *pContext = (IOContext *)context;
-
-        debugprint(LOG_HIL_NVME,
-                   "NVM     | READ  | NSID %-5d | %" PRIX64
-                   " + %d | NAND %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                   nsid, pContext->slba, pContext->nlb, pContext->beginAt, tick,
-                   tick - pContext->beginAt);
-
-        pContext->tick = tick;
-
-        if (pDisk) {
-          pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
-
-          pDisk->read(pContext->slba, pContext->nlb, pContext->buffer);
-          pContext->dma->write(0, pContext->nlb * info.lbaSize,
-                               pContext->buffer, dmaDone, context);
-        }
-        else {
-          pContext->dma->write(0, pContext->nlb * info.lbaSize, nullptr,
-                               dmaDone, context);
         }
       };
 
       IOContext *pContext = (IOContext *)context;
 
-      pParent->read(this, pContext->slba, pContext->nlb, doWrite, pContext);
+      pContext->tick = tick;
+      pContext->beginAt = 0;
+
+      pParent->read(this, pContext->slba, pContext->nlb, dmaDone, pContext);
+
+      if (pDisk) {
+        pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
+
+        pDisk->read(pContext->slba, pContext->nlb, pContext->buffer);
+        pContext->dma->write(0, pContext->nlb * info.lbaSize, pContext->buffer,
+                             dmaDone, context);
+      }
+      else {
+        pContext->dma->write(0, pContext->nlb * info.lbaSize, nullptr, dmaDone,
+                             context);
+      }
     };
 
     IOContext *pContext = new IOContext(func, resp);

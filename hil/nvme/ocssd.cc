@@ -1215,16 +1215,19 @@ void OpenChannelSSD::physicalPageWrite(SQEntryWrapper &req,
     pContext->slba = ppa;
     pContext->nlb = nppa;
 
-    DMAFunction doDMA = [this](uint64_t, void *context) {
+    DMAFunction doDMA = [this](uint64_t now, void *context) {
       DMAFunction doWrite = [this](uint64_t, void *context) {
         DMAFunction dmaDone = [this](uint64_t now, void *context) {
           DMAFunction nandDone = [](uint64_t now, void *context) {
             VectorContext *pContext = (VectorContext *)context;
 
             debugprint(LOG_HIL_NVME,
-                       "OCSSD   | Physical Block Write  | %" PRIu64
-                       " - %" PRIu64 " (%" PRIu64 ")",
+                       "OCSSD   | Physical Page Write  | %" PRIu64 " - %" PRIu64
+                       " (%" PRIu64 ")",
                        pContext->beginAt, now, now - pContext->beginAt);
+
+            pContext->resp.entry.dword0 = 0xFFFFFFFF;
+            pContext->resp.entry.reserved = 0xFFFFFFFF;
 
             pContext->function(pContext->resp);
 
@@ -1290,7 +1293,7 @@ void OpenChannelSSD::physicalPageWrite(SQEntryWrapper &req,
                                     pContext->buffer, doWrite, context);
       }
       else {
-        doWrite(0, context);
+        doWrite(now, context);
       }
     };
 
@@ -1336,7 +1339,7 @@ void OpenChannelSSD::physicalPageRead(SQEntryWrapper &req,
     pContext->slba = ppa;
     pContext->nlb = nppa;
 
-    DMAFunction doDMA = [this](uint64_t, void *context) {
+    DMAFunction doDMA = [this](uint64_t now, void *context) {
       DMAFunction doRead = [this](uint64_t now, void *context) {
         DMAFunction nandDone = [](uint64_t now, void *context) {
           DMAFunction dmaDone = [](uint64_t now, void *context) {
@@ -1346,6 +1349,9 @@ void OpenChannelSSD::physicalPageRead(SQEntryWrapper &req,
                        "OCSSD   | Physical Block Read   | %" PRIu64
                        " - %" PRIu64 " (%" PRIu64 ")",
                        pContext->beginAt, now, now - pContext->beginAt);
+
+            pContext->resp.entry.dword0 = 0xFFFFFFFF;
+            pContext->resp.entry.reserved = 0xFFFFFFFF;
 
             pContext->function(pContext->resp);
 
@@ -1411,7 +1417,7 @@ void OpenChannelSSD::physicalPageRead(SQEntryWrapper &req,
                                     pContext->buffer, doRead, context);
       }
       else {
-        doRead(0, context);
+        doRead(now, context);
       }
     };
 
@@ -1625,8 +1631,8 @@ void OpenChannelSSD::read(SQEntryWrapper &req, RequestFunction &func) {
         IOContext *pContext = (IOContext *)context;
 
         debugprint(LOG_HIL_NVME,
-                   "OCSSD   | READ  | %" PRIX64
-                   " + %d | NAND %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                   "OCSSD   | READ  | %" PRIX64 " + %d | NAND %" PRIu64
+                   " - %" PRIu64 " (%" PRIu64 ")",
                    pContext->slba, pContext->nlb, pContext->beginAt, tick,
                    tick - pContext->beginAt);
 
@@ -1709,8 +1715,8 @@ void OpenChannelSSD::write(SQEntryWrapper &req, RequestFunction &func) {
         }
 
         debugprint(LOG_HIL_NVME,
-                   "OCSSD   | WRITE | %" PRIX64
-                   " + %d | DMA %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                   "OCSSD   | WRITE | %" PRIX64 " + %d | DMA %" PRIu64
+                   " - %" PRIu64 " (%" PRIu64 ")",
                    pContext->slba, pContext->nlb, pContext->beginAt, tick,
                    tick - pContext->beginAt);
 
@@ -1920,7 +1926,7 @@ void OpenChannelSSD::vectorChunkRead(SQEntryWrapper &req,
 
     VectorContext *pContext = (VectorContext *)context;
 
-    if (pContext->nlb > 0) {
+    if (pContext->nlb > 1) {
       uint64_t size = pContext->nlb * 8;
 
       pContext->buffer = (uint8_t *)calloc(size, 1);
@@ -2000,7 +2006,7 @@ void OpenChannelSSD::vectorChunkWrite(SQEntryWrapper &req,
       std::vector<::CPDPBP> list;
 
       // Collect LBA List
-      if (pContext->nlb > 0) {
+      if (pContext->nlb > 1) {
         for (uint64_t i = 0; i < pContext->nlb; i++) {
           pContext->lbaList.push_back(*(uint64_t *)(pContext->buffer + i * 8));
         }
@@ -2017,7 +2023,7 @@ void OpenChannelSSD::vectorChunkWrite(SQEntryWrapper &req,
 
     VectorContext *pContext = (VectorContext *)context;
 
-    if (pContext->nlb > 0) {
+    if (pContext->nlb > 1) {
       uint64_t size = pContext->nlb * 8;
 
       pContext->buffer = (uint8_t *)calloc(size, 1);
@@ -2078,7 +2084,7 @@ void OpenChannelSSD::vectorChunkReset(SQEntryWrapper &req,
     std::vector<::CPDPBP> list;
 
     // Collect LBA List
-    if (pContext->nlb > 0) {
+    if (pContext->nlb > 1) {
       for (uint64_t i = 0; i < pContext->nlb; i++) {
         lbaList.push_back(*(uint64_t *)(pContext->buffer + i * 8));
       }
@@ -2096,7 +2102,7 @@ void OpenChannelSSD::vectorChunkReset(SQEntryWrapper &req,
   CPUContext *pCPU = new CPUContext(doRead, pContext, CPU::NVME__OCSSD,
                                     CPU::VECTOR_CHUNK_RESET);
 
-  if (pContext->nlb > 0) {
+  if (pContext->nlb > 1) {
     uint64_t size = pContext->nlb * 8;
 
     pContext->buffer = (uint8_t *)calloc(size, 1);

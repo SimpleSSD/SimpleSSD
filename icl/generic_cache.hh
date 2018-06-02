@@ -51,6 +51,8 @@ class GenericCache : public AbstractCache {
   bool prefetchEnabled;
   uint32_t hitCounter;
   uint32_t accessCounter;
+  uint64_t prefetchTrigger;
+  uint64_t lastPrefetched;
 
   PREFETCH_MODE prefetchMode;
   EVICT_MODE evictMode;
@@ -63,6 +65,8 @@ class GenericCache : public AbstractCache {
 
   std::vector<Line *> cacheData;
   std::vector<Line **> evictData;
+
+  uint64_t getCacheLatency();
 
   uint32_t calcSetIndex(uint64_t);
   void calcIOPosition(uint64_t, uint32_t &, uint32_t &);

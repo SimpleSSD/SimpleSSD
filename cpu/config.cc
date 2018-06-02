@@ -64,15 +64,6 @@ void Config::update() {
   if (clock == 0) {
     panic("Invalid ClockSpeed");
   }
-  if (hilCore == 0) {
-    panic("Invalid ClockSpeed");
-  }
-  if (iclCore == 0) {
-    panic("Invalid ClockSpeed");
-  }
-  if (ftlCore == 0) {
-    panic("Invalid ClockSpeed");
-  }
 }
 
 uint64_t Config::readUint(uint32_t idx) {

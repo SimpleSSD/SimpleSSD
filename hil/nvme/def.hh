@@ -35,7 +35,7 @@ namespace NVMe {
 #define NSID_LOWEST 0x00000001
 #define NSID_ALL 0xFFFFFFFF
 
-#define MAKE_SGL_ID(type, subtype) \
+#define MAKE_SGL_ID(type, subtype)                                             \
   (uint8_t)(((type << 4) & 0xF0) | (subtype & 0x0F))
 #define SGL_TYPE(id) (uint8_t)(id >> 4)
 #define SGL_SUBTYPE(id) (uint8_t)(id & 0x0F)
