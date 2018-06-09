@@ -187,8 +187,8 @@ PAL2::~PAL2() {
   delete DieTimeSlots;
   delete MergedTimeSlots;
 
-  delete ChFreeSlots;
-  delete DieFreeSlots;
+  // delete ChFreeSlots;
+  // delete DieFreeSlots;
 }
 void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   // ensure we can erase multiple blocks from single request
@@ -233,7 +233,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
           if (conflicts)
             DMA0tickFrom = tickDMA0;
         }
-          /*=========== CONFLICT check - DMA0 ============*/
+        /*=========== CONFLICT check - DMA0 ============*/
 #if GATHER_RESOURCE_CONFLICT
         if (conflicts && !(confType & CONFLICT_MEM)) {
           confType |= CONFLICT_DMA0;
@@ -492,7 +492,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
 #endif  // END MERGE TIMESLOT
     }
 
-      // print Log
+    // print Log
 #if 1  // DBG_PRINT_BUSY
     if (1) {
 #if DBG_PRINT_REQUEST
