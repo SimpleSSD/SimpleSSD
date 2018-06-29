@@ -33,10 +33,9 @@ SimpleDRAM::Stat::Stat() {
 
 SimpleDRAM::SimpleDRAM(ConfigReader &p)
     : AbstractDRAM(p), lastDRAMAccess(0), ignoreScheduling(false) {
-  pageFetchLatency = pTiming->tRP + pTiming->tRCD + pTiming->tCL;
+  pageFetchLatency = pTiming->tRP + pTiming->tRAS;
   interfaceBandwidth = 2.0 * pStructure->busWidth * pStructure->chip *
-                       pStructure->rank * pStructure->channel / 8.0 /
-                       pTiming->tCK;
+                       pStructure->channel / 8.0 / pTiming->tCK;
 
   autoRefresh = allocate([this](uint64_t now) {
     dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
@@ -101,8 +100,9 @@ bool SimpleDRAM::isScheduling() {
 
 void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
-  uint64_t latency = (uint64_t)(
-      pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);
+  uint64_t latency =
+      (uint64_t)(pageCount * (pageFetchLatency +
+                              pStructure->pageSize / interfaceBandwidth));
 
   uint64_t beginAt = updateDelay(latency, tick);
 
@@ -131,8 +131,9 @@ void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
 
 void SimpleDRAM::write(void *addr, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
-  uint64_t latency = (uint64_t)(
-      pageFetchLatency + pageCount * pStructure->pageSize / interfaceBandwidth);
+  uint64_t latency =
+      (uint64_t)(pageCount * (pageFetchLatency +
+                              pStructure->pageSize / interfaceBandwidth));
 
   uint64_t beginAt = updateDelay(latency, tick);
 

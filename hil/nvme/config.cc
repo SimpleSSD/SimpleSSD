@@ -32,6 +32,7 @@ const char NAME_PCIE_GEN[] = "PCIEGeneration";
 const char NAME_PCIE_LANE[] = "PCIELane";
 const char NAME_AXI_BUS_WIDTH[] = "AXIBusWidth";
 const char NAME_AXI_CLOCK[] = "AXIClock";
+const char NAME_FIFO_UNIT[] = "FIFOTransferUnit";
 const char NAME_WORK_INTERVAL[] = "WorkInterval";
 const char NAME_MAX_REQUEST_COUNT[] = "MaxRequestCount";
 const char NAME_MAX_IO_CQUEUE[] = "MaxIOCQueue";
@@ -50,6 +51,7 @@ Config::Config() {
   pcieLane = 4;
   axiWidth = ARM::AXI::BUS_128BIT;
   axiClock = 250000000;
+  fifoUnit = 4096;
   workInterval = 50000;
   maxRequestCount = 4;
   maxIOCQueue = 16;
@@ -114,6 +116,9 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_AXI_CLOCK)) {
     axiClock = strtoul(value, nullptr, 10);
   }
+  else if (MATCH_NAME(NAME_FIFO_UNIT)) {
+    fifoUnit = strtoul(value, nullptr, 10);
+  }
   else if (MATCH_NAME(NAME_WORK_INTERVAL)) {
     workInterval = strtoul(value, nullptr, 10);
   }
@@ -164,6 +169,9 @@ void Config::update() {
   if (maxRequestCount == 0) {
     panic("MaxRequestCount should be larger then 0");
   }
+  if (fifoUnit > 4096) {
+    panic("FIFOTransferUnit should be less than or equal to 4096");
+  }
 }
 
 int64_t Config::readInt(uint32_t idx) {
@@ -190,6 +198,9 @@ uint64_t Config::readUint(uint32_t idx) {
       break;
     case NVME_AXI_CLOCK:
       ret = axiClock;
+      break;
+    case NVME_FIFO_UNIT:
+      ret = fifoUnit;
       break;
     case NVME_WORK_INTERVAL:
       ret = workInterval;

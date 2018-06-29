@@ -36,6 +36,7 @@ typedef enum {
   NVME_PCIE_LANE,
   NVME_AXI_BUS_WIDTH,
   NVME_AXI_CLOCK,
+  NVME_FIFO_UNIT,
   NVME_WORK_INTERVAL,
   NVME_MAX_REQUEST_COUNT,
   NVME_MAX_IO_CQUEUE,
@@ -56,6 +57,7 @@ class Config : public BaseConfig {
   uint8_t pcieLane;              //!< Default: 4
   ARM::AXI::BUS_WIDTH axiWidth;  //!< Default: BUS_128BIT
   uint64_t axiClock;             //!< Default: 250000000 (250MHz)
+  uint64_t fifoUnit;             //!< Default: 4096
   uint64_t workInterval;         //!< Default: 50000 (50ns)
   uint64_t maxRequestCount;      //!< Default: 4
   uint16_t maxIOCQueue;          //!< Default: 16

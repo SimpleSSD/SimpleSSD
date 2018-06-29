@@ -384,9 +384,6 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
         arrived = tick;
         tick = tickBackup;
 
-        // TEMP: Disable DRAM calculation for prevent conflict
-        pDRAM->setScheduling(false);
-
         goto ICL_GENERIC_CACHE_READ;
       }
     }
@@ -401,6 +398,9 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
       uint64_t beginAt, finishedAt = tick;
 
       if (prefetchEnabled) {
+        // TEMP: Disable DRAM calculation for prevent conflict
+        pDRAM->setScheduling(false);
+
         if (!ret) {
           debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Read ahead triggered");
         }
@@ -516,6 +516,8 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
   else {
     FTL::Request reqInternal(lineCountInSuperPage, req);
 
+    pDRAM->write(nullptr, req.length, tick);
+
     pFTL->read(reqInternal, tick);
   }
 
@@ -560,6 +562,10 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       uint64_t arrived = tick;
 
       // Wait cache to be valid
+      if (tick < cacheData[setIdx][wayIdx].insertedAt) {
+        tick = cacheData[setIdx][wayIdx].insertedAt;
+      }
+
       // TODO: TEMPORAL CODE
       // We should only show DRAM latency when cache become dirty
       if (dirty) {
@@ -568,10 +574,6 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
         cacheData[setIdx][wayIdx].lastAccessed = tick;
       }
       else {
-        if (tick < cacheData[setIdx][wayIdx].insertedAt) {
-          tick = cacheData[setIdx][wayIdx].insertedAt;
-        }
-
         cacheData[setIdx][wayIdx].insertedAt = flash;
         cacheData[setIdx][wayIdx].lastAccessed = flash;
       }
@@ -597,6 +599,10 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       // Do we have place to write data?
       if (wayIdx != waySize) {
         // Wait cache to be valid
+        if (tick < cacheData[setIdx][wayIdx].insertedAt) {
+          tick = cacheData[setIdx][wayIdx].insertedAt;
+        }
+
         // TODO: TEMPORAL CODE
         // We should only show DRAM latency when cache become dirty
         if (dirty) {
@@ -605,10 +611,6 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
           cacheData[setIdx][wayIdx].lastAccessed = tick;
         }
         else {
-          if (tick < cacheData[setIdx][wayIdx].insertedAt) {
-            tick = cacheData[setIdx][wayIdx].insertedAt;
-          }
-
           cacheData[setIdx][wayIdx].insertedAt = flash;
           cacheData[setIdx][wayIdx].lastAccessed = flash;
         }
@@ -711,6 +713,9 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
     }
 
     tick += applyLatency(CPU::ICL__GENERIC_CACHE, CPU::WRITE);
+  }
+  else {
+    pDRAM->read(nullptr, req.length, tick);
   }
 
   stat.request[1]++;

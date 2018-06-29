@@ -62,9 +62,10 @@ struct ReadEntry {
   uint64_t id;
   uint64_t insertEndAt;
   uint64_t dmaEndAt;
+  uint64_t latency;
 
   ReadEntry();
-  ReadEntry(uint64_t, uint64_t, uint64_t);
+  ReadEntry(uint64_t, uint64_t, uint64_t, uint64_t);
 };
 
 class FIFO : public DMAInterface {
@@ -100,7 +101,7 @@ class FIFO : public DMAInterface {
 
   std::list<ReadEntry>::iterator find(uint64_t);
 
-  uint64_t calcSize(uint64_t);
+  uint64_t calcSize(uint64_t, bool &);
 
   // Write
   void insertWrite();

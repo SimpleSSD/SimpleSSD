@@ -104,14 +104,27 @@ void Subsystem::convertUnit(Namespace *ns, uint64_t slba, uint64_t nlblk,
   uint64_t nlp;
   uint64_t off;
 
-  slpn = slba / lbaratio;
-  off = slba % lbaratio;
-  nlp = (nlblk + off + lbaratio - 1) / lbaratio;
+  if (lbaratio == 0) {
+    lbaratio = info->lbaSize / logicalPageSize;
 
-  req.range.slpn = slpn + info->range.slpn;
-  req.range.nlp = nlp;
-  req.offset = off * info->lbaSize;
-  req.length = nlblk * info->lbaSize;
+    slpn = slba * lbaratio;
+    nlp = nlblk * lbaratio;
+
+    req.range.slpn = slpn + info->range.slpn;
+    req.range.nlp = nlp;
+    req.offset = 0;
+    req.length = nlblk * info->lbaSize;
+  }
+  else {
+    slpn = slba / lbaratio;
+    off = slba % lbaratio;
+    nlp = (nlblk + off + lbaratio - 1) / lbaratio;
+
+    req.range.slpn = slpn + info->range.slpn;
+    req.range.nlp = nlp;
+    req.offset = off * info->lbaSize;
+    req.length = nlblk * info->lbaSize;
+  }
 }
 
 bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {

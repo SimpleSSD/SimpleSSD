@@ -84,7 +84,7 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   // See Xilinx Gen3 Integrated Block for PCIe
   fifoParam.rqSize = 8192;
   fifoParam.wqSize = 8192;
-  fifoParam.transferUnit = 128;
+  fifoParam.transferUnit = conf.readUint(CONFIG_NVME, NVME_FIFO_UNIT);
   fifoParam.latency = [](uint64_t size) -> uint64_t {
     return ARM::AXI::Stream::calculateDelay(250000000, ARM::AXI::BUS_128BIT,
                                             size);

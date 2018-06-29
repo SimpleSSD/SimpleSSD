@@ -326,7 +326,6 @@ void Device::_writeDMADone(uint64_t tick, void *context) {
 
     Completion resp;
 
-    resp.maskIS = PORT_IRQ_SG_DONE;  // PxIS.DPS
     resp.fis.sdb.type = FIS_TYPE_DEV_BITS;
     resp.fis.sdb.flag = 0x40;
     resp.fis.sdb.payload = (1 << pContext->tag);
@@ -385,7 +384,6 @@ void Device::_readDMADone(uint64_t tick, void *context) {
 
     Completion resp;
 
-    resp.maskIS = PORT_IRQ_SG_DONE;  // PxIS.DPS
     resp.fis.sdb.type = FIS_TYPE_DEV_BITS;
     resp.fis.sdb.flag = 0x40;
     resp.fis.sdb.payload = (1 << pContext->tag);
@@ -421,7 +419,7 @@ void Device::identifyDevice(CommandContext *cmd) {
 
     data[ATA_ID_MAX_MULTSECT] = 0x8000;
     data[ATA_ID_CAPABILITY] = 0x0F00;
-    data[ATA_ID_FIELD_VALID] = 0x0000;
+    data[ATA_ID_FIELD_VALID] = 0x0006;
     data[ATA_ID_MWDMA_MODES] = 0x0007;
     data[ATA_ID_PIO_MODES] = 0x0003;
     data[ATA_ID_EIDE_DMA_MIN] = 120;
@@ -494,10 +492,37 @@ void Device::setMode(CommandContext *cmd) {
   uint8_t fid = cmd->request.regH2D.featureL;
   uint8_t id = cmd->request.regH2D.countL;
 
-  debugprint(LOG_HIL_SATA, "ATA     | SET MODE | Feature %02Xh | ID %02Xh", fid,
-             id);
+  switch (fid) {
+    case FEATURE_SET_XFER_MODE:
+      debugprint(LOG_HIL_SATA, "ATA     | SET MODE | Set Transfer Mode");
 
-  // TODO: Handle SET XFERMODE
+      switch (id & 0xF8) {
+        case 0:
+          if (id & 0x01) {
+            debugprint(LOG_HIL_SATA,
+                       "ATA     | SET MODE | PIO default mode, disable IORDY");
+          }
+          else {
+            debugprint(LOG_HIL_SATA, "ATA     | SET MODE | PIO default mode");
+          }
+
+          break;
+        case 1:
+          debugprint(LOG_HIL_SATA, "ATA     | SET MODE | PIO%d", id & 0x07);
+          break;
+        case 4:
+          debugprint(LOG_HIL_SATA, "ATA     | SET MODE | MWDMA%d", id & 0x07);
+          break;
+        case 8:
+          debugprint(LOG_HIL_SATA, "ATA     | SET MODE | UDMA%d", id & 0x07);
+          break;
+      }
+
+      break;
+    default:
+      debugprint(LOG_HIL_SATA, "ATA     | SET MODE | Not supported feature");
+      break;
+  }
 
   Completion resp;
 
@@ -722,6 +747,11 @@ void Device::writeDMA(CommandContext *cmd, bool isPIO) {
 }
 
 void Device::writeNCQ(CommandContext *cmd) {
+  struct Wrapper {
+    CommandContext *cmd;
+    NCQContext *ncq;
+  };
+
   uint64_t slba = MAKE_LBA_EXT(cmd->request);
   uint32_t nlb = (cmd->request.regH2D.featureL |
                   ((uint32_t)cmd->request.regH2D.featureH << 8));
@@ -744,18 +774,24 @@ void Device::writeNCQ(CommandContext *cmd) {
 
   // Send write scheduled
   DMAFunction doSubmit = [this](uint64_t, void *context) {
-    auto pContext = (CommandContext *)context;
+    auto pContext = (Wrapper *)context;
 
-    Completion resp(writeDMASetup, pContext);
+    Completion resp(writeDMASetup, pContext->ncq);
 
-    resp.slotIndex = pContext->slotIndex;
+    resp.slotIndex = pContext->cmd->slotIndex;
     resp.fis.regD2H.type = FIS_TYPE_REG_D2H;
 
     pParent->submitFIS(resp);
-    pContext->release();
+    pContext->cmd->release();
+
+    delete pContext;
   };
 
-  execute(CPU::SATA__DEVICE, CPU::WRITE_NCQ, doSubmit, cmd);
+  Wrapper *wrapper = new Wrapper();
+  wrapper->cmd = cmd;
+  wrapper->ncq = pContext;
+
+  execute(CPU::SATA__DEVICE, CPU::WRITE_NCQ, doSubmit, wrapper);
 }
 
 void Device::flushCache(CommandContext *cmd) {

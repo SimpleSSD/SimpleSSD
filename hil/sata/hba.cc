@@ -140,8 +140,8 @@ void HBA::readAHCIRegister(uint32_t offset, uint32_t size, uint8_t *buffer) {
     panic("Invalid register access size");
   }
 
-  debugprint(LOG_HIL_SATA, "REG     | READ  | %02Xh + %d | %08" PRIX64, offset,
-             size, temp);
+  // debugprint(LOG_HIL_SATA, "REG     | READ  | %02Xh + %d | %08" PRIX64,
+  // offset, size, temp);
 }
 
 void HBA::writeAHCIRegister(uint32_t offset, uint32_t size, uint8_t *buffer) {
@@ -154,8 +154,8 @@ void HBA::writeAHCIRegister(uint32_t offset, uint32_t size, uint8_t *buffer) {
     panic("Invalid register access size");
   }
 
-  debugprint(LOG_HIL_SATA, "REG     | WRITE | %02Xh + %d | %08X", offset, size,
-             temp);
+  // debugprint(LOG_HIL_SATA, "REG     | WRITE | %02Xh + %d | %08X", offset,
+  // size, temp);
 
   // Access to AHCI Generic Host Control Register
   if (offset < 0x100) {
@@ -404,6 +404,11 @@ void HBA::submitFIS(Completion &resp) {
     resp.maskIS |= PORT_IRQ_TF_ERR;
   }
 
+  if (resp.fis.data[0] == FIS_TYPE_DEV_BITS) {
+    // Reset PxSACT
+    port.active &= ~resp.fis.sdb.payload;
+  }
+
   lResponseQueue.push(resp);
   handleResponse();
 }
@@ -498,7 +503,11 @@ void HBA::interruptCleared() {
       debugprint(LOG_HIL_SATA, "QUEUE   | FIS completed for entry %d",
                  iter.slotIndex);
 
-      iter.func(getTick(), iter.context);
+      pInterface->updateInterrupt(false);
+
+      // Copy function
+      auto func = iter.func;
+      auto context = iter.context;
 
       // Clear PxCI
       port.commandIssue &= ~((uint32_t)1 << iter.slotIndex);
@@ -510,6 +519,8 @@ void HBA::interruptCleared() {
       if (lResponseQueue.size() > 0) {
         handleResponse();
       }
+
+      func(getTick(), context);
     }
   }
 }

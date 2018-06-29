@@ -366,6 +366,12 @@ typedef enum : uint8_t {
   OPCODE_WRITE_SECTOR_EXT = 0x34,
 } OPCODE;
 
+// ACS-2 SET FEATURE Fields
+enum : uint8_t {
+  FEATURE_ENABLE_VOLATILE_CACHE = 0x02,
+  FEATURE_SET_XFER_MODE
+};
+
 }  // namespace SATA
 
 }  // namespace HIL

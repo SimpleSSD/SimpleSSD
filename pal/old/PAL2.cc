@@ -192,8 +192,8 @@ PAL2::~PAL2() {
   delete DieTimeSlots;
   delete MergedTimeSlots;
 
-  delete ChFreeSlots;
-  delete DieFreeSlots;
+  delete[] ChFreeSlots;
+  delete[] DieFreeSlots;
 }
 void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   // ensure we can erase multiple blocks from single request

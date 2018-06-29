@@ -89,11 +89,11 @@ bool Config::setConfig(const char *name, const char *value) {
 }
 
 void Config::update() {
-  if (reclaimBlock == 0) {
+  if (gcMode == GC_MODE_0 && reclaimBlock == 0) {
     panic("Invalid GCReclaimBlocks");
   }
 
-  if (reclaimThreshold < gcThreshold) {
+  if (gcMode == GC_MODE_1 && reclaimThreshold < gcThreshold) {
     panic("Invalid GCReclaimThreshold");
   }
 }
