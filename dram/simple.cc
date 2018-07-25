@@ -98,7 +98,7 @@ bool SimpleDRAM::isScheduling() {
   return !ignoreScheduling;
 }
 
-void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
+void SimpleDRAM::read(void *, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency =
       (uint64_t)(pageCount * (pageFetchLatency +
@@ -129,7 +129,7 @@ void SimpleDRAM::read(void *addr, uint64_t size, uint64_t &tick) {
   readStat.size += size;
 }
 
-void SimpleDRAM::write(void *addr, uint64_t size, uint64_t &tick) {
+void SimpleDRAM::write(void *, uint64_t size, uint64_t &tick) {
   uint64_t pageCount = (size > 0) ? (size - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency =
       (uint64_t)(pageCount * (pageFetchLatency +

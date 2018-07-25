@@ -63,14 +63,15 @@ void PALStatistics::CounterOper::add(uint32_t oper) {
   cnts[OPER_NUM].add();
 }
 
-void PALStatistics::CounterOper::printstat(const char *namestr) {
-  // char OPER_STR[OPER_ALL][8] = {"Read ", "Write", "Erase", "Total"};
-  // DPRINTF(PAL, "[ %s ]:\n", namestr);
-  // DPRINTF(PAL, "OPER, COUNT\n");
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   DPRINTF(PAL, "%s, %" PRIu64 "\n", OPER_STR[i], cnts[i].cnt);
-  // }
-}
+void PALStatistics::CounterOper::printstat(const char *) {}
+// void PALStatistics::CounterOper::printstat(const char *namestr) {
+//   char OPER_STR[OPER_ALL][8] = {"Read ", "Write", "Erase", "Total"};
+//   DPRINTF(PAL, "[ %s ]:\n", namestr);
+//   DPRINTF(PAL, "OPER, COUNT\n");
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     DPRINTF(PAL, "%s, %" PRIu64 "\n", OPER_STR[i], cnts[i].cnt);
+//   }
+// }
 
 PALStatistics::Value::Value() {
   init();
@@ -155,27 +156,28 @@ void PALStatistics::ValueOper::exclusive_add(uint32_t oper, double val) {
   vals[oper].add(val);
 }
 
-void PALStatistics::ValueOper::printstat(
-    const char *namestr)  // This is only used by access capacity
-{
-  // char OPER_STR[OPER_ALL][8] = {"Read ", "Write", "Erase", "Total"};
-  // DPRINTF(PAL, "[ %s ]:\n", namestr);
-  // DPRINTF(PAL, "OPER, AVERAGE, COUNT, TOTAL, MIN, MAX\n");
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL, "%s, ( NO DATA )\n", OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL,
-  //             "%s, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %"
-  //             PRIu64
-  //             "\n",
-  //             OPER_STR[i], (uint64_t)vals[i].avg(), (uint64_t)vals[i].cnt,
-  //             (uint64_t)vals[i].sum, (uint64_t)vals[i].minval,
-  //             (uint64_t)vals[i].maxval);
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat(const char *) {}
+// void PALStatistics::ValueOper::printstat(
+//     const char *namestr)  // This is only used by access capacity
+// {
+//   char OPER_STR[OPER_ALL][8] = {"Read ", "Write", "Erase", "Total"};
+//   DPRINTF(PAL, "[ %s ]:\n", namestr);
+//   DPRINTF(PAL, "OPER, AVERAGE, COUNT, TOTAL, MIN, MAX\n");
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL, "%s, ( NO DATA )\n", OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL,
+//               "%s, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %"
+//               PRIu64
+//               "\n",
+//               OPER_STR[i], (uint64_t)vals[i].avg(), (uint64_t)vals[i].cnt,
+//               (uint64_t)vals[i].sum, (uint64_t)vals[i].minval,
+//               (uint64_t)vals[i].maxval);
+//     }
+//   }
+// }
 
 void PALStatistics::getEnergyStat(double &read, double &write, double &erase) {
   // val = [pJ] / [10^6] = [uJ]
@@ -184,226 +186,235 @@ void PALStatistics::getEnergyStat(double &read, double &write, double &erase) {
   erase = Energy_Total.vals[2].sum / 1000000;  // uJ
 }
 
-void PALStatistics::ValueOper::printstat_energy(const char *namestr) {
-  /*     char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-       printf( "[ %s ]:\n", namestr);
-       printf( "PAL: OPER, AVERAGE(nJ), COUNT, TOTAL(uJ)\n");
-
-       for (int i=0;i<OPER_ALL;i++)
-       {
-          if(vals[i].cnt == 0)
-          {
-                  printf( "PAL: %s, ( NO DATA )\n", OPER_STR[i]);
-          }
-          else
-          {
-                  printf( "PAL: %s, %llu, %llu, %llu\n",
-                     OPER_STR[i], (uint64_t)vals[i].avg()/1000000,
-     (uint64_t)vals[i].cnt, (uint64_t)vals[i].sum/1000000);
-          }
-      }
-  */
-}
+void PALStatistics::ValueOper::printstat_energy(const char *) {}
+// void PALStatistics::ValueOper::printstat_energy(const char *namestr) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   printf("[ %s ]:\n", namestr);
+//   printf("PAL: OPER, AVERAGE(nJ), COUNT, TOTAL(uJ)\n");
+//
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     if (vals[i].cnt == 0) {
+//       printf("PAL: %s, ( NO DATA )\n", OPER_STR[i]);
+//     }
+//     else {
+//       printf("PAL: %s, %llu, %llu, %llu\n", OPER_STR[i],
+//              (uint64_t)vals[i].avg() / 1000000, (uint64_t)vals[i].cnt,
+//              (uint64_t)vals[i].sum / 1000000);
+//     }
+//   }
+// }
 
 // power
-void PALStatistics::PrintDieIdleTicks(
-    uint32_t die_num, uint64_t sim_time_ps,
-    uint64_t idle_power_nw) { /*
-                                  uint64_t active_time_ps =
-                                 Ticks_Active_die[die_num].vals[OPER_ALL -
-                                 1].sum; uint64_t idle_time_ps = sim_time_ps -
-                                 active_time_ps; uint64_t idle_energy =
-                                 idle_power_nw * idle_time_ps;
+void PALStatistics::PrintDieIdleTicks(uint32_t, uint64_t, uint64_t) {}
+// void PALStatistics::PrintDieIdleTicks(uint32_t die_num, uint64_t sim_time_ps,
+//                                       uint64_t idle_power_nw) {
+//   uint64_t active_time_ps = Ticks_Active_die[die_num].vals[OPER_ALL - 1].sum;
+//   uint64_t idle_time_ps = sim_time_ps - active_time_ps;
+//   uint64_t idle_energy = idle_power_nw * idle_time_ps;
+//
+//   printf("PAL: Idle(pJ), Die%d, %llu\n", die_num, idle_energy / 1000000000);
+// }
 
-                                  printf("PAL: Idle(pJ), Die%d, %llu\n",
-                                 die_num, idle_energy/1000000000); */
-}
+void PALStatistics::ValueOper::printstat_bandwidth(class ValueOper *, uint64_t,
+                                                   uint64_t) {}
+// void PALStatistics::ValueOper::printstat_bandwidth(
+//     class ValueOper *Access_Capacity, uint64_t ExactBusyTime,
+//     uint64_t LastExactBusyTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     if (ExactBusyTime > LastExactBusyTime) {
+//       //
+//       printf("sum=%f\tsampled_sum=%f\n", Access_Capacity->vals[i].sum,
+//              Access_Capacity->vals[i].sampled_sum);
+//       this->exclusive_add(
+//           i, (Access_Capacity->vals[i].sum -
+//               Access_Capacity->vals[i].sampled_sum) *
+//                  1.0 / MBYTE /
+//                  ((ExactBusyTime - LastExactBusyTime) * 1.0 / PSEC));
+//     }
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(
+//           PAL, "%s bandwidth excluding idle time (min, max, average): ( NO
+//           DATA
+//           )\n ", OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL,
+//               "%s bandwidth excluding idle time (min, max, average): %.6lf "
+//               "MB/s, %.6lf MB/s, %.6lf MB/s\n",
+//               OPER_STR[i], vals[i].minval, vals[i].maxval,
+//               (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
+//                   ((ExactBusyTime)*1.0 / PSEC));
+//     }
+//   }
+// }
 
-void PALStatistics::ValueOper::printstat_bandwidth(
-    class ValueOper *Access_Capacity, uint64_t ExactBusyTime,
-    uint64_t LastExactBusyTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   if (ExactBusyTime > LastExactBusyTime) {
-  //     //
-  //     printf("sum=%f\tsampled_sum=%f\n",Access_Capacity->vals[i].sum,Access_Capacity->vals[i].sampled_sum);
-  //     this->exclusive_add(
-  //         i, (Access_Capacity->vals[i].sum -
-  //             Access_Capacity->vals[i].sampled_sum) *
-  //                1.0 / MBYTE /
-  //                ((ExactBusyTime - LastExactBusyTime) * 1.0 / PSEC));
-  //   }
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(
-  //         PAL,
-  //         "%s bandwidth excluding idle time (min, max, average): ( NO DATA
-  //         )\n", OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL,
-  //             "%s bandwidth excluding idle time (min, max, average): %.6lf "
-  //             "MB/s, %.6lf MB/s, %.6lf MB/s\n",
-  //             OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //             (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
-  //                 ((ExactBusyTime)*1.0 / PSEC));
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat_bandwidth_widle(class ValueOper *,
+                                                         uint64_t, uint64_t) {}
+// void PALStatistics::ValueOper::printstat_bandwidth_widle(
+//     class ValueOper *Access_Capacity, uint64_t ExecutionTime,
+//     uint64_t LastExecutionTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     assert(ExecutionTime > LastExecutionTime);
+//     this->exclusive_add(
+//         i,
+//         (Access_Capacity->vals[i].sum - Access_Capacity->vals[i].sampled_sum)
+//         *
+//             1.0 / MBYTE / ((ExecutionTime - LastExecutionTime) * 1.0 /
+//             PSEC));
+//
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(
+//           PAL, "%s bandwidth including idle time (min, max, average): ( NO
+//           DATA
+//           )\n ", OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL,
+//               "%s bandwidth including idle time (min, max, average): %.6lf "
+//               "MB/s, %.6lf MB/s, %.6lf MB/s\n",
+//               OPER_STR[i], vals[i].minval, vals[i].maxval,
+//               (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
+//                   ((ExecutionTime)*1.0 / PSEC));
+//     }
+//   }
+// }
 
-void PALStatistics::ValueOper::printstat_bandwidth_widle(
-    class ValueOper *Access_Capacity, uint64_t ExecutionTime,
-    uint64_t LastExecutionTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   assert(ExecutionTime > LastExecutionTime);
-  //   this->exclusive_add(
-  //       i,
-  //       (Access_Capacity->vals[i].sum - Access_Capacity->vals[i].sampled_sum)
-  //       *
-  //           1.0 / MBYTE / ((ExecutionTime - LastExecutionTime) * 1.0 /
-  //           PSEC));
-  //
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(
-  //         PAL,
-  //         "%s bandwidth including idle time (min, max, average): ( NO DATA
-  //         )\n", OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL,
-  //             "%s bandwidth including idle time (min, max, average): %.6lf "
-  //             "MB/s, %.6lf MB/s, %.6lf MB/s\n",
-  //             OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //             (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
-  //                 ((ExecutionTime)*1.0 / PSEC));
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat_oper_bandwidth(class ValueOper *,
+                                                        uint64_t *,
+                                                        uint64_t *) {}
+// void PALStatistics::ValueOper::printstat_oper_bandwidth(
+//     class ValueOper *Access_Capacity, uint64_t *OpBusyTime,
+//     uint64_t *LastOpBusyTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < 3; i++)  // only read/write/erase
+//   {
+//     if (OpBusyTime[i] > LastOpBusyTime[i])
+//       this->exclusive_add(
+//           i, (Access_Capacity->vals[i].sum -
+//               Access_Capacity->vals[i].sampled_sum) *
+//                  1.0 / MBYTE /
+//                  ((OpBusyTime[i] - LastOpBusyTime[i]) * 1.0 / PSEC));
+//
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL, "%s-only bandwidth (min, max, average): ( NO DATA )\n",
+//               OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL,
+//               "%s-only bandwidth (min, max, average): %.6lf MB/s, %.6lf MB/s,
+//               "
+//               "%.6lf MB/s\n",
+//               OPER_STR[i], vals[i].minval, vals[i].maxval,
+//               (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
+//                   ((OpBusyTime[i]) * 1.0 / PSEC));
+//     }
+//   }
+// }
+void PALStatistics::ValueOper::printstat_iops(class ValueOper *, uint64_t,
+                                              uint64_t) {}
+// void PALStatistics::ValueOper::printstat_iops(class ValueOper
+// *Access_Capacity,
+//                                               uint64_t ExactBusyTime,
+//                                               uint64_t LastExactBusyTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     if (ExactBusyTime > LastExactBusyTime)
+//       this->exclusive_add(
+//           i, (Access_Capacity->vals[i].cnt -
+//               Access_Capacity->vals[i].sampled_cnt) *
+//                  1.0 / ((ExactBusyTime - LastExactBusyTime) * 1.0 / PSEC));
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL, "%s IOPS excluding idle time (min, max, average): ( NO
+//       DATA
+//               )\n ", OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(
+//           PAL,
+//           "%s IOPS excluding idle time (min, max, average): %.6lf, %.6lf, "
+//           "%.6lf\n",
+//           OPER_STR[i], vals[i].minval, vals[i].maxval,
+//           (Access_Capacity->vals[i].cnt) * 1.0 / ((ExactBusyTime)*1.0 /
+//           PSEC));
+//     }
+//   }
+// }
 
-void PALStatistics::ValueOper::printstat_oper_bandwidth(
-    class ValueOper *Access_Capacity, uint64_t *OpBusyTime,
-    uint64_t *LastOpBusyTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < 3; i++)  // only read/write/erase
-  // {
-  //   if (OpBusyTime[i] > LastOpBusyTime[i])
-  //     this->exclusive_add(
-  //         i, (Access_Capacity->vals[i].sum -
-  //             Access_Capacity->vals[i].sampled_sum) *
-  //                1.0 / MBYTE /
-  //                ((OpBusyTime[i] - LastOpBusyTime[i]) * 1.0 / PSEC));
-  //
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL, "%s-only bandwidth (min, max, average): ( NO DATA )\n",
-  //             OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL,
-  //             "%s-only bandwidth (min, max, average): %.6lf MB/s, %.6lf MB/s,
-  //             "
-  //             "%.6lf MB/s\n",
-  //             OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //             (Access_Capacity->vals[i].sum) * 1.0 / MBYTE /
-  //                 ((OpBusyTime[i]) * 1.0 / PSEC));
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat_iops_widle(class ValueOper *, uint64_t,
+                                                    uint64_t) {}
+// void PALStatistics::ValueOper::printstat_iops_widle(
+//     class ValueOper *Access_Capacity, uint64_t ExecutionTime,
+//     uint64_t LastExecutionTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     this->exclusive_add(
+//         i,
+//         (Access_Capacity->vals[i].cnt - Access_Capacity->vals[i].sampled_cnt)
+//         *
+//             1.0 / ((ExecutionTime - LastExecutionTime) * 1.0 / PSEC));
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL,
+//               "%s IOPS including idle time (min, max, average): ( NO DATA
+//               )\n", OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(
+//           PAL,
+//           "%s IOPS including idle time (min, max, average): %.6lf, %.6lf, "
+//           "%.6lf\n",
+//           OPER_STR[i], vals[i].minval, vals[i].maxval,
+//           (Access_Capacity->vals[i].cnt) * 1.0 / ((ExecutionTime)*1.0 /
+//           PSEC));
+//     }
+//   }
+// }
 
-void PALStatistics::ValueOper::printstat_iops(class ValueOper *Access_Capacity,
-                                              uint64_t ExactBusyTime,
-                                              uint64_t LastExactBusyTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   if (ExactBusyTime > LastExactBusyTime)
-  //     this->exclusive_add(
-  //         i, (Access_Capacity->vals[i].cnt -
-  //             Access_Capacity->vals[i].sampled_cnt) *
-  //                1.0 / ((ExactBusyTime - LastExactBusyTime) * 1.0 / PSEC));
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL,
-  //             "%s IOPS excluding idle time (min, max, average): ( NO DATA
-  //             )\n", OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(
-  //         PAL,
-  //         "%s IOPS excluding idle time (min, max, average): %.6lf, %.6lf, "
-  //         "%.6lf\n",
-  //         OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExactBusyTime)*1.0 /
-  //         PSEC));
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat_oper_iops(class ValueOper *,
+                                                   uint64_t *, uint64_t *) {}
+// void PALStatistics::ValueOper::printstat_oper_iops(
+//     class ValueOper *Access_Capacity, uint64_t *OpBusyTime,
+//     uint64_t *LastOpBusyTime) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < 3; i++)  // only read/write/erase
+//   {
+//     if (OpBusyTime[i] > LastOpBusyTime[i])
+//       this->exclusive_add(
+//           i, (Access_Capacity->vals[i].cnt -
+//               Access_Capacity->vals[i].sampled_cnt) *
+//                  1.0 / ((OpBusyTime[i] - LastOpBusyTime[i]) * 1.0 / PSEC));
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL, "%s-only IOPS (min, max, average): ( NO DATA )\n",
+//               OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL, "%s-only IOPS (min, max, average): %.6lf, %.6lf, %.6lf\n",
+//               OPER_STR[i], vals[i].minval, vals[i].maxval,
+//               (Access_Capacity->vals[i].cnt) * 1.0 /
+//                   ((OpBusyTime[i]) * 1.0 / PSEC));
+//     }
+//   }
+// }
 
-void PALStatistics::ValueOper::printstat_iops_widle(
-    class ValueOper *Access_Capacity, uint64_t ExecutionTime,
-    uint64_t LastExecutionTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   this->exclusive_add(
-  //       i,
-  //       (Access_Capacity->vals[i].cnt - Access_Capacity->vals[i].sampled_cnt)
-  //       *
-  //           1.0 / ((ExecutionTime - LastExecutionTime) * 1.0 / PSEC));
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL,
-  //             "%s IOPS including idle time (min, max, average): ( NO DATA
-  //             )\n", OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(
-  //         PAL,
-  //         "%s IOPS including idle time (min, max, average): %.6lf, %.6lf, "
-  //         "%.6lf\n",
-  //         OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //         (Access_Capacity->vals[i].cnt) * 1.0 / ((ExecutionTime)*1.0 /
-  //         PSEC));
-  //   }
-  // }
-}
-
-void PALStatistics::ValueOper::printstat_oper_iops(
-    class ValueOper *Access_Capacity, uint64_t *OpBusyTime,
-    uint64_t *LastOpBusyTime) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < 3; i++)  // only read/write/erase
-  // {
-  //   if (OpBusyTime[i] > LastOpBusyTime[i])
-  //     this->exclusive_add(
-  //         i, (Access_Capacity->vals[i].cnt -
-  //             Access_Capacity->vals[i].sampled_cnt) *
-  //                1.0 / ((OpBusyTime[i] - LastOpBusyTime[i]) * 1.0 / PSEC));
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL, "%s-only IOPS (min, max, average): ( NO DATA )\n",
-  //             OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL, "%s-only IOPS (min, max, average): %.6lf, %.6lf, %.6lf\n",
-  //             OPER_STR[i], vals[i].minval, vals[i].maxval,
-  //             (Access_Capacity->vals[i].cnt) * 1.0 /
-  //                 ((OpBusyTime[i]) * 1.0 / PSEC));
-  //   }
-  // }
-}
-
-void PALStatistics::ValueOper::printstat_latency(const char *namestr) {
-  // char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
-  // for (int i = 0; i < OPER_ALL; i++) {
-  //   if (vals[i].cnt == 0) {
-  //     DPRINTF(PAL, "%s latency (min, max, average): ( NO DATA )\n",
-  //             OPER_STR[i]);
-  //   }
-  //   else {
-  //     DPRINTF(PAL,
-  //             "%s latency (min, max, average): %" PRIu64 " us, %" PRIu64
-  //             " us, %" PRIu64 " us\n",
-  //             OPER_STR[i], (uint64_t)(vals[i].minval * 1.0 / 1000000),
-  //             (uint64_t)(vals[i].maxval * 1.0 / 1000000),
-  //             (uint64_t)(vals[i].avg() * 1.0 / 1000000));
-  //   }
-  // }
-}
+void PALStatistics::ValueOper::printstat_latency(const char *) {}
+// void PALStatistics::ValueOper::printstat_latency(const char *namestr) {
+//   char OPER_STR[OPER_ALL][8] = {"Read", "Write", "Erase", "Total"};
+//   for (int i = 0; i < OPER_ALL; i++) {
+//     if (vals[i].cnt == 0) {
+//       DPRINTF(PAL, "%s latency (min, max, average): ( NO DATA )\n",
+//               OPER_STR[i]);
+//     }
+//     else {
+//       DPRINTF(PAL,
+//               "%s latency (min, max, average): %" PRIu64 " us, %" PRIu64
+//               " us, %" PRIu64 " us\n",
+//               OPER_STR[i], (uint64_t)(vals[i].minval * 1.0 / 1000000),
+//               (uint64_t)(vals[i].maxval * 1.0 / 1000000),
+//               (uint64_t)(vals[i].avg() * 1.0 / 1000000));
+//     }
+//   }
+// }
 #endif  // Polished stats
 
 PALStatistics::PALStatistics(SimpleSSD::ConfigReader *c, Latency *l)
@@ -531,7 +542,7 @@ void PALStatistics::MergeSnapshot() {
 #if GATHER_RESOURCE_CONFLICT
 void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
                                TimeSlot *DMA0, TimeSlot *MEM, TimeSlot *DMA1,
-                               uint8_t confType, uint64_t confLength)
+                               uint8_t confType, uint64_t)
 #else
 void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
                                TimeSlot *DMA0, TimeSlot *MEM, TimeSlot *DMA1)

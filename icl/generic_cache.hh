@@ -61,7 +61,7 @@ class GenericCache : public AbstractCache {
   std::function<Line *(Line *, Line *)> compareFunction;
   std::random_device rd;
   std::mt19937 gen;
-  std::uniform_int_distribution<> dist;
+  std::uniform_int_distribution<uint32_t> dist;
 
   std::vector<Line *> cacheData;
   std::vector<Line **> evictData;

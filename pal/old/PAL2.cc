@@ -1128,20 +1128,21 @@ uint32_t PAL2::CPDPBPtoDieIdx(CPDPBP *pCPDPBP) {
   return ret;
 }
 
-void PAL2::printCPDPBP(CPDPBP *pCPDPBP) {
-  //  uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
-
-  // DPRINTF(PAL, "PAL:    %7s | %7s | %7s | %7s | %7s | %7s\n",
-  //         ADDR_STRINFO[gconf->AddrSeq[0]], ADDR_STRINFO[gconf->AddrSeq[1]],
-  //         ADDR_STRINFO[gconf->AddrSeq[2]], ADDR_STRINFO[gconf->AddrSeq[3]],
-  //         ADDR_STRINFO[gconf->AddrSeq[4]],
-  //         ADDR_STRINFO[gconf->AddrSeq[5]]);  // Use DPRINTF here
-  // DPRINTF(PAL, "PAL:    %7u | %7u | %7u | %7u | %7u | %7u\n",
-  //         pCPDPBP_IDX[gconf->AddrSeq[0]], pCPDPBP_IDX[gconf->AddrSeq[1]],
-  //         pCPDPBP_IDX[gconf->AddrSeq[2]], pCPDPBP_IDX[gconf->AddrSeq[3]],
-  //         pCPDPBP_IDX[gconf->AddrSeq[4]],
-  //         pCPDPBP_IDX[gconf->AddrSeq[5]]);  // Use DPRINTF here
-}
+void PAL2::printCPDPBP(CPDPBP *) {}
+// void PAL2::printCPDPBP(CPDPBP *pCPDPBP) {
+//   uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
+//
+//   DPRINTF(PAL, "PAL:    %7s | %7s | %7s | %7s | %7s | %7s\n",
+//           ADDR_STRINFO[gconf->AddrSeq[0]], ADDR_STRINFO[gconf->AddrSeq[1]],
+//           ADDR_STRINFO[gconf->AddrSeq[2]], ADDR_STRINFO[gconf->AddrSeq[3]],
+//           ADDR_STRINFO[gconf->AddrSeq[4]],
+//           ADDR_STRINFO[gconf->AddrSeq[5]]);  // Use DPRINTF here
+//   DPRINTF(PAL, "PAL:    %7u | %7u | %7u | %7u | %7u | %7u\n",
+//           pCPDPBP_IDX[gconf->AddrSeq[0]], pCPDPBP_IDX[gconf->AddrSeq[1]],
+//           pCPDPBP_IDX[gconf->AddrSeq[2]], pCPDPBP_IDX[gconf->AddrSeq[3]],
+//           pCPDPBP_IDX[gconf->AddrSeq[4]],
+//           pCPDPBP_IDX[gconf->AddrSeq[5]]);  // Use DPRINTF here
+// }
 
 void PAL2::PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP) {
   uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
@@ -1172,7 +1173,7 @@ void PAL2::PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP) {
   }
   else {
     uint32_t tmp_size = RS[6] * RS[5] * RS[4] * RS[3] * RS[2] * RS[1] * RS[0];
-    for (unsigned i = 0; i < (5 - AS[6] - 1); i++) {
+    for (int i = 0; i < (4 - AS[6]); i++) {
       tmp_size /= RS[i];
       pCPDPBP_IDX[AS[i]] = tmp_MOD / tmp_size;
       tmp_MOD = tmp_MOD % tmp_size;
@@ -1180,7 +1181,7 @@ void PAL2::PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP) {
     tmp_size /= RS[6];
     uint32_t tmp = tmp_MOD / tmp_size;
     tmp_MOD = tmp_MOD % tmp_size;
-    for (unsigned i = (5 - AS[6] - 1); i < 6; i++) {
+    for (int i = (4 - AS[6]); i < 6; i++) {
       tmp_size /= RS[i];
       pCPDPBP_IDX[AS[i]] = tmp_MOD / tmp_size;
       tmp_MOD = tmp_MOD % tmp_size;

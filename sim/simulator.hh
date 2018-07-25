@@ -42,7 +42,7 @@ class Simulator {
   virtual Event allocateEvent(EventFunction) = 0;
   virtual void scheduleEvent(Event, uint64_t) = 0;
   virtual void descheduleEvent(Event) = 0;
-  virtual bool isScheduled(Event) = 0;
+  virtual bool isScheduled(Event, uint64_t * = nullptr) = 0;
   virtual void deallocateEvent(Event) = 0;
 };
 
@@ -51,7 +51,7 @@ uint64_t getTick();
 Event allocate(EventFunction f);
 void schedule(Event e, uint64_t t);
 void deschedule(Event e);
-bool scheduled(Event e);
+bool scheduled(Event e, uint64_t *p = nullptr);
 void deallocate(Event e);
 
 }  // namespace SimpleSSD

@@ -165,7 +165,7 @@ void Host::processUTPTask() {
   panic("UTP Task is not implemented");
 }
 
-void Host::processUTPTransfer(uint64_t finishedAt) {
+void Host::processUTPTransfer(uint64_t) {
   uint32_t bit = 0;
 
   for (int i = 0; i < 32; i++) {
@@ -551,8 +551,8 @@ void Host::handleRequest() {
 
     lRequestQueue.pop();
 
-    DMAFunction doRead = [this](uint64_t now, void *context) {
-      DMAFunction doRequest = [this](uint64_t now, void *context) {
+    DMAFunction doRead = [this](uint64_t, void *context) {
+      DMAFunction doRequest = [this](uint64_t, void *context) {
         DMAFunction doWrite = [this](uint64_t now, void *context) {
           auto *pContext = (RequestContext *)context;
 

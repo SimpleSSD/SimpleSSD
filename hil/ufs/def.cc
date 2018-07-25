@@ -181,7 +181,7 @@ bool UPIUResponse::get(uint8_t *buffer, uint32_t length) {
     memset(buffer + 16, 0, 16);
 
     if (header.dataSegmentLength > 0) {
-      if (length > 31 + header.dataSegmentLength) {
+      if (length > 31ul + header.dataSegmentLength) {
         buffer[32] = senseLength >> 8;
         buffer[33] = senseLength & 0xFF;
         memcpy(buffer + 34, senseData, senseLength);
@@ -230,7 +230,7 @@ bool UPIUQueryReq::set(uint8_t *buffer, uint32_t length) {
     if (header.dataSegmentLength > 0) {
       uint32_t offset = (header.transactionType & 0x80) ? 4 : 0;
 
-      if (length > 31 + offset + header.dataSegmentLength) {
+      if (length > 31ul + offset + header.dataSegmentLength) {
         if (data) {
           free(data);
         }
@@ -271,7 +271,7 @@ bool UPIUQueryReq::get(uint8_t *buffer, uint32_t length) {
     memset(buffer + 28, 0, 4);
 
     if (header.dataSegmentLength > 0) {
-      if (length > 31 + header.dataSegmentLength) {
+      if (length > 31ul + header.dataSegmentLength) {
         memcpy(buffer + 32, data, header.dataSegmentLength);
       }
       else {
@@ -318,7 +318,7 @@ bool UPIUQueryResp::set(uint8_t *buffer, uint32_t length) {
     if (header.dataSegmentLength > 0) {
       uint32_t offset = (header.transactionType & 0x80) ? 4 : 0;
 
-      if (length > 31 + offset + header.dataSegmentLength) {
+      if (length > 31ul + offset + header.dataSegmentLength) {
         if (data) {
           free(data);
         }
@@ -359,7 +359,7 @@ bool UPIUQueryResp::get(uint8_t *buffer, uint32_t length) {
     memset(buffer + 28, 0, 4);
 
     if (header.dataSegmentLength > 0) {
-      if (length > 31 + header.dataSegmentLength) {
+      if (length > 31ul + header.dataSegmentLength) {
         memcpy(buffer + 32, data, header.dataSegmentLength);
       }
       else {
@@ -400,7 +400,7 @@ bool UPIUDataOut::set(uint8_t *buffer, uint32_t length) {
     if (header.dataSegmentLength > 0) {
       uint32_t offset = (header.transactionType & 0x80) ? 4 : 0;
 
-      if (length > 31 + offset + header.dataSegmentLength) {
+      if (length > 31ul + offset + header.dataSegmentLength) {
         if (data) {
           free(data);
         }
@@ -434,7 +434,7 @@ bool UPIUDataOut::get(uint8_t *buffer, uint32_t length) {
     memset(buffer + 20, 0, 12);
 
     if (header.dataSegmentLength > 0) {
-      if (length > 31 + header.dataSegmentLength) {
+      if (length > 31ul + header.dataSegmentLength) {
         memcpy(buffer + 32, data, header.dataSegmentLength);
       }
       else {
@@ -475,7 +475,7 @@ bool UPIUDataIn::set(uint8_t *buffer, uint32_t length) {
     if (header.dataSegmentLength > 0) {
       uint32_t offset = (header.transactionType & 0x80) ? 4 : 0;
 
-      if (length > 31 + offset + header.dataSegmentLength) {
+      if (length > 31ul + offset + header.dataSegmentLength) {
         if (data) {
           free(data);
         }
@@ -509,7 +509,7 @@ bool UPIUDataIn::get(uint8_t *buffer, uint32_t length) {
     memset(buffer + 20, 0, 12);
 
     if (header.dataSegmentLength > 0) {
-      if (length > 31 + header.dataSegmentLength) {
+      if (length > 31ul + header.dataSegmentLength) {
         memcpy(buffer + 32, data, header.dataSegmentLength);
       }
       else {

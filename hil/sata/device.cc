@@ -280,7 +280,7 @@ void Device::flush(DMAFunction &func, void *context) {
   execute(CPU::SATA__DEVICE, CPU::FLUSH, doFlush, req);
 }
 
-void Device::_writeDMASetup(uint64_t tick, void *context) {
+void Device::_writeDMASetup(uint64_t, void *context) {
   NCQContext *pContext = (NCQContext *)context;
 
   debugprint(LOG_HIL_SATA, "ATA     | WRITE FPDMA QUEUED | Tag %d | Setup DMA",

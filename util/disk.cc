@@ -178,7 +178,7 @@ uint16_t Disk::write(uint64_t slba, uint16_t nlblk, uint8_t *buffer) {
   return ret;
 }
 
-uint16_t Disk::erase(uint64_t slba, uint16_t nlblk) {
+uint16_t Disk::erase(uint64_t, uint16_t nlblk) {
   return nlblk;
 }
 

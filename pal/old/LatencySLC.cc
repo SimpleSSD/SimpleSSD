@@ -23,11 +23,11 @@ LatencySLC::LatencySLC(SimpleSSD::PAL::Config::NANDTiming t,
 
 LatencySLC::~LatencySLC() {}
 
-inline uint8_t LatencySLC::GetPageType(uint32_t AddrPage) {
+inline uint8_t LatencySLC::GetPageType(uint32_t) {
   return PAGE_LSB;
 }
 
-uint64_t LatencySLC::GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy) {
+uint64_t LatencySLC::GetLatency(uint32_t, uint8_t Oper, uint8_t Busy) {
   switch (Busy) {
     case BUSY_DMA0:
       if (Oper == OPER_READ) {

@@ -158,7 +158,7 @@ Controller::~Controller() {
 }
 
 void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
-                              uint64_t &tick) {
+                              uint64_t &) {
   registers.interruptMaskSet = interruptMask;
   registers.interruptMaskClear = interruptMask;
 
@@ -221,7 +221,7 @@ void Controller::readRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
 }
 
 void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
-                               uint64_t &tick) {
+                               uint64_t &) {
   static DMAFunction empty = [](uint64_t, void *) {};
   uint32_t uiTemp32;
   uint64_t uiTemp64;
@@ -407,8 +407,7 @@ void Controller::writeRegister(uint64_t offset, uint64_t size, uint8_t *buffer,
   }
 }  // namespace NVMe
 
-void Controller::ringCQHeadDoorbell(uint16_t qid, uint16_t head,
-                                    uint64_t &tick) {
+void Controller::ringCQHeadDoorbell(uint16_t qid, uint16_t head, uint64_t &) {
   CQueue *pQueue = ppCQueue[qid];
 
   if (pQueue) {
@@ -429,8 +428,7 @@ void Controller::ringCQHeadDoorbell(uint16_t qid, uint16_t head,
   }
 }
 
-void Controller::ringSQTailDoorbell(uint16_t qid, uint16_t tail,
-                                    uint64_t &tick) {
+void Controller::ringSQTailDoorbell(uint16_t qid, uint16_t tail, uint64_t &) {
   SQueue *pQueue = ppSQueue[qid];
 
   if (pQueue) {

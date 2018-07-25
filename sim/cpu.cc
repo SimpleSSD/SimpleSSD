@@ -79,7 +79,7 @@ void execute(CPU::NAMESPACE ns, CPU::FUNCTION fct, DMAFunction &func,
   }
 }
 
-void commonCPUHandler(uint64_t now, void *context) {
+void commonCPUHandler(uint64_t, void *context) {
   CPUContext *pContext = (CPUContext *)context;
 
   execute(pContext->ns, pContext->fct, pContext->func, pContext->context,

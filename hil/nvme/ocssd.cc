@@ -1341,7 +1341,7 @@ void OpenChannelSSD::physicalPageRead(SQEntryWrapper &req,
 
     DMAFunction doDMA = [this](uint64_t now, void *context) {
       DMAFunction doRead = [this](uint64_t now, void *context) {
-        DMAFunction nandDone = [](uint64_t now, void *context) {
+        DMAFunction nandDone = [](uint64_t, void *context) {
           DMAFunction dmaDone = [](uint64_t now, void *context) {
             VectorContext *pContext = (VectorContext *)context;
 

@@ -500,7 +500,7 @@ void Namespace::datasetManagement(SQEntryWrapper &req, RequestFunction &func) {
 
         pDMA->context = context;
 
-        for (int i = 0; i < pContext->slba; i++) {
+        for (uint64_t i = 0; i < pContext->slba; i++) {
           memcpy(range.data,
                  pContext->buffer + i * sizeof(DatasetManagementRange),
                  sizeof(DatasetManagementRange));

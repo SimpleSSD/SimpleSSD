@@ -86,7 +86,7 @@ void HIL::write(Request &req) {
     pICL->write(reqInternal, tick);
 
     stat.request[1]++;
-    stat.iosize[0] += pReq->length;
+    stat.iosize[1] += pReq->length;
     updateBusyTime(1, beginAt, tick);
     updateBusyTime(2, beginAt, tick);
 

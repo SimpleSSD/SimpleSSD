@@ -27,3 +27,7 @@ CTestTestfile.cmake
 # Python
 *.pyc
 temp_build/
+
+# Library output
+libsimplessd.a
+libmcpat.a

@@ -919,7 +919,7 @@ bool Subsystem::getFeatures(SQEntryWrapper &req, RequestFunction &func) {
   return true;
 }
 
-bool Subsystem::asyncEventReq(SQEntryWrapper &req, RequestFunction &func) {
+bool Subsystem::asyncEventReq(SQEntryWrapper &, RequestFunction &) {
   // FIXME: Not implemented
   return true;
 }

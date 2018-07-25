@@ -43,7 +43,7 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
       useWriteCaching(conf.readBoolean(CONFIG_ICL, ICL_USE_WRITE_CACHE)),
       useReadPrefetch(conf.readBoolean(CONFIG_ICL, ICL_USE_READ_PREFETCH)),
       gen(rd()),
-      dist(std::uniform_int_distribution<>(0, waySize - 1)) {
+      dist(std::uniform_int_distribution<uint32_t>(0, waySize - 1)) {
   uint64_t cacheSize = conf.readUint(CONFIG_ICL, ICL_CACHE_SIZE);
 
   if (!useReadCaching && !useWriteCaching) {
@@ -94,7 +94,7 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
 
   switch (policy) {
     case POLICY_RANDOM:
-      evictFunction = [this](uint32_t setIdx, uint64_t &tick) -> uint32_t {
+      evictFunction = [this](uint32_t, uint64_t &) -> uint32_t {
         return dist(gen);
       };
       compareFunction = [this](Line *a, Line *b) -> Line * {
@@ -192,6 +192,10 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
 }
 
 GenericCache::~GenericCache() {
+  if (!useReadCaching && !useWriteCaching) {
+    return;
+  }
+
   for (uint32_t i = 0; i < setSize; i++) {
     delete[] cacheData[i];
   }

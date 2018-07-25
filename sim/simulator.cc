@@ -56,9 +56,9 @@ void deschedule(Event e) {
   }
 }
 
-bool scheduled(Event e) {
+bool scheduled(Event e, uint64_t *p) {
   if (sim) {
-    return sim->isScheduled(e);
+    return sim->isScheduled(e, p);
   }
 
   return false;
