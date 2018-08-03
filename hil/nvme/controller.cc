@@ -646,7 +646,6 @@ void Controller::identify(uint8_t *data) {
   uint16_t vid, ssvid;
   uint64_t totalSize;
   uint64_t unallocated;
-  uint32_t nn = pSubsystem->validNamespaceCount();
 
   pParent->getVendorID(vid, ssvid);
   pSubsystem->getNVMCapacity(totalSize, unallocated);
@@ -911,7 +910,11 @@ void Controller::identify(uint8_t *data) {
     }
 
     // Number of Namespaces
-    memcpy(data + 0x0204, &nn, 4);
+    // SimpleSSD supports infinite number of namespaces (0xFFFFFFFD)
+    data[0x0204] = 0xFD;
+    data[0x0205] = 0xFF;    
+    data[0x0206] = 0xFF;
+    data[0x0207] = 0xFF;
 
     // Optional NVM Command Support
     {

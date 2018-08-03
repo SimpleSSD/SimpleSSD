@@ -29,6 +29,9 @@
 #include "pal/old/PALStatistics.h"
 #include "util/algorithm.hh"
 
+#define FLUSH_PERIOD 100000000000ull  // 0.1sec
+#define FLUSH_RANGE 10000000000ull    // 0.01sec
+
 namespace SimpleSSD {
 
 namespace PAL {
@@ -69,6 +72,16 @@ PALOLD::PALOLD(Parameter &p, ConfigReader &c) : AbstractPAL(p, c) {
 
   stats = new PALStatistics(&conf, lat);
   pal = new PAL2(stats, &param, &conf, lat);
+
+  // We will periodically flush timeslot for saving memory
+  flushFunction = [this](uint64_t tick) {
+    pal->FlushFreeSlots(tick - FLUSH_RANGE);
+    pal->FlushTimeSlots(tick - FLUSH_RANGE);
+
+    schedule(flushEvent, tick + FLUSH_PERIOD);
+  };
+  flushEvent = allocate(flushFunction);
+  schedule(flushEvent, getTick() + FLUSH_PERIOD);
 }
 
 PALOLD::~PALOLD() {

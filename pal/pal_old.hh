@@ -40,6 +40,9 @@ class PALOLD : public AbstractPAL {
   ::PALStatistics *stats;
   ::Latency *lat;
 
+  Event flushEvent;
+  EventFunction flushFunction;
+
   void convertCPDPBP(Request &, std::vector<::CPDPBP> &);
   void printCPDPBP(::CPDPBP &, const char *);
   void printPPN(Request &, const char *);
