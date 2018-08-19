@@ -126,7 +126,7 @@ struct Chunk {
 
 class SGL : public DMAInterface {
  private:
-  std::vector<Chunk> list;
+  std::vector<Chunk> chunkList;
   uint64_t totalSize;
 
   void parseSGLDescriptor(SGLDescriptor &);

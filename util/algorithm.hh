@@ -26,6 +26,38 @@
 #include <climits>
 #include <cmath>
 
+#ifdef _MSC_VER
+
+#include <cstdlib>
+
+#include <intrin.h>
+
+#define __builtin_bswap16 _byteswap_ushort
+#define __builtin_bswap32 _byteswap_ulong
+#define __builtin_bswap64 _byteswap_uint64
+
+inline uint32_t __builtin_clzl(uint32_t val) {
+  unsigned long leadingZero = 0;
+
+  if (_BitScanReverse(&leadingZero, val)) {
+    return 31 - leadingZero;
+  }
+
+  return 32;
+}
+
+inline uint32_t __builtin_ffsl(uint32_t val) {
+  unsigned long trailingZero = 0;
+
+  if (_BitScanForward(&trailingZero, val)) {
+    return trailingZero + 1;
+  }
+
+  return 0;
+}
+
+#endif
+
 #ifndef MIN
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
 #endif

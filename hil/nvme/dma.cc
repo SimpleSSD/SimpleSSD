@@ -336,12 +336,12 @@ void SGL::parseSGLDescriptor(SGLDescriptor &desc) {
   switch (SGL_TYPE(desc.id)) {
     case TYPE_DATA_BLOCK_DESCRIPTOR:
     case TYPE_KEYED_DATA_BLOCK_DESCRIPTOR:
-      list.push_back(Chunk(desc.address, desc.length, false));
+      chunkList.push_back(Chunk(desc.address, desc.length, false));
       totalSize += desc.length;
 
       break;
     case TYPE_BIT_BUCKET_DESCRIPTOR:
-      list.push_back(Chunk(desc.address, desc.length, true));
+      chunkList.push_back(Chunk(desc.address, desc.length, true));
       totalSize += desc.length;
 
       break;
@@ -431,7 +431,7 @@ void SGL::read(uint64_t offset, uint64_t length, uint8_t *buffer,
 
     DMAContext *readContext = (DMAContext *)context;
 
-    for (auto &iter : list) {
+    for (auto &iter : chunkList) {
       if (begin) {
         read = MIN(iter.length, length - totalRead);
 
@@ -489,7 +489,7 @@ void SGL::write(uint64_t offset, uint64_t length, uint8_t *buffer,
 
     DMAContext *writeContext = (DMAContext *)context;
 
-    for (auto &iter : list) {
+    for (auto &iter : chunkList) {
       if (begin) {
         written = MIN(iter.length, length - totalWritten);
 

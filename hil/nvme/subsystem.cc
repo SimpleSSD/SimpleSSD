@@ -152,21 +152,24 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
 
   // Merge
   auto iter = allocated.begin();
-  auto next = iter;
 
-  while (true) {
-    next++;
+  if (iter != allocated.end()) {
+    auto next = iter;
 
-    if (iter != allocated.end() || next == allocated.end()) {
-      break;
-    }
+    while (true) {
+      next++;
 
-    if (iter->slpn + iter->nlp == next->slpn) {
-      iter = allocated.erase(iter);
-      next = iter;
-    }
-    else {
-      iter++;
+      if (iter != allocated.end() || next == allocated.end()) {
+        break;
+      }
+
+      if (iter->slpn + iter->nlp == next->slpn) {
+        iter = allocated.erase(iter);
+        next = iter;
+      }
+      else {
+        iter++;
+      }
     }
   }
 

@@ -69,7 +69,7 @@ PAL::PAL(ConfigReader &c) : conf(c) {
   }
 
   // Super block includes plane
-  if (conf.readBoolean(CONFIG_PAL, NAND_USE_MULTI_PLANE_OP) |
+  if (conf.readBoolean(CONFIG_PAL, NAND_USE_MULTI_PLANE_OP) ||
       (superblock & INDEX_PLANE)) {
     param.superPageSize *= param.plane;
     value[3] = param.plane;

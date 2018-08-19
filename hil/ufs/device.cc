@@ -551,8 +551,8 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
           memcpy(&slba, req->cdb + 2, 4);
           memcpy(&nlb, req->cdb + 7, 2);
 
-          slba = be32toh(slba);
-          nlb = be16toh(nlb);
+          slba = __builtin_bswap32(slba);
+          nlb = __builtin_bswap16(nlb);
         } break;
         case CMD_READ_CAPACITY_10: {
           uint32_t temp;
@@ -561,11 +561,11 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
 
           temp =
               (uint32_t)((totalLogicalPages * logicalPageSize / lbaSize) - 1);
-          temp = htobe32(temp);
+          temp = __builtin_bswap32(temp);
           memcpy(buffer, &temp, 4);
 
           temp = lbaSize;
-          temp = htobe32(temp);
+          temp = __builtin_bswap32(temp);
           memcpy(buffer + 4, &temp, 4);
 
           length = 8;
@@ -577,11 +577,11 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
           buffer = (uint8_t *)calloc(32, 1);
 
           temp64 = (totalLogicalPages * logicalPageSize) / lbaSize - 1;
-          temp64 = htobe64(temp64);
+          temp64 = __builtin_bswap64(temp64);
           memcpy(buffer, &temp64, 8);
 
           temp32 = lbaSize;
-          temp32 = htobe32(temp32);
+          temp32 = __builtin_bswap32(temp32);
           memcpy(buffer + 8, &temp32, 4);
 
           length = 32;
@@ -634,8 +634,8 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
           memcpy(&slba, req->cdb + 2, 4);
           memcpy(&nlb, req->cdb + 7, 2);
 
-          slba = be32toh(slba);
-          nlb = be16toh(nlb);
+          slba = __builtin_bswap32(slba);
+          nlb = __builtin_bswap16(nlb);
 
           if (slba + nlb > totalLogicalPages * logicalPageSize) {
             resp->header.status = 0x0;  // Check condition
@@ -658,8 +658,8 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
           memcpy(&slba, req->cdb + 2, 4);
           memcpy(&nlb, req->cdb + 7, 2);
 
-          slba = be32toh(slba);
-          nlb = be16toh(nlb);
+          slba = __builtin_bswap32(slba);
+          nlb = __builtin_bswap16(nlb);
         } break;
         case CMD_REQUEST_SENSE:
         case CMD_FORMAT_UNIT:
@@ -674,8 +674,8 @@ void Device::processCommand(UTP_TRANSFER_CMD cmd, UPIUCommand *req,
           memcpy(&slba, req->cdb + 2, 4);
           memcpy(&nlb, req->cdb + 7, 2);
 
-          slba = be32toh(slba);
-          nlb = be16toh(nlb);
+          slba = __builtin_bswap32(slba);
+          nlb = __builtin_bswap16(nlb);
 
           if (immed) {
             static DMAFunction dummy = [](uint64_t, void *) {};

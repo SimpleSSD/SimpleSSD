@@ -746,17 +746,17 @@ bool OpenChannelSSD::deviceIdentification(SQEntryWrapper &req,
   // PPA Format
   {
     data[0x0C] = ppaMask.channelShift;
-    data[0x0D] = __builtin_popcountl(ppaMask.channelMask);
+    data[0x0D] = popcount(ppaMask.channelMask);
     data[0x0E] = __builtin_ffsl(ppaMask.wayMask | ppaMask.dieMask) - 1;
-    data[0x0F] = __builtin_popcountl(ppaMask.wayMask | ppaMask.dieMask);
+    data[0x0F] = popcount(ppaMask.wayMask | ppaMask.dieMask);
     data[0x10] = ppaMask.planeShift;
-    data[0x11] = __builtin_popcountl(ppaMask.planeMask);
+    data[0x11] = popcount(ppaMask.planeMask);
     data[0x12] = ppaMask.blockShift;
-    data[0x13] = __builtin_popcountl(ppaMask.blockMask);
+    data[0x13] = popcount(ppaMask.blockMask);
     data[0x14] = ppaMask.pageShift;
-    data[0x15] = __builtin_popcountl(ppaMask.pageMask);
+    data[0x15] = popcount(ppaMask.pageMask);
     data[0x16] = 0;
-    data[0x17] = __builtin_popcountl(ppaMask.sectorMask);
+    data[0x17] = popcount(ppaMask.sectorMask);
   }
 
   // Description of 1st group

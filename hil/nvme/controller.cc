@@ -912,7 +912,7 @@ void Controller::identify(uint8_t *data) {
     // Number of Namespaces
     // SimpleSSD supports infinite number of namespaces (0xFFFFFFFD)
     data[0x0204] = 0xFD;
-    data[0x0205] = 0xFF;    
+    data[0x0205] = 0xFF;
     data[0x0206] = 0xFF;
     data[0x0207] = 0xFF;
 
@@ -1536,13 +1536,16 @@ void Controller::completion() {
 
   submitContext->context = pData;
 
-  for (auto iter = lCQFIFO.begin(); iter != lCQFIFO.end(); iter++) {
+  for (auto iter = lCQFIFO.begin(); iter != lCQFIFO.end();) {
     if (iter->submitAt <= tick) {
       // Copy CQ
       pData->entryToPost.push_back(*iter);
 
       // Delete entry
       iter = lCQFIFO.erase(iter);
+    }
+    else {
+      iter++;
     }
   }
 
