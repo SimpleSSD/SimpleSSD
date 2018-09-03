@@ -48,7 +48,7 @@ void panic(const char *format, ...) {
   str.resize(vsnprintf(nullptr, 0, format, args) + 1);
   va_end(args);
   vsnprintf(str.data(), str.size(), format, copied);
-  va_end(args);
+  va_end(copied);
 
   if (logger) {
     logger->errfile << getTick() << ": panic: " << str.data() << std::endl;
@@ -66,7 +66,7 @@ void warn(const char *format, ...) {
   str.resize(vsnprintf(nullptr, 0, format, args) + 1);
   va_end(args);
   vsnprintf(str.data(), str.size(), format, copied);
-  va_end(args);
+  va_end(copied);
 
   if (logger) {
     logger->errfile << getTick() << ": warn: " << str.data() << std::endl;
@@ -82,7 +82,7 @@ void info(const char *format, ...) {
   str.resize(vsnprintf(nullptr, 0, format, args) + 1);
   va_end(args);
   vsnprintf(str.data(), str.size(), format, copied);
-  va_end(args);
+  va_end(copied);
 
   if (logger) {
     logger->errfile << getTick() << ": info: " << str.data() << std::endl;
@@ -113,7 +113,7 @@ void debugprint(LOG_ID id, const char *format, ...) {
   str.resize(vsnprintf(nullptr, 0, format, args) + 1);
   va_end(args);
   vsnprintf(str.data(), str.size(), format, copied);
-  va_end(args);
+  va_end(copied);
 
   if (logger && id < LOG_NUM) {
     logger->outfile << getTick() << ": " << logName[id] << ": " << str.data()

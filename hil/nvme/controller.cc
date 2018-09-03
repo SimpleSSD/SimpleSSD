@@ -674,7 +674,7 @@ void Controller::identify(uint8_t *data) {
     }
 
     // Firmware Revision
-    strncpy((char *)data + 0x0040, "02.01.00", 0x08);
+    strncpy((char *)data + 0x0040, "02.01.01", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;
@@ -911,10 +911,11 @@ void Controller::identify(uint8_t *data) {
 
     // Number of Namespaces
     // SimpleSSD supports infinite number of namespaces (0xFFFFFFFD)
-    data[0x0204] = 0xFD;
-    data[0x0205] = 0xFF;
-    data[0x0206] = 0xFF;
-    data[0x0207] = 0xFF;
+    // But kernel's DIV_ROUND_UP has problem when number is too big
+    // #define _KERNEL_DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+    // This wrong macro introduces DIV_ROUND_UP(0xFFFFFFFD, 1024) to zero
+    // So we use 1024 here, for only one IDENTIFY NSLIST command
+    *(uint32_t *)(data + 0x0204) = 1024;
 
     // Optional NVM Command Support
     {
