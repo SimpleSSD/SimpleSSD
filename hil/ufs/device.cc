@@ -111,33 +111,8 @@ LUN::_LUN(bool b, uint8_t n, ConfigReader &cfg) : bWellknown(b), id(n) {
   inquiry[3] = 0x02;
   inquiry[4] = 31;
   inquiry[7] = 0x02;
-  inquiry[8] = 'S';
-  inquiry[9] = 'i';
-  inquiry[10] = 'm';
-  inquiry[11] = 'p';
-  inquiry[12] = 'l';
-  inquiry[13] = 'e';
-  inquiry[14] = 'S';
-  inquiry[15] = 'S';
-  inquiry[16] = 'D';
-  inquiry[17] = ' ';
-  inquiry[18] = 'U';
-  inquiry[19] = 'F';
-  inquiry[20] = 'S';
-  inquiry[21] = ' ';
-  inquiry[22] = 'D';
-  inquiry[23] = 'e';
-  inquiry[24] = 'v';
-  inquiry[25] = 'i';
-  inquiry[26] = 'c';
-  inquiry[27] = 'e';
-  inquiry[28] = ' ';
-  inquiry[29] = 'v';
-  inquiry[30] = '0';
-  inquiry[31] = '2';
-  inquiry[33] = '.';
-  inquiry[34] = '0';
-  inquiry[35] = '1';
+
+  sprintf((char *)inquiry + 8, "SimpleSSD UFS Device");
 }
 
 Device::Device(DMAInterface *d, ConfigReader &c)

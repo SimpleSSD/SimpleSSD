@@ -31,9 +31,7 @@ namespace HIL {
 namespace NVMe {
 
 #define LBA_SIZE 4096    // Always OCSSD's logical block size is 4K
-#define OCSSD_VERSION 1  //!< 1 for v1.2, 2 for v2.0
 
-#if OCSSD_VERSION == 1
 typedef struct _BlockData {
   uint32_t index;
   uint8_t value;
@@ -41,7 +39,7 @@ typedef struct _BlockData {
   _BlockData();
   _BlockData(uint32_t, uint8_t);
 } BlockData;
-#elif OCSSD_VERSION == 2
+
 typedef union _ChunkDescriptor {
   uint8_t data[32];
   struct {
@@ -69,9 +67,6 @@ typedef struct _ChunkUpdateEntry {
 
   _ChunkUpdateEntry(ChunkDescriptor *, uint32_t);
 } ChunkUpdateEntry;
-#else
-#error "Invalid OpenChannel SSD revision"
-#endif
 
 typedef struct {
   uint32_t group;         // Channel
@@ -105,8 +100,8 @@ class VectorContext : public IOContext {
   VectorContext(RequestFunction &f, CQEntryWrapper &r) : IOContext(f, r) {}
 };
 
-class OpenChannelSSD : public Subsystem {
- private:
+class OpenChannelSSD12 : public Subsystem {
+ protected:
   PAL::Parameter param;
   PAL::PALOLD *pPALOLD;
 
@@ -114,12 +109,6 @@ class OpenChannelSSD : public Subsystem {
 
   Geometry structure;
   Mask ppaMask;
-#if OCSSD_VERSION == 1
-  std::unordered_map<uint64_t, BlockData> badBlocks;
-#else
-  ChunkDescriptor *pDescriptor;
-  uint64_t descriptorLength;
-#endif
 
   uint64_t lastScheduled;
   Event completionEvent;
@@ -128,46 +117,25 @@ class OpenChannelSSD : public Subsystem {
   void updateCompletion();
   void completion();
 
-#if OCSSD_VERSION == 1
+ private:
+  std::unordered_map<uint64_t, BlockData> badBlocks;
+
   bool parsePPA(uint64_t, ::CPDPBP &);
   void convertUnit(::CPDPBP &);
   void mergeList(std::vector<uint64_t> &, std::vector<::CPDPBP> &,
                  bool = false);
-#else
-  uint64_t makeLBA(uint32_t, uint32_t, uint32_t, uint32_t);
-  void parseLBA(uint64_t, uint32_t &, uint32_t &, uint32_t &, uint32_t &);
-  void convertUnit(std::vector<uint64_t> &, std::vector<::CPDPBP> &,
-                   std::vector<ChunkUpdateEntry> &, bool = false, bool = false);
-  void readInternal(std::vector<uint64_t> &, DMAFunction &, void *,
-                    bool = false);
-  void writeInternal(std::vector<uint64_t> &, DMAFunction &, void *,
-                     bool = false);
-  void eraseInternal(std::vector<uint64_t> &, DMAFunction &, void *,
-                     bool = false);
-#endif
 
   // Commands
-#if OCSSD_VERSION == 1
   bool deviceIdentification(SQEntryWrapper &, RequestFunction &);
   bool setBadBlockTable(SQEntryWrapper &, RequestFunction &);
   bool getBadBlockTable(SQEntryWrapper &, RequestFunction &);
   void physicalBlockErase(SQEntryWrapper &, RequestFunction &);
   void physicalPageWrite(SQEntryWrapper &, RequestFunction &);
   void physicalPageRead(SQEntryWrapper &, RequestFunction &);
-#else
-  bool getLogPage(SQEntryWrapper &, RequestFunction &);
-  bool geometry(SQEntryWrapper &, RequestFunction &);
-  void read(SQEntryWrapper &, RequestFunction &);
-  void write(SQEntryWrapper &, RequestFunction &);
-  void datasetManagement(SQEntryWrapper &, RequestFunction &);
-  void vectorChunkRead(SQEntryWrapper &, RequestFunction &);
-  void vectorChunkWrite(SQEntryWrapper &, RequestFunction &);
-  void vectorChunkReset(SQEntryWrapper &, RequestFunction &);
-#endif
 
  public:
-  OpenChannelSSD(Controller *, ConfigData &);
-  ~OpenChannelSSD();
+  OpenChannelSSD12(Controller *, ConfigData &);
+  ~OpenChannelSSD12();
 
   void init() override;
 
@@ -178,6 +146,41 @@ class OpenChannelSSD : public Subsystem {
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;
   void resetStatValues() override;
+};
+
+class OpenChannelSSD20 : public OpenChannelSSD12 {
+ private:
+  ChunkDescriptor *pDescriptor;
+  uint64_t descriptorLength;
+
+  uint64_t makeLBA(uint32_t, uint32_t, uint32_t, uint32_t);
+  void parseLBA(uint64_t, uint32_t &, uint32_t &, uint32_t &, uint32_t &);
+  void convertUnit(std::vector<uint64_t> &, std::vector<::CPDPBP> &,
+                   std::vector<ChunkUpdateEntry> &, bool = false, bool = false);
+  void readInternal(std::vector<uint64_t> &, DMAFunction &, void *,
+                    bool = false);
+  void writeInternal(std::vector<uint64_t> &, DMAFunction &, void *,
+                     bool = false);
+  void eraseInternal(std::vector<uint64_t> &, DMAFunction &, void *,
+                     bool = false);
+
+  // Commands
+  bool getLogPage(SQEntryWrapper &, RequestFunction &);
+  bool geometry(SQEntryWrapper &, RequestFunction &);
+  void read(SQEntryWrapper &, RequestFunction &);
+  void write(SQEntryWrapper &, RequestFunction &);
+  void datasetManagement(SQEntryWrapper &, RequestFunction &);
+  void vectorChunkRead(SQEntryWrapper &, RequestFunction &);
+  void vectorChunkWrite(SQEntryWrapper &, RequestFunction &);
+  void vectorChunkReset(SQEntryWrapper &, RequestFunction &);
+
+ public:
+  OpenChannelSSD20(Controller *, ConfigData &);
+  ~OpenChannelSSD20();
+
+  void init() override;
+
+  void submitCommand(SQEntryWrapper &, RequestFunction) override;
 };
 
 }  // namespace NVMe

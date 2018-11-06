@@ -125,7 +125,21 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
 
   if (vid == OCSSD_VENDOR) {
     bUseOCSSD = true;
-    pSubsystem = new OpenChannelSSD(this, cfgdata);
+
+    switch (ssvid) {
+      case OCSSD_SSVID_1_2:
+        pSubsystem = new OpenChannelSSD12(this, cfgdata);
+
+        break;
+      case OCSSD_SSVID_2_0:
+        pSubsystem = new OpenChannelSSD20(this, cfgdata);
+
+        break;
+      default:
+        panic("nvme_ctrl: Invalid SSVID for Open-Channel SSD");
+
+        break;
+    }
   }
   else {
     pSubsystem = new Subsystem(this, cfgdata);

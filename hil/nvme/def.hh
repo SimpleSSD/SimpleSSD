@@ -41,6 +41,8 @@ namespace NVMe {
 #define SGL_SUBTYPE(id) (uint8_t)(id & 0x0F)
 
 #define OCSSD_VENDOR 0x1D1D
+#define OCSSD_SSVID_1_2 0x0102
+#define OCSSD_SSVID_2_0 0x0200
 
 typedef union _HealthInfo {
   uint8_t data[0x200];
