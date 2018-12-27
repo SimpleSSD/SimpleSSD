@@ -170,9 +170,21 @@ void PageMapping::format(LPNRange &range, uint64_t &tick) {
   tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::FORMAT);
 }
 
-Status *PageMapping::getStatus() {
+Status *PageMapping::getStatus(uint64_t lpnBegin, uint64_t lpnEnd) {
   status.freePhysicalBlocks = freeBlocks.size();
-  status.mappedLogicalPages = table.size();
+
+  if (lpnBegin == 0 && lpnEnd >= status.totalLogicalPages) {
+    status.mappedLogicalPages = table.size();
+  }
+  else {
+    status.mappedLogicalPages = 0;
+
+    for (uint64_t lpn = lpnBegin; lpn < lpnEnd; lpn++) {
+      if (table.count(lpn) > 0) {
+        status.mappedLogicalPages++;
+      }
+    }
+  }
 
   return &status;
 }

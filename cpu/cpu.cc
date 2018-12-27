@@ -289,7 +289,7 @@ CPU::CPU(ConfigReader &c) : conf(c), lastResetStat(0) {
 
 CPU::~CPU() {}
 
-void CPU::calculatePower(Energy &energy) {
+void CPU::calculatePower(Power &power) {
   // Print stats before die
   ParseXML param;
   uint64_t simCycle = (getTick() - lastResetStat) / clockPeriod;
@@ -625,7 +625,7 @@ void CPU::calculatePower(Energy &energy) {
 
   McPAT mcpat(&param);
 
-  mcpat.getEnergy(energy);
+  mcpat.getPower(power);
 }
 
 uint32_t CPU::leastBusyCPU(std::vector<Core> &list) {
@@ -950,17 +950,41 @@ void CPU::resetStatValues() {
 }
 
 void CPU::printLastStat() {
-  Energy energy;
+  Power power;
 
   debugprint(LOG_CPU, "Begin CPU power calculation");
 
-  calculatePower(energy);
+  calculatePower(power);
 
-  debugprint(LOG_CPU, " Core: %lf W", energy.core);
-  debugprint(LOG_CPU, " L1i: %lf W", energy.icache);
-  debugprint(LOG_CPU, " L1d: %lf W", energy.dcache);
-  debugprint(LOG_CPU, " L2: %lf W", energy.l2);
-  debugprint(LOG_CPU, " L3: %lf W", energy.l3);
+  debugprint(LOG_CPU, "Core:");
+  debugprint(LOG_CPU, "  Area: %lf mm^2", power.core.area);
+  debugprint(LOG_CPU, "  Peak Dynamic: %lf W", power.core.peakDynamic);
+  debugprint(LOG_CPU, "  Subthreshold Leakage: %lf W",
+             power.core.subthresholdLeakage);
+  debugprint(LOG_CPU, "  Gate Leakage: %lf W", power.core.gateLeakage);
+  debugprint(LOG_CPU, "  Runtime Dynamic: %lf W", power.core.runtimeDynamic);
+
+  if (power.level2.area > 0.0) {
+    debugprint(LOG_CPU, "L2:");
+    debugprint(LOG_CPU, "  Area: %lf mm^2", power.level2.area);
+    debugprint(LOG_CPU, "  Peak Dynamic: %lf W", power.level2.peakDynamic);
+    debugprint(LOG_CPU, "  Subthreshold Leakage: %lf W",
+               power.level2.subthresholdLeakage);
+    debugprint(LOG_CPU, "  Gate Leakage: %lf W", power.level2.gateLeakage);
+    debugprint(LOG_CPU, "  Runtime Dynamic: %lf W",
+               power.level2.runtimeDynamic);
+  }
+
+  if (power.level3.area > 0.0) {
+    debugprint(LOG_CPU, "L3:");
+    debugprint(LOG_CPU, "  Area: %lf mm^2", power.level3.area);
+    debugprint(LOG_CPU, "  Peak Dynamic: %lf W", power.level3.peakDynamic);
+    debugprint(LOG_CPU, "  Subthreshold Leakage: %lf W",
+               power.level3.subthresholdLeakage);
+    debugprint(LOG_CPU, "  Gate Leakage: %lf W", power.level3.gateLeakage);
+    debugprint(LOG_CPU, "  Runtime Dynamic: %lf W",
+               power.level3.runtimeDynamic);
+  }
 }
 
 }  // namespace CPU

@@ -80,7 +80,7 @@ class PageMapping : public AbstractFTL {
 
   void format(LPNRange &, uint64_t &) override;
 
-  Status *getStatus() override;
+  Status *getStatus(uint64_t, uint64_t) override;
 
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;

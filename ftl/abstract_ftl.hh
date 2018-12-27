@@ -54,7 +54,7 @@ class AbstractFTL : public StatObject {
 
   virtual void format(LPNRange &, uint64_t &) = 0;
 
-  virtual Status *getStatus() = 0;
+  virtual Status *getStatus(uint64_t, uint64_t) = 0;
 };
 
 }  // namespace FTL

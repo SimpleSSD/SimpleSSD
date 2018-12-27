@@ -27,11 +27,8 @@ namespace SimpleSSD {
 
 namespace DRAM {
 
-AbstractDRAM::EnergeStat::EnergeStat() {
-  memset(this, 0, sizeof(EnergeStat));
-}
-
-AbstractDRAM::AbstractDRAM(ConfigReader &c) : conf(c) {
+AbstractDRAM::AbstractDRAM(ConfigReader &c)
+    : conf(c), totalEnergy(0.0), totalPower(0.0) {
   pStructure = conf.getDRAMStructure();
   pTiming = conf.getDRAMTiming();
   pPower = conf.getDRAMPower();
@@ -118,50 +115,26 @@ void AbstractDRAM::convertMemspec() {
 void AbstractDRAM::getStatList(std::vector<Stats> &list, std::string prefix) {
   Stats temp;
 
-  temp.name = prefix + "energy.act";
-  temp.desc = "ACT command energy (pJ)";
+  temp.name = prefix + "energy";
+  temp.desc = "Total energy comsumed by embedded DRAM (pJ)";
   list.push_back(temp);
 
-  temp.name = prefix + "energy.pre";
-  temp.desc = "PRE command energy (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.rd";
-  temp.desc = "RD command energy (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.wr";
-  temp.desc = "WR command energy (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.act.standby";
-  temp.desc = "ACT standby energy (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.pre.standby";
-  temp.desc = "PRE standby energy (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.ref";
-  temp.desc = "Refresh energy (pJ)";
+  temp.name = prefix + "power";
+  temp.desc = "Total power comsumed by embedded DRAM (mW)";
   list.push_back(temp);
 }
 
 void AbstractDRAM::getStatValues(std::vector<double> &values) {
-  values.push_back(stat.act);
-  values.push_back(stat.pre);
-  values.push_back(stat.read);
-  values.push_back(stat.write);
-  values.push_back(stat.actStandby);
-  values.push_back(stat.preStandby);
-  values.push_back(stat.refresh);
+  values.push_back(totalEnergy);
+  values.push_back(totalPower);
 }
 
 void AbstractDRAM::resetStatValues() {
   // calcWindowEnergy clears old data
   dramPower->calcWindowEnergy(getTick() / pTiming->tCK);
 
-  memset(&stat, 0, sizeof(EnergeStat));
+  totalEnergy = 0.0;
+  totalPower = 0.0;
 }
 
 }  // namespace DRAM

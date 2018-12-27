@@ -174,8 +174,8 @@ void HIL::getLPNInfo(uint64_t &totalLogicalPages, uint32_t &logicalPageSize) {
   pICL->getLPNInfo(totalLogicalPages, logicalPageSize);
 }
 
-uint64_t HIL::getUsedPageCount() {
-  return pICL->getUsedPageCount();
+uint64_t HIL::getUsedPageCount(uint64_t lcaBegin, uint64_t lcaEnd) {
+  return pICL->getUsedPageCount(lcaBegin, lcaEnd);
 }
 
 void HIL::updateBusyTime(int idx, uint64_t begin, uint64_t end) {

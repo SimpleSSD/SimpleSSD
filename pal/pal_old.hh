@@ -43,6 +43,8 @@ class PALOLD : public AbstractPAL {
   Event flushEvent;
   EventFunction flushFunction;
 
+  uint8_t lastResetTick;
+
   void convertCPDPBP(Request &, std::vector<::CPDPBP> &);
   void printCPDPBP(::CPDPBP &, const char *);
   void printPPN(Request &, const char *);

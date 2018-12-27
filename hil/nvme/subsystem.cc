@@ -220,6 +220,10 @@ bool Subsystem::createNamespace(uint32_t nsid, Namespace::Information *info) {
              "NS %-5d| CREATE | LBA size %" PRIu32 " | Capacity %" PRIu64, nsid,
              info->lbaSize, info->size);
 
+  lNamespaces.sort([](Namespace *lhs, Namespace *rhs) -> bool {
+    return lhs->getNSID() < rhs->getNSID();
+  });
+
   return true;
 }
 
@@ -259,7 +263,9 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   // This function also called from OpenChannelSSD subsystem
   if (pHIL) {
     info->utilization =
-        pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
+        pHIL->getUsedPageCount(info->range.slpn,
+                               info->range.slpn + info->range.nlp) *
+        logicalPageSize / info->lbaSize;
   }
 
   memcpy(buffer + 16, &info->utilization, 8);
@@ -944,51 +950,51 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req,
   debugprint(LOG_HIL_NVME, "ADMIN   | Namespace Management | OP %d | NSID %d",
              sel, req.entry.namespaceID);
 
-  DMAFunction doRead = [this](uint64_t, void *context) {
-    DMAFunction dmaDone = [this](uint64_t, void *context) {
-      Namespace::Information info;
-      NamespaceManagementContext *pContext =
-          (NamespaceManagementContext *)context;
+  static DMAFunction dmaDone = [this](uint64_t, void *context) {
+    Namespace::Information info;
+    NamespaceManagementContext *pContext =
+        (NamespaceManagementContext *)context;
 
-      // Copy data
-      memcpy(&info.size, pContext->buffer + 0, 8);
-      memcpy(&info.capacity, pContext->buffer + 8, 8);
-      info.lbaFormatIndex = pContext->buffer[26];
-      info.dataProtectionSettings = pContext->buffer[29];
-      info.namespaceSharingCapabilities = pContext->buffer[30];
+    // Copy data
+    memcpy(&info.size, pContext->buffer + 0, 8);
+    memcpy(&info.capacity, pContext->buffer + 8, 8);
+    info.lbaFormatIndex = pContext->buffer[26];
+    info.dataProtectionSettings = pContext->buffer[29];
+    info.namespaceSharingCapabilities = pContext->buffer[30];
 
-      if (info.lbaFormatIndex >= nLBAFormat) {
-        pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
-                                  STATUS_ABORT_INVALID_FORMAT);
-      }
-      else if (info.namespaceSharingCapabilities != 0x00) {
-        pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
-                                  STATUS_INVALID_FIELD);
-      }
-      else if (info.dataProtectionSettings != 0x00) {
-        pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
-                                  STATUS_INVALID_FIELD);
-      }
+    if (info.lbaFormatIndex >= nLBAFormat) {
+      pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                                STATUS_ABORT_INVALID_FORMAT);
+    }
+    else if (info.namespaceSharingCapabilities != 0x00) {
+      pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                                STATUS_INVALID_FIELD);
+    }
+    else if (info.dataProtectionSettings != 0x00) {
+      pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                                STATUS_INVALID_FIELD);
+    }
 
-      info.lbaSize = lbaSize[info.lbaFormatIndex];
+    info.lbaSize = lbaSize[info.lbaFormatIndex];
 
-      bool ret = createNamespace(pContext->nsid, &info);
+    bool ret = createNamespace(pContext->nsid, &info);
 
-      if (ret) {
-        pContext->resp.entry.dword0 = pContext->nsid;
-      }
-      else {
-        pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
-                                  STATUS_NAMESPACE_INSUFFICIENT_CAPACITY);
-      }
+    if (ret) {
+      pContext->resp.entry.dword0 = pContext->nsid;
+    }
+    else {
+      pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                                STATUS_NAMESPACE_INSUFFICIENT_CAPACITY);
+    }
 
-      pContext->function(pContext->resp);
+    pContext->function(pContext->resp);
 
-      free(pContext->buffer);
-      delete pContext->dma;
-      delete pContext;
-    };
+    free(pContext->buffer);
+    delete pContext->dma;
+    delete pContext;
+  };
 
+  static DMAFunction doRead = [](uint64_t, void *context) {
     RequestContext *pContext = (RequestContext *)context;
 
     pContext->dma->read(0, 0x1000, pContext->buffer, dmaDone, context);
@@ -1027,6 +1033,7 @@ bool Subsystem::namespaceManagement(SQEntryWrapper &req,
             new NamespaceManagementContext(func, resp);
 
         pContext->buffer = (uint8_t *)calloc(0x1000, sizeof(uint8_t));
+        pContext->nsid = nsid;
 
         if (req.useSGL) {
           pContext->dma = new SGL(cfgdata, doRead, pContext, req.entry.data1,
@@ -1066,68 +1073,100 @@ bool Subsystem::namespaceAttachment(SQEntryWrapper &req,
   debugprint(LOG_HIL_NVME, "ADMIN   | Namespace Attachment | OP %d | NSID %d",
              req.entry.dword10 & 0x0F, req.entry.namespaceID);
 
-  DMAFunction doRead = [this, sel, nsid](uint64_t, void *context) {
-    DMAFunction dmaDone = [this, sel, nsid](uint64_t, void *context) {
-      bool err = false;
-      RequestContext *pContext = (RequestContext *)context;
-      uint32_t ctrlList = *(uint32_t *)pContext->buffer;
+  static DMAFunction dmaDone = [this](uint64_t, void *context) {
+    bool err = false;
+    IOContext *pContext = (IOContext *)context;
+    uint16_t *ctrlList = (uint16_t *)pContext->buffer;
+    std::vector<uint16_t> list;
 
-      if (ctrlList != 0x00000001) {
-        err = true;
-        pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
-                                  STATUS_CONTROLLER_LIST_INVALID);
-      }
+    uint8_t sel = (uint8_t)pContext->slba;
+    uint32_t nsid = (uint32_t)pContext->nlb;
 
-      if (!err) {
-        if (sel == 0x00) {  // Attach
-          for (auto &iter : lNamespaces) {
-            if (iter->getNSID() == nsid) {
-              if (iter->isAttached()) {
-                pContext->resp.makeStatus(true, false,
-                                          TYPE_COMMAND_SPECIFIC_STATUS,
-                                          STATUS_NAMESPACE_ALREADY_ATTACHED);
-              }
-              else {
-                iter->attach(true);
-              }
+    for (uint16_t i = 1; i <= ctrlList[0]; i++) {
+      list.push_back(ctrlList[i]);
+    }
+
+    if (list.size() > 1 && sel == 0x00) {
+      err = true;
+      pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                                STATUS_NAMESPACE_IS_PRIVATE);
+    }
+    else if (list.size() == 0) {
+      err = true;
+      pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                                STATUS_CONTROLLER_LIST_INVALID);
+    }
+    else if (list.at(0) != 0) {  // Controller ID is zero
+      err = true;
+      pContext->resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                                STATUS_CONTROLLER_LIST_INVALID);
+    }
+
+    if (!err) {
+      if (sel == 0x00) {  // Attach
+        bool exist = false;
+
+        for (auto &iter : lNamespaces) {
+          if (iter->getNSID() == nsid) {
+            exist = true;
+
+            if (iter->isAttached()) {
+              err = true;
+              pContext->resp.makeStatus(true, false,
+                                        TYPE_COMMAND_SPECIFIC_STATUS,
+                                        STATUS_NAMESPACE_ALREADY_ATTACHED);
+            }
+            else {
+              iter->attach(true);
             }
           }
         }
-        else if (sel == 0x01) {  // Detach
-          for (auto &iter : lNamespaces) {
-            if (iter->getNSID() == nsid) {
-              if (iter->isAttached()) {
-                iter->attach(false);
-              }
-              else {
-                pContext->resp.makeStatus(true, false,
-                                          TYPE_COMMAND_SPECIFIC_STATUS,
-                                          STATUS_NAMESPACE_NOT_ATTACHED);
-              }
+
+        if (!exist) {
+          err = true;
+          pContext->resp.makeStatus(true, false, TYPE_GENERIC_COMMAND_STATUS,
+                                    STATUS_ABORT_INVALID_NAMESPACE);
+        }
+      }
+      else if (sel == 0x01) {  // Detach
+        for (auto &iter : lNamespaces) {
+          if (iter->getNSID() == nsid) {
+            if (iter->isAttached()) {
+              iter->attach(false);
+            }
+            else {
+              err = true;
+              pContext->resp.makeStatus(true, false,
+                                        TYPE_COMMAND_SPECIFIC_STATUS,
+                                        STATUS_NAMESPACE_NOT_ATTACHED);
             }
           }
         }
-        else {
-          pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
-                                    STATUS_INVALID_FIELD);
-        }
       }
+      else {
+        pContext->resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                                  STATUS_INVALID_FIELD);
+      }
+    }
 
-      pContext->function(pContext->resp);
+    pContext->function(pContext->resp);
 
-      free(pContext->buffer);
-      delete pContext->dma;
-      delete pContext;
-    };
-
-    RequestContext *pContext = (RequestContext *)context;
-
-    pContext->dma->read(0, 4, pContext->buffer, dmaDone, context);
+    free(pContext->buffer);
+    delete pContext->dma;
+    delete pContext;
   };
 
-  RequestContext *pContext = new RequestContext(func, resp);
+  static DMAFunction doRead = [](uint64_t, void *context) {
+    IOContext *pContext = (IOContext *)context;
 
-  pContext->buffer = (uint8_t *)calloc(1, sizeof(uint32_t));
+    pContext->dma->read(0, 0x1000, pContext->buffer, dmaDone, context);
+  };
+
+  IOContext *pContext = new IOContext(func, resp);
+
+  pContext->buffer = (uint8_t *)calloc(0x1000, 1);
+  pContext->slba = sel;
+  pContext->nlb = nsid;
 
   if (req.useSGL) {
     pContext->dma =
@@ -1205,7 +1244,9 @@ bool Subsystem::formatNVM(SQEntryWrapper &req, RequestFunction &func) {
       (*iter)->format(getTick());
 
       info->utilization =
-          pHIL->getUsedPageCount() * logicalPageSize / info->lbaSize;
+          pHIL->getUsedPageCount(info->range.slpn,
+                                 info->range.slpn + info->range.nlp) *
+          logicalPageSize / info->lbaSize;
 
       // Send format command to HIL
       RequestContext *pContext = new RequestContext(func, resp);

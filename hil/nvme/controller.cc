@@ -688,7 +688,7 @@ void Controller::identify(uint8_t *data) {
     }
 
     // Firmware Revision
-    strncpy((char *)data + 0x0040, "02.01.01", 0x08);
+    strncpy((char *)data + 0x0040, "02.01.02", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;

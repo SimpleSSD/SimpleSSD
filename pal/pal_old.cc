@@ -36,7 +36,8 @@ namespace SimpleSSD {
 
 namespace PAL {
 
-PALOLD::PALOLD(Parameter &p, ConfigReader &c) : AbstractPAL(p, c) {
+PALOLD::PALOLD(Parameter &p, ConfigReader &c)
+    : AbstractPAL(p, c), lastResetTick(0) {
   Config::NANDTiming *pTiming = c.getNANDTiming();
   Config::NANDPower *pPower = c.getNANDPower();
 
@@ -312,35 +313,47 @@ void PALOLD::getStatList(std::vector<Stats> &list, std::string prefix) {
   Stats temp;
 
   temp.name = prefix + "energy.read";
-  temp.desc = "NAND power used on read transaction (uJ)";
+  temp.desc = "Consumed energy by NAND read operation (uJ)";
   list.push_back(temp);
 
   temp.name = prefix + "energy.program";
-  temp.desc = "NAND power used on program transaction (uJ)";
+  temp.desc = "Consumed energy by NAND program operation (uJ)";
   list.push_back(temp);
 
   temp.name = prefix + "energy.erase";
-  temp.desc = "NAND power used on erase transaction (uJ)";
+  temp.desc = "Consumed energy by NAND erase operation (uJ)";
   list.push_back(temp);
 
   temp.name = prefix + "energy.total";
-  temp.desc = "NAND power used on all transaction (uJ)";
+  temp.desc = "Total consumed energy by NAND (uJ)";
+  list.push_back(temp);
+
+  temp.name = prefix + "power";
+  temp.desc = "Average power consumed by NAND (uW)";
   list.push_back(temp);
 }
 
 void PALOLD::getStatValues(std::vector<double> &values) {
   double read, program, erase;
+  double total;
 
   stats->getEnergyStat(read, program, erase);
 
   values.push_back(read);
   values.push_back(program);
   values.push_back(erase);
-  values.push_back(read + program + erase);
+
+  total = read + program + erase;
+  values.push_back(total);
+
+  // uW = uJ / ps * 1e+12
+  total /= (double)(getTick() - lastResetTick) / 1e+12;
+  values.push_back(total);
 }
 
 void PALOLD::resetStatValues() {
   stats->ResetStats();
+  lastResetTick = getTick();
 }
 
 void PALOLD::read(::CPDPBP &addr, uint64_t &tick) {

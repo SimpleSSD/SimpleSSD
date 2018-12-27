@@ -39,19 +39,6 @@ typedef enum : uint8_t {
 
 class AbstractDRAM : public StatObject {
  protected:
-  struct EnergeStat {
-    double act;
-    double pre;
-    double read;
-    double write;
-    double actStandby;
-    double preStandby;
-    double refresh;
-    double total;
-
-    EnergeStat();
-  };
-
   ConfigReader &conf;
 
   Config::DRAMStructure *pStructure;
@@ -63,7 +50,8 @@ class AbstractDRAM : public StatObject {
 
   void convertMemspec();
 
-  EnergeStat stat;
+  double totalEnergy;  // Unit: pJ
+  double totalPower;   // Unit: mW
 
  public:
   AbstractDRAM(ConfigReader &);

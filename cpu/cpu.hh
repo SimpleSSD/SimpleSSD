@@ -115,7 +115,7 @@ class CPU : public StatObject {
   std::unordered_map<uint16_t, std::unordered_map<uint16_t, InstStat>> cpi;
 
   uint32_t leastBusyCPU(std::vector<Core> &);
-  void calculatePower(Energy &);
+  void calculatePower(Power &);
 
  public:
   CPU(ConfigReader &);

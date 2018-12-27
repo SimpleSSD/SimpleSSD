@@ -64,7 +64,7 @@ class HIL : public StatObject {
   void format(Request &, bool);
 
   void getLPNInfo(uint64_t &, uint32_t &);
-  uint64_t getUsedPageCount();
+  uint64_t getUsedPageCount(uint64_t, uint64_t);
 
   void getStatList(std::vector<Stats> &, std::string) override;
   void getStatValues(std::vector<double> &) override;

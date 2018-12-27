@@ -79,15 +79,10 @@ void SimpleDRAM::updateStats(uint64_t cycle) {
   dramPower->calcWindowEnergy(cycle);
 
   auto &energy = dramPower->getEnergy();
+  auto &power = dramPower->getPower();
 
-  stat.act += energy.act_energy;
-  stat.pre += energy.pre_energy;
-  stat.read += energy.read_energy;
-  stat.write += energy.write_energy;
-  stat.actStandby += energy.act_stdby_energy;
-  stat.preStandby += energy.pre_stdby_energy;
-  stat.refresh += energy.ref_energy;
-  stat.total += energy.total_energy;
+  totalEnergy += energy.window_energy;
+  totalPower = power.average_power;
 }
 
 void SimpleDRAM::setScheduling(bool enable) {

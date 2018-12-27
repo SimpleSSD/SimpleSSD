@@ -165,10 +165,10 @@ void ICL::getLPNInfo(uint64_t &t, uint32_t &s) {
   s = logicalPageSize;
 }
 
-uint64_t ICL::getUsedPageCount() {
-  static uint32_t ratio = pFTL->getInfo()->ioUnitInPage;
+uint64_t ICL::getUsedPageCount(uint64_t lcaBegin, uint64_t lcaEnd) {
+  uint32_t ratio = pFTL->getInfo()->ioUnitInPage;
 
-  return pFTL->getUsedPageCount() * ratio;
+  return pFTL->getUsedPageCount(lcaBegin / ratio, lcaEnd / ratio) * ratio;
 }
 
 void ICL::getStatList(std::vector<Stats> &list, std::string prefix) {

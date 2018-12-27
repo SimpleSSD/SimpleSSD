@@ -99,8 +99,8 @@ Parameter *FTL::getInfo() {
   return &param;
 }
 
-uint64_t FTL::getUsedPageCount() {
-  return pFTL->getStatus()->mappedLogicalPages;
+uint64_t FTL::getUsedPageCount(uint64_t lpnBegin, uint64_t lpnEnd) {
+  return pFTL->getStatus(lpnBegin, lpnEnd)->mappedLogicalPages;
 }
 
 void FTL::getStatList(std::vector<Stats> &list, std::string prefix) {
