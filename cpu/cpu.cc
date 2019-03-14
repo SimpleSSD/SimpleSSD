@@ -91,6 +91,7 @@ CPU::CoreStat &CPU::Core::getStat() {
 
 void CPU::Core::submitJob(JobEntry job, uint64_t delay) {
   job.delay = delay;
+  job.submitAt = getTick();
   jobs.push(job);
 
   if (!busy) {
@@ -100,7 +101,16 @@ void CPU::Core::submitJob(JobEntry job, uint64_t delay) {
 
 void CPU::Core::handleJob() {
   auto &iter = jobs.front();
-  uint64_t finishedAt = getTick() + iter.inst->latency + iter.delay;
+  uint64_t now = getTick();
+  uint64_t diff = now - iter.submitAt;
+  uint64_t finishedAt;
+
+  if (diff >= iter.delay) {
+    finishedAt = now + iter.inst->latency;
+  }
+  else {
+    finishedAt = now + iter.inst->latency + iter.delay - diff;
+  }
 
   busy = true;
 
@@ -630,23 +640,26 @@ void CPU::calculatePower(Power &power) {
 
 uint32_t CPU::leastBusyCPU(std::vector<Core> &list) {
   uint32_t idx = list.size();
+  uint64_t busymin = std::numeric_limits<uint64_t>::max();
 
   for (uint32_t i = 0; i < list.size(); i++) {
     auto &core = list.at(i);
+    auto busy = core.getStat().busy;
 
-    if (!core.isBusy()) {
+    if (!core.isBusy() && busy < busymin) {
+      busymin = busy;
       idx = i;
     }
   }
 
   if (idx == list.size()) {
-    uint64_t max = std::numeric_limits<uint64_t>::max();
+    uint64_t jobmin = std::numeric_limits<uint64_t>::max();
 
     for (uint32_t i = 0; i < list.size(); i++) {
-      auto &core = list.at(i);
+      auto jobs = list.at(i).getJobListSize();
 
-      if (core.getJobListSize() < max) {
-        max = core.getJobListSize();
+      if (jobs <= jobmin) {
+        jobmin = jobs;
         idx = i;
       }
     }

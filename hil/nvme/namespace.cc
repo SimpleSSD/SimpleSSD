@@ -410,17 +410,14 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
 
       pParent->read(this, pContext->slba, pContext->nlb, dmaDone, pContext);
 
-      if (pDisk) {
-        pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
+      pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
 
+      if (pDisk) {
         pDisk->read(pContext->slba, pContext->nlb, pContext->buffer);
-        pContext->dma->write(0, pContext->nlb * info.lbaSize, pContext->buffer,
-                             dmaDone, context);
       }
-      else {
-        pContext->dma->write(0, pContext->nlb * info.lbaSize, nullptr, dmaDone,
-                             context);
-      }
+
+      pContext->dma->write(0, pContext->nlb * info.lbaSize, pContext->buffer,
+                           dmaDone, context);
     };
 
     IOContext *pContext = new IOContext(func, resp);

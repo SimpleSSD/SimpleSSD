@@ -61,6 +61,7 @@ typedef struct _JobEntry {
   DMAFunction func;
   void *context;
   InstStat *inst;
+  uint64_t submitAt;
   uint64_t delay;
 
   _JobEntry(DMAFunction &, void *, InstStat *);

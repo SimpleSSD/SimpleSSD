@@ -581,7 +581,9 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
       block->second.write(pageIndex, req.lpn, idx, beginAt);
 
       // Read old data if needed (Only executed when bRandomTweak = false)
-      if (readBeforeWrite) {
+      // Maybe some other init procedures want to perform 'partial-write'
+      // So check sendToPAL variable
+      if (readBeforeWrite && sendToPAL) {
         palRequest.blockIndex = mapping.first;
         palRequest.pageIndex = mapping.second;
         palRequest.ioFlag.set();
@@ -612,10 +614,14 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
     }
   }
 
-  tick = finishedAt;
-  tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::WRITE_INTERNAL);
+  // Exclude CPU operation when initializing
+  if (sendToPAL) {
+    tick = finishedAt;
+    tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::WRITE_INTERNAL);
+  }
 
   // GC if needed
+  // I assumed that init procedure never invokes GC
   static float gcThreshold = conf.readFloat(CONFIG_FTL, FTL_GC_THRESHOLD_RATIO);
 
   if (freeBlockRatio() < gcThreshold) {
