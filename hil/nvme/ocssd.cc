@@ -42,7 +42,11 @@ ChunkUpdateEntry::_ChunkUpdateEntry(ChunkDescriptor *p, uint32_t i)
     : pDesc(p), pageIdx(i) {}
 
 OpenChannelSSD12::OpenChannelSSD12(Controller *c, ConfigData &cfg)
-    : Subsystem(c, cfg), lastScheduled(0) {
+    : Subsystem(c, cfg),
+      lastScheduled(0),
+      eraseCount(0),
+      readCount(0),
+      writeCount(0) {
   completionEvent = allocate([this](uint64_t) { completion(); });
 }
 
@@ -178,7 +182,8 @@ void OpenChannelSSD12::init() {
   pDisk->open("", info.sizeInByteL, LBA_SIZE);
 }
 
-void OpenChannelSSD12::submitCommand(SQEntryWrapper &req, RequestFunction func) {
+void OpenChannelSSD12::submitCommand(SQEntryWrapper &req,
+                                     RequestFunction func) {
   struct CommandContext {
     SQEntryWrapper req;
     RequestFunction func;
@@ -320,7 +325,7 @@ void OpenChannelSSD12::convertUnit(::CPDPBP &addr) {
 }
 
 void OpenChannelSSD12::mergeList(std::vector<uint64_t> &lbaList,
-                               std::vector<::CPDPBP> &list, bool block) {
+                                 std::vector<::CPDPBP> &list, bool block) {
   ::CPDPBP temp;
 
   list.clear();
@@ -379,7 +384,7 @@ void OpenChannelSSD12::completion() {
 }
 
 bool OpenChannelSSD12::deviceIdentification(SQEntryWrapper &req,
-                                          RequestFunction &func) {
+                                            RequestFunction &func) {
   CQEntryWrapper resp(req);
   PAL::NAND_TYPE type =
       (PAL::NAND_TYPE)conf.readInt(CONFIG_PAL, PAL::NAND_FLASH_TYPE);
@@ -577,10 +582,10 @@ bool OpenChannelSSD12::deviceIdentification(SQEntryWrapper &req,
   }
 
   return true;
-}  // namespace NVMe
+}
 
 bool OpenChannelSSD12::setBadBlockTable(SQEntryWrapper &req,
-                                      RequestFunction &func) {
+                                        RequestFunction &func) {
   bool err = false;
 
   CQEntryWrapper resp(req);
@@ -677,7 +682,7 @@ bool OpenChannelSSD12::setBadBlockTable(SQEntryWrapper &req,
 }
 
 bool OpenChannelSSD12::getBadBlockTable(SQEntryWrapper &req,
-                                      RequestFunction &func) {
+                                        RequestFunction &func) {
   CQEntryWrapper resp(req);
   CPDPBP addr;
   uint64_t ppa = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
@@ -759,7 +764,7 @@ bool OpenChannelSSD12::getBadBlockTable(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD12::physicalBlockErase(SQEntryWrapper &req,
-                                        RequestFunction &func) {
+                                          RequestFunction &func) {
   bool err = false;
 
   CQEntryWrapper resp(req);
@@ -767,6 +772,8 @@ void OpenChannelSSD12::physicalBlockErase(SQEntryWrapper &req,
 
   uint8_t nppa = (req.entry.dword12 & 0x3F) + 1;
   uint64_t ppa = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+
+  eraseCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Physical Block Erase  | %d lbas", nppa);
 
@@ -870,7 +877,7 @@ void OpenChannelSSD12::physicalBlockErase(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD12::physicalPageWrite(SQEntryWrapper &req,
-                                       RequestFunction &func) {
+                                         RequestFunction &func) {
   bool err = false;
 
   CQEntryWrapper resp(req);
@@ -878,6 +885,8 @@ void OpenChannelSSD12::physicalPageWrite(SQEntryWrapper &req,
 
   uint8_t nppa = (req.entry.dword12 & 0x3F) + 1;
   uint64_t ppa = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+
+  writeCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Physical Page Write  | %d lbas", nppa);
 
@@ -994,7 +1003,7 @@ void OpenChannelSSD12::physicalPageWrite(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD12::physicalPageRead(SQEntryWrapper &req,
-                                      RequestFunction &func) {
+                                        RequestFunction &func) {
   bool err = false;
 
   CQEntryWrapper resp(req);
@@ -1002,6 +1011,8 @@ void OpenChannelSSD12::physicalPageRead(SQEntryWrapper &req,
 
   uint8_t nppa = (req.entry.dword12 & 0x3F) + 1;
   uint64_t ppa = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+
+  readCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Physical Page Read   | %d lbas", nppa);
 
@@ -1117,20 +1128,53 @@ void OpenChannelSSD12::physicalPageRead(SQEntryWrapper &req,
   }
 }
 
-void OpenChannelSSD12::getStatList(std::vector<Stats> &list, std::string prefix) {
+void OpenChannelSSD12::getStatList(std::vector<Stats> &list,
+                                   std::string prefix) {
+  Stats temp;
+
+  temp.name = prefix + "command_count";
+  temp.desc = "Total number of OCSSD command handled";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase";
+  temp.desc = "Total number of Physical Block Erase command";
+  list.push_back(temp);
+
+  temp.name = prefix + "read";
+  temp.desc = "Total number of Physical Page Read command";
+  list.push_back(temp);
+
+  temp.name = prefix + "write";
+  temp.desc = "Total number of Physical Page Write command";
+  list.push_back(temp);
+
   pPALOLD->getStatList(list, prefix + "pal.");
 }
 
 void OpenChannelSSD12::getStatValues(std::vector<double> &values) {
+  values.push_back(commandCount);
+  values.push_back(eraseCount);
+  values.push_back(readCount);
+  values.push_back(writeCount);
+
   pPALOLD->getStatValues(values);
 }
 
 void OpenChannelSSD12::resetStatValues() {
+  commandCount = 0;
+  eraseCount = 0;
+  readCount = 0;
+  writeCount = 0;
+
   pPALOLD->resetStatValues();
 }
 
 OpenChannelSSD20::OpenChannelSSD20(Controller *c, ConfigData &cfg)
-    : OpenChannelSSD12(c, cfg), pDescriptor(nullptr) {}
+    : OpenChannelSSD12(c, cfg),
+      pDescriptor(nullptr),
+      vectorEraseCount(0),
+      vectorReadCount(0),
+      vectorWriteCount(0) {}
 
 OpenChannelSSD20::~OpenChannelSSD20() {
   free(pDescriptor);
@@ -1259,7 +1303,8 @@ void OpenChannelSSD20::init() {
   pDisk->open("", info.sizeInByteL, LBA_SIZE);
 }
 
-void OpenChannelSSD20::submitCommand(SQEntryWrapper &req, RequestFunction func) {
+void OpenChannelSSD20::submitCommand(SQEntryWrapper &req,
+                                     RequestFunction func) {
   struct CommandContext {
     SQEntryWrapper req;
     RequestFunction func;
@@ -1357,7 +1402,7 @@ void OpenChannelSSD20::submitCommand(SQEntryWrapper &req, RequestFunction func) 
 }
 
 uint64_t OpenChannelSSD20::makeLBA(uint32_t g, uint32_t p, uint32_t c,
-                                 uint32_t l) {
+                                   uint32_t l) {
   uint64_t ret = 0;
 
   ret = l & ppaMask.sectorMask;
@@ -1369,7 +1414,7 @@ uint64_t OpenChannelSSD20::makeLBA(uint32_t g, uint32_t p, uint32_t c,
 }
 
 void OpenChannelSSD20::parseLBA(uint64_t lba, uint32_t &g, uint32_t &p,
-                              uint32_t &c, uint32_t &l) {
+                                uint32_t &c, uint32_t &l) {
   l = lba & ppaMask.sectorMask;
   c = (lba & ppaMask.blockMask) >> ppaMask.blockShift;
   p = (lba & ppaMask.wayMask) >> ppaMask.wayShift;
@@ -1377,9 +1422,9 @@ void OpenChannelSSD20::parseLBA(uint64_t lba, uint32_t &g, uint32_t &p,
 }
 
 void OpenChannelSSD20::convertUnit(std::vector<uint64_t> &lbaList,
-                                 std::vector<::CPDPBP> &list,
-                                 std::vector<ChunkUpdateEntry> &chunk,
-                                 bool block, bool mode) {
+                                   std::vector<::CPDPBP> &list,
+                                   std::vector<ChunkUpdateEntry> &chunk,
+                                   bool block, bool mode) {
   static bool useMP =
       conf.readBoolean(CONFIG_PAL, PAL::NAND_USE_MULTI_PLANE_OP);
 
@@ -1441,7 +1486,8 @@ void OpenChannelSSD20::convertUnit(std::vector<uint64_t> &lbaList,
 }
 
 void OpenChannelSSD20::readInternal(std::vector<uint64_t> &lbaList,
-                                  DMAFunction &func, void *context, bool mode) {
+                                    DMAFunction &func, void *context,
+                                    bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
 
@@ -1487,8 +1533,8 @@ void OpenChannelSSD20::readInternal(std::vector<uint64_t> &lbaList,
 }
 
 void OpenChannelSSD20::writeInternal(std::vector<uint64_t> &lbaList,
-                                   DMAFunction &func, void *context,
-                                   bool mode) {
+                                     DMAFunction &func, void *context,
+                                     bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
 
@@ -1547,8 +1593,8 @@ void OpenChannelSSD20::writeInternal(std::vector<uint64_t> &lbaList,
 }
 
 void OpenChannelSSD20::eraseInternal(std::vector<uint64_t> &lbaList,
-                                   DMAFunction &func, void *context,
-                                   bool mode) {
+                                     DMAFunction &func, void *context,
+                                     bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
 
@@ -1621,7 +1667,7 @@ bool OpenChannelSSD20::getLogPage(SQEntryWrapper &req, RequestFunction &func) {
              req_size, req.entry.namespaceID);
 
   static DMAFunction dmaDone = [](uint64_t, void *context) {
-    RequestContext *pContext = (RequestContext *)context;
+    IOContext *pContext = (IOContext *)context;
 
     pContext->function(pContext->resp);
 
@@ -1629,10 +1675,10 @@ bool OpenChannelSSD20::getLogPage(SQEntryWrapper &req, RequestFunction &func) {
     delete pContext;
   };
   DMAFunction smartInfo = [this, offset](uint64_t, void *context) {
-    RequestContext *pContext = (RequestContext *)context;
+    IOContext *pContext = (IOContext *)context;
 
-    pContext->dma->write(offset, descriptorLength * sizeof(ChunkDescriptor),
-                         pContext->buffer, dmaDone, context);
+    pContext->dma->write(offset, pContext->nlb, pContext->buffer, dmaDone,
+                         context);
   };
 
   switch (lid) {
@@ -1644,27 +1690,20 @@ bool OpenChannelSSD20::getLogPage(SQEntryWrapper &req, RequestFunction &func) {
     case LOG_CHUNK_INFORMATION: {
       ret = true;
       submit = false;
-      RequestContext *pContext = new RequestContext(func, resp);
+      IOContext *pContext = new IOContext(func, resp);
 
-      // Check request size
-      if (req_size < descriptorLength * sizeof(ChunkDescriptor)) {
-        submit = true;
-        resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
-                        STATUS_INVALID_LOG_PAGE);
+      // Fill data
+      pContext->buffer = (uint8_t *)pDescriptor;
+      pContext->nlb = req_size;
+
+      if (req.useSGL) {
+        pContext->dma = new SGL(cfgdata, smartInfo, pContext, req.entry.data1,
+                                req.entry.data2);
       }
       else {
-        // Fill data
-        pContext->buffer = (uint8_t *)pDescriptor;
-
-        if (req.useSGL) {
-          pContext->dma = new SGL(cfgdata, smartInfo, pContext, req.entry.data1,
-                                  req.entry.data2);
-        }
-        else {
-          pContext->dma =
-              new PRPList(cfgdata, smartInfo, pContext, req.entry.data1,
-                          req.entry.data2, (uint64_t)req_size);
-        }
+        pContext->dma =
+            new PRPList(cfgdata, smartInfo, pContext, req.entry.data1,
+                        req.entry.data2, (uint64_t)req_size);
       }
     } break;
     default:
@@ -1766,6 +1805,8 @@ void OpenChannelSSD20::read(SQEntryWrapper &req, RequestFunction &func) {
     warn("nvme_namespace: host tried to read 0 blocks");
   }
 
+  readCount++;
+
   debugprint(LOG_HIL_NVME, "OCSSD   | READ  | %" PRIX64 " + %d", slba, nlb);
 
   if (!err) {
@@ -1847,6 +1888,8 @@ void OpenChannelSSD20::write(SQEntryWrapper &req, RequestFunction &func) {
     warn("nvme_namespace: host tried to write 0 blocks");
   }
 
+  writeCount++;
+
   debugprint(LOG_HIL_NVME, "OCSSD   | WRITE | %" PRIX64 " + %d", slba, nlb);
 
   if (!err) {
@@ -1920,7 +1963,7 @@ void OpenChannelSSD20::write(SQEntryWrapper &req, RequestFunction &func) {
 }
 
 void OpenChannelSSD20::datasetManagement(SQEntryWrapper &req,
-                                       RequestFunction &func) {
+                                         RequestFunction &func) {
   bool err = false;
 
   CQEntryWrapper resp(req);
@@ -1931,6 +1974,8 @@ void OpenChannelSSD20::datasetManagement(SQEntryWrapper &req,
     err = true;
     // Just ignore
   }
+
+  eraseCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | TRIM  | %d ranges | Attr %1X", nr,
              req.entry.dword11 & 0x0F);
@@ -2018,7 +2063,7 @@ void OpenChannelSSD20::datasetManagement(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD20::vectorChunkRead(SQEntryWrapper &req,
-                                     RequestFunction &func) {
+                                       RequestFunction &func) {
   CQEntryWrapper resp(req);
 
   VectorContext *pContext = new VectorContext(func, resp);
@@ -2026,6 +2071,8 @@ void OpenChannelSSD20::vectorChunkRead(SQEntryWrapper &req,
   pContext->slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
   pContext->nlb = (req.entry.dword12 & 0x0000003F) + 1;
   pContext->beginAt = getTick();
+
+  vectorReadCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Vector Chunk Read  | %d lbas",
              pContext->nlb);
@@ -2115,7 +2162,7 @@ void OpenChannelSSD20::vectorChunkRead(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD20::vectorChunkWrite(SQEntryWrapper &req,
-                                      RequestFunction &func) {
+                                        RequestFunction &func) {
   CQEntryWrapper resp(req);
 
   VectorContext *pContext = new VectorContext(func, resp);
@@ -2123,6 +2170,8 @@ void OpenChannelSSD20::vectorChunkWrite(SQEntryWrapper &req,
   pContext->slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
   pContext->nlb = (req.entry.dword12 & 0x0000003F) + 1;
   pContext->beginAt = getTick();
+
+  vectorWriteCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Vector Chunk Write | %d lbas",
              pContext->nlb);
@@ -2212,7 +2261,7 @@ void OpenChannelSSD20::vectorChunkWrite(SQEntryWrapper &req,
 }
 
 void OpenChannelSSD20::vectorChunkReset(SQEntryWrapper &req,
-                                      RequestFunction &func) {
+                                        RequestFunction &func) {
   CQEntryWrapper resp(req);
 
   IOContext *pContext = new IOContext(func, resp);
@@ -2220,6 +2269,8 @@ void OpenChannelSSD20::vectorChunkReset(SQEntryWrapper &req,
   pContext->slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
   pContext->nlb = (req.entry.dword12 & 0x0000003F) + 1;
   pContext->beginAt = getTick();
+
+  vectorEraseCount++;
 
   debugprint(LOG_HIL_NVME, "OCSSD   | Vector Chunk Reset | %d lbas",
              pContext->nlb);
@@ -2275,6 +2326,65 @@ void OpenChannelSSD20::vectorChunkReset(SQEntryWrapper &req,
   else {
     doRead(0, pContext);
   }
+}
+
+void OpenChannelSSD20::getStatList(std::vector<Stats> &list,
+                                   std::string prefix) {
+  Stats temp;
+
+  temp.name = prefix + "command_count";
+  temp.desc = "Total number of OCSSD command handled";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase";
+  temp.desc = "Total number of TRIM (Erase) command";
+  list.push_back(temp);
+
+  temp.name = prefix + "read";
+  temp.desc = "Total number of Read command";
+  list.push_back(temp);
+
+  temp.name = prefix + "write";
+  temp.desc = "Total number of Write command";
+  list.push_back(temp);
+
+  temp.name = prefix + "vector.erase";
+  temp.desc = "Total number of Vector Chunk Reset command";
+  list.push_back(temp);
+
+  temp.name = prefix + "vector.read";
+  temp.desc = "Total number of Vector Chunk Read command";
+  list.push_back(temp);
+
+  temp.name = prefix + "vector.write";
+  temp.desc = "Total number of Vector Chunk Write command";
+  list.push_back(temp);
+
+  pPALOLD->getStatList(list, prefix + "pal.");
+}
+
+void OpenChannelSSD20::getStatValues(std::vector<double> &values) {
+  values.push_back(commandCount);
+  values.push_back(eraseCount);
+  values.push_back(readCount);
+  values.push_back(writeCount);
+  values.push_back(vectorEraseCount);
+  values.push_back(vectorReadCount);
+  values.push_back(vectorWriteCount);
+
+  pPALOLD->getStatValues(values);
+}
+
+void OpenChannelSSD20::resetStatValues() {
+  commandCount = 0;
+  eraseCount = 0;
+  readCount = 0;
+  writeCount = 0;
+  vectorEraseCount = 0;
+  vectorReadCount = 0;
+  vectorWriteCount = 0;
+
+  pPALOLD->resetStatValues();
 }
 
 }  // namespace NVMe

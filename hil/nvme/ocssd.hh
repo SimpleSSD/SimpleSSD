@@ -30,7 +30,7 @@ namespace HIL {
 
 namespace NVMe {
 
-#define LBA_SIZE 4096    // Always OCSSD's logical block size is 4K
+#define LBA_SIZE 4096  // Always OCSSD's logical block size is 4K
 
 typedef struct _BlockData {
   uint32_t index;
@@ -114,6 +114,11 @@ class OpenChannelSSD12 : public Subsystem {
   Event completionEvent;
   std::priority_queue<Request, std::vector<Request>, Request> completionQueue;
 
+  // Stats
+  uint64_t eraseCount;
+  uint64_t readCount;
+  uint64_t writeCount;
+
   void updateCompletion();
   void completion();
 
@@ -153,6 +158,10 @@ class OpenChannelSSD20 : public OpenChannelSSD12 {
   ChunkDescriptor *pDescriptor;
   uint64_t descriptorLength;
 
+  uint64_t vectorEraseCount;
+  uint64_t vectorReadCount;
+  uint64_t vectorWriteCount;
+
   uint64_t makeLBA(uint32_t, uint32_t, uint32_t, uint32_t);
   void parseLBA(uint64_t, uint32_t &, uint32_t &, uint32_t &, uint32_t &);
   void convertUnit(std::vector<uint64_t> &, std::vector<::CPDPBP> &,
@@ -181,6 +190,10 @@ class OpenChannelSSD20 : public OpenChannelSSD12 {
   void init() override;
 
   void submitCommand(SQEntryWrapper &, RequestFunction) override;
+
+  void getStatList(std::vector<Stats> &, std::string) override;
+  void getStatValues(std::vector<double> &) override;
+  void resetStatValues() override;
 };
 
 }  // namespace NVMe

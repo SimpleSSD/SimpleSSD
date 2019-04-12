@@ -13,5 +13,5 @@ User defined type uses `CamelCase`. Typename should begin with upper-case charac
 Variable/function name uses `camelCase`. Variable/function name should begin with lower-case characters.
 
 ### Formatting using `clang-format`
-Use C/C++ code formatter `clang-format` version >= 5.0.
+Use C/C++ code formatter `clang-format` version >= 6.0.
 See .clang-format file for style definition.

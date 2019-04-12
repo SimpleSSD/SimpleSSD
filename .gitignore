@@ -9,6 +9,7 @@
 Debug/
 Release/
 x64/
+.vscode/
 
 # CMake Specific
 CMakeCache.txt
