@@ -704,7 +704,7 @@ bool OpenChannelSSD12::getBadBlockTable(SQEntryWrapper &req,
                addr.Page);
 
     // Table ID
-    strncpy((char *)data, "BBLT", 4);
+    memcpy(data, "BBLT", 4);
     // Version number
     *(uint16_t *)(data + 0x04) = 1;
     // Total number of blocks in this LUN

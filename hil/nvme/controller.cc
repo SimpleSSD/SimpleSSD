@@ -675,20 +675,20 @@ void Controller::identify(uint8_t *data) {
     memcpy(data + 0x0002, &ssvid, 2);
 
     // Serial Number
-    strncpy((char *)data + 0x0004, "00000000000000000000", 0x14);
+    memcpy(data + 0x0004, "00000000000000000000", 0x14);
 
     // Model Number
     if (bUseOCSSD) {
-      strncpy((char *)data + 0x0018, "SimpleSSD OCSSD Controller by CAMELab   ",
+      memcpy(data + 0x0018, "SimpleSSD OCSSD Controller by CAMELab   ",
               0x28);
     }
     else {
-      strncpy((char *)data + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ",
+      memcpy(data + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ",
               0x28);
     }
 
     // Firmware Revision
-    strncpy((char *)data + 0x0040, "02.01.02", 0x08);
+    memcpy(data + 0x0040, "02.01.02", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;
