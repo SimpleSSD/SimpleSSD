@@ -27,8 +27,7 @@ namespace DRAM {
 
 #define REFRESH_PERIOD 64000000000
 
-SimpleDRAM::Stat::Stat() {
-  memset(this, 0, sizeof(Stat));
+SimpleDRAM::Stat::Stat(): count(0), size(0) {
 }
 
 SimpleDRAM::SimpleDRAM(ConfigReader &p)
@@ -199,8 +198,8 @@ void SimpleDRAM::getStatValues(std::vector<double> &values) {
 void SimpleDRAM::resetStatValues() {
   AbstractDRAM::resetStatValues();
 
-  memset(&readStat, 0, sizeof(Stat));
-  memset(&writeStat, 0, sizeof(Stat));
+  readStat = Stat();
+  writeStat = Stat();
 }
 
 }  // namespace DRAM

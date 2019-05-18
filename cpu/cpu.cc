@@ -68,7 +68,8 @@ JobEntry::_JobEntry(DMAFunction &f, void *c, InstStat *i)
     : func(f), context(c), inst(i) {}
 
 CPU::CoreStat::CoreStat() : busy(0) {
-  memset(&instStat, 0, sizeof(InstStat));
+  // memset(&instStat, 0, sizeof(InstStat));
+  instStat = InstStat();
 }
 
 CPU::Core::Core() : busy(false) {
@@ -944,21 +945,21 @@ void CPU::resetStatValues() {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 
   for (auto &core : iclCore) {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 
   for (auto &core : ftlCore) {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 }
 
