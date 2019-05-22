@@ -95,7 +95,7 @@ Controller::Controller(Interface *intrface, ConfigReader &c)
   if (axiWidth * axiClock == (uint64_t)250000000 * ARM::AXI::BUS_128BIT) {
     // We don't need interconnect FIFO
     interconnect = pcieFIFO;
-    pcieFIFO = nullptr;  // Prefent double delete(free)
+    pcieFIFO = nullptr;  // Prevent double delete(free)
   }
   else {
     fifoParam.latency = [axiWidth, axiClock](uint64_t size) -> uint64_t {
@@ -675,20 +675,18 @@ void Controller::identify(uint8_t *data) {
     memcpy(data + 0x0002, &ssvid, 2);
 
     // Serial Number
-    strncpy((char *)data + 0x0004, "00000000000000000000", 0x14);
+    memcpy(data + 0x0004, "00000000000000000000", 0x14);
 
     // Model Number
     if (bUseOCSSD) {
-      strncpy((char *)data + 0x0018, "SimpleSSD OCSSD Controller by CAMELab   ",
-              0x28);
+      memcpy(data + 0x0018, "SimpleSSD OCSSD Controller by CAMELab   ", 0x28);
     }
     else {
-      strncpy((char *)data + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ",
-              0x28);
+      memcpy(data + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ", 0x28);
     }
 
     // Firmware Revision
-    strncpy((char *)data + 0x0040, "02.01.02", 0x08);
+    memcpy(data + 0x0040, "02.01.02", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;

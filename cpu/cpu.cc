@@ -67,9 +67,7 @@ uint64_t InstStat::sum() {
 JobEntry::_JobEntry(DMAFunction &f, void *c, InstStat *i)
     : func(f), context(c), inst(i) {}
 
-CPU::CoreStat::CoreStat() : busy(0) {
-  memset(&instStat, 0, sizeof(InstStat));
-}
+CPU::CoreStat::CoreStat() : busy(0) {}
 
 CPU::Core::Core() : busy(false) {
   jobEvent = allocate([this](uint64_t) { jobDone(); });
@@ -944,21 +942,21 @@ void CPU::resetStatValues() {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 
   for (auto &core : iclCore) {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 
   for (auto &core : ftlCore) {
     auto &stat = core.getStat();
 
     stat.busy = 0;
-    memset(&stat.instStat, 0, sizeof(InstStat));
+    stat.instStat = InstStat();
   }
 }
 

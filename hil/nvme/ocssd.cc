@@ -686,7 +686,7 @@ bool OpenChannelSSD12::getBadBlockTable(SQEntryWrapper &req,
   CQEntryWrapper resp(req);
   CPDPBP addr;
   uint64_t ppa = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
-  size_t prpsize = 64 + structure.chunk;
+  uint64_t prpsize = 64 + structure.chunk;
 
   RequestContext *pContext = new RequestContext(func, resp);
 
@@ -704,7 +704,7 @@ bool OpenChannelSSD12::getBadBlockTable(SQEntryWrapper &req,
                addr.Page);
 
     // Table ID
-    strncpy((char *)data, "BBLT", 4);
+    memcpy(data, "BBLT", 4);
     // Version number
     *(uint16_t *)(data + 0x04) = 1;
     // Total number of blocks in this LUN

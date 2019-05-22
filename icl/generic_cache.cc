@@ -719,6 +719,13 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
     tick += applyLatency(CPU::ICL__GENERIC_CACHE, CPU::WRITE);
   }
   else {
+    if (dirty) {
+      pFTL->write(reqInternal, tick);
+    }
+    else {
+      tick = flash;
+    }
+
     pDRAM->read(nullptr, req.length, tick);
   }
 
