@@ -48,10 +48,9 @@ class PAL2  // let's not inherit PAL1
 
   SimpleSSD::PAL::Parameter *pParam;
   Latency *lat;
+  PALStatistics *stats;  // statistics of PAL2, not created by itself
 
-  TimeSlot **ChTimeSlots;
-  TimeSlot **DieTimeSlots;
-  TimeSlot **MergedTimeSlots;  // for gathering busy time
+  std::list<TimeSlot> MergedTimeSlots;  // for gathering busy time
 
   uint64_t totalDie;
 
@@ -64,30 +63,22 @@ class PAL2  // let's not inherit PAL1
 
   void submit(Command &cmd, CPDPBP &addr);
   void TimelineScheduling(Command &req, CPDPBP &reqCPD);
-  PALStatistics *stats;  // statistics of PAL2, not created by itself
-  void InquireBusyTime(uint64_t currentTick);
   void FlushTimeSlots(uint64_t currentTick);
   void FlushOpTimeStamp();
-  TimeSlot *FlushATimeSlot(TimeSlot *tgtTimeSlot, uint64_t currentTick);
-  TimeSlot *FlushATimeSlotBusyTime(TimeSlot *tgtTimeSlot, uint64_t currentTick,
-                                   uint64_t *TimeSum);
-  // Jie: merge time slotss
-  void MergeATimeSlot(TimeSlot *tgtTimeSlot);
-  void MergeATimeSlot(TimeSlot *startTimeSlot, TimeSlot *endTimeSlot);
-  void MergeATimeSlotCH(TimeSlot *tgtTimeSlot);
-  void MergeATimeSlotDIE(TimeSlot *tgtTimeSlot);
-  TimeSlot *InsertAfter(TimeSlot *tgtTimeSlot, uint64_t tickLen,
-                        uint64_t tickFrom);
+  void FlushATimeSlotBusyTime(std::list<TimeSlot> &tgtTimeSlot,
+                              uint64_t currentTick, uint64_t *TimeSum);
 
-  TimeSlot *FindFreeTime(TimeSlot *tgtTimeSlot, uint64_t tickLen,
-                         uint64_t tickFrom);  // you can insert a tickLen
-                                              // TimeSlot after Returned
-                                              // TimeSlot.
+  // you can insert a tickLen
+  // TimeSlot after Returned
+  // TimeSlot.
+  std::list<TimeSlot>::iterator FindFreeTime(std::list<TimeSlot> &tgtTimeSlot,
+                                             uint64_t tickLen,
+                                             uint64_t tickFrom);
 
   // Jie: return: FreeSlot is found?
   bool FindFreeTime(
       std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
-      uint64_t tickLen, uint64_t &tickFrom, uint64_t &startTick,
+      uint64_t tickLen, uint64_t tickFrom, uint64_t &startTick,
       bool &conflicts);
   void InsertFreeSlot(
       std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
@@ -100,7 +91,6 @@ class PAL2  // let's not inherit PAL1
   void FlushAFreeSlot(
       std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
       uint64_t currentTick);
-  uint8_t VerifyTimeLines(uint8_t print_on);
 
   // PPN Conversion related //ToDo: Shifted-Mode is also required for better
   // performance.

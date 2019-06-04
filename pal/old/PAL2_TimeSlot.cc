@@ -22,5 +22,4 @@
 TimeSlot::TimeSlot(uint64_t startTick, uint64_t duration) {
   StartTick = startTick;
   EndTick = startTick + duration - 1;
-  Next = NULL;
 }

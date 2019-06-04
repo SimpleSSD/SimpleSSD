@@ -233,6 +233,8 @@ void PALOLD::convertCPDPBP(Request &req, std::vector<::CPDPBP> &list) {
   tmp = 0;
 
   if (count == 4) {
+    list.reserve(value[0] * value[1] * value[2] * value[3]);
+
     for (uint32_t i = 0; i < value[3]; i++) {
       for (uint32_t j = 0; j < value[2]; j++) {
         for (uint32_t k = 0; k < value[1]; k++) {
@@ -251,6 +253,8 @@ void PALOLD::convertCPDPBP(Request &req, std::vector<::CPDPBP> &list) {
     }
   }
   else if (count == 3) {
+    list.reserve(value[0] * value[1] * value[2]);
+
     for (uint32_t j = 0; j < value[2]; j++) {
       for (uint32_t k = 0; k < value[1]; k++) {
         for (uint32_t l = 0; l < value[0]; l++) {
@@ -266,6 +270,8 @@ void PALOLD::convertCPDPBP(Request &req, std::vector<::CPDPBP> &list) {
     }
   }
   else if (count == 2) {
+     list.reserve(value[0] * value[1]);
+
     for (uint32_t k = 0; k < value[1]; k++) {
       for (uint32_t l = 0; l < value[0]; l++) {
         if (req.ioFlag.test(tmp++)) {
@@ -278,6 +284,8 @@ void PALOLD::convertCPDPBP(Request &req, std::vector<::CPDPBP> &list) {
     }
   }
   else if (count == 1) {
+    list.reserve(value[0]);
+
     for (uint32_t l = 0; l < value[0]; l++) {
       if (req.ioFlag.test(tmp++)) {
         *ptr[0] = l;
@@ -331,24 +339,136 @@ void PALOLD::getStatList(std::vector<Stats> &list, std::string prefix) {
   temp.name = prefix + "power";
   temp.desc = "Average power consumed by NAND (uW)";
   list.push_back(temp);
+
+  temp.name = prefix + "read.dma0.wait";
+  temp.desc = "Average dma0 wait time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.dma0";
+  temp.desc = "Average dma0 time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.mem";
+  temp.desc = "Average memory operation time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.dma1.wait";
+  temp.desc = "Average dma1 wait time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.dma1";
+  temp.desc = "Average dma1 time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.total";
+  temp.desc = "Average time of read";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.dma0.wait";
+  temp.desc = "Average dma0 wait time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.dma0";
+  temp.desc = "Average dma0 time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.mem";
+  temp.desc = "Average memory operation time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.dma1.wait";
+  temp.desc = "Average dma1 wait time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.dma1";
+  temp.desc = "Average dma1 time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "program.total";
+  temp.desc = "Average time of program";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.dma0.wait";
+  temp.desc = "Average dma0 wait time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.dma0";
+  temp.desc = "Average dma0 time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.mem";
+  temp.desc = "Average memory operation time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.dma1.wait";
+  temp.desc = "Average dma1 wait time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.dma1";
+  temp.desc = "Average dma1 time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "erase.total";
+  temp.desc = "Average time of erase";
+  list.push_back(temp);
+
+  temp.name = prefix + "channel.utilization";
+  temp.desc = "Average utilization of all channels (%)";
+  list.push_back(temp);
+
+  temp.name = prefix + "die.utilization";
+  temp.desc = "Average utilization of all dies (%)";
+  list.push_back(temp);
 }
 
 void PALOLD::getStatValues(std::vector<double> &values) {
-  double read, program, erase;
-  double total;
+  PALStatistics::OperStats energy;
+  PALStatistics::OperStats ticks;
+  PALStatistics::ActiveTime active;
+  PALStatistics::Breakdown breakdown;
+  double elapsedTick = (double)(getTick() - lastResetTick);
 
-  stats->getEnergyStat(read, program, erase);
+  stats->getEnergyStat(energy);
+  stats->getTickStat(ticks);
 
-  values.push_back(read);
-  values.push_back(program);
-  values.push_back(erase);
-
-  total = read + program + erase;
-  values.push_back(total);
+  values.push_back(energy.read);
+  values.push_back(energy.write);
+  values.push_back(energy.erase);
+  values.push_back(energy.total);
 
   // uW = uJ / ps * 1e+12
-  total /= (double)(getTick() - lastResetTick) / 1e+12;
-  values.push_back(total);
+  energy.total /= elapsedTick / 1e+12;
+  values.push_back(energy.total);
+
+  stats->getReadBreakdown(breakdown);
+  values.push_back(breakdown.dma0wait);
+  values.push_back(breakdown.dma0);
+  values.push_back(breakdown.mem);
+  values.push_back(breakdown.dma1wait);
+  values.push_back(breakdown.dma1);
+  values.push_back(ticks.read);
+
+  stats->getWriteBreakdown(breakdown);
+  values.push_back(breakdown.dma0wait);
+  values.push_back(breakdown.dma0);
+  values.push_back(breakdown.mem);
+  values.push_back(breakdown.dma1wait);
+  values.push_back(breakdown.dma1);
+  values.push_back(ticks.write);
+
+  stats->getEraseBreakdown(breakdown);
+  values.push_back(breakdown.dma0wait);
+  values.push_back(breakdown.dma0);
+  values.push_back(breakdown.mem);
+  values.push_back(breakdown.dma1wait);
+  values.push_back(breakdown.dma1);
+  values.push_back(ticks.erase);
+
+  stats->getChannelActiveTimeAll(active);
+  values.push_back(active.average);
+
+  stats->getDieActiveTimeAll(active);
+  values.push_back(active.average);
 }
 
 void PALOLD::resetStatValues() {

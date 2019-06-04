@@ -167,132 +167,135 @@ CPU::CPU(ConfigReader &c) : conf(c), lastResetStat(0) {
   cpi.find(1)->second.insert({1, InstStat(8, 28, 7, 19, 0, 0, clockPeriod)});
   cpi.find(1)->second.insert({3, InstStat(4, 28, 6, 11, 0, 0, clockPeriod)});
   cpi.find(1)->second.insert(
-      {4, InstStat(71, 164, 28, 118, 0, 4, clockPeriod)});
+      {4, InstStat(63, 180, 21, 147, 0, 2, clockPeriod)});
   cpi.find(1)->second.insert(
-      {9, InstStat(124, 420, 77, 255, 208, 6, clockPeriod)});
+      {9, InstStat(177, 504, 113, 415, 118, 19, clockPeriod)});
   cpi.find(1)->second.insert(
-      {10, InstStat(86, 296, 47, 123, 0, 2, clockPeriod)});
-  cpi.find(1)->second.insert({5, InstStat(38, 120, 17, 64, 0, 3, clockPeriod)});
+      {10, InstStat(157, 616, 102, 338, 0, 2, clockPeriod)});
   cpi.find(1)->second.insert(
-      {6, InstStat(103, 344, 45, 189, 48, 4, clockPeriod)});
-  cpi.find(1)->second.insert({8, InstStat(24, 84, 12, 52, 0, 1, clockPeriod)});
+      {5, InstStat(45, 180, 15, 155, 0, 0, clockPeriod)});
   cpi.find(1)->second.insert(
-      {7, InstStat(109, 164, 74, 166, 0, 1, clockPeriod)});
-  cpi.find(2)->second.insert({0, InstStat(8, 84, 17, 27, 0, 1, clockPeriod)});
-  cpi.find(2)->second.insert({1, InstStat(8, 84, 17, 27, 0, 1, clockPeriod)});
+      {6, InstStat(133, 452, 54, 377, 91, 1, clockPeriod)});
+  cpi.find(1)->second.insert(
+      {8, InstStat(34, 140, 10, 146, 0, 0, clockPeriod)});
+  cpi.find(1)->second.insert(
+      {7, InstStat(120, 236, 86, 260, 0, 1, clockPeriod)});
+  cpi.find(2)->second.insert({0, InstStat(8, 88, 17, 27, 0, 1, clockPeriod)});
+  cpi.find(2)->second.insert({1, InstStat(8, 88, 17, 27, 0, 1, clockPeriod)});
   cpi.find(2)->second.insert({2, InstStat(5, 40, 6, 12, 0, 0, clockPeriod)});
   cpi.find(2)->second.insert({3, InstStat(5, 40, 6, 12, 0, 0, clockPeriod)});
   cpi.find(2)->second.insert({4, InstStat(5, 40, 6, 12, 0, 0, clockPeriod)});
   cpi.find(3)->second.insert(
-      {0, InstStat(69, 384, 46, 260, 0, 3, clockPeriod)});
+      {0, InstStat(90, 532, 64, 284, 0, 1, clockPeriod)});
   cpi.find(3)->second.insert(
-      {1, InstStat(62, 416, 45, 243, 0, 2, clockPeriod)});
-  cpi.find(3)->second.insert({2, InstStat(20, 116, 18, 59, 0, 0, clockPeriod)});
-  cpi.find(3)->second.insert({3, InstStat(20, 112, 18, 61, 0, 1, clockPeriod)});
-  cpi.find(3)->second.insert({4, InstStat(10, 64, 7, 86, 0, 1, clockPeriod)});
-  cpi.find(4)->second.insert({0, InstStat(35, 132, 36, 62, 0, 1, clockPeriod)});
-  cpi.find(4)->second.insert({1, InstStat(35, 132, 36, 62, 0, 1, clockPeriod)});
-  cpi.find(4)->second.insert({2, InstStat(28, 100, 27, 49, 0, 1, clockPeriod)});
+      {1, InstStat(82, 496, 53, 312, 0, 5, clockPeriod)});
+  cpi.find(3)->second.insert({2, InstStat(22, 120, 20, 59, 0, 2, clockPeriod)});
+  cpi.find(3)->second.insert({3, InstStat(22, 120, 20, 61, 0, 2, clockPeriod)});
+  cpi.find(3)->second.insert({4, InstStat(9, 72, 12, 86, 0, 1, clockPeriod)});
+  cpi.find(4)->second.insert(
+      {0, InstStat(61, 312, 102, 120, 0, 2, clockPeriod)});
+  cpi.find(4)->second.insert(
+      {1, InstStat(61, 312, 102, 120, 0, 2, clockPeriod)});
+  cpi.find(4)->second.insert({2, InstStat(27, 100, 27, 49, 0, 1, clockPeriod)});
   cpi.find(5)->second.insert(
-      {14, InstStat(45, 156, 31, 70, 0, 2, clockPeriod)});
+      {14, InstStat(44, 164, 32, 68, 0, 2, clockPeriod)});
   cpi.find(5)->second.insert({13, InstStat(0, 0, 0, 0, 0, 0, clockPeriod)});
   cpi.find(5)->second.insert(
-      {16, InstStat(126, 332, 65, 172, 0, 5, clockPeriod)});
+      {16, InstStat(136, 360, 65, 230, 0, 3, clockPeriod)});
   cpi.find(5)->second.insert(
-      {15, InstStat(57, 128, 36, 93, 0, 3, clockPeriod)});
+      {15, InstStat(54, 140, 36, 91, 0, 8, clockPeriod)});
   cpi.find(5)->second.insert({11, InstStat(0, 0, 0, 0, 0, 0, clockPeriod)});
   cpi.find(5)->second.insert({12, InstStat(0, 0, 0, 0, 0, 0, clockPeriod)});
   cpi.find(6)->second.insert(
-      {17, InstStat(40, 160, 36, 75, 0, 2, clockPeriod)});
+      {17, InstStat(41, 168, 42, 75, 0, 1, clockPeriod)});
   cpi.find(6)->second.insert(
-      {0, InstStat(82, 416, 81, 177, 0, 7, clockPeriod)});
+      {0, InstStat(99, 456, 94, 177, 0, 6, clockPeriod)});
   cpi.find(6)->second.insert(
-      {1, InstStat(82, 416, 81, 176, 0, 8, clockPeriod)});
+      {1, InstStat(99, 456, 94, 177, 0, 6, clockPeriod)});
   cpi.find(7)->second.insert(
-      {18, InstStat(40, 148, 33, 75, 0, 3, clockPeriod)});
+      {18, InstStat(44, 152, 35, 78, 0, 2, clockPeriod)});
   cpi.find(7)->second.insert(
-      {0, InstStat(82, 416, 81, 177, 0, 7, clockPeriod)});
+      {0, InstStat(99, 456, 94, 177, 0, 6, clockPeriod)});
   cpi.find(7)->second.insert(
-      {1, InstStat(82, 416, 81, 176, 0, 8, clockPeriod)});
+      {1, InstStat(99, 456, 94, 177, 0, 6, clockPeriod)});
   cpi.find(8)->second.insert(
-      {19, InstStat(106, 216, 43, 165, 0, 14, clockPeriod)});
-  cpi.find(8)->second.insert({20, InstStat(2, 24, 10, 80, 0, 1, clockPeriod)});
+      {19, InstStat(119, 220, 45, 160, 0, 6, clockPeriod)});
+  cpi.find(8)->second.insert({20, InstStat(4, 40, 14, 110, 0, 1, clockPeriod)});
   cpi.find(8)->second.insert(
-      {21, InstStat(71, 204, 45, 166, 0, 4, clockPeriod)});
-  cpi.find(9)->second.insert({19, InstStat(25, 52, 5, 39, 0, 5, clockPeriod)});
+      {21, InstStat(70, 200, 42, 161, 0, 1, clockPeriod)});
+  cpi.find(9)->second.insert({19, InstStat(27, 44, 5, 37, 0, 0, clockPeriod)});
   cpi.find(9)->second.insert(
-      {0, InstStat(100, 340, 48, 164, 0, 4, clockPeriod)});
+      {0, InstStat(82, 292, 42, 128, 0, 4, clockPeriod)});
   cpi.find(9)->second.insert(
-      {1, InstStat(101, 332, 51, 167, 0, 4, clockPeriod)});
-  cpi.find(9)->second.insert({2, InstStat(53, 124, 28, 80, 0, 2, clockPeriod)});
+      {1, InstStat(86, 304, 47, 141, 0, 3, clockPeriod)});
+  cpi.find(9)->second.insert({2, InstStat(51, 124, 28, 78, 0, 3, clockPeriod)});
   cpi.find(9)->second.insert(
-      {22, InstStat(123, 332, 66, 194, 0, 5, clockPeriod)});
+      {22, InstStat(131, 364, 71, 200, 0, 7, clockPeriod)});
   cpi.find(10)->second.insert(
-      {19, InstStat(74, 40, 6, 109, 0, 14, clockPeriod)});
+      {19, InstStat(155, 100, 12, 208, 0, 4, clockPeriod)});
   cpi.find(10)->second.insert(
-      {0, InstStat(95, 276, 58, 148, 0, 2, clockPeriod)});
+      {0, InstStat(93, 284, 60, 146, 0, 5, clockPeriod)});
   cpi.find(10)->second.insert(
-      {1, InstStat(97, 264, 57, 150, 0, 3, clockPeriod)});
+      {1, InstStat(95, 276, 60, 150, 0, 4, clockPeriod)});
   cpi.find(10)->second.insert(
-      {22, InstStat(119, 304, 72, 186, 0, 4, clockPeriod)});
+      {22, InstStat(119, 328, 76, 186, 0, 4, clockPeriod)});
   cpi.find(10)->second.insert(
-      {5, InstStat(53, 168, 67, 85, 0, 2, clockPeriod)});
+      {5, InstStat(54, 172, 69, 89, 0, 1, clockPeriod)});
   cpi.find(10)->second.insert(
-      {6, InstStat(59, 208, 69, 117, 0, 1, clockPeriod)});
+      {6, InstStat(72, 236, 77, 141, 0, 3, clockPeriod)});
   cpi.find(10)->second.insert(
-      {7, InstStat(59, 188, 71, 92, 0, 0, clockPeriod)});
+      {7, InstStat(68, 204, 77, 116, 0, 1, clockPeriod)});
   cpi.find(10)->second.insert(
-      {20, InstStat(53, 328, 48, 244, 0, 8, clockPeriod)});
+      {20, InstStat(65, 388, 63, 303, 0, 1, clockPeriod)});
   cpi.find(10)->second.insert(
-      {23, InstStat(132, 356, 73, 208, 0, 3, clockPeriod)});
+      {23, InstStat(128, 368, 76, 204, 0, 4, clockPeriod)});
   cpi.find(10)->second.insert(
-      {24, InstStat(133, 364, 74, 206, 0, 7, clockPeriod)});
+      {24, InstStat(128, 384, 81, 209, 0, 6, clockPeriod)});
   cpi.find(10)->second.insert(
-      {25, InstStat(70, 172, 44, 109, 0, 2, clockPeriod)});
+      {25, InstStat(69, 184, 43, 112, 0, 4, clockPeriod)});
   cpi.find(10)->second.insert(
-      {26, InstStat(275, 1012, 230, 442, 0, 7, clockPeriod)});
+      {26, InstStat(206, 692, 157, 315, 0, 5, clockPeriod)});
   cpi.find(10)->second.insert(
-      {27, InstStat(204, 680, 154, 325, 0, 4, clockPeriod)});
+      {27, InstStat(183, 620, 154, 284, 0, 6, clockPeriod)});
   cpi.find(10)->second.insert(
-      {28, InstStat(262, 952, 222, 405, 0, 5, clockPeriod)});
+      {28, InstStat(162, 460, 78, 227, 0, 4, clockPeriod)});
   cpi.find(11)->second.insert(
-      {29, InstStat(43, 176, 35, 94, 0, 3, clockPeriod)});
+      {29, InstStat(51, 132, 40, 97, 0, 0, clockPeriod)});
   cpi.find(11)->second.insert(
-      {30, InstStat(216, 484, 129, 509, 0, 15, clockPeriod)});
+      {30, InstStat(212, 460, 117, 491, 0, 9, clockPeriod)});
   cpi.find(11)->second.insert(
-      {31, InstStat(34, 160, 39, 74, 0, 2, clockPeriod)});
+      {31, InstStat(42, 172, 43, 74, 0, 2, clockPeriod)});
   cpi.find(11)->second.insert(
-      {32, InstStat(34, 160, 39, 73, 0, 3, clockPeriod)});
-  cpi.find(11)->second.insert({0, InstStat(30, 76, 17, 51, 0, 2, clockPeriod)});
-  cpi.find(11)->second.insert({1, InstStat(30, 76, 17, 51, 0, 2, clockPeriod)});
-  cpi.find(11)->second.insert({2, InstStat(26, 64, 18, 44, 0, 2, clockPeriod)});
+      {32, InstStat(42, 172, 43, 74, 0, 2, clockPeriod)});
+  cpi.find(11)->second.insert({0, InstStat(29, 76, 17, 51, 0, 2, clockPeriod)});
+  cpi.find(11)->second.insert({1, InstStat(29, 76, 17, 51, 0, 2, clockPeriod)});
+  cpi.find(11)->second.insert({2, InstStat(25, 64, 18, 44, 0, 1, clockPeriod)});
   cpi.find(12)->second.insert(
-      {19, InstStat(154, 416, 69, 189, 0, 13, clockPeriod)});
+      {19, InstStat(157, 352, 69, 178, 0, 1, clockPeriod)});
   cpi.find(12)->second.insert(
-      {31, InstStat(34, 160, 39, 74, 0, 2, clockPeriod)});
+      {31, InstStat(42, 172, 43, 73, 0, 3, clockPeriod)});
   cpi.find(12)->second.insert(
-      {32, InstStat(34, 160, 39, 73, 0, 3, clockPeriod)});
+      {32, InstStat(42, 172, 43, 73, 0, 3, clockPeriod)});
   cpi.find(12)->second.insert(
-      {0, InstStat(29, 80, 21, 119, 0, 4, clockPeriod)});
+      {0, InstStat(28, 84, 23, 119, 0, 0, clockPeriod)});
   cpi.find(12)->second.insert(
-      {1, InstStat(29, 80, 21, 120, 0, 3, clockPeriod)});
-  cpi.find(12)->second.insert({2, InstStat(26, 64, 18, 44, 0, 2, clockPeriod)});
+      {1, InstStat(28, 84, 23, 120, 0, 1, clockPeriod)});
+  cpi.find(12)->second.insert({2, InstStat(25, 64, 18, 44, 0, 1, clockPeriod)});
   cpi.find(12)->second.insert(
-      {33, InstStat(63, 224, 36, 128, 0, 3, clockPeriod)});
+      {33, InstStat(57, 212, 36, 128, 0, 3, clockPeriod)});
   cpi.find(12)->second.insert(
-      {34, InstStat(35, 116, 29, 72, 0, 2, clockPeriod)});
+      {34, InstStat(34, 116, 29, 72, 0, 3, clockPeriod)});
+  cpi.find(12)->second.insert({35, InstStat(16, 64, 9, 38, 0, 1, clockPeriod)});
   cpi.find(12)->second.insert(
-      {35, InstStat(16, 64, 10, 39, 0, 1, clockPeriod)});
+      {36, InstStat(28, 72, 15, 48, 0, 2, clockPeriod)});
   cpi.find(12)->second.insert(
-      {36, InstStat(29, 72, 17, 51, 0, 2, clockPeriod)});
+      {37, InstStat(57, 212, 36, 127, 0, 3, clockPeriod)});
   cpi.find(12)->second.insert(
-      {37, InstStat(63, 224, 36, 127, 0, 4, clockPeriod)});
+      {38, InstStat(34, 128, 31, 68, 0, 2, clockPeriod)});
   cpi.find(12)->second.insert(
-      {38, InstStat(33, 116, 29, 66, 0, 1, clockPeriod)});
+      {39, InstStat(18, 56, 10, 37, 0, 1, clockPeriod)});
   cpi.find(12)->second.insert(
-      {39, InstStat(18, 56, 11, 37, 0, 0, clockPeriod)});
-  cpi.find(12)->second.insert(
-      {40, InstStat(34, 100, 19, 63, 0, 2, clockPeriod)});
+      {40, InstStat(33, 100, 17, 61, 0, 3, clockPeriod)});
 }
 
 CPU::~CPU() {}
@@ -301,6 +304,8 @@ void CPU::calculatePower(Power &power) {
   // Print stats before die
   ParseXML param;
   uint64_t simCycle = (getTick() - lastResetStat) / clockPeriod;
+  uint32_t totalCore = hilCore.size() + iclCore.size() + ftlCore.size();
+  uint32_t coreIdx = 0;
 
   param.initialize();
 
@@ -312,7 +317,7 @@ void CPU::calculatePower(Power &power) {
     param.sys.Private_L2 = 0;
     param.sys.number_of_L3s = 0;
     param.sys.number_of_NoCs = 0;
-    param.sys.homogeneous_cores = 1;
+    param.sys.homogeneous_cores = 0;
     param.sys.homogeneous_L2s = 1;
     param.sys.homogeneous_L1Directories = 1;
     param.sys.homogeneous_L2Directories = 1;
@@ -333,100 +338,104 @@ void CPU::calculatePower(Power &power) {
     param.sys.physical_address_width = 48;
     param.sys.virtual_memory_page_size = 4096;
     param.sys.total_cycles = simCycle;
+    param.sys.number_of_cores = totalCore;
   }
 
-  // system.core
-  {
-    param.sys.core[0].clock_rate = param.sys.target_core_clockrate;
-    param.sys.core[0].opt_local = 0;
-    param.sys.core[0].instruction_length = 32;
-    param.sys.core[0].opcode_width = 7;
-    param.sys.core[0].x86 = 0;
-    param.sys.core[0].micro_opcode_width = 8;
-    param.sys.core[0].machine_type = 0;
-    param.sys.core[0].number_hardware_threads = 1;
-    param.sys.core[0].fetch_width = 2;
-    param.sys.core[0].number_instruction_fetch_ports = 1;
-    param.sys.core[0].decode_width = 2;
-    param.sys.core[0].issue_width = 4;
-    param.sys.core[0].peak_issue_width = 7;
-    param.sys.core[0].commit_width = 4;
-    param.sys.core[0].fp_issue_width = 1;
-    param.sys.core[0].prediction_width = 0;
-    param.sys.core[0].pipelines_per_core[0] = 1;
-    param.sys.core[0].pipelines_per_core[1] = 1;
-    param.sys.core[0].pipeline_depth[0] = 8;
-    param.sys.core[0].pipeline_depth[1] = 8;
-    param.sys.core[0].ALU_per_core = 3;
-    param.sys.core[0].MUL_per_core = 1;
-    param.sys.core[0].FPU_per_core = 1;
-    param.sys.core[0].instruction_buffer_size = 32;
-    param.sys.core[0].decoded_stream_buffer_size = 16;
-    param.sys.core[0].instruction_window_scheme = 0;
-    param.sys.core[0].instruction_window_size = 20;
-    param.sys.core[0].fp_instruction_window_size = 15;
-    param.sys.core[0].ROB_size = 0;
-    param.sys.core[0].archi_Regs_IRF_size = 32;
-    param.sys.core[0].archi_Regs_FRF_size = 32;
-    param.sys.core[0].phy_Regs_IRF_size = 64;
-    param.sys.core[0].phy_Regs_FRF_size = 64;
-    param.sys.core[0].rename_scheme = 0;
-    param.sys.core[0].checkpoint_depth = 1;
-    param.sys.core[0].register_windows_size = 0;
-    strcpy(param.sys.core[0].LSU_order, "inorder");
-    param.sys.core[0].store_buffer_size = 4;
-    param.sys.core[0].load_buffer_size = 0;
-    param.sys.core[0].memory_ports = 1;
-    param.sys.core[0].RAS_size = 0;
-    param.sys.core[0].number_of_BPT = 2;
-    param.sys.core[0].number_of_BTB = 2;
+  // Now, we are using heterogeneous cores
+  for (coreIdx = 0; coreIdx < totalCore; coreIdx++) {
+    // system.core
+    {
+      param.sys.core[coreIdx].clock_rate = param.sys.target_core_clockrate;
+      param.sys.core[coreIdx].opt_local = 0;
+      param.sys.core[coreIdx].instruction_length = 32;
+      param.sys.core[coreIdx].opcode_width = 7;
+      param.sys.core[coreIdx].x86 = 0;
+      param.sys.core[coreIdx].micro_opcode_width = 8;
+      param.sys.core[coreIdx].machine_type = 0;
+      param.sys.core[coreIdx].number_hardware_threads = 1;
+      param.sys.core[coreIdx].fetch_width = 2;
+      param.sys.core[coreIdx].number_instruction_fetch_ports = 1;
+      param.sys.core[coreIdx].decode_width = 2;
+      param.sys.core[coreIdx].issue_width = 4;
+      param.sys.core[coreIdx].peak_issue_width = 7;
+      param.sys.core[coreIdx].commit_width = 4;
+      param.sys.core[coreIdx].fp_issue_width = 1;
+      param.sys.core[coreIdx].prediction_width = 0;
+      param.sys.core[coreIdx].pipelines_per_core[0] = 1;
+      param.sys.core[coreIdx].pipelines_per_core[1] = 1;
+      param.sys.core[coreIdx].pipeline_depth[0] = 8;
+      param.sys.core[coreIdx].pipeline_depth[1] = 8;
+      param.sys.core[coreIdx].ALU_per_core = 3;
+      param.sys.core[coreIdx].MUL_per_core = 1;
+      param.sys.core[coreIdx].FPU_per_core = 1;
+      param.sys.core[coreIdx].instruction_buffer_size = 32;
+      param.sys.core[coreIdx].decoded_stream_buffer_size = 16;
+      param.sys.core[coreIdx].instruction_window_scheme = 0;
+      param.sys.core[coreIdx].instruction_window_size = 20;
+      param.sys.core[coreIdx].fp_instruction_window_size = 15;
+      param.sys.core[coreIdx].ROB_size = 0;
+      param.sys.core[coreIdx].archi_Regs_IRF_size = 32;
+      param.sys.core[coreIdx].archi_Regs_FRF_size = 32;
+      param.sys.core[coreIdx].phy_Regs_IRF_size = 64;
+      param.sys.core[coreIdx].phy_Regs_FRF_size = 64;
+      param.sys.core[coreIdx].rename_scheme = 0;
+      param.sys.core[coreIdx].checkpoint_depth = 1;
+      param.sys.core[coreIdx].register_windows_size = 0;
+      strcpy(param.sys.core[coreIdx].LSU_order, "inorder");
+      param.sys.core[coreIdx].store_buffer_size = 4;
+      param.sys.core[coreIdx].load_buffer_size = 0;
+      param.sys.core[coreIdx].memory_ports = 1;
+      param.sys.core[coreIdx].RAS_size = 0;
+      param.sys.core[coreIdx].number_of_BPT = 2;
+      param.sys.core[coreIdx].number_of_BTB = 2;
+    }
+
+    // system.core.itlb
+    param.sys.core[coreIdx].itlb.number_entries = 64;
+
+    // system.core.icache
+    {
+      param.sys.core[coreIdx].icache.icache_config[0] = 32768;
+      param.sys.core[coreIdx].icache.icache_config[1] = 8;
+      param.sys.core[coreIdx].icache.icache_config[2] = 4;
+      param.sys.core[coreIdx].icache.icache_config[3] = 1;
+      param.sys.core[coreIdx].icache.icache_config[4] = 10;
+      param.sys.core[coreIdx].icache.icache_config[5] = 10;
+      param.sys.core[coreIdx].icache.icache_config[6] = 32;
+      param.sys.core[coreIdx].icache.icache_config[7] = 0;
+      param.sys.core[coreIdx].icache.buffer_sizes[0] = 4;
+      param.sys.core[coreIdx].icache.buffer_sizes[1] = 4;
+      param.sys.core[coreIdx].icache.buffer_sizes[2] = 4;
+      param.sys.core[coreIdx].icache.buffer_sizes[3] = 0;
+    }
+
+    // system.core dtlb
+    param.sys.core[coreIdx].dtlb.number_entries = 64;
+
+    // system.core.dcache
+    {
+      param.sys.core[coreIdx].dcache.dcache_config[0] = 32768;
+      param.sys.core[coreIdx].dcache.dcache_config[1] = 8;
+      param.sys.core[coreIdx].dcache.dcache_config[2] = 4;
+      param.sys.core[coreIdx].dcache.dcache_config[3] = 1;
+      param.sys.core[coreIdx].dcache.dcache_config[4] = 10;
+      param.sys.core[coreIdx].dcache.dcache_config[5] = 10;
+      param.sys.core[coreIdx].dcache.dcache_config[6] = 32;
+      param.sys.core[coreIdx].dcache.dcache_config[7] = 0;
+      param.sys.core[coreIdx].dcache.buffer_sizes[0] = 4;
+      param.sys.core[coreIdx].dcache.buffer_sizes[1] = 4;
+      param.sys.core[coreIdx].dcache.buffer_sizes[2] = 4;
+      param.sys.core[coreIdx].dcache.buffer_sizes[3] = 4;
+    }
+
+    // system.core.BTB
+    param.sys.core[coreIdx].BTB.BTB_config[0] = 4096;
+    param.sys.core[coreIdx].BTB.BTB_config[1] = 4;
+    param.sys.core[coreIdx].BTB.BTB_config[2] = 2;
+    param.sys.core[coreIdx].BTB.BTB_config[3] = 2;
+    param.sys.core[coreIdx].BTB.BTB_config[4] = 1;
+    param.sys.core[coreIdx].BTB.BTB_config[5] = 1;
   }
-
-  // system.core.itlb
-  param.sys.core[0].itlb.number_entries = 64;
-
-  // system.core.icache
-  {
-    param.sys.core[0].icache.icache_config[0] = 32768;
-    param.sys.core[0].icache.icache_config[1] = 8;
-    param.sys.core[0].icache.icache_config[2] = 4;
-    param.sys.core[0].icache.icache_config[3] = 1;
-    param.sys.core[0].icache.icache_config[4] = 10;
-    param.sys.core[0].icache.icache_config[5] = 10;
-    param.sys.core[0].icache.icache_config[6] = 32;
-    param.sys.core[0].icache.icache_config[7] = 0;
-    param.sys.core[0].icache.buffer_sizes[0] = 4;
-    param.sys.core[0].icache.buffer_sizes[1] = 4;
-    param.sys.core[0].icache.buffer_sizes[2] = 4;
-    param.sys.core[0].icache.buffer_sizes[3] = 0;
-  }
-
-  // system.core dtlb
-  param.sys.core[0].dtlb.number_entries = 64;
-
-  // system.core.dcache
-  {
-    param.sys.core[0].dcache.dcache_config[0] = 32768;
-    param.sys.core[0].dcache.dcache_config[1] = 8;
-    param.sys.core[0].dcache.dcache_config[2] = 4;
-    param.sys.core[0].dcache.dcache_config[3] = 1;
-    param.sys.core[0].dcache.dcache_config[4] = 10;
-    param.sys.core[0].dcache.dcache_config[5] = 10;
-    param.sys.core[0].dcache.dcache_config[6] = 32;
-    param.sys.core[0].dcache.dcache_config[7] = 0;
-    param.sys.core[0].dcache.buffer_sizes[0] = 4;
-    param.sys.core[0].dcache.buffer_sizes[1] = 4;
-    param.sys.core[0].dcache.buffer_sizes[2] = 4;
-    param.sys.core[0].dcache.buffer_sizes[3] = 4;
-  }
-
-  // system.core.BTB
-  param.sys.core[0].BTB.BTB_config[0] = 4096;
-  param.sys.core[0].BTB.BTB_config[1] = 4;
-  param.sys.core[0].BTB.BTB_config[2] = 2;
-  param.sys.core[0].BTB.BTB_config[3] = 2;
-  param.sys.core[0].BTB.BTB_config[4] = 1;
-  param.sys.core[0].BTB.BTB_config[5] = 1;
 
   // system.L2
   {
@@ -455,120 +464,113 @@ void CPU::calculatePower(Power &power) {
   // Apply stat values
 
   // Core stat
-  // We are using homogeneous core
-  // McPAT will treat multi core as single core
-  // Just merge instruction statistics
-  double maxBusy = 0.;
-  int corecount = 0;
-
-  param.sys.core[0].total_instructions = 0;
-  param.sys.core[0].int_instructions = 0;
-  param.sys.core[0].fp_instructions = 0;
-  param.sys.core[0].branch_instructions = 0;
-  param.sys.core[0].load_instructions = 0;
-  param.sys.core[0].store_instructions = 0;
+  coreIdx = 0;
 
   for (auto &core : hilCore) {
     CoreStat &stat = core.getStat();
 
-    param.sys.core[0].total_instructions += stat.instStat.sum();
-    param.sys.core[0].int_instructions += stat.instStat.arithmetic;
-    param.sys.core[0].fp_instructions += stat.instStat.floatingPoint;
-    param.sys.core[0].branch_instructions += stat.instStat.branch;
-    param.sys.core[0].load_instructions += stat.instStat.load;
-    param.sys.core[0].store_instructions += stat.instStat.store;
+    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
+    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
+    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
+    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
+    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
+    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
 
-    maxBusy = MAX(maxBusy, stat.busy / clockPeriod);
-    corecount++;
+    coreIdx++;
   }
 
   for (auto &core : iclCore) {
     CoreStat &stat = core.getStat();
 
-    param.sys.core[0].total_instructions += stat.instStat.sum();
-    param.sys.core[0].int_instructions += stat.instStat.arithmetic;
-    param.sys.core[0].fp_instructions += stat.instStat.floatingPoint;
-    param.sys.core[0].branch_instructions += stat.instStat.branch;
-    param.sys.core[0].load_instructions += stat.instStat.load;
-    param.sys.core[0].store_instructions += stat.instStat.store;
+    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
+    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
+    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
+    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
+    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
+    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
 
-    maxBusy = MAX(maxBusy, stat.busy / clockPeriod);
-    corecount++;
+    coreIdx++;
   }
 
   for (auto &core : ftlCore) {
     CoreStat &stat = core.getStat();
 
-    param.sys.core[0].total_instructions += stat.instStat.sum();
-    param.sys.core[0].int_instructions += stat.instStat.arithmetic;
-    param.sys.core[0].fp_instructions += stat.instStat.floatingPoint;
-    param.sys.core[0].branch_instructions += stat.instStat.branch;
-    param.sys.core[0].load_instructions += stat.instStat.load;
-    param.sys.core[0].store_instructions += stat.instStat.store;
+    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
+    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
+    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
+    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
+    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
+    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
 
-    maxBusy = MAX(maxBusy, stat.busy / clockPeriod);
-    corecount++;
+    coreIdx++;
   };
 
-  param.sys.number_of_cores = corecount;
-  param.sys.core[0].total_cycles = simCycle;
-  param.sys.core[0].busy_cycles = maxBusy;
-  param.sys.core[0].idle_cycles = simCycle - maxBusy;
-  param.sys.core[0].committed_instructions =
-      param.sys.core[0].total_instructions;
-  param.sys.core[0].committed_int_instructions =
-      param.sys.core[0].int_instructions;
-  param.sys.core[0].committed_fp_instructions =
-      param.sys.core[0].fp_instructions;
-  param.sys.core[0].pipeline_duty_cycle = 1;
-  param.sys.core[0].IFU_duty_cycle = 0.9;
-  param.sys.core[0].BR_duty_cycle = 0.72;
-  param.sys.core[0].LSU_duty_cycle = 0.71;
-  param.sys.core[0].MemManU_I_duty_cycle = 0.9;
-  param.sys.core[0].MemManU_D_duty_cycle = 0.71;
-  param.sys.core[0].ALU_duty_cycle = 0.76;
-  param.sys.core[0].MUL_duty_cycle = 0.82;
-  param.sys.core[0].FPU_duty_cycle = 0.0;
-  param.sys.core[0].ALU_cdb_duty_cycle = 0.76;
-  param.sys.core[0].MUL_cdb_duty_cycle = 0.82;
-  param.sys.core[0].FPU_cdb_duty_cycle = 0.0;
-  param.sys.core[0].ialu_accesses = param.sys.core[0].int_instructions;
-  param.sys.core[0].fpu_accesses = param.sys.core[0].fp_instructions;
-  param.sys.core[0].mul_accesses = param.sys.core[0].int_instructions * .5;
-  param.sys.core[0].int_regfile_reads = param.sys.core[0].load_instructions;
-  param.sys.core[0].float_regfile_reads =
-      param.sys.core[0].fp_instructions * .4;
-  param.sys.core[0].int_regfile_writes = param.sys.core[0].store_instructions;
-  param.sys.core[0].float_regfile_writes =
-      param.sys.core[0].fp_instructions * .4;
+  for (coreIdx = 0; coreIdx < totalCore; coreIdx++) {
+    param.sys.core[coreIdx].total_cycles = simCycle;
+    param.sys.core[coreIdx].idle_cycles =
+        simCycle - param.sys.core[coreIdx].busy_cycles;
+    param.sys.core[coreIdx].committed_instructions =
+        param.sys.core[coreIdx].total_instructions;
+    param.sys.core[coreIdx].committed_int_instructions =
+        param.sys.core[coreIdx].int_instructions;
+    param.sys.core[coreIdx].committed_fp_instructions =
+        param.sys.core[coreIdx].fp_instructions;
+    param.sys.core[coreIdx].pipeline_duty_cycle = 1;
+    param.sys.core[coreIdx].IFU_duty_cycle = 0.9;
+    param.sys.core[coreIdx].BR_duty_cycle = 0.72;
+    param.sys.core[coreIdx].LSU_duty_cycle = 0.71;
+    param.sys.core[coreIdx].MemManU_I_duty_cycle = 0.9;
+    param.sys.core[coreIdx].MemManU_D_duty_cycle = 0.71;
+    param.sys.core[coreIdx].ALU_duty_cycle = 0.76;
+    param.sys.core[coreIdx].MUL_duty_cycle = 0.82;
+    param.sys.core[coreIdx].FPU_duty_cycle = 0.0;
+    param.sys.core[coreIdx].ALU_cdb_duty_cycle = 0.76;
+    param.sys.core[coreIdx].MUL_cdb_duty_cycle = 0.82;
+    param.sys.core[coreIdx].FPU_cdb_duty_cycle = 0.0;
+    param.sys.core[coreIdx].ialu_accesses = param.sys.core[0].int_instructions;
+    param.sys.core[coreIdx].fpu_accesses = param.sys.core[0].fp_instructions;
+    param.sys.core[coreIdx].mul_accesses =
+        param.sys.core[0].int_instructions * .5;
+    param.sys.core[coreIdx].int_regfile_reads =
+        param.sys.core[0].load_instructions;
+    param.sys.core[coreIdx].float_regfile_reads =
+        param.sys.core[coreIdx].fp_instructions * .4;
+    param.sys.core[coreIdx].int_regfile_writes =
+        param.sys.core[0].store_instructions;
+    param.sys.core[coreIdx].float_regfile_writes =
+        param.sys.core[coreIdx].fp_instructions * .4;
 
-  // L1i and L1d
-  {
-    auto &core = param.sys.core[0];
+    // L1i and L1d
+    {
+      auto &core = param.sys.core[coreIdx];
 
-    core.icache.total_accesses = core.load_instructions * .3;
-    core.icache.total_hits = core.icache.total_accesses * .7;
-    core.icache.total_misses = core.icache.total_accesses * .3;
-    core.icache.read_accesses = core.icache.total_accesses;
-    core.icache.read_hits = core.icache.total_hits;
-    core.icache.read_misses = core.icache.total_misses;
-    core.itlb.total_accesses = core.load_instructions * .2;
-    core.itlb.total_hits = core.itlb.total_accesses * .8;
-    core.itlb.total_misses = core.itlb.total_accesses * .2;
+      core.icache.total_accesses = core.load_instructions * .3;
+      core.icache.total_hits = core.icache.total_accesses * .7;
+      core.icache.total_misses = core.icache.total_accesses * .3;
+      core.icache.read_accesses = core.icache.total_accesses;
+      core.icache.read_hits = core.icache.total_hits;
+      core.icache.read_misses = core.icache.total_misses;
+      core.itlb.total_accesses = core.load_instructions * .2;
+      core.itlb.total_hits = core.itlb.total_accesses * .8;
+      core.itlb.total_misses = core.itlb.total_accesses * .2;
 
-    core.dcache.total_accesses = core.load_instructions * .4;
-    core.dcache.total_hits = core.dcache.total_accesses * .4;
-    core.dcache.total_misses = core.dcache.total_accesses * .6;
-    core.dcache.read_accesses = core.dcache.total_accesses * .6;
-    core.dcache.read_hits = core.dcache.total_hits * .6;
-    core.dcache.read_misses = core.dcache.total_misses * .6;
-    core.dcache.write_accesses = core.dcache.total_accesses * .4;
-    core.dcache.write_hits = core.dcache.total_hits * .4;
-    core.dcache.write_misses = core.dcache.total_misses * .4;
-    core.dcache.write_backs = core.dcache.total_misses * .4;
-    core.dtlb.total_accesses = core.load_instructions * .2;
-    core.dtlb.total_hits = core.itlb.total_accesses * .8;
-    core.dtlb.total_misses = core.itlb.total_accesses * .2;
+      core.dcache.total_accesses = core.load_instructions * .4;
+      core.dcache.total_hits = core.dcache.total_accesses * .4;
+      core.dcache.total_misses = core.dcache.total_accesses * .6;
+      core.dcache.read_accesses = core.dcache.total_accesses * .6;
+      core.dcache.read_hits = core.dcache.total_hits * .6;
+      core.dcache.read_misses = core.dcache.total_misses * .6;
+      core.dcache.write_accesses = core.dcache.total_accesses * .4;
+      core.dcache.write_hits = core.dcache.total_hits * .4;
+      core.dcache.write_misses = core.dcache.total_misses * .4;
+      core.dcache.write_backs = core.dcache.total_misses * .4;
+      core.dtlb.total_accesses = core.load_instructions * .2;
+      core.dtlb.total_hits = core.itlb.total_accesses * .8;
+      core.dtlb.total_misses = core.itlb.total_accesses * .2;
+    }
   }
 
   // L2

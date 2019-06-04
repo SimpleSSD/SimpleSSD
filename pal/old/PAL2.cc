@@ -69,15 +69,6 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
 
   totalDie = pParam->channel * pParam->package * pParam->die;
 
-  ChTimeSlots = new TimeSlot *[pParam->channel];
-  std::memset(ChTimeSlots, 0, sizeof(TimeSlot *) * pParam->channel);
-
-  DieTimeSlots = new TimeSlot *[totalDie];
-  std::memset(DieTimeSlots, 0, sizeof(TimeSlot *) * totalDie);
-
-  MergedTimeSlots = new TimeSlot *[1];
-  MergedTimeSlots[0] = NULL;
-
   ChFreeSlots =
       new std::map<uint64_t, std::map<uint64_t, uint64_t> *>[pParam->channel];
   ChStartPoint = new uint64_t[pParam->channel];
@@ -188,13 +179,31 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::PAL::Parameter *p,
 
 PAL2::~PAL2() {
   FlushTimeSlots(MAX64);
-  delete ChTimeSlots;
-  delete DieTimeSlots;
-  delete MergedTimeSlots;
 
+  for (uint i = 0; i < pParam->channel; i++) {
+    for (auto &iter : ChFreeSlots[i]) {
+      {
+        delete iter.second;
+        iter.second = NULL;
+      }
+    }
+  }
   delete[] ChFreeSlots;
+
+  for (uint i = 0; i < totalDie; i++) {
+    for (auto &iter : DieFreeSlots[i]) {
+      {
+        delete iter.second;
+        iter.second = NULL;
+      }
+    }
+  }
   delete[] DieFreeSlots;
+
+  delete[] ChStartPoint;
+  delete[] DieStartPoint;
 }
+
 void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   // ensure we can erase multiple blocks from single request
   unsigned erase_block = 1;
@@ -202,17 +211,17 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   for (unsigned cur_command = 0; cur_command < erase_block; cur_command++) {
 #if GATHER_RESOURCE_CONFLICT
     uint8_t confType = CONFLICT_NONE;
-    uint64_t confLength = 0;
 #endif
     req.ppn = req.ppn - (req.ppn & (erase_block - 1)) + cur_command;
     uint32_t reqCh = reqCPD.Channel;
     uint32_t reqDieIdx = CPDPBPtoDieIdx(&reqCPD);
-    TimeSlot *tsDMA0 = NULL, *tsMEM = NULL, *tsDMA1 = NULL;
-    uint64_t tickDMA0 = 0, tickMEM = 0, tickDMA1 = 0;
-    uint64_t latDMA0, latMEM, latDMA1, DMA0tickFrom, MEMtickFrom, DMA1tickFrom,
-        totalLat;
-    uint64_t latANTI;  // anticipate time slot
-    bool conflicts;    // check conflict when scheduling
+    TimeSlot tsDMA0, tsMEM, tsDMA1;
+    uint64_t tickDMA0 = 0, tickMEM = 0,
+             tickDMA1 = 0;  // start tick of the free slot
+    uint64_t latDMA0, latMEM, latDMA1, totalLat;
+    uint64_t DMA0tickFrom, MEMtickFrom, DMA1tickFrom;  // starting point
+    uint64_t latANTI;                                  // anticipate time slot
+    bool conflicts;  // check conflict when scheduling
     latDMA0 = lat->GetLatency(reqCPD.Page, req.operation, BUSY_DMA0);
     latMEM = lat->GetLatency(reqCPD.Page, req.operation, BUSY_MEM);
     latDMA1 = lat->GetLatency(reqCPD.Page, req.operation, BUSY_DMA1);
@@ -265,6 +274,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
         if (tickMEM == tickDMA0)
           break;
         DMA0tickFrom = MEMtickFrom;
+
         uint64_t tickDMA0_vrfy;
         if (!FindFreeTime(ChFreeSlots[reqCh], latDMA0, DMA0tickFrom,
                           tickDMA0_vrfy, conflicts)) {
@@ -298,7 +308,8 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
           DMA1tickFrom = tickDMA1;
       }
 
-      // 4) Re-verify MEM slot with including MEM(DMA0_start ~ DMA1_end)
+      // 4) Re-verify MEM slot
+      // The target die should be free during (DMA0_start ~ DMA1_end)
       totalLat = (DMA1tickFrom + latDMA1 + latANTI) - DMA0tickFrom;
       uint64_t tickMEM_vrfy;
       if (!FindFreeTime(DieFreeSlots[reqDieIdx], totalLat, DMA0tickFrom,
@@ -315,7 +326,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
       DMA0tickFrom = tickMEM_vrfy;  // or re-search for next available resource!
     }                               // LOOP0
 
-    // 5) Assggn dma0, dma1, mem
+    // 5) Assign dma0, dma1, mem
     {
       InsertFreeSlot(ChFreeSlots[reqCh], latDMA0, DMA0tickFrom, tickDMA0,
                      ChStartPoint[reqCh], 0);
@@ -344,24 +355,21 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
       // temporarily use previous MergedTimeSlots design
       InsertFreeSlot(DieFreeSlots[reqDieIdx], totalLat, DMA0tickFrom, tickMEM,
                      DieStartPoint[reqDieIdx], 0);
-      if (tsDMA0 != NULL)
-        delete tsDMA0;
+
       if (DMA0tickFrom < tickDMA0)
-        tsDMA0 = new TimeSlot(tickDMA0, latDMA0);
+        tsDMA0 = TimeSlot(tickDMA0, latDMA0);
       else
-        tsDMA0 = new TimeSlot(DMA0tickFrom, latDMA0);
-      if (tsDMA1 != NULL)
-        delete tsDMA1;
+        tsDMA0 = TimeSlot(DMA0tickFrom, latDMA0);
+
       if (DMA1tickFrom < tickDMA1)
-        tsDMA0 = new TimeSlot(tickDMA1 + latANTI, latDMA1);
+        tsDMA1 = TimeSlot(tickDMA1 + latANTI, latDMA1);
       else
-        tsDMA1 = new TimeSlot(DMA1tickFrom + latANTI, latDMA1);
-      if (tsMEM != NULL)
-        delete tsMEM;
+        tsDMA1 = TimeSlot(DMA1tickFrom + latANTI, latDMA1);
+
       if (DMA0tickFrom < tickMEM)
-        tsMEM = new TimeSlot(tickMEM, totalLat);
+        tsMEM = TimeSlot(tickMEM, totalLat);
       else
-        tsMEM = new TimeSlot(DMA0tickFrom, totalLat);
+        tsMEM = TimeSlot(DMA0tickFrom, totalLat);
 
       //******************************************************************//
       if (DMA0tickFrom > tickDMA0)
@@ -389,108 +397,123 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
         //******************************************************************//
 #if 1
       // Manage MergedTimeSlots
-      if (MergedTimeSlots[0] == NULL) {
-        MergedTimeSlots[0] = new TimeSlot(
-            tsMEM->StartTick, tsMEM->EndTick - tsMEM->StartTick + 1);
+      if (MergedTimeSlots.size() == 0) {
+        MergedTimeSlots.push_back(
+            TimeSlot(tsMEM.StartTick, tsMEM.EndTick - tsMEM.StartTick + 1));
       }
       else {
-        TimeSlot *cur = MergedTimeSlots[0];
-        uint64_t s = tsMEM->StartTick;
-        uint64_t e = tsMEM->EndTick;
-        TimeSlot *spos = NULL, *epos = NULL;
+        uint64_t s = tsMEM.StartTick;
+        uint64_t e = tsMEM.EndTick;
         int spnt = 0, epnt = 0;  // inside(0), rightside(1)
+        std::list<TimeSlot>::iterator cur;
+        std::list<TimeSlot>::iterator spos = MergedTimeSlots.end();
+        std::list<TimeSlot>::iterator epos = MergedTimeSlots.end();
 
         // find s position
-        cur = MergedTimeSlots[0];
-        while (cur) {
+        cur = MergedTimeSlots.begin();
+
+        while (cur != MergedTimeSlots.end()) {
           if (cur->StartTick <= s && s <= cur->EndTick) {
             spos = cur;
             spnt = 0;  // inside
             break;
           }
 
-          if ((cur->Next == NULL) ||
-              (cur->Next && (s < cur->Next->StartTick))) {
+          auto next = cur;
+
+          next++;
+
+          if ((next == MergedTimeSlots.end()) ||
+              (next != MergedTimeSlots.end() && (s < next->StartTick))) {
             spos = cur;
             spnt = 1;  // rightside
             break;
           }
 
-          cur = cur->Next;
+          cur = next;
         }
 
         // find e position
-        cur = MergedTimeSlots[0];
-        while (cur) {
+        cur = MergedTimeSlots.begin();
+
+        while (cur != MergedTimeSlots.end()) {
           if (cur->StartTick <= e && e <= cur->EndTick) {
             epos = cur;
             epnt = 0;  // inside
             break;
           }
 
-          if ((cur->Next == NULL) ||
-              (cur->Next && (e < cur->Next->StartTick))) {
+          auto next = cur;
+
+          next++;
+
+          if ((next == MergedTimeSlots.end()) ||
+              (next != MergedTimeSlots.end() && (e < next->StartTick))) {
             epos = cur;
             epnt = 1;  // rightside
             break;
           }
-          cur = cur->Next;
+
+          cur = next;
         }
 
         // merge
-        if (!((spos || epos) &&
-              (spos == epos && spnt == 0 &&
-               epnt == 0)))  // if both side is in a merged slot, skip
-        {
-          if (spos) {
-            if (spnt == 1)  // rightside
-            {
-              TimeSlot *tmp = new TimeSlot(
-                  tsMEM->StartTick, tsMEM->EndTick - tsMEM->StartTick +
-                                        1);  // duration will be updated later
-              tmp->Next = spos->Next;
-              if (spos == epos) {
-                epos = tmp;
-              }
-              spos->Next = tmp;  // overlapping temporary now;
-              spos = tmp;        // update spos
+        // if both side is in a merged slot, skip
+        if (!(spos != MergedTimeSlots.end() && epos != MergedTimeSlots.end() &&
+              (spos == epos && spnt == 0 && epnt == 0))) {
+          if (spos != MergedTimeSlots.end() &&
+              spnt == 1) {  // right side of spos
+            bool update = false;
+
+            if (spos == epos) {
+              update = true;
             }
+
+            // duration will be updated later
+            // Insert tmp after spos
+            auto tmp = MergedTimeSlots.insert(
+                ++spos,
+                TimeSlot(tsMEM.StartTick, tsMEM.EndTick - tsMEM.StartTick + 1));
+
+            if (update) {
+              epos = tmp;
+            }
+
+            spos = --tmp;  // update spos
           }
           else {
-            if (!epos)  // both new
+            if (epos == MergedTimeSlots.end())  // both new
             {
-              TimeSlot *tmp = new TimeSlot(
-                  tsMEM->StartTick,
-                  tsMEM->EndTick - tsMEM->StartTick + 1);  // copy one
-              tmp->Next = MergedTimeSlots[0];
-              MergedTimeSlots[0] = tmp;
+              auto tmp =
+                  TimeSlot(tsMEM.StartTick,
+                           tsMEM.EndTick - tsMEM.StartTick + 1);  // copy one
+
+              MergedTimeSlots.insert(MergedTimeSlots.begin(), tmp);
             }
-            else if (epos) {
-              TimeSlot *tmp = new TimeSlot(
-                  tsMEM->StartTick, 999);  // duration will be updated later
-              tmp->Next = MergedTimeSlots[0];
-              MergedTimeSlots[0] = tmp;
-              spos = tmp;
+            else {
+              auto tmp = TimeSlot(tsMEM.StartTick,
+                                  999);  // duration will be updated later
+              spos = MergedTimeSlots.insert(MergedTimeSlots.begin(), tmp);
             }
           }
 
-          if (epos) {
+          if (epos != MergedTimeSlots.end()) {
             if (epnt == 0) {
               spos->EndTick = epos->EndTick;
             }
             else if (epnt == 1) {
-              spos->EndTick = tsMEM->EndTick;
+              spos->EndTick = tsMEM.EndTick;
             }
+
             // remove [ spos->Next ~ epos ]
-            cur = spos->Next;
-            spos->Next = epos->Next;
-            while (cur) {
-              TimeSlot *rem = cur;
-              cur = cur->Next;
-              delete rem;
-              if (rem == epos)
-                break;
+            auto iter = spos;
+
+            for (iter++; iter != epos;) {
+              iter = MergedTimeSlots.erase(iter);
             }
+
+            // We need to erase epos
+            MergedTimeSlots.erase(epos);
           }
         }
       }
@@ -530,43 +553,35 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
       //         (tsDMA1->EndTick - tsDMA0->StartTick + 1));  // Use DPRINTF
       //         here
 #endif
-#if GATHER_RESOURCE_CONFLICT
-      if (confType != CONFLICT_NONE) {
-        confLength = tsDMA0->StartTick - req.arrived;
-      }
-#endif
     }
 #endif
 
     // 6) Write-back latency on RequestLL
-    req.finished = tsDMA1->EndTick;
+    req.finished = tsDMA1.EndTick;
 
     // categorize the time spent for read/write operation
     std::map<uint64_t, uint64_t>::iterator e;
-    e = OpTimeStamp[req.operation].find(tsDMA0->StartTick);
+    e = OpTimeStamp[req.operation].find(tsDMA0.StartTick);
     if (e != OpTimeStamp[req.operation].end()) {
-      if (e->second < tsDMA1->EndTick)
-        e->second = tsDMA1->EndTick;
+      if (e->second < tsDMA1.EndTick)
+        e->second = tsDMA1.EndTick;
     }
     else {
-      OpTimeStamp[req.operation][tsDMA0->StartTick] = tsDMA1->EndTick;
+      OpTimeStamp[req.operation][tsDMA0.StartTick] = tsDMA1.EndTick;
     }
     FlushOpTimeStamp();
 
     // Update stats
 #if 1
-    stats->UpdateLastTick(tsDMA1->EndTick);
+    stats->UpdateLastTick(tsDMA1.EndTick);
 #if GATHER_RESOURCE_CONFLICT
-    stats->AddLatency(req, &reqCPD, reqDieIdx, tsDMA0, tsMEM, tsDMA1, confType,
-                      confLength);
+    stats->AddLatency(req, &reqCPD, reqDieIdx, tsDMA0, tsMEM, tsDMA1, confType);
 #else
     stats->AddLatency(req, &reqCPD, reqDieIdx, tsDMA0, tsMEM, tsDMA1);
 #endif
 #endif
 
     if (req.operation == OPER_ERASE || req.mergeSnapshot) {
-      // MergeATimeSlot(ChTimeSlots[reqCh], tsDMA0);
-      // MergeATimeSlot(DieTimeSlots[reqDieIdx]);
       stats->MergeSnapshot();
     }
   }
@@ -576,240 +591,21 @@ void PAL2::submit(Command &cmd, CPDPBP &addr) {
   TimelineScheduling(cmd, addr);
 }
 
-uint8_t PAL2::VerifyTimeLines(uint8_t print_on) {
-  uint8_t ret = 0;
-  if (print_on)
-    printf("[ Verify Timelines ]\n");
+void PAL2::FlushATimeSlotBusyTime(std::list<TimeSlot> &tgtTimeSlot,
+                                  uint64_t currentTick, uint64_t *TimeSum) {
+  auto cur = tgtTimeSlot.begin();
 
-  for (uint32_t c = 0; c < pParam->channel; c++) {
-    TimeSlot *tsDBG = ChTimeSlots[c];
-    TimeSlot *prev = tsDBG;
-    uint64_t ioCnt = 0;
-    uint64_t cntVrfy = 0;
-    uint64_t utilTime = 0;
-    uint64_t idleTime = 0;
-    if (!tsDBG) {
-      printf("WARN: no entry in CH%02d\n", c);
-      continue;
-    }
-    ioCnt++;
-    utilTime += (tsDBG->EndTick - tsDBG->StartTick + 1);
-    tsDBG = tsDBG->Next;
-    // printf("TimeSlot - CH%02d Vrfy : ", c);
-    while (tsDBG) {
-      if (!((prev->EndTick < tsDBG->StartTick) &&
-            (tsDBG->StartTick < tsDBG->EndTick))) {
-        if (print_on)
-          printf("CH%02d VERIFY FAILED: %" PRIu64 "~%" PRIu64 ", %" PRIu64
-                 "~%" PRIu64 "\n",
-                 c, prev->StartTick, prev->EndTick, tsDBG->StartTick,
-                 tsDBG->EndTick);
-        cntVrfy++;
-      }
-      ioCnt++;
-      utilTime += (tsDBG->EndTick - tsDBG->StartTick + 1);
-      idleTime += (tsDBG->StartTick - prev->EndTick - 1);
-
-      prev = tsDBG;
-      tsDBG = tsDBG->Next;
-    }
-    if (cntVrfy) {
-      if (print_on) {
-        printf("TimeSlot - CH%02d Vrfy : FAIL %" PRIu64 "\n", c, cntVrfy);
-
-        TimeSlot *tsDBG = ChTimeSlots[c];
-        printf("TimeSlot - CH%d : ", c);
-        while (tsDBG) {
-          printf("%" PRIu64 "~%" PRIu64 ", ", tsDBG->StartTick, tsDBG->EndTick);
-          tsDBG = tsDBG->Next;
-        }
-        printf("\n");
-      }
-      ret |= 1;
-    }
-    if (print_on)
-      printf("TimeSlot - CH%02d UtilTime : %" PRIu64 " , IdleTime : %" PRIu64
-             " , Count: %" PRIu64 "\n",
-             c, utilTime, idleTime, ioCnt);
-  }
-
-  for (uint32_t d = 0; d < totalDie; d++) {
-    TimeSlot *tsDBG = DieTimeSlots[d];
-    TimeSlot *prev = tsDBG;
-    uint64_t ioCnt = 0;
-    uint64_t cntVrfy = 0;
-    uint64_t idleTime = 0;
-    uint64_t utilTime = 0;
-    if (!tsDBG) {
-      printf("WARN: no entry in DIE%05d\n", d);
-      continue;
-    }
-    ioCnt++;
-    utilTime += (tsDBG->EndTick - tsDBG->StartTick + 1);
-    tsDBG = tsDBG->Next;
-    // printf("TimeSlot - DIE%02d Vrfy : ", d);
-    while (tsDBG) {
-      if (!((prev->EndTick < tsDBG->StartTick) &&
-            (tsDBG->StartTick < tsDBG->EndTick))) {
-        if (print_on)
-          printf("DIE%05d VERIFY FAILED: %" PRIu64 "~%" PRIu64 ", %" PRIu64
-                 "~%" PRIu64 "\n",
-                 d, prev->StartTick, prev->EndTick, tsDBG->StartTick,
-                 tsDBG->EndTick);
-        cntVrfy++;
-      }
-      ioCnt++;
-      utilTime += (tsDBG->EndTick - tsDBG->StartTick + 1);
-      idleTime += (tsDBG->StartTick - prev->EndTick - 1);
-
-      prev = tsDBG;
-      tsDBG = tsDBG->Next;
-    }
-    if (cntVrfy) {
-      if (print_on) {
-        printf("TimeSlot - DIE%05d Vrfy : FAIL %" PRIu64 "\n", d, cntVrfy);
-
-        TimeSlot *tsDBG = DieTimeSlots[d];
-        printf("TimeSlot - DIE%d : ", d);
-        while (tsDBG) {
-          printf("%" PRIu64 "~%" PRIu64 ", ", tsDBG->StartTick, tsDBG->EndTick);
-          tsDBG = tsDBG->Next;
-        }
-        printf("\n");
-      }
-      ret |= 2;
-    }
-    if (print_on)
-      printf("TimeSlot - DIE%05d UtilTime : %" PRIu64 " , IdleTime : %" PRIu64
-             " , Count: %" PRIu64 "\n",
-             d, utilTime, idleTime, ioCnt);
-  }
-
-  return ret;
-}
-
-TimeSlot *PAL2::InsertAfter(TimeSlot *tgtTimeSlot, uint64_t tickLen,
-                            uint64_t startTick) {
-  TimeSlot *curTS;
-  TimeSlot *newTS;
-
-  curTS = tgtTimeSlot;
-
-  newTS = new TimeSlot(startTick, tickLen);
-  newTS->Next = curTS->Next;
-
-  curTS->Next = newTS;
-
-  return newTS;
-}
-
-TimeSlot *PAL2::FlushATimeSlot(TimeSlot *tgtTimeSlot, uint64_t currentTick) {
-  TimeSlot *cur = tgtTimeSlot;
-  while (cur) {
+  while (cur != tgtTimeSlot.end()) {
     if (cur->EndTick < currentTick) {
-      TimeSlot *rem = cur;
-      cur = cur->Next;
-      delete rem;
+      *TimeSum += (cur->EndTick - cur->StartTick + 1);
+
+      cur = tgtTimeSlot.erase(cur);
+
       continue;
     }
+
     break;
   }
-  return cur;
-}
-
-void PAL2::MergeATimeSlot(TimeSlot *tgtTimeSlot) {
-  TimeSlot *cur = tgtTimeSlot;
-  while (cur) {
-    if (cur->Next) {
-      TimeSlot *rem = cur->Next;
-      cur->EndTick = rem->EndTick;
-      cur->Next = rem->Next;
-      delete rem;
-    }
-    else {
-      cur = cur->Next;
-    }
-  }
-}
-
-void PAL2::MergeATimeSlot(TimeSlot *startTimeSlot, TimeSlot *endTimeSlot) {
-  TimeSlot *cur = startTimeSlot;
-  while (cur) {
-    if (cur->Next && cur->Next == endTimeSlot) {
-      TimeSlot *rem = cur->Next;
-      cur->EndTick = rem->EndTick;
-      cur->Next = rem->Next;
-      delete rem;
-      break;
-    }
-    else if (cur->Next) {
-      TimeSlot *rem = cur->Next;
-      cur->EndTick = rem->EndTick;
-      cur->Next = rem->Next;
-      delete rem;
-    }
-    else {
-      cur = cur->Next;
-    }
-  }
-}
-
-void PAL2::MergeATimeSlotCH(TimeSlot *tgtTimeSlot) {
-  TimeSlot *cur = tgtTimeSlot;
-  while (cur) {
-    while (cur->Next && (cur->Next)->StartTick - cur->EndTick == 1) {
-      TimeSlot *rem = cur->Next;
-      cur->EndTick = rem->EndTick;
-      cur->Next = rem->Next;
-      delete rem;
-    }
-    cur = cur->Next;
-  }
-  TimeSlot *test = tgtTimeSlot;
-  int counter = 0;
-  while (test) {
-    counter++;
-    test = test->Next;
-  }
-
-  printf("TimeAfterSlot length: %d\n", counter);
-}
-
-void PAL2::MergeATimeSlotDIE(TimeSlot *tgtTimeSlot) {
-  TimeSlot *cur = tgtTimeSlot;
-  while (cur) {
-    while (cur->Next && (cur->Next)->StartTick - cur->EndTick == 1) {
-      TimeSlot *rem = cur->Next;
-      cur->EndTick = rem->EndTick;
-      cur->Next = rem->Next;
-      delete rem;
-    }
-    cur = cur->Next;
-  }
-  TimeSlot *test = tgtTimeSlot;
-  int counter = 0;
-  while (test) {
-    counter++;
-    test = test->Next;
-  }
-  printf("TimeAfterSlot length: %d\n", counter);
-}
-TimeSlot *PAL2::FlushATimeSlotBusyTime(TimeSlot *tgtTimeSlot,
-                                       uint64_t currentTick,
-                                       uint64_t *TimeSum) {
-  TimeSlot *cur = tgtTimeSlot;
-  while (cur) {
-    if (cur->EndTick < currentTick) {
-      // cnt++;
-      TimeSlot *rem = cur;
-      cur = cur->Next;
-      *TimeSum += (rem->EndTick - rem->StartTick + 1);
-      delete rem;
-      continue;
-    }
-    break;
-  }
-  return cur;
 }
 
 void PAL2::FlushOpTimeStamp()  // currently only used during garbage collection
@@ -839,63 +635,9 @@ void PAL2::FlushOpTimeStamp()  // currently only used during garbage collection
     stats->OpBusyTime[Oper] += end_tick - start_tick + 1;
   }
 }
-void PAL2::InquireBusyTime(uint64_t currentTick) {
-  stats->SampledExactBusyTime = stats->ExactBusyTime;
-  // flush OpTimeStamp
-  std::map<uint64_t, uint64_t>::iterator e;
-  for (unsigned Oper = 0; Oper < 3; Oper++) {
-    uint64_t start_tick = (uint64_t)-1, end_tick = (uint64_t)-1;
-    for (e = OpTimeStamp[Oper].begin(); e != OpTimeStamp[Oper].end();) {
-      if (e->second > currentTick)
-        break;
-      if (start_tick == (uint64_t)-1 && end_tick == (uint64_t)-1) {
-        start_tick = e->first;
-        end_tick = e->second;
-      }
-      else if (e->first < end_tick && e->second <= end_tick) {
-      }
-      else if (e->first < end_tick && e->second > end_tick) {
-        end_tick = e->second;
-      }
-      else if (e->first >= end_tick) {
-        stats->OpBusyTime[Oper] += end_tick - start_tick + 1;
-        start_tick = e->first;
-        end_tick = e->second;
-      }
-      OpTimeStamp[Oper].erase(e);
-      e = OpTimeStamp[Oper].begin();
-    }
-    stats->OpBusyTime[Oper] += end_tick - start_tick + 1;
-  }
-  TimeSlot *cur = MergedTimeSlots[0];
-
-  while (cur) {
-    if (cur->EndTick < currentTick) {
-      TimeSlot *rem = cur;
-      cur = cur->Next;
-      stats->SampledExactBusyTime += (rem->EndTick - rem->StartTick + 1);
-      continue;
-    }
-    else if (cur->EndTick >= currentTick && cur->StartTick < currentTick) {
-      TimeSlot *rem = cur;
-      stats->SampledExactBusyTime += (currentTick - rem->StartTick + 1);
-      break;
-    }
-    break;
-  }
-}
 
 void PAL2::FlushTimeSlots(uint64_t currentTick) {
-  for (uint32_t i = 0; i < pParam->channel; i++) {
-    ChTimeSlots[i] = FlushATimeSlot(ChTimeSlots[i], currentTick);
-  }
-
-  for (uint32_t i = 0; i < totalDie; i++) {
-    DieTimeSlots[i] = FlushATimeSlot(DieTimeSlots[i], currentTick);
-  }
-
-  MergedTimeSlots[0] = FlushATimeSlotBusyTime(MergedTimeSlots[0], currentTick,
-                                              &(stats->ExactBusyTime));
+  FlushATimeSlotBusyTime(MergedTimeSlots, currentTick, &(stats->ExactBusyTime));
 
   stats->Access_Capacity.update();
   stats->Ticks_Total.update();
@@ -908,8 +650,9 @@ void PAL2::FlushFreeSlots(uint64_t currentTick) {
   for (uint32_t i = 0; i < totalDie; i++) {
     FlushAFreeSlot(DieFreeSlots[i], currentTick);
   }
-  MergedTimeSlots[0] = FlushATimeSlotBusyTime(MergedTimeSlots[0], currentTick,
-                                              &(stats->ExactBusyTime));
+
+  FlushATimeSlotBusyTime(MergedTimeSlots, currentTick, &(stats->ExactBusyTime));
+
   stats->Access_Capacity.update();
   stats->Ticks_Total.update();
 }
@@ -933,17 +676,19 @@ void PAL2::FlushAFreeSlot(
   }
 }
 
-TimeSlot *PAL2::FindFreeTime(TimeSlot *tgtTimeSlot, uint64_t tickLen,
-                             uint64_t fromTick) {
-  TimeSlot *cur = tgtTimeSlot;
-  TimeSlot *next = NULL;
-  while (cur) {
+std::list<TimeSlot>::iterator PAL2::FindFreeTime(
+    std::list<TimeSlot> &tgtTimeSlot, uint64_t tickLen, uint64_t fromTick) {
+  auto cur = tgtTimeSlot.begin();
+  auto next = cur;
+
+  while (cur != tgtTimeSlot.end()) {
     // printf("FindFreeTime.FIND : cur->ST=%llu, cur->ET=%llu, next=0x%X\n",
     // cur->StartTick, cur->EndTick, (unsigned int)next); //DBG
-    if (cur->Next)
-      next = cur->Next;
-    else
+    next++;
+
+    if (next == tgtTimeSlot.end()) {
       break;
+    }
 
     if (cur->EndTick < fromTick && fromTick < next->StartTick) {
       if ((next->StartTick - fromTick) >= tickLen) {
@@ -958,15 +703,16 @@ TimeSlot *PAL2::FindFreeTime(TimeSlot *tgtTimeSlot, uint64_t tickLen,
         break;
       }
     }
-    cur = cur->Next;
+
+    cur++;
   }
 
-  //                   v-- this condition looks strange? but [minus of uint64_t
-  //                   values] do not work correctly without this!
-  if (tgtTimeSlot && (tgtTimeSlot->StartTick > fromTick) &&
-      ((tgtTimeSlot->StartTick - fromTick) >= tickLen)) {
-    cur = NULL;  // if there is an available time slot before first cmd, return
-                 // NULL!
+  // v-- this condition looks strange? but [minus of uint64_t values] do not
+  // work correctly without this!
+  if ((tgtTimeSlot.begin()->StartTick > fromTick) &&
+      ((tgtTimeSlot.begin()->StartTick - fromTick) >= tickLen)) {
+    cur = tgtTimeSlot.end();  // if there is an available time slot before first
+                              // cmd, return NULL!
   }
 
   return cur;
@@ -974,14 +720,11 @@ TimeSlot *PAL2::FindFreeTime(TimeSlot *tgtTimeSlot, uint64_t tickLen,
 
 bool PAL2::FindFreeTime(
     std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
-    uint64_t tickLen, uint64_t &tickFrom, uint64_t &startTick,
-    bool &conflicts) {
-  std::map<uint64_t, std::map<uint64_t, uint64_t> *>::iterator e =
-      tgtFreeSlot.upper_bound(tickLen);
+    uint64_t tickLen, uint64_t tickFrom, uint64_t &startTick, bool &conflicts) {
+  auto e = tgtFreeSlot.upper_bound(tickLen);
   if (e == tgtFreeSlot.end()) {
     e--;  // Jie: tgtFreeSlot is not empty
-    std::map<uint64_t, uint64_t>::iterator f =
-        (e->second)->upper_bound(tickFrom);
+    auto f = (e->second)->upper_bound(tickFrom);
     if (f != (e->second)->begin()) {
       f--;
       if (f->second >= tickLen + tickFrom - (uint64_t)1) {

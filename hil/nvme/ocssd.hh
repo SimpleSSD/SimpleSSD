@@ -162,6 +162,7 @@ class OpenChannelSSD20 : public OpenChannelSSD12 {
   uint64_t vectorReadCount;
   uint64_t vectorWriteCount;
 
+  ChunkDescriptor *getChunkDescriptor(uint32_t, uint32_t, uint32_t);
   uint64_t makeLBA(uint32_t, uint32_t, uint32_t, uint32_t);
   void parseLBA(uint64_t, uint32_t &, uint32_t &, uint32_t &, uint32_t &);
   void convertUnit(std::vector<uint64_t> &, std::vector<::CPDPBP> &,

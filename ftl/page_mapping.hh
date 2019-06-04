@@ -60,6 +60,8 @@ class PageMapping : public AbstractFTL {
   uint32_t convertBlockIdx(uint32_t);
   uint32_t getFreeBlock(uint32_t);
   uint32_t getLastFreeBlock(Bitset &);
+  void calculateVictimWeight(std::vector<std::pair<uint32_t, float>> &,
+                             const EVICT_POLICY, uint64_t);
   void selectVictimBlock(std::vector<uint32_t> &, uint64_t &);
   void doGarbageCollection(std::vector<uint32_t> &, uint64_t &);
 

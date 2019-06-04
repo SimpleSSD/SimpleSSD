@@ -26,6 +26,7 @@
 #include "PAL2_TimeSlot.h"
 
 #include "sim/config_reader.hh"
+#include "sim/simulator.hh"
 
 #include <cassert>
 #include <cstdio>
@@ -34,6 +35,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <string>
 using namespace std;
@@ -171,12 +173,11 @@ class PALStatistics {
   void UpdateLastTick(uint64_t tick);
   uint64_t GetLastTick();
 #if GATHER_RESOURCE_CONFLICT
-  void AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx, TimeSlot *DMA0,
-                  TimeSlot *MEM, TimeSlot *DMA1, uint8_t confType,
-                  uint64_t confLength);
+  void AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx, TimeSlot &DMA0,
+                  TimeSlot &MEM, TimeSlot &DMA1, uint8_t confType);
 #else
-  void AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx, TimeSlot *DMA0,
-                  TimeSlot *MEM, TimeSlot *DMA1);
+  void AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx, TimeSlot &DMA0,
+                  TimeSlot &MEM, TimeSlot &DMA1);
 #endif
   void MergeSnapshot();
   uint64_t ExactBusyTime, SampledExactBusyTime;
@@ -184,13 +185,47 @@ class PALStatistics {
   uint64_t LastExactBusyTime;
   uint64_t LastExecutionTime;
 
+  struct Breakdown {
+    double dma0wait;
+    double dma0;
+    double mem;
+    double dma1wait;
+    double dma1;
+
+    Breakdown() : dma0wait(0.), dma0(0.), mem(0.), dma1wait(0.), dma1(0.) {}
+  };
+
+  struct OperStats {
+    double read;
+    double write;
+    double erase;
+    double total;
+
+    OperStats() : read(0.), write(0.), erase(0.), total(0.) {}
+  };
+
+  struct ActiveTime {
+    double min;
+    double average;
+    double max;
+
+    ActiveTime() : min(0.), average(0.), max(0.) {}
+  };
+
   void PrintStats(uint64_t sim_time_ps);
   void ResetStats();
   void PrintFinalStats(uint64_t sim_time_ps);
 
-  void getEnergyStat(double &, double &, double &);
+  void getTickStat(OperStats &);        // Return busy ticks in ps
+  void getEnergyStat(OperStats &);      // Return energy in uJ
+  void getReadBreakdown(Breakdown &);   // Return READ breakdown in ps
+  void getWriteBreakdown(Breakdown &);  // Return WRITE breakdown in ps
+  void getEraseBreakdown(Breakdown &);  // Return ERASE breakdown in ps
+  void getChannelActiveTime(uint32_t, ActiveTime &);
+  void getDieActiveTime(uint32_t, ActiveTime &);
+  void getChannelActiveTimeAll(ActiveTime &);
+  void getDieActiveTimeAll(ActiveTime &);
 
-  ///////////////////////////////// polished stats
   class Counter {
    public:
     Counter();
@@ -254,7 +289,6 @@ class PALStatistics {
     void printstat_oper_iops(class ValueOper *, uint64_t *, uint64_t *);
 
     void printstat_energy(const char *namestr);
-    uint8_t get_die_idle_ticks();
   };
 
   ValueOper Ticks_DMA0WAIT;
@@ -286,7 +320,6 @@ class PALStatistics {
 
   void PrintDieIdleTicks(uint32_t die_num, uint64_t sim_time_ps,
                          uint64_t idle_power_nw);
-  /////////////////////////////////
 
  private:
   void ClearStats();

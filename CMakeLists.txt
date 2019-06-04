@@ -63,12 +63,12 @@ if (MSVC)
   add_compile_options(/wd4305)  # Surpress truncation warning
   add_compile_options(/wd4800)  # Surpress int -> boolean waring
 else ()
+  set(CMAKE_CXX_FLAGS "-g -rdynamic -Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
+
   if (DEBUG_BUILD)
-    set(CMAKE_CXX_FLAGS
-      "-O0 -g -rdynamic -Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-O0 ${CMAKE_CXX_FLAGS}")
   else ()
-    set(CMAKE_CXX_FLAGS
-      "-O2 -rdynamic -Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-O2 ${CMAKE_CXX_FLAGS}")
   endif ()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

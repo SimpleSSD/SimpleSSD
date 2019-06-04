@@ -37,6 +37,7 @@ typedef enum {
   FTL_GC_RECLAIM_BLOCK,
   FTL_GC_RECLAIM_THRESHOLD,
   FTL_GC_EVICT_POLICY,
+  FTL_GC_D_CHOICE_PARAM,
   FTL_USE_RANDOM_IO_TWEAK,
 
   /* N+K Mapping configuration*/
@@ -49,13 +50,15 @@ typedef enum {
 } MAPPING;
 
 typedef enum {
-  GC_MODE_0,
-  GC_MODE_1,
+  GC_MODE_0,  // Reclaim fixed number of blocks
+  GC_MODE_1,  // Reclaim blocks until threshold
 } GC_MODE;
 
 typedef enum {
-  POLICY_GREEDY,
+  POLICY_GREEDY,  // Select the block with the least valid pages
   POLICY_COST_BENEFIT,
+  POLICY_RANDOM,  // Select the block randomly
+  POLICY_DCHOICE,
 } EVICT_POLICY;
 
 class Config : public BaseConfig {
@@ -69,6 +72,7 @@ class Config : public BaseConfig {
   float reclaimThreshold;      //!< Default: 0.1 (10%)
   GC_MODE gcMode;              //!< Default: FTL_GC_MODE_0
   EVICT_POLICY evictPolicy;    //!< Default: POLICY_GREEDY
+  uint64_t dChoiceParam;       //!< Default: 3
   bool randomIOTweak;          //!< Default: true
 
  public:

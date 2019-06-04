@@ -1265,13 +1265,12 @@ void OpenChannelSSD20::init() {
   for (uint32_t g = 0; g < structure.group; g++) {
     for (uint32_t p = 0; p < structure.parallelUnit; p++) {
       for (uint32_t c = 0; c < structure.chunk; c++) {
-        auto &desc = pDescriptor[g * structure.parallelUnit * structure.chunk +
-                                 p * structure.chunk + c];
+        auto desc = getChunkDescriptor(g, p, c);
 
-        desc.chunkState = FREE;
-        desc.chunkType = 0x01;  // Force sequential write
-        desc.slba = makeLBA(g, p, c, 0);
-        desc.nlb = structure.chunkSize;
+        desc->chunkState = FREE;
+        desc->chunkType = 0x01;  // Force sequential write
+        desc->slba = makeLBA(g, p, c, 0);
+        desc->nlb = structure.chunkSize;
       }
     }
   }
@@ -1401,6 +1400,12 @@ void OpenChannelSSD20::submitCommand(SQEntryWrapper &req,
   }
 }
 
+ChunkDescriptor *OpenChannelSSD20::getChunkDescriptor(uint32_t g, uint32_t p,
+                                                      uint32_t c) {
+  return &pDescriptor[g * structure.parallelUnit * structure.chunk +
+                      p * structure.chunk + c];
+}
+
 uint64_t OpenChannelSSD20::makeLBA(uint32_t g, uint32_t p, uint32_t c,
                                    uint32_t l) {
   uint64_t ret = 0;
@@ -1466,10 +1471,7 @@ void OpenChannelSSD20::convertUnit(std::vector<uint64_t> &lbaList,
       }
     }
 
-    chunk.push_back(ChunkUpdateEntry(
-        pDescriptor + g * structure.parallelUnit * structure.chunk +
-            p * structure.chunk + c,
-        temp.Page));
+    chunk.push_back(ChunkUpdateEntry(getChunkDescriptor(g, p, c), temp.Page));
     list.push_back(temp);
   };
 
@@ -1490,6 +1492,8 @@ void OpenChannelSSD20::readInternal(std::vector<uint64_t> &lbaList,
                                     bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
+  bool err = false;
+  uint64_t idx = 1;
 
   pContext->req = Request(func, context);
   pContext->beginAt =
@@ -1501,7 +1505,45 @@ void OpenChannelSSD20::readInternal(std::vector<uint64_t> &lbaList,
   for (auto &iter : chunks) {
     // Check block status
     if (iter.pDesc->chunkState == OFFLINE) {
-      panic("Reading dead block");
+      warn("Reading dead block");
+      ((IOContext *)context)
+          ->resp.makeStatus(false, false, TYPE_MEDIA_AND_DATA_INTEGRITY_ERROR,
+                            STATUS_DEALLOCATED_OR_UNWRITTEN_LOGICAL_BLOCK);
+    }
+
+    if (err) {
+      if (idx <= 0xFFFFFFFF) {
+        ((IOContext *)context)->resp.entry.dword0 |= idx;
+      }
+      else {
+        ((IOContext *)context)->resp.entry.reserved |= (idx >> 32);
+      }
+    }
+
+    idx <<= 1;
+  }
+
+  if (!err) {
+    ((IOContext *)context)->resp.entry.dword0 = 0xFFFFFFFF;
+    ((IOContext *)context)->resp.entry.reserved = 0xFFFFFFFF;
+  }
+  else {
+    // Remove invalid LBAs
+    uint64_t mask = ((IOContext *)context)->resp.entry.reserved;
+    idx = 1;
+
+    mask <<= 32;
+    mask |= ((IOContext *)context)->resp.entry.dword0;
+
+    for (auto iter = pContext->list.begin(); iter != pContext->list.end();) {
+      if (mask & idx) {
+        iter = pContext->list.erase(iter);
+      }
+      else {
+        iter++;
+      }
+
+      idx <<= 1;
     }
   }
 
@@ -1537,6 +1579,8 @@ void OpenChannelSSD20::writeInternal(std::vector<uint64_t> &lbaList,
                                      bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
+  bool err = false;
+  uint64_t idx = 1;
 
   pContext->req = Request(func, context);
   pContext->beginAt =
@@ -1548,20 +1592,69 @@ void OpenChannelSSD20::writeInternal(std::vector<uint64_t> &lbaList,
   for (auto &iter : chunks) {
     // Check block status
     if (iter.pDesc->chunkState == OFFLINE) {
-      panic("Writing to dead block");
+      err = true;
+      warn("Writing to dead chunk");
+    }
+    else if (iter.pDesc->chunkState == CLOSED) {
+      err = true;
+      warn("Writing to closed chunk");
     }
     // Check write pointer
     else if (iter.pDesc->chunkState == OPEN &&
              iter.pDesc->writePointer / structure.writeSize > iter.pageIdx) {
-      panic("Write pointer violation");
+      err = true;
+      warn("Write pointer violation");
     }
 
-    // Update write pointer
-    iter.pDesc->writePointer = (iter.pageIdx + 1) * structure.writeSize;
+    if (err) {
+      ((IOContext *)context)
+          ->resp.makeStatus(false, false, TYPE_MEDIA_AND_DATA_INTEGRITY_ERROR,
+                            0xF2);  // Out of order write
+    }
+    else {
+      // Update write pointer
+      iter.pDesc->writePointer = (iter.pageIdx + 1) * structure.writeSize;
+      iter.pDesc->chunkState = OPEN;
 
-    // Do we need to close this chunk?
-    if (iter.pageIdx == param.page - 1) {
-      iter.pDesc->chunkState = CLOSED;
+      // Do we need to close this chunk?
+      if (iter.pageIdx == param.page - 1) {
+        iter.pDesc->chunkState = CLOSED;
+      }
+    }
+
+    if (err) {
+      if (idx <= 0xFFFFFFFF) {
+        ((IOContext *)context)->resp.entry.dword0 |= idx;
+      }
+      else {
+        ((IOContext *)context)->resp.entry.reserved |= (idx >> 32);
+      }
+    }
+
+    idx <<= 1;
+  }
+
+  if (!err) {
+    ((IOContext *)context)->resp.entry.dword0 = 0xFFFFFFFF;
+    ((IOContext *)context)->resp.entry.reserved = 0xFFFFFFFF;
+  }
+  else {
+    // Remove invalid LBAs
+    uint64_t mask = ((IOContext *)context)->resp.entry.reserved;
+    idx = 1;
+
+    mask <<= 32;
+    mask |= ((IOContext *)context)->resp.entry.dword0;
+
+    for (auto iter = pContext->list.begin(); iter != pContext->list.end();) {
+      if (mask & idx) {
+        iter = pContext->list.erase(iter);
+      }
+      else {
+        iter++;
+      }
+
+      idx <<= 1;
     }
   }
 
@@ -1597,6 +1690,8 @@ void OpenChannelSSD20::eraseInternal(std::vector<uint64_t> &lbaList,
                                      bool mode) {
   OCSSDContext *pContext = new OCSSDContext();
   std::vector<ChunkUpdateEntry> chunks;
+  bool err = false;
+  uint64_t idx = 1;
 
   pContext->req = Request(func, context);
   pContext->beginAt =
@@ -1604,22 +1699,67 @@ void OpenChannelSSD20::eraseInternal(std::vector<uint64_t> &lbaList,
 
   convertUnit(lbaList, pContext->list, chunks, true, mode);
 
+  ((IOContext *)context)->resp.entry.dword0 = 0;
+  ((IOContext *)context)->resp.entry.reserved = 0;
+
   // Update ChunkDescriptor
   for (auto &iter : chunks) {
     // Check block status
     if (iter.pDesc->chunkState == OFFLINE) {
-      panic("Erasing dead block");
+      err = true;
+      warn("Erasing dead chunk");
+      ((IOContext *)context)
+          ->resp.makeStatus(false, false, TYPE_MEDIA_AND_DATA_INTEGRITY_ERROR,
+                            0xC0);  // Offline chunk
     }
-    else if (iter.pDesc->chunkState == FREE) {
-      warn("Erasing clean block");
+    else if (iter.pDesc->chunkState == FREE || iter.pDesc->chunkState == OPEN) {
+      err = true;
+      warn("Erasing free or open chunk");
+
+      ((IOContext *)context)
+          ->resp.makeStatus(false, false, TYPE_MEDIA_AND_DATA_INTEGRITY_ERROR,
+                            0xC1);  // Invalid reset
     }
-    else if (iter.pDesc->chunkState == OPEN) {
-      warn("Erasing open block");
+    else {
+      // Update
+      iter.pDesc->writePointer = 0;
+      iter.pDesc->chunkState = FREE;
     }
 
-    // Update
-    iter.pDesc->writePointer = 0;
-    iter.pDesc->chunkState = FREE;
+    if (err) {
+      if (idx <= 0xFFFFFFFF) {
+        ((IOContext *)context)->resp.entry.dword0 |= idx;
+      }
+      else {
+        ((IOContext *)context)->resp.entry.reserved |= (idx >> 32);
+      }
+    }
+
+    idx <<= 1;
+  }
+
+  if (!err) {
+    ((IOContext *)context)->resp.entry.dword0 = 0xFFFFFFFF;
+    ((IOContext *)context)->resp.entry.reserved = 0xFFFFFFFF;
+  }
+  else {
+    // Remove invalid LBAs
+    uint64_t mask = ((IOContext *)context)->resp.entry.reserved;
+    idx = 1;
+
+    mask <<= 32;
+    mask |= ((IOContext *)context)->resp.entry.dword0;
+
+    for (auto iter = pContext->list.begin(); iter != pContext->list.end();) {
+      if (mask & idx) {
+        iter = pContext->list.erase(iter);
+      }
+      else {
+        iter++;
+      }
+
+      idx <<= 1;
+    }
   }
 
   DMAFunction doErase = [this](uint64_t tick, void *context) {
@@ -2089,9 +2229,6 @@ void OpenChannelSSD20::vectorChunkRead(SQEntryWrapper &req,
                      " (%" PRIu64 ")",
                      pContext->beginAt, now, now - pContext->beginAt);
 
-          pContext->resp.entry.dword0 = 0xFFFFFFFF;
-          pContext->resp.entry.reserved = 0xFFFFFFFF;
-
           pContext->function(pContext->resp);
 
           free(pContext->buffer);
@@ -2181,9 +2318,21 @@ void OpenChannelSSD20::vectorChunkWrite(SQEntryWrapper &req,
       DMAFunction eachWrite = [this](uint64_t, void *context) {
         DMAFunction dmaDone = [this](uint64_t now, void *context) {
           VectorContext *pContext = (VectorContext *)context;
+          uint64_t mask = pContext->resp.entry.reserved;
+
+          mask <<= 32;
+          mask |= pContext->resp.entry.dword0;
+
+          if (pContext->resp.entry.dword3.status == 0) {
+            mask = 0;
+          }
 
           // Write to disk
           for (uint64_t i = 0; i < pContext->nlb; i++) {
+            if ((1 << i) & mask) {
+              continue;
+            }
+
             uint64_t lba = pContext->lbaList.at(i);
 
             pDisk->write(lba, 1, pContext->buffer + i * LBA_SIZE);
@@ -2194,9 +2343,6 @@ void OpenChannelSSD20::vectorChunkWrite(SQEntryWrapper &req,
                      "OCSSD   | Vector Chunk Write | %" PRIu64 " - %" PRIu64
                      " (%" PRIu64 ")",
                      pContext->beginAt, now, now - pContext->beginAt);
-
-          pContext->resp.entry.dword0 = 0xFFFFFFFF;
-          pContext->resp.entry.reserved = 0xFFFFFFFF;
 
           pContext->function(pContext->resp);
 
@@ -2283,9 +2429,6 @@ void OpenChannelSSD20::vectorChunkReset(SQEntryWrapper &req,
                  "OCSSD   | Vector Chunk Reset | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
                  pContext->beginAt, now, now - pContext->beginAt);
-
-      pContext->resp.entry.dword0 = 0xFFFFFFFF;
-      pContext->resp.entry.reserved = 0xFFFFFFFF;
 
       pContext->function(pContext->resp);
 

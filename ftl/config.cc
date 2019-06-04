@@ -34,6 +34,7 @@ const char NAME_GC_MODE[] = "GCMode";
 const char NAME_GC_RECLAIM_BLOCK[] = "GCReclaimBlocks";
 const char NAME_GC_RECLAIM_THRESHOLD[] = "GCReclaimThreshold";
 const char NAME_GC_EVICT_POLICY[] = "EvictPolicy";
+const char NAME_GC_D_CHOICE_PARAM[] = "DChoiceParam";
 const char NAME_USE_RANDOM_IO_TWEAK[] = "EnableRandomIOTweak";
 
 Config::Config() {
@@ -45,6 +46,8 @@ Config::Config() {
   reclaimBlock = 1;
   reclaimThreshold = 0.1f;
   gcMode = GC_MODE_0;
+  evictPolicy = POLICY_GREEDY;
+  dChoiceParam = 3;
   randomIOTweak = true;
 }
 
@@ -77,6 +80,9 @@ bool Config::setConfig(const char *name, const char *value) {
   }
   else if (MATCH_NAME(NAME_GC_EVICT_POLICY)) {
     evictPolicy = (EVICT_POLICY)strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_GC_D_CHOICE_PARAM)) {
+    dChoiceParam = strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_USE_RANDOM_IO_TWEAK)) {
     randomIOTweak = convertBool(value);
@@ -125,6 +131,9 @@ uint64_t Config::readUint(uint32_t idx) {
       break;
     case FTL_GC_RECLAIM_BLOCK:
       ret = reclaimBlock;
+      break;
+    case FTL_GC_D_CHOICE_PARAM:
+      ret = dChoiceParam;
       break;
   }
 

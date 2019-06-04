@@ -32,12 +32,12 @@
 #include <string>
 using namespace std;
 
-class TimeSlot {
- public:
-  TimeSlot(uint64_t startTick, uint64_t duration);
+struct TimeSlot {
   uint64_t StartTick;
   uint64_t EndTick;
-  TimeSlot *Next;
+
+  TimeSlot(uint64_t startTick, uint64_t duration);
+  TimeSlot() : StartTick(0ull), EndTick(0ull){};
 };
 
 #endif

@@ -26,6 +26,7 @@ def compile(cxx, src, dst, rootpath):
                '-g',
                '-I' + rootpath,
                '-I' + os.path.join(rootpath, '../../../../ext/drampower/src'),
+               '-I' + os.path.join(rootpath, '../lib/drampower/src'),
                '-c',
                src,
                '-o',

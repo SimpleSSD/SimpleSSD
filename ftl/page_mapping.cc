@@ -275,14 +275,54 @@ uint32_t PageMapping::getLastFreeBlock(Bitset &iomap) {
   return lastFreeBlock.at(lastFreeBlockIndex);
 }
 
+// calculate weight of each block regarding victim selection policy
+void PageMapping::calculateVictimWeight(
+    std::vector<std::pair<uint32_t, float>> &weight, const EVICT_POLICY policy,
+    uint64_t tick) {
+  weight.resize(blocks.size());
+  uint64_t i = 0;
+  float temp;
+
+  switch (policy) {
+    case POLICY_GREEDY:
+    case POLICY_RANDOM:
+    case POLICY_DCHOICE:
+      for (auto &iter : blocks) {
+        weight.at(i).first = iter.first;
+        weight.at(i).second =
+            param.pagesInBlock - iter.second.getDirtyPageCount();
+
+        i++;
+      }
+
+      break;
+    case POLICY_COST_BENEFIT:
+      for (auto &iter : blocks) {
+        temp = (float)(param.pagesInBlock - iter.second.getDirtyPageCount()) /
+               param.pagesInBlock;
+
+        weight.at(i).first = iter.first;
+        weight.at(i).second =
+            temp / ((1 - temp) * (tick - iter.second.getLastAccessedTime()));
+
+        i++;
+      }
+
+      break;
+    default:
+      panic("Invalid evict policy");
+  }
+}
+
 void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
                                     uint64_t &tick) {
   static const GC_MODE mode = (GC_MODE)conf.readInt(CONFIG_FTL, FTL_GC_MODE);
   static const EVICT_POLICY policy =
       (EVICT_POLICY)conf.readInt(CONFIG_FTL, FTL_GC_EVICT_POLICY);
-  uint64_t nBlocks = conf.readInt(CONFIG_FTL, FTL_GC_RECLAIM_BLOCK);
+  static uint32_t dChoiceParam =
+      conf.readUint(CONFIG_FTL, FTL_GC_D_CHOICE_PARAM);
+  uint64_t nBlocks = conf.readUint(CONFIG_FTL, FTL_GC_RECLAIM_BLOCK);
   std::vector<std::pair<uint32_t, float>> weight;
-  uint64_t i = 0;
 
   list.clear();
 
@@ -307,34 +347,7 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   }
 
   // Calculate weights of all blocks
-  weight.resize(blocks.size());
-
-  if (policy == POLICY_GREEDY) {
-    for (auto &iter : blocks) {
-      weight.at(i).first = iter.first;
-      weight.at(i).second =
-          param.pagesInBlock - iter.second.getDirtyPageCount();
-
-      i++;
-    }
-  }
-  else if (policy == POLICY_COST_BENEFIT) {
-    float temp;
-
-    for (auto &iter : blocks) {
-      temp = (float)(param.pagesInBlock - iter.second.getDirtyPageCount()) /
-             param.pagesInBlock;
-
-      weight.at(i).first = iter.first;
-      weight.at(i).second =
-          temp / ((1 - temp) * (tick - iter.second.getLastAccessedTime()));
-
-      i++;
-    }
-  }
-  else {
-    panic("Invalid evict policy");
-  }
+  calculateVictimWeight(weight, policy, tick);
 
   // Sort weights
   std::sort(
@@ -343,12 +356,36 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
         return a.second < b.second;
       });
 
-  // Select victims
-  i = 0;
-  list.resize(nBlocks);
+  if (policy == POLICY_RANDOM) {
+    // exclude block with no invalid page
+    auto iter = weight.begin();
 
-  for (auto &iter : list) {
-    iter = weight.at(i++).first;
+    for (; iter != weight.end(); iter++) {
+      if (iter->second != 0) {
+        break;
+      }
+    }
+
+    if (iter <= weight.end() - nBlocks) {
+      weight.erase(weight.begin(), iter);
+    }
+
+    std::random_shuffle(weight.begin(), weight.end());
+  }
+  else if (policy == POLICY_DCHOICE) {
+    std::random_shuffle(weight.begin(), weight.end());
+
+    // sort (d * nBlocks) blocks
+    std::sort(
+        weight.begin(), weight.begin() + dChoiceParam * nBlocks,
+        [](std::pair<uint32_t, float> a, std::pair<uint32_t, float> b) -> bool {
+          return a.second < b.second;
+        });
+  }
+
+  // Select victims from the blocks with the lowest weight
+  for (uint64_t i = 0; i < nBlocks; i++) {
+    list.push_back(weight.at(i).first);
   }
 
   tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::SELECT_VICTIM_BLOCK);
@@ -357,18 +394,21 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
 void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
                                       uint64_t &tick) {
   PAL::Request req(param.ioUnitInPage);
+  std::vector<PAL::Request> readRequests;
+  std::vector<PAL::Request> writeRequests;
+  std::vector<PAL::Request> eraseRequests;
   std::vector<uint64_t> lpns;
   Bitset bit(param.ioUnitInPage);
   uint64_t beginAt;
-  uint64_t beginAt2;
-  uint64_t finishedAt = tick;
-  uint64_t finishedAt2 = tick;
+  uint64_t readFinishedAt = tick;
+  uint64_t writeFinishedAt = tick;
+  uint64_t eraseFinishedAt = tick;
 
   if (blocksToReclaim.size() == 0) {
     return;
   }
 
-  // For all blocks to reclaim
+  // For all blocks to reclaim, collecting request structure only
   for (auto &iter : blocksToReclaim) {
     auto block = blocks.find(iter);
 
@@ -392,9 +432,7 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
         req.pageIndex = pageIndex;
         req.ioFlag = bit;
 
-        beginAt = tick;
-
-        pPAL->read(req, beginAt);
+        readRequests.push_back(req);
 
         // Update mapping table
         uint32_t newBlockIdx = freeBlock->first;
@@ -433,11 +471,7 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
               req.ioFlag.set();
             }
 
-            beginAt2 = beginAt;
-
-            pPAL->write(req, beginAt2);
-
-            finishedAt2 = MAX(finishedAt2, beginAt2);
+            writeRequests.push_back(req);
           }
         }
       }
@@ -448,13 +482,36 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
     req.pageIndex = 0;
     req.ioFlag.set();
 
-    eraseInternal(req, finishedAt2);
-
-    // Merge timing
-    finishedAt = MAX(finishedAt, finishedAt2);
+    eraseRequests.push_back(req);
   }
 
-  tick = finishedAt;
+  // Do actual I/O here
+  // This handles PAL2 limitation (SIGSEGV, infinite loop, or so-on)
+  for (auto &iter : readRequests) {
+    beginAt = tick;
+
+    pPAL->read(iter, beginAt);
+
+    readFinishedAt = MAX(readFinishedAt, beginAt);
+  }
+
+  for (auto &iter : writeRequests) {
+    beginAt = readFinishedAt;
+
+    pPAL->write(iter, beginAt);
+
+    writeFinishedAt = MAX(writeFinishedAt, beginAt);
+  }
+
+  for (auto &iter : eraseRequests) {
+    beginAt = readFinishedAt;
+
+    eraseInternal(iter, beginAt);
+
+    eraseFinishedAt = MAX(eraseFinishedAt, beginAt);
+  }
+
+  tick = MAX(writeFinishedAt, eraseFinishedAt);
   tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::DO_GARBAGE_COLLECTION);
 }
 
