@@ -31,24 +31,38 @@ namespace FTL {
 
 class Block {
  private:
-  const uint32_t pageCount;
-  const uint32_t ioUnitInPage;
-  std::vector<uint32_t> nextWritePageIndex;
+  uint32_t idx;
+  uint32_t pageCount;
+  uint32_t ioUnitInPage;
+  uint32_t *pNextWritePageIndex;
 
+  // Following variables are used when ioUnitInPage == 1
+  Bitset *pValidBits;
+  Bitset *pErasedBits;
+  uint64_t *pLPNs;
+
+  // Following variables are used when ioUnitInPage > 1
   std::vector<Bitset> validBits;
   std::vector<Bitset> erasedBits;
-  std::vector<std::vector<uint64_t>> lpns;
+  uint64_t **ppLPNs;
 
   uint64_t lastAccessed;
   uint32_t eraseCount;
 
  public:
-  Block(uint32_t, uint32_t);
+  Block(uint32_t, uint32_t, uint32_t);
+  Block(const Block &);      // Copy constructor
+  Block(Block &&) noexcept;  // Move constructor
   ~Block();
 
+  Block &operator=(const Block &);  // Copy assignment
+  Block &operator=(Block &&);       // Move assignment
+
+  uint32_t getBlockIndex() const;
   uint64_t getLastAccessedTime();
   uint32_t getEraseCount();
   uint32_t getValidPageCount();
+  uint32_t getValidPageCountRaw();
   uint32_t getDirtyPageCount();
   uint32_t getNextWritePageIndex();
   uint32_t getNextWritePageIndex(uint32_t);

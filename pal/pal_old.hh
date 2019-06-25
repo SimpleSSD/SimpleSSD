@@ -45,6 +45,12 @@ class PALOLD : public AbstractPAL {
 
   uint8_t lastResetTick;
 
+  struct {
+    uint64_t readCount;
+    uint64_t writeCount;
+    uint64_t eraseCount;
+  } stat;
+
   void convertCPDPBP(Request &, std::vector<::CPDPBP> &);
   void printCPDPBP(::CPDPBP &, const char *);
   void printPPN(Request &, const char *);

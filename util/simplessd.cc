@@ -23,8 +23,8 @@
 
 using namespace SimpleSSD;
 
-ConfigReader initSimpleSSDEngine(Simulator *sim, std::ostream &info,
-                                 std::ostream &err, std::string config) {
+ConfigReader initSimpleSSDEngine(Simulator *sim, std::ostream *info,
+                                 std::ostream *err, std::string config) {
   ConfigReader conf;
 
   setSimulator(sim);

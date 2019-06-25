@@ -29,7 +29,7 @@
 #include "sim/trace.hh"
 
 SimpleSSD::ConfigReader initSimpleSSDEngine(SimpleSSD::Simulator *,
-                                            std::ostream &, std::ostream &,
+                                            std::ostream *, std::ostream *,
                                             std::string);
 void releaseSimpleSSDEngine();
 

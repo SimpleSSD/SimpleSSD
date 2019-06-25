@@ -26,7 +26,7 @@
 
 namespace SimpleSSD {
 
-void initLogSystem(std::ostream &, std::ostream &);
+void initLogSystem(std::ostream *, std::ostream *);
 void destroyLogSystem();
 
 }  // namespace SimpleSSD

@@ -29,7 +29,9 @@ const char NAME_MAPPING_MODE[] = "MappingMode";
 const char NAME_OVERPROVISION_RATIO[] = "OverProvisioningRatio";
 const char NAME_GC_THRESHOLD[] = "GCThreshold";
 const char NAME_BAD_BLOCK_THRESHOLD[] = "EraseThreshold";
-const char NAME_WARM_UP_RATIO[] = "Warmup";
+const char NAME_FILLING_MODE[] = "FillingMode";
+const char NAME_FILL_RATIO[] = "FillRatio";
+const char NAME_INVALID_PAGE_RATIO[] = "InvalidPageRatio";
 const char NAME_GC_MODE[] = "GCMode";
 const char NAME_GC_RECLAIM_BLOCK[] = "GCReclaimBlocks";
 const char NAME_GC_RECLAIM_THRESHOLD[] = "GCReclaimThreshold";
@@ -42,7 +44,9 @@ Config::Config() {
   overProvision = 0.25f;
   gcThreshold = 0.05f;
   badBlockThreshold = 100000;
-  warmup = 1.f;
+  fillingMode = FILLING_MODE_0;
+  fillingRatio = 0.f;
+  invalidRatio = 0.f;
   reclaimBlock = 1;
   reclaimThreshold = 0.1f;
   gcMode = GC_MODE_0;
@@ -66,8 +70,14 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_BAD_BLOCK_THRESHOLD)) {
     badBlockThreshold = strtoul(value, nullptr, 10);
   }
-  else if (MATCH_NAME(NAME_WARM_UP_RATIO)) {
-    warmup = strtof(value, nullptr);
+  else if (MATCH_NAME(NAME_FILLING_MODE)) {
+    fillingMode = (FILLING_MODE)strtoul(value, nullptr, 10);
+  }
+  else if (MATCH_NAME(NAME_FILL_RATIO)) {
+    fillingRatio = strtof(value, nullptr);
+  }
+  else if (MATCH_NAME(NAME_INVALID_PAGE_RATIO)) {
+    invalidRatio = strtof(value, nullptr);
   }
   else if (MATCH_NAME(NAME_GC_MODE)) {
     gcMode = (GC_MODE)strtoul(value, nullptr, 10);
@@ -102,6 +112,14 @@ void Config::update() {
   if (gcMode == GC_MODE_1 && reclaimThreshold < gcThreshold) {
     panic("Invalid GCReclaimThreshold");
   }
+
+  if (fillingRatio < 0.f || fillingRatio > 1.f) {
+    panic("Invalid FillingRatio");
+  }
+
+  if (invalidRatio < 0.f || invalidRatio > 1.f) {
+    panic("Invalid InvalidPageRatio");
+  }
 }
 
 int64_t Config::readInt(uint32_t idx) {
@@ -126,6 +144,9 @@ uint64_t Config::readUint(uint32_t idx) {
   uint64_t ret = 0;
 
   switch (idx) {
+    case FTL_FILLING_MODE:
+      ret = fillingMode;
+      break;
     case FTL_BAD_BLOCK_THRESHOLD:
       ret = badBlockThreshold;
       break;
@@ -150,8 +171,11 @@ float Config::readFloat(uint32_t idx) {
     case FTL_GC_THRESHOLD_RATIO:
       ret = gcThreshold;
       break;
-    case FTL_WARM_UP_RATIO:
-      ret = warmup;
+    case FTL_FILL_RATIO:
+      ret = fillingRatio;
+      break;
+    case FTL_INVALID_PAGE_RATIO:
+      ret = invalidRatio;
       break;
     case FTL_GC_RECLAIM_THRESHOLD:
       ret = reclaimThreshold;

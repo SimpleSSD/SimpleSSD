@@ -176,10 +176,10 @@ void PALStatistics::ValueOper::printstat(const char *) {}
 // }
 
 void PALStatistics::getTickStat(OperStats &stat) {
-  stat.read = Ticks_Total.vals[OPER_READ].sum;
-  stat.write = Ticks_Total.vals[OPER_WRITE].sum;
-  stat.erase = Ticks_Total.vals[OPER_ERASE].sum;
-  stat.total = Ticks_Total.vals[OPER_NUM].sum;
+  stat.read = Ticks_Total.vals[OPER_READ].avg();
+  stat.write = Ticks_Total.vals[OPER_WRITE].avg();
+  stat.erase = Ticks_Total.vals[OPER_ERASE].avg();
+  stat.total = Ticks_Total.vals[OPER_NUM].avg();
 }
 
 void PALStatistics::getEnergyStat(OperStats &stat) {

@@ -32,7 +32,9 @@ typedef enum {
   FTL_OVERPROVISION_RATIO,
   FTL_GC_THRESHOLD_RATIO,
   FTL_BAD_BLOCK_THRESHOLD,
-  FTL_WARM_UP_RATIO,
+  FTL_FILLING_MODE,
+  FTL_FILL_RATIO,
+  FTL_INVALID_PAGE_RATIO,
   FTL_GC_MODE,
   FTL_GC_RECLAIM_BLOCK,
   FTL_GC_RECLAIM_THRESHOLD,
@@ -55,6 +57,12 @@ typedef enum {
 } GC_MODE;
 
 typedef enum {
+  FILLING_MODE_0,
+  FILLING_MODE_1,
+  FILLING_MODE_2,
+} FILLING_MODE;
+
+typedef enum {
   POLICY_GREEDY,  // Select the block with the least valid pages
   POLICY_COST_BENEFIT,
   POLICY_RANDOM,  // Select the block randomly
@@ -67,7 +75,9 @@ class Config : public BaseConfig {
   float overProvision;         //!< Default: 0.25 (25%)
   float gcThreshold;           //!< Default: 0.05 (5%)
   uint64_t badBlockThreshold;  //!< Default: 100000
-  float warmup;                //!< Default: 1.0 (100%)
+  FILLING_MODE fillingMode;    //!< Default: FILLING_MODE_0
+  float fillingRatio;          //!< Default: 0.0 (0%)
+  float invalidRatio;          //!< Default: 0.0 (0%)
   uint64_t reclaimBlock;       //!< Default: 1
   float reclaimThreshold;      //!< Default: 0.1 (10%)
   GC_MODE gcMode;              //!< Default: FTL_GC_MODE_0

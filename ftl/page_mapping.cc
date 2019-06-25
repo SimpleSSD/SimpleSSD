@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <random>
 
 #include "util/algorithm.hh"
 #include "util/bitset.hh"
@@ -37,8 +38,11 @@ PageMapping::PageMapping(ConfigReader &c, Parameter &p, PAL::PAL *l,
       lastFreeBlock(param.pageCountToMaxPerf),
       lastFreeBlockIOMap(param.ioUnitInPage),
       bReclaimMore(false) {
+  blocks.reserve(param.totalPhysicalBlocks);
+  table.reserve(param.totalLogicalBlocks * param.pagesInBlock);
+
   for (uint32_t i = 0; i < param.totalPhysicalBlocks; i++) {
-    freeBlocks.insert({i, Block(param.pagesInBlock, param.ioUnitInPage)});
+    freeBlocks.emplace(Block(i, param.pagesInBlock, param.ioUnitInPage));
   }
 
   status.totalLogicalPages = param.totalLogicalBlocks * param.pagesInBlock;
@@ -60,20 +64,119 @@ PageMapping::~PageMapping() {}
 
 bool PageMapping::initialize() {
   uint64_t nPagesToWarmup;
-  uint64_t nTotalPages;
+  uint64_t nPagesToInvalidate;
+  uint64_t nTotalLogicalPages;
+  uint64_t maxPagesBeforeGC;
   uint64_t tick;
+  uint64_t valid;
+  uint64_t invalid;
+  FILLING_MODE mode;
+
   Request req(param.ioUnitInPage);
 
-  nTotalPages = param.totalLogicalBlocks * param.pagesInBlock;
-  nPagesToWarmup = nTotalPages * conf.readFloat(CONFIG_FTL, FTL_WARM_UP_RATIO);
-  nPagesToWarmup = MIN(nPagesToWarmup, nTotalPages);
+  debugprint(LOG_FTL_PAGE_MAPPING, "Initialization started");
+
+  nTotalLogicalPages = param.totalLogicalBlocks * param.pagesInBlock;
+  nPagesToWarmup =
+      nTotalLogicalPages * conf.readFloat(CONFIG_FTL, FTL_FILL_RATIO);
+  nPagesToInvalidate =
+      nTotalLogicalPages * conf.readFloat(CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
+  mode = (FILLING_MODE)conf.readUint(CONFIG_FTL, FTL_FILLING_MODE);
+  maxPagesBeforeGC =
+      param.pagesInBlock *
+      (param.totalPhysicalBlocks *
+           (1 - conf.readFloat(CONFIG_FTL, FTL_GC_THRESHOLD_RATIO)) -
+       param.pageCountToMaxPerf);  // # free blocks to maintain
+
+  if (nPagesToWarmup + nPagesToInvalidate > maxPagesBeforeGC) {
+    warn("ftl: Too high filling ratio. Adjusting invalidPageRatio.");
+    nPagesToInvalidate = maxPagesBeforeGC - nPagesToWarmup;
+  }
+
+  debugprint(LOG_FTL_PAGE_MAPPING, "Total logical pages: %" PRIu64,
+             nTotalLogicalPages);
+  debugprint(LOG_FTL_PAGE_MAPPING,
+             "Total logical pages to fill: %" PRIu64 " (%.2f %%)",
+             nPagesToWarmup, nPagesToWarmup * 100.f / nTotalLogicalPages);
+  debugprint(LOG_FTL_PAGE_MAPPING,
+             "Total invalidated pages to create: %" PRIu64 " (%.2f %%)",
+             nPagesToInvalidate,
+             nPagesToInvalidate * 100.f / nTotalLogicalPages);
+
   req.ioFlag.set();
 
-  for (req.lpn = 0; req.lpn < nPagesToWarmup; req.lpn++) {
-    tick = 0;
-
-    writeInternal(req, tick, false);
+  // Step 1. Filling
+  if (mode == FILLING_MODE_0 || mode == FILLING_MODE_1) {
+    // Sequential
+    for (uint64_t i = 0; i < nPagesToWarmup; i++) {
+      tick = 0;
+      req.lpn = i;
+      writeInternal(req, tick, false);
+    }
   }
+  else {
+    // Random
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dist(0, nTotalLogicalPages - 1);
+
+    for (uint64_t i = 0; i < nPagesToWarmup; i++) {
+      tick = 0;
+      req.lpn = dist(gen);
+      writeInternal(req, tick, false);
+    }
+  }
+
+  // Step 2. Invalidating
+  if (mode == FILLING_MODE_0) {
+    // Sequential
+    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
+      tick = 0;
+      req.lpn = i;
+      writeInternal(req, tick, false);
+    }
+  }
+  else if (mode == FILLING_MODE_1) {
+    // Random
+    // We can successfully restrict range of LPN to create exact number of
+    // invalid pages because we wrote in sequential mannor in step 1.
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dist(0, nPagesToWarmup - 1);
+
+    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
+      tick = 0;
+      req.lpn = dist(gen);
+      writeInternal(req, tick, false);
+    }
+  }
+  else {
+    // Random
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dist(0, nTotalLogicalPages - 1);
+
+    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
+      tick = 0;
+      req.lpn = dist(gen);
+      writeInternal(req, tick, false);
+    }
+  }
+
+  // Report
+  calculateTotalPages(valid, invalid);
+  debugprint(LOG_FTL_PAGE_MAPPING, "Filling finished. Page status:");
+  debugprint(LOG_FTL_PAGE_MAPPING,
+             "  Total valid physical pages: %" PRIu64
+             " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
+             valid, valid * 100.f / nTotalLogicalPages, nPagesToWarmup,
+             (int64_t)(valid - nPagesToWarmup));
+  debugprint(LOG_FTL_PAGE_MAPPING,
+             "  Total invalid physical pages: %" PRIu64
+             " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
+             invalid, invalid * 100.f / nTotalLogicalPages, nPagesToInvalidate,
+             (int64_t)(invalid - nPagesToInvalidate));
+  debugprint(LOG_FTL_PAGE_MAPPING, "Initialization finished");
 
   return true;
 }
@@ -205,36 +308,25 @@ uint32_t PageMapping::getFreeBlock(uint32_t idx) {
   }
 
   if (freeBlocks.size() > 0) {
-    uint32_t eraseCount = std::numeric_limits<uint32_t>::max();
-    auto found = freeBlocks.end();
-
-    // Found least erased block
-    for (auto iter = freeBlocks.begin(); iter != freeBlocks.end(); iter++) {
-      if (idx == convertBlockIdx(iter->first)) {
-        uint32_t current = iter->second.getEraseCount();
-
-        if (current < eraseCount) {
-          eraseCount = current;
-          blockIndex = iter->first;
-          found = iter;
-        }
-      }
-    }
-
     // No free block found on specified index
-    if (found == freeBlocks.end()) {
+    if (freeBlocks.empty()) {
       panic("No free block at index %d found", idx);
     }
+
+    // Found least erased block
+    auto &iter = freeBlocks.top();
+
+    blockIndex = iter.getBlockIndex();
 
     // Insert found block to block list
     if (blocks.find(blockIndex) != blocks.end()) {
       panic("Corrupted");
     }
 
-    blocks.insert({blockIndex, found->second});
+    blocks.emplace(blockIndex, std::move(iter));
 
     // Remove found block from free block list
-    freeBlocks.erase(found);
+    freeBlocks.pop();
   }
   else {
     panic("No free block left");
@@ -279,33 +371,34 @@ uint32_t PageMapping::getLastFreeBlock(Bitset &iomap) {
 void PageMapping::calculateVictimWeight(
     std::vector<std::pair<uint32_t, float>> &weight, const EVICT_POLICY policy,
     uint64_t tick) {
-  weight.resize(blocks.size());
-  uint64_t i = 0;
   float temp;
+
+  weight.reserve(blocks.size());
 
   switch (policy) {
     case POLICY_GREEDY:
     case POLICY_RANDOM:
     case POLICY_DCHOICE:
       for (auto &iter : blocks) {
-        weight.at(i).first = iter.first;
-        weight.at(i).second =
-            param.pagesInBlock - iter.second.getDirtyPageCount();
+        if (iter.second.getNextWritePageIndex() != param.pagesInBlock) {
+          continue;
+        }
 
-        i++;
+        weight.push_back({iter.first, iter.second.getValidPageCountRaw()});
       }
 
       break;
     case POLICY_COST_BENEFIT:
       for (auto &iter : blocks) {
-        temp = (float)(param.pagesInBlock - iter.second.getDirtyPageCount()) /
-               param.pagesInBlock;
+        if (iter.second.getNextWritePageIndex() != param.pagesInBlock) {
+          continue;
+        }
 
-        weight.at(i).first = iter.first;
-        weight.at(i).second =
-            temp / ((1 - temp) * (tick - iter.second.getLastAccessedTime()));
+        temp = (float)(iter.second.getValidPageCountRaw()) / param.pagesInBlock;
 
-        i++;
+        weight.push_back(
+            {iter.first,
+             temp / ((1 - temp) * (tick - iter.second.getLastAccessedTime()))});
       }
 
       break;
@@ -349,6 +442,26 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   // Calculate weights of all blocks
   calculateVictimWeight(weight, policy, tick);
 
+  if (policy == POLICY_RANDOM || policy == POLICY_DCHOICE) {
+    uint64_t randomRange =
+        policy == POLICY_RANDOM ? nBlocks : dChoiceParam * nBlocks;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> dist(0, weight.size() - 1);
+    std::vector<std::pair<uint32_t, float>> selected;
+
+    while (selected.size() < randomRange) {
+      uint64_t idx = dist(gen);
+
+      if (weight.at(idx).first < std::numeric_limits<uint32_t>::max()) {
+        selected.push_back(weight.at(idx));
+        weight.at(idx).first = std::numeric_limits<uint32_t>::max();
+      }
+    }
+
+    weight = std::move(selected);
+  }
+
   // Sort weights
   std::sort(
       weight.begin(), weight.end(),
@@ -356,34 +469,9 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
         return a.second < b.second;
       });
 
-  if (policy == POLICY_RANDOM) {
-    // exclude block with no invalid page
-    auto iter = weight.begin();
-
-    for (; iter != weight.end(); iter++) {
-      if (iter->second != 0) {
-        break;
-      }
-    }
-
-    if (iter <= weight.end() - nBlocks) {
-      weight.erase(weight.begin(), iter);
-    }
-
-    std::random_shuffle(weight.begin(), weight.end());
-  }
-  else if (policy == POLICY_DCHOICE) {
-    std::random_shuffle(weight.begin(), weight.end());
-
-    // sort (d * nBlocks) blocks
-    std::sort(
-        weight.begin(), weight.begin() + dChoiceParam * nBlocks,
-        [](std::pair<uint32_t, float> a, std::pair<uint32_t, float> b) -> bool {
-          return a.second < b.second;
-        });
-  }
-
   // Select victims from the blocks with the lowest weight
+  nBlocks = MIN(nBlocks, weight.size());
+
   for (uint64_t i = 0; i < nBlocks; i++) {
     list.push_back(weight.at(i).first);
   }
@@ -472,8 +560,12 @@ void PageMapping::doGarbageCollection(std::vector<uint32_t> &blocksToReclaim,
             }
 
             writeRequests.push_back(req);
+
+            stat.validPageCopies++;
           }
         }
+
+        stat.validSuperPageCopies++;
       }
     }
 
@@ -593,10 +685,10 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
   else {
     // Create empty mapping
-    auto ret = table.insert(
-        {req.lpn,
-         std::vector<std::pair<uint32_t, uint32_t>>(
-             bitsetSize, {param.totalPhysicalBlocks, param.pagesInBlock})});
+    auto ret = table.emplace(
+        req.lpn,
+        std::vector<std::pair<uint32_t, uint32_t>>(
+            bitsetSize, {param.totalPhysicalBlocks, param.pagesInBlock}));
 
     if (!ret.second) {
       panic("Failed to insert new mapping");
@@ -682,6 +774,10 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   static float gcThreshold = conf.readFloat(CONFIG_FTL, FTL_GC_THRESHOLD_RATIO);
 
   if (freeBlockRatio() < gcThreshold) {
+    if (!sendToPAL) {
+      panic("ftl: GC triggered while in initialization");
+    }
+
     std::vector<uint32_t> list;
     uint64_t beginAt = tick;
 
@@ -741,10 +837,6 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
     panic("No such block");
   }
 
-  if (freeBlocks.find(req.blockIndex) != freeBlocks.end()) {
-    panic("Corrupted");
-  }
-
   if (block->second.getValidPageCount() != 0) {
     panic("There are valid pages in victim block");
   }
@@ -757,7 +849,7 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
   // Check erase count
   if (block->second.getEraseCount() < threshold) {
     // Insert block to free block list
-    freeBlocks.insert({req.blockIndex, block->second});
+    freeBlocks.emplace(std::move(block->second));
   }
 
   // Remove block from block list
@@ -766,21 +858,70 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
   tick += applyLatency(CPU::FTL__PAGE_MAPPING, CPU::ERASE_INTERNAL);
 }
 
+float PageMapping::calculateWearLeveling() {
+  uint64_t totalEraseCnt = 0;
+  uint64_t sumOfSquaredEraseCnt = 0;
+  uint64_t numOfBlocks = param.totalLogicalBlocks;
+  uint64_t eraseCnt;
+
+  for (auto &iter : blocks) {
+    eraseCnt = iter.second.getEraseCount();
+    totalEraseCnt += eraseCnt;
+    sumOfSquaredEraseCnt += eraseCnt * eraseCnt;
+  }
+
+  if (sumOfSquaredEraseCnt == 0) {
+    return -1;  // no meaning of wear-leveling
+  }
+
+  return (float)totalEraseCnt * totalEraseCnt /
+         (numOfBlocks * sumOfSquaredEraseCnt);
+}
+
+void PageMapping::calculateTotalPages(uint64_t &valid, uint64_t &invalid) {
+  valid = 0;
+  invalid = 0;
+
+  for (auto &iter : blocks) {
+    valid += iter.second.getValidPageCount();
+    invalid += iter.second.getDirtyPageCount();
+  }
+}
+
 void PageMapping::getStatList(std::vector<Stats> &list, std::string prefix) {
   Stats temp;
 
-  temp.name = prefix + "page_mapping.gc_count";
+  temp.name = prefix + "page_mapping.gc.count";
   temp.desc = "Total GC count";
   list.push_back(temp);
 
-  temp.name = prefix + "page_mapping.reclaimed_blocks";
+  temp.name = prefix + "page_mapping.gc.reclaimed_blocks";
   temp.desc = "Total reclaimed blocks in GC";
+  list.push_back(temp);
+
+  temp.name = prefix + "page_mapping.gc.superpage_copies";
+  temp.desc = "Total copied valid superpages during GC";
+  list.push_back(temp);
+
+  temp.name = prefix + "page_mapping.gc.page_copies";
+  temp.desc = "Total copied valid pages during GC";
+  list.push_back(temp);
+
+  // For the exact definition, see following paper:
+  // Li, Yongkun, Patrick PC Lee, and John Lui.
+  // "Stochastic modeling of large-scale solid-state storage systems: analysis,
+  // design tradeoffs and optimization." ACM SIGMETRICS (2013)
+  temp.name = prefix + "page_mapping.wear_leveling";
+  temp.desc = "Wear-leveling factor";
   list.push_back(temp);
 }
 
 void PageMapping::getStatValues(std::vector<double> &values) {
   values.push_back(stat.gcCount);
   values.push_back(stat.reclaimedBlocks);
+  values.push_back(stat.validSuperPageCopies);
+  values.push_back(stat.validPageCopies);
+  values.push_back(calculateWearLeveling());
 }
 
 void PageMapping::resetStatValues() {

@@ -20,26 +20,161 @@
 #include "ftl/common/block.hh"
 
 #include <algorithm>
+#include <cstring>
 
 namespace SimpleSSD {
 
 namespace FTL {
 
-Block::Block(uint32_t count, uint32_t ioUnit)
-    : pageCount(count),
+Block::Block(uint32_t blockIdx, uint32_t count, uint32_t ioUnit)
+    : idx(blockIdx),
+      pageCount(count),
       ioUnitInPage(ioUnit),
-      nextWritePageIndex(std::vector<uint32_t>(ioUnitInPage, 0)),
-      validBits(std::vector<Bitset>(pageCount, Bitset(ioUnitInPage))),
-      erasedBits(std::vector<Bitset>(pageCount, Bitset(ioUnitInPage))),
-      lpns(std::vector<std::vector<uint64_t>>(
-          pageCount, std::vector<uint64_t>(ioUnitInPage, 0))),
+      pValidBits(nullptr),
+      pErasedBits(nullptr),
+      pLPNs(nullptr),
+      ppLPNs(nullptr),
       lastAccessed(0),
       eraseCount(0) {
+  if (ioUnitInPage == 1) {
+    pValidBits = new Bitset(pageCount);
+    pErasedBits = new Bitset(pageCount);
+
+    pLPNs = (uint64_t *)calloc(pageCount, sizeof(uint64_t));
+  }
+  else if (ioUnitInPage > 1) {
+    validBits = std::vector<Bitset>(pageCount, Bitset(ioUnitInPage));
+    erasedBits = std::vector<Bitset>(pageCount, Bitset(ioUnitInPage));
+
+    ppLPNs = (uint64_t **)calloc(pageCount, sizeof(uint64_t *));
+
+    for (uint32_t i = 0; i < pageCount; i++) {
+      ppLPNs[i] = (uint64_t *)calloc(ioUnitInPage, sizeof(uint64_t));
+    }
+  }
+  else {
+    panic("Invalid I/O unit in page");
+  }
+
+  // C-style allocation
+  pNextWritePageIndex = (uint32_t *)calloc(ioUnitInPage, sizeof(uint32_t));
+
   erase();
   eraseCount = 0;
 }
 
-Block::~Block() {}
+Block::Block(const Block &old)
+    : Block(old.idx, old.pageCount, old.ioUnitInPage) {
+  if (ioUnitInPage == 1) {
+    *pValidBits = *old.pValidBits;
+    *pErasedBits = *old.pErasedBits;
+
+    memcpy(pLPNs, old.pLPNs, pageCount * sizeof(uint64_t));
+  }
+  else {
+    validBits = old.validBits;
+    erasedBits = old.erasedBits;
+
+    for (uint32_t i = 0; i < pageCount; i++) {
+      memcpy(ppLPNs[i], old.ppLPNs[i], ioUnitInPage * sizeof(uint64_t));
+    }
+  }
+
+  memcpy(pNextWritePageIndex, old.pNextWritePageIndex,
+         ioUnitInPage * sizeof(uint32_t));
+
+  eraseCount = old.eraseCount;
+}
+
+Block::Block(Block &&old) noexcept
+    : idx(std::move(old.idx)),
+      pageCount(std::move(old.pageCount)),
+      ioUnitInPage(std::move(old.ioUnitInPage)),
+      pNextWritePageIndex(std::move(old.pNextWritePageIndex)),
+      pValidBits(std::move(old.pValidBits)),
+      pErasedBits(std::move(old.pErasedBits)),
+      pLPNs(std::move(old.pLPNs)),
+      validBits(std::move(old.validBits)),
+      erasedBits(std::move(old.erasedBits)),
+      ppLPNs(std::move(old.ppLPNs)),
+      lastAccessed(std::move(old.lastAccessed)),
+      eraseCount(std::move(old.eraseCount)) {
+  // TODO Use std::exchange to set old value to null (C++14)
+  old.idx = 0;
+  old.pageCount = 0;
+  old.ioUnitInPage = 0;
+  old.pNextWritePageIndex = nullptr;
+  old.pValidBits = nullptr;
+  old.pErasedBits = nullptr;
+  old.pLPNs = nullptr;
+  old.ppLPNs = nullptr;
+  old.lastAccessed = 0;
+  old.eraseCount = 0;
+}
+
+Block::~Block() {
+  free(pNextWritePageIndex);
+  free(pLPNs);
+
+  delete pValidBits;
+  delete pErasedBits;
+
+  if (ppLPNs) {
+    for (uint32_t i = 0; i < pageCount; i++) {
+      free(ppLPNs[i]);
+    }
+
+    free(ppLPNs);
+  }
+
+  pNextWritePageIndex = nullptr;
+  pLPNs = nullptr;
+  pValidBits = nullptr;
+  pErasedBits = nullptr;
+  ppLPNs = nullptr;
+}
+
+Block &Block::operator=(const Block &rhs) {
+  if (this != &rhs) {
+    this->~Block();
+    *this = Block(rhs);  // Call copy constructor
+  }
+
+  return *this;
+}
+
+Block &Block::operator=(Block &&rhs) {
+  if (this != &rhs) {
+    this->~Block();
+
+    idx = std::move(rhs.idx);
+    pageCount = std::move(rhs.pageCount);
+    ioUnitInPage = std::move(rhs.ioUnitInPage);
+    pNextWritePageIndex = std::move(rhs.pNextWritePageIndex);
+    pValidBits = std::move(rhs.pValidBits);
+    pErasedBits = std::move(rhs.pErasedBits);
+    pLPNs = std::move(rhs.pLPNs);
+    validBits = std::move(rhs.validBits);
+    erasedBits = std::move(rhs.erasedBits);
+    ppLPNs = std::move(rhs.ppLPNs);
+    lastAccessed = std::move(rhs.lastAccessed);
+    eraseCount = std::move(rhs.eraseCount);
+
+    rhs.pNextWritePageIndex = nullptr;
+    rhs.pValidBits = nullptr;
+    rhs.pErasedBits = nullptr;
+    rhs.pLPNs = nullptr;
+    rhs.ppLPNs = nullptr;
+    rhs.lastAccessed = 0;
+    rhs.eraseCount = 0;
+  }
+
+  return *this;
+}
+
+uint32_t Block::getBlockIndex() const {
+  return idx;
+}
 
 uint64_t Block::getLastAccessedTime() {
   return lastAccessed;
@@ -52,9 +187,30 @@ uint32_t Block::getEraseCount() {
 uint32_t Block::getValidPageCount() {
   uint32_t ret = 0;
 
-  for (auto &iter : validBits) {
-    if (iter.any()) {
-      ret++;
+  if (ioUnitInPage == 1) {
+    ret = pValidBits->count();
+  }
+  else {
+    for (auto &iter : validBits) {
+      if (iter.any()) {
+        ret++;
+      }
+    }
+  }
+
+  return ret;
+}
+
+uint32_t Block::getValidPageCountRaw() {
+  uint32_t ret = 0;
+
+  if (ioUnitInPage == 1) {
+    // Same as getValidPageCount()
+    ret = pValidBits->count();
+  }
+  else {
+    for (auto &iter : validBits) {
+      ret += iter.count();
     }
   }
 
@@ -64,10 +220,15 @@ uint32_t Block::getValidPageCount() {
 uint32_t Block::getDirtyPageCount() {
   uint32_t ret = 0;
 
-  for (uint32_t i = 0; i < pageCount; i++) {
-    // Dirty: Valid(false), Erased(false)
-    if ((~(validBits.at(i) | erasedBits.at(i))).any()) {
-      ret++;
+  if (ioUnitInPage == 1) {
+    ret = (~(*pValidBits | *pErasedBits)).count();
+  }
+  else {
+    for (uint32_t i = 0; i < pageCount; i++) {
+      // Dirty: Valid(false), Erased(false)
+      if ((~(validBits.at(i) | erasedBits.at(i))).any()) {
+        ret++;
+      }
     }
   }
 
@@ -75,25 +236,51 @@ uint32_t Block::getDirtyPageCount() {
 }
 
 uint32_t Block::getNextWritePageIndex() {
-  return *std::max_element(nextWritePageIndex.begin(),
-                           nextWritePageIndex.end());
+  uint32_t idx = 0;
+
+  for (uint32_t i = 0; i < ioUnitInPage; i++) {
+    if (idx < pNextWritePageIndex[i]) {
+      idx = pNextWritePageIndex[i];
+    }
+  }
+
+  return idx;
 }
 
 uint32_t Block::getNextWritePageIndex(uint32_t idx) {
-  return nextWritePageIndex[idx];
+  return pNextWritePageIndex[idx];
 }
 
 bool Block::getPageInfo(uint32_t pageIndex, std::vector<uint64_t> &lpn,
                         Bitset &map) {
-  map = validBits.at(pageIndex);
-  lpn = lpns.at(pageIndex);
+  if (ioUnitInPage == 1 && map.size() == 1) {
+    map.set();
+    lpn = std::vector<uint64_t>(1, pLPNs[pageIndex]);
+  }
+  else if (map.size() == ioUnitInPage) {
+    map = validBits.at(pageIndex);
+    lpn = std::vector<uint64_t>(ppLPNs[pageIndex],
+                                ppLPNs[pageIndex] + ioUnitInPage);
+  }
+  else {
+    panic("I/O map size mismatch");
+  }
 
   return map.any();
 }
 
 bool Block::read(uint32_t pageIndex, uint32_t idx, uint64_t tick) {
-  auto valid = validBits.at(pageIndex);
-  bool read = valid.test(idx);
+  bool read = false;
+
+  if (ioUnitInPage == 1 && idx == 0) {
+    read = pValidBits->test(pageIndex);
+  }
+  else if (idx < ioUnitInPage) {
+    read = validBits.at(pageIndex).test(idx);
+  }
+  else {
+    panic("I/O map size mismatch");
+  }
 
   if (read) {
     lastAccessed = tick;
@@ -104,20 +291,39 @@ bool Block::read(uint32_t pageIndex, uint32_t idx, uint64_t tick) {
 
 bool Block::write(uint32_t pageIndex, uint64_t lpn, uint32_t idx,
                   uint64_t tick) {
-  auto valid = erasedBits.at(pageIndex);
-  bool write = valid.test(idx);
+  bool write = false;
+
+  if (ioUnitInPage == 1 && idx == 0) {
+    write = pErasedBits->test(pageIndex);
+  }
+  else if (idx < ioUnitInPage) {
+    write = erasedBits.at(pageIndex).test(idx);
+  }
+  else {
+    panic("I/O map size mismatch");
+  }
 
   if (write) {
-    if (pageIndex < nextWritePageIndex[idx]) {
+    if (pageIndex < pNextWritePageIndex[idx]) {
       panic("Write to block should sequential");
     }
 
     lastAccessed = tick;
-    erasedBits.at(pageIndex).reset(idx);
-    validBits.at(pageIndex).set(idx);
 
-    nextWritePageIndex[idx] = pageIndex + 1;
-    lpns.at(pageIndex).at(idx) = lpn;
+    if (ioUnitInPage == 1) {
+      pErasedBits->reset(pageIndex);
+      pValidBits->set(pageIndex);
+
+      pLPNs[pageIndex] = lpn;
+    }
+    else {
+      erasedBits.at(pageIndex).reset(idx);
+      validBits.at(pageIndex).set(idx);
+
+      ppLPNs[pageIndex][idx] = lpn;
+    }
+
+    pNextWritePageIndex[idx] = pageIndex + 1;
   }
   else {
     panic("Write to non erased page");
@@ -127,21 +333,31 @@ bool Block::write(uint32_t pageIndex, uint64_t lpn, uint32_t idx,
 }
 
 void Block::erase() {
-  for (auto &iter : validBits) {
-    iter.reset();
+  if (ioUnitInPage == 1) {
+    pValidBits->reset();
+    pErasedBits->set();
   }
-  for (auto &iter : erasedBits) {
-    iter.set();
+  else {
+    for (auto &iter : validBits) {
+      iter.reset();
+    }
+    for (auto &iter : erasedBits) {
+      iter.set();
+    }
   }
-  for (auto &iter : nextWritePageIndex) {
-    iter = 0;
-  }
+
+  memset(pNextWritePageIndex, 0, sizeof(uint32_t) * ioUnitInPage);
 
   eraseCount++;
 }
 
 void Block::invalidate(uint32_t pageIndex, uint32_t idx) {
-  validBits.at(pageIndex).reset(idx);
+  if (ioUnitInPage == 1) {
+    pValidBits->reset(pageIndex);
+  }
+  else {
+    validBits.at(pageIndex).reset(idx);
+  }
 }
 
 }  // namespace FTL

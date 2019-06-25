@@ -31,61 +31,61 @@
 namespace SimpleSSD {
 
 struct Logger {
-  std::ostream &outfile;
-  std::ostream &errfile;
+  std::ostream *outfile;
+  std::ostream *errfile;
 
-  Logger(std::ostream &o, std::ostream &e) : outfile(o), errfile(e) {}
+  Logger(std::ostream *o, std::ostream *e) : outfile(o), errfile(e) {}
 };
 
 Logger *logger = nullptr;
 
 void panic(const char *format, ...) {
-  va_list args, copied;
-  std::vector<char> str;
+  if (logger && logger->errfile) {
+    va_list args, copied;
+    std::vector<char> str;
 
-  va_start(args, format);
-  va_copy(copied, args);
-  str.resize(vsnprintf(nullptr, 0, format, args) + 1);
-  va_end(args);
-  vsnprintf(str.data(), str.size(), format, copied);
-  va_end(copied);
+    va_start(args, format);
+    va_copy(copied, args);
+    str.resize(vsnprintf(nullptr, 0, format, args) + 1);
+    va_end(args);
+    vsnprintf(str.data(), str.size(), format, copied);
+    va_end(copied);
 
-  if (logger) {
-    logger->errfile << getTick() << ": panic: " << str.data() << std::endl;
+    *(logger->errfile) << getTick() << ": panic: " << str.data() << std::endl;
   }
 
   std::terminate();
 }
 
 void warn(const char *format, ...) {
-  va_list args, copied;
-  std::vector<char> str;
+  if (logger && logger->errfile) {
+    va_list args, copied;
+    std::vector<char> str;
 
-  va_start(args, format);
-  va_copy(copied, args);
-  str.resize(vsnprintf(nullptr, 0, format, args) + 1);
-  va_end(args);
-  vsnprintf(str.data(), str.size(), format, copied);
-  va_end(copied);
+    va_start(args, format);
+    va_copy(copied, args);
+    str.resize(vsnprintf(nullptr, 0, format, args) + 1);
+    va_end(args);
+    vsnprintf(str.data(), str.size(), format, copied);
+    va_end(copied);
 
-  if (logger) {
-    logger->errfile << getTick() << ": warn: " << str.data() << std::endl;
+    *(logger->errfile) << getTick() << ": warn: " << str.data() << std::endl;
   }
 }
 
 void info(const char *format, ...) {
-  va_list args, copied;
-  std::vector<char> str;
+  if (logger && logger->errfile) {
+    va_list args, copied;
+    std::vector<char> str;
 
-  va_start(args, format);
-  va_copy(copied, args);
-  str.resize(vsnprintf(nullptr, 0, format, args) + 1);
-  va_end(args);
-  vsnprintf(str.data(), str.size(), format, copied);
-  va_end(copied);
+    va_start(args, format);
+    va_copy(copied, args);
+    str.resize(vsnprintf(nullptr, 0, format, args) + 1);
+    va_end(args);
+    vsnprintf(str.data(), str.size(), format, copied);
+    va_end(copied);
 
-  if (logger) {
-    logger->errfile << getTick() << ": info: " << str.data() << std::endl;
+    *(logger->errfile) << getTick() << ": info: " << str.data() << std::endl;
   }
 }
 
@@ -105,34 +105,34 @@ const std::string logName[LOG_NUM] = {
 };
 
 void debugprint(LOG_ID id, const char *format, ...) {
-  va_list args, copied;
-  std::vector<char> str;
+  if (logger && logger->outfile && id < LOG_NUM) {
+    va_list args, copied;
+    std::vector<char> str;
 
-  va_start(args, format);
-  va_copy(copied, args);
-  str.resize(vsnprintf(nullptr, 0, format, args) + 1);
-  va_end(args);
-  vsnprintf(str.data(), str.size(), format, copied);
-  va_end(copied);
+    va_start(args, format);
+    va_copy(copied, args);
+    str.resize(vsnprintf(nullptr, 0, format, args) + 1);
+    va_end(args);
+    vsnprintf(str.data(), str.size(), format, copied);
+    va_end(copied);
 
-  if (logger && id < LOG_NUM) {
-    logger->outfile << getTick() << ": " << logName[id] << ": " << str.data()
-                    << std::endl;
+    *(logger->outfile) << getTick() << ": " << logName[id] << ": " << str.data()
+                       << std::endl;
   }
 }
 
 void debugprint(LOG_ID id, const uint8_t *buffer, uint64_t size) {
-  if (logger && id < LOG_NUM) {
+  if (logger && logger->outfile && id < LOG_NUM) {
     uint32_t temp;
 
     temp = id;
-    logger->outfile.write((char *)&temp, 4);
-    logger->outfile.write((char *)&size, 8);
-    logger->outfile.write((const char *)buffer, size);
+    logger->outfile->write((char *)&temp, 4);
+    logger->outfile->write((char *)&size, 8);
+    logger->outfile->write((const char *)buffer, size);
   }
 }
 
-void initLogSystem(std::ostream &out, std::ostream &err) {
+void initLogSystem(std::ostream *out, std::ostream *err) {
   destroyLogSystem();
 
   logger = new Logger(out, err);

@@ -33,6 +33,13 @@ namespace SimpleSSD {
 
 namespace FTL {
 
+class CompareBlock {
+ public:
+  bool operator()(Block &lhs, Block &rhs) {
+    return lhs.getEraseCount() < rhs.getEraseCount();
+  }
+};
+
 class PageMapping : public AbstractFTL {
  private:
   PAL::PAL *pPAL;
@@ -42,7 +49,7 @@ class PageMapping : public AbstractFTL {
   std::unordered_map<uint64_t, std::vector<std::pair<uint32_t, uint32_t>>>
       table;
   std::unordered_map<uint32_t, Block> blocks;
-  std::unordered_map<uint32_t, Block> freeBlocks;
+  std::priority_queue<Block, std::vector<Block>, CompareBlock> freeBlocks;
   std::vector<uint32_t> lastFreeBlock;
   Bitset lastFreeBlockIOMap;
   uint32_t lastFreeBlockIndex;
@@ -54,6 +61,8 @@ class PageMapping : public AbstractFTL {
   struct {
     uint64_t gcCount;
     uint64_t reclaimedBlocks;
+    uint64_t validSuperPageCopies;
+    uint64_t validPageCopies;
   } stat;
 
   float freeBlockRatio();
@@ -64,6 +73,9 @@ class PageMapping : public AbstractFTL {
                              const EVICT_POLICY, uint64_t);
   void selectVictimBlock(std::vector<uint32_t> &, uint64_t &);
   void doGarbageCollection(std::vector<uint32_t> &, uint64_t &);
+
+  float calculateWearLeveling();
+  void calculateTotalPages(uint64_t &, uint64_t &);
 
   void readInternal(Request &, uint64_t &);
   void writeInternal(Request &, uint64_t &, bool = true);
