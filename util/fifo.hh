@@ -119,7 +119,9 @@ class FIFO : public DMAInterface {
   void insertReadDoneNext();
 
  public:
+  FIFO() = delete;
   FIFO(DMAInterface *, FIFOParam &);
+  FIFO(const FIFO &) = delete;
   ~FIFO();
 
   void dmaRead(uint64_t, uint64_t, uint8_t *, DMAFunction &,

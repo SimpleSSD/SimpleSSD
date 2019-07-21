@@ -61,11 +61,14 @@ Subsystem::~Subsystem() {
 
 void Subsystem::init() {
   pHIL = new HIL(conf);
+  uint16_t nNamespaces =
+      (uint16_t)conf.readUint(CONFIG_NVME, NVME_ENABLE_DEFAULT_NAMESPACE);
 
   pHIL->getLPNInfo(totalLogicalPages, logicalPageSize);
 
-  if (conf.readBoolean(CONFIG_NVME, NVME_ENABLE_DEFAULT_NAMESPACE)) {
+  if (nNamespaces > 0) {
     Namespace::Information info;
+    uint64_t totalSize;
     uint32_t lba = (uint32_t)conf.readUint(CONFIG_NVME, NVME_LBA_SIZE);
 
     for (info.lbaFormatIndex = 0; info.lbaFormatIndex < nLBAFormat;
@@ -82,16 +85,20 @@ void Subsystem::init() {
     }
 
     // Fill Namespace information
-    info.size = totalLogicalPages * logicalPageSize / lba;
-    info.capacity = info.size;
+    totalSize = totalLogicalPages * logicalPageSize / lba;
     info.dataProtectionSettings = 0x00;
     info.namespaceSharingCapabilities = 0x00;
 
-    if (createNamespace(NSID_LOWEST, &info)) {
-      lNamespaces.front()->attach(true);
-    }
-    else {
-      panic("Failed to create namespace");
+    for (uint16_t i = 0; i < nNamespaces; i++) {
+      info.size = totalSize / nNamespaces;
+      info.capacity = info.size;
+
+      if (createNamespace(NSID_LOWEST + i, &info)) {
+        lNamespaces.back()->attach(true);
+      }
+      else {
+        panic("Failed to create namespace");
+      }
     }
   }
 }

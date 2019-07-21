@@ -40,7 +40,7 @@ struct Logger {
 Logger *logger = nullptr;
 
 void panic(const char *format, ...) {
-  if (logger && logger->errfile) {
+  if (logger) {
     va_list args, copied;
     std::vector<char> str;
 
@@ -51,7 +51,12 @@ void panic(const char *format, ...) {
     vsnprintf(str.data(), str.size(), format, copied);
     va_end(copied);
 
-    *(logger->errfile) << getTick() << ": panic: " << str.data() << std::endl;
+    if (logger->errfile) {
+      *(logger->errfile) << getTick() << ": panic: " << str.data() << std::endl;
+    }
+    else {
+      std::cerr << getTick() << ": panic: " << str.data() << std::endl;
+    }
   }
 
   std::terminate();

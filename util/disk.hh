@@ -40,6 +40,7 @@ class Disk {
 
  public:
   Disk();
+  Disk(const Disk &) = delete;
   virtual ~Disk();
 
   virtual uint64_t open(std::string, uint64_t, uint32_t);
@@ -56,6 +57,7 @@ class CoWDisk : public Disk {
 
  public:
   CoWDisk();
+  CoWDisk(const CoWDisk &) = delete;
   ~CoWDisk();
 
   void close() override;
@@ -70,6 +72,7 @@ class MemDisk : public Disk {
 
  public:
   MemDisk();
+  MemDisk(const MemDisk &) = delete;
   ~MemDisk();
 
   uint64_t open(std::string, uint64_t, uint32_t) override;

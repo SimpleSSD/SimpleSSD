@@ -34,8 +34,13 @@ CQEntry::_CQEntry() {
 }
 
 SQEntryWrapper::_SQEntryWrapper(SQEntry &sqdata, uint16_t sqid, uint16_t cqid,
-                                uint16_t sqhead)
-    : entry(sqdata), sqID(sqid), cqID(cqid), sqHead(sqhead), useSGL(true) {
+                                uint16_t sqhead, uint16_t squid)
+    : entry(sqdata),
+      sqID(sqid),
+      cqID(cqid),
+      sqHead(sqhead),
+      sqUID(squid),
+      useSGL(true) {
   if ((sqdata.dword0.fuse >> 6) == 0x00) {
     useSGL = false;
   }
@@ -43,6 +48,7 @@ SQEntryWrapper::_SQEntryWrapper(SQEntry &sqdata, uint16_t sqid, uint16_t cqid,
 
 CQEntryWrapper::_CQEntryWrapper(SQEntryWrapper &sqew) {
   cqID = sqew.cqID;
+  sqUID = sqew.sqUID;
   entry.dword2.sqHead = sqew.sqHead;
   entry.dword2.sqID = sqew.sqID;
   entry.dword3.commandID = sqew.entry.dword0.commandID;

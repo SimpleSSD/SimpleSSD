@@ -163,13 +163,20 @@ void PALOLD::convertCPDPBP(Request &req, std::vector<::CPDPBP> &list) {
   static bool useMultiplaneOP =
       conf.readBoolean(CONFIG_PAL, NAND_USE_MULTI_PLANE_OP);
   static uint32_t pageInSuperPage = param.pageInSuperPage;
+  static bool bRandomTweak =
+      conf.readBoolean(CONFIG_FTL, FTL::FTL_USE_RANDOM_IO_TWEAK);
   uint32_t value[4];
   uint32_t *ptr[4];
   uint64_t tmp = req.blockIndex;
   int count = 0;
 
-  if (req.ioFlag.size() != pageInSuperPage) {
+  if (bRandomTweak && req.ioFlag.size() != pageInSuperPage) {
     panic("Invalid size of I/O flag");
+  }
+
+  if (!bRandomTweak && req.ioFlag.size() != pageInSuperPage) {
+    req.ioFlag = Bitset(pageInSuperPage);
+    req.ioFlag.set();
   }
 
   list.clear();

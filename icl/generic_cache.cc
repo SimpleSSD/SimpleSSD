@@ -31,10 +31,9 @@ namespace ICL {
 
 GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
     : AbstractCache(c, f, d),
-      lineCountInSuperPage(f->getInfo()->ioUnitInPage),
       superPageSize(f->getInfo()->pageSize),
-      lineSize(superPageSize / lineCountInSuperPage),
       parallelIO(f->getInfo()->pageCountToMaxPerf),
+      lineCountInSuperPage(f->getInfo()->ioUnitInPage),
       lineCountInMaxIO(parallelIO * lineCountInSuperPage),
       waySize(conf.readUint(CONFIG_ICL, ICL_WAY_SIZE)),
       prefetchIOCount(conf.readUint(CONFIG_ICL, ICL_PREFETCH_COUNT)),
@@ -45,6 +44,18 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
       gen(rd()),
       dist(std::uniform_int_distribution<uint32_t>(0, waySize - 1)) {
   uint64_t cacheSize = conf.readUint(CONFIG_ICL, ICL_CACHE_SIZE);
+
+  lineSize = superPageSize / lineCountInSuperPage;
+
+  if (lineSize != superPageSize) {
+    bSuperPage = true;
+  }
+
+  if (!conf.readBoolean(CONFIG_FTL, FTL::FTL_USE_RANDOM_IO_TWEAK)) {
+    lineSize = superPageSize;
+    lineCountInSuperPage = 1;
+    lineCountInMaxIO = parallelIO;
+  }
 
   if (!useReadCaching && !useWriteCaching) {
     return;
@@ -79,10 +90,6 @@ GenericCache::GenericCache(ConfigReader &c, FTL::FTL *f, DRAM::AbstractDRAM *d)
     evictData[i] = (Line **)calloc(parallelIO, sizeof(Line *));
   }
 
-  lastRequest.reqID = 1;
-  prefetchEnabled = false;
-  hitCounter = 0;
-  accessCounter = 0;
   prefetchTrigger = std::numeric_limits<uint64_t>::max();
 
   evictMode = (EVICT_MODE)conf.readInt(CONFIG_ICL, ICL_EVICT_GRANULARITY);
@@ -264,35 +271,35 @@ uint32_t GenericCache::getValidWay(uint64_t lca, uint64_t &tick) {
   return wayIdx;
 }
 
-void GenericCache::checkPrefetch(Request &req) {
-  if (lastRequest.reqID == req.reqID) {
-    lastRequest.range = req.range;
-    lastRequest.offset = req.offset;
-    lastRequest.length = req.length;
+void GenericCache::checkSequential(Request &req, SequentialDetect &data) {
+  if (data.lastRequest.reqID == req.reqID) {
+    data.lastRequest.range = req.range;
+    data.lastRequest.offset = req.offset;
+    data.lastRequest.length = req.length;
 
     return;
   }
 
-  if (lastRequest.range.slpn * lineSize + lastRequest.offset +
-          lastRequest.length ==
+  if (data.lastRequest.range.slpn * lineSize + data.lastRequest.offset +
+          data.lastRequest.length ==
       req.range.slpn * lineSize + req.offset) {
-    if (!prefetchEnabled) {
-      hitCounter++;
-      accessCounter += lastRequest.offset + lastRequest.length;
+    if (!data.enabled) {
+      data.hitCounter++;
+      data.accessCounter += data.lastRequest.offset + data.lastRequest.length;
 
-      if (hitCounter >= prefetchIOCount &&
-          (float)accessCounter / superPageSize >= prefetchIORatio) {
-        prefetchEnabled = true;
+      if (data.hitCounter >= prefetchIOCount &&
+          (float)data.accessCounter / superPageSize >= prefetchIORatio) {
+        data.enabled = true;
       }
     }
   }
   else {
-    prefetchEnabled = false;
-    hitCounter = 0;
-    accessCounter = 0;
+    data.enabled = false;
+    data.hitCounter = 0;
+    data.accessCounter = 0;
   }
 
-  lastRequest = req;
+  data.lastRequest = req;
 }
 
 void GenericCache::evictCache(uint64_t tick, bool flush) {
@@ -351,7 +358,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
     uint64_t arrived = tick;
 
     if (useReadPrefetch) {
-      checkPrefetch(req);
+      checkSequential(req, readDetect);
     }
 
     wayIdx = getValidWay(req.range.slpn, tick);
@@ -401,7 +408,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
       uint64_t beginLCA, endLCA;
       uint64_t beginAt, finishedAt = tick;
 
-      if (prefetchEnabled) {
+      if (readDetect.enabled) {
         // TEMP: Disable DRAM calculation for prevent conflict
         pDRAM->setScheduling(false);
 
@@ -411,7 +418,8 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 
         beginLCA = req.range.slpn;
 
-        if (prefetchMode == MODE_ALL) {
+        // If super-page is disabled, just read all pages from all planes
+        if (prefetchMode == MODE_ALL || !bSuperPage) {
           endLCA = beginLCA + lineCountInMaxIO;
           prefetchTrigger = beginLCA + lineCountInMaxIO / 2;
         }
@@ -472,6 +480,8 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
         reqInternal.ioFlag.set(iter.first % lineCountInSuperPage);
 
         beginAt = tick;  // Ignore cache metadata access
+
+        // If superPageSizeData is true, read first LPN only
         pFTL->read(reqInternal, beginAt);
 
         // DRAM delay
@@ -498,7 +508,7 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 
       tick = finishedAt;
 
-      if (prefetchEnabled) {
+      if (readDetect.enabled) {
         if (ret) {
           // This request was prefetch
           debugprint(LOG_ICL_GENERIC_CACHE, "READ  | Prefetch done");
@@ -538,15 +548,13 @@ bool GenericCache::read(Request &req, uint64_t &tick) {
 bool GenericCache::write(Request &req, uint64_t &tick) {
   bool ret = false;
   uint64_t flash = tick;
+  bool dirty = false;
 
   debugprint(LOG_ICL_GENERIC_CACHE,
              "WRITE | REQ %7u-%-4u | LCA %" PRIu64 " | SIZE %" PRIu64,
              req.reqID, req.reqSubID, req.range.slpn, req.length);
 
   FTL::Request reqInternal(lineCountInSuperPage, req);
-
-  // TODO: TEMPORAL CODE
-  bool dirty = false;
 
   if (req.length < lineSize) {
     dirty = true;
@@ -726,7 +734,12 @@ bool GenericCache::write(Request &req, uint64_t &tick) {
       tick = flash;
     }
 
+    // TEMP: Disable DRAM calculation for prevent conflict
+    pDRAM->setScheduling(false);
+
     pDRAM->read(nullptr, req.length, tick);
+
+    pDRAM->setScheduling(true);
   }
 
   stat.request[1]++;

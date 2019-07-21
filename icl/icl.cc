@@ -44,9 +44,15 @@ ICL::ICL(ConfigReader &c) : conf(c) {
 
   FTL::Parameter *param = pFTL->getInfo();
 
-  totalLogicalPages =
-      param->totalLogicalBlocks * param->pagesInBlock * param->ioUnitInPage;
-  logicalPageSize = param->pageSize / param->ioUnitInPage;
+  if (conf.readBoolean(CONFIG_FTL, FTL::FTL_USE_RANDOM_IO_TWEAK)) {
+    totalLogicalPages =
+        param->totalLogicalBlocks * param->pagesInBlock * param->ioUnitInPage;
+    logicalPageSize = param->pageSize / param->ioUnitInPage;
+  }
+  else {
+    totalLogicalPages = param->totalLogicalBlocks * param->pagesInBlock;
+    logicalPageSize = param->pageSize;
+  }
 
   pCache = new GenericCache(conf, pFTL, pDRAM);
 }

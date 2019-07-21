@@ -32,11 +32,11 @@ namespace ICL {
 
 class GenericCache : public AbstractCache {
  private:
-  const uint32_t lineCountInSuperPage;
   const uint32_t superPageSize;
-  const uint32_t lineSize;
   const uint32_t parallelIO;
-  const uint32_t lineCountInMaxIO;
+  uint32_t lineCountInSuperPage;
+  uint32_t lineCountInMaxIO;
+  uint32_t lineSize;
   uint32_t setSize;
   uint32_t waySize;
 
@@ -47,10 +47,19 @@ class GenericCache : public AbstractCache {
   const bool useWriteCaching;
   const bool useReadPrefetch;
 
-  Request lastRequest;
-  bool prefetchEnabled;
-  uint32_t hitCounter;
-  uint32_t accessCounter;
+  bool bSuperPage;
+
+  struct SequentialDetect {
+    bool enabled;
+    Request lastRequest;
+    uint32_t hitCounter;
+    uint32_t accessCounter;
+
+    SequentialDetect() : enabled(false), hitCounter(0), accessCounter(0) {
+      lastRequest.reqID = 1;
+    }
+  } readDetect;
+
   uint64_t prefetchTrigger;
   uint64_t lastPrefetched;
 
@@ -73,7 +82,7 @@ class GenericCache : public AbstractCache {
 
   uint32_t getEmptyWay(uint32_t, uint64_t &);
   uint32_t getValidWay(uint64_t, uint64_t &);
-  void checkPrefetch(Request &);
+  void checkSequential(Request &, SequentialDetect &);
 
   void evictCache(uint64_t, bool = true);
 

@@ -42,8 +42,10 @@ PageMapping::PageMapping(ConfigReader &c, Parameter &p, PAL::PAL *l,
   table.reserve(param.totalLogicalBlocks * param.pagesInBlock);
 
   for (uint32_t i = 0; i < param.totalPhysicalBlocks; i++) {
-    freeBlocks.emplace(Block(i, param.pagesInBlock, param.ioUnitInPage));
+    freeBlocks.emplace_back(Block(i, param.pagesInBlock, param.ioUnitInPage));
   }
+
+  nFreeBlocks = param.totalPhysicalBlocks;
 
   status.totalLogicalPages = param.totalLogicalBlocks * param.pagesInBlock;
 
@@ -274,7 +276,7 @@ void PageMapping::format(LPNRange &range, uint64_t &tick) {
 }
 
 Status *PageMapping::getStatus(uint64_t lpnBegin, uint64_t lpnEnd) {
-  status.freePhysicalBlocks = freeBlocks.size();
+  status.freePhysicalBlocks = nFreeBlocks;
 
   if (lpnBegin == 0 && lpnEnd >= status.totalLogicalPages) {
     status.mappedLogicalPages = table.size();
@@ -293,7 +295,7 @@ Status *PageMapping::getStatus(uint64_t lpnBegin, uint64_t lpnEnd) {
 }
 
 float PageMapping::freeBlockRatio() {
-  return (float)freeBlocks.size() / param.totalPhysicalBlocks;
+  return (float)nFreeBlocks / param.totalPhysicalBlocks;
 }
 
 uint32_t PageMapping::convertBlockIdx(uint32_t blockIdx) {
@@ -307,26 +309,35 @@ uint32_t PageMapping::getFreeBlock(uint32_t idx) {
     panic("Index out of range");
   }
 
-  if (freeBlocks.size() > 0) {
-    // No free block found on specified index
-    if (freeBlocks.empty()) {
-      panic("No free block at index %d found", idx);
+  if (nFreeBlocks > 0) {
+    // Search block which is blockIdx % param.pageCountToMaxPerf == idx
+    auto iter = freeBlocks.begin();
+
+    for (; iter != freeBlocks.end(); iter++) {
+      blockIndex = iter->getBlockIndex();
+
+      if (blockIndex % param.pageCountToMaxPerf == idx) {
+        break;
+      }
     }
 
-    // Found least erased block
-    auto &iter = freeBlocks.top();
-
-    blockIndex = iter.getBlockIndex();
+    // Sanity check
+    if (iter == freeBlocks.end()) {
+      // Just use first one
+      iter = freeBlocks.begin();
+      blockIndex = iter->getBlockIndex();
+    }
 
     // Insert found block to block list
     if (blocks.find(blockIndex) != blocks.end()) {
       panic("Corrupted");
     }
 
-    blocks.emplace(blockIndex, std::move(iter));
+    blocks.emplace(blockIndex, std::move(*iter));
 
     // Remove found block from free block list
-    freeBlocks.pop();
+    freeBlocks.erase(iter);
+    nFreeBlocks--;
   }
   else {
     panic("No free block left");
@@ -336,7 +347,7 @@ uint32_t PageMapping::getFreeBlock(uint32_t idx) {
 }
 
 uint32_t PageMapping::getLastFreeBlock(Bitset &iomap) {
-  if ((lastFreeBlockIOMap & iomap).any() || !bRandomTweak) {
+  if (!bRandomTweak || (lastFreeBlockIOMap & iomap).any()) {
     // Update lastFreeBlockIndex
     lastFreeBlockIndex++;
 
@@ -426,7 +437,7 @@ void PageMapping::selectVictimBlock(std::vector<uint32_t> &list,
   else if (mode == GC_MODE_1) {
     static const float t = conf.readFloat(CONFIG_FTL, FTL_GC_RECLAIM_THRESHOLD);
 
-    nBlocks = param.totalPhysicalBlocks * t - freeBlocks.size();
+    nBlocks = param.totalPhysicalBlocks * t - nFreeBlocks;
   }
   else {
     panic("Invalid GC mode");
@@ -623,7 +634,7 @@ void PageMapping::readInternal(Request &req, uint64_t &tick) {
     }
 
     for (uint32_t idx = 0; idx < bitsetSize; idx++) {
-      if (req.ioFlag.test(idx)) {
+      if (req.ioFlag.test(idx) || !bRandomTweak) {
         auto &mapping = mappingList->second.at(idx);
 
         if (mapping.first < param.totalPhysicalBlocks &&
@@ -670,7 +681,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
 
   if (mappingList != table.end()) {
     for (uint32_t idx = 0; idx < bitsetSize; idx++) {
-      if (req.ioFlag.test(idx)) {
+      if (req.ioFlag.test(idx) || !bRandomTweak) {
         auto &mapping = mappingList->second.at(idx);
 
         if (mapping.first < param.totalPhysicalBlocks &&
@@ -721,7 +732,7 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
   }
 
   for (uint32_t idx = 0; idx < bitsetSize; idx++) {
-    if (req.ioFlag.test(idx)) {
+    if (req.ioFlag.test(idx) || !bRandomTweak) {
       uint32_t pageIndex = block->second.getNextWritePageIndex(idx);
       auto &mapping = mappingList->second.at(idx);
 
@@ -735,7 +746,10 @@ void PageMapping::writeInternal(Request &req, uint64_t &tick, bool sendToPAL) {
       if (readBeforeWrite && sendToPAL) {
         palRequest.blockIndex = mapping.first;
         palRequest.pageIndex = mapping.second;
-        palRequest.ioFlag.set();
+
+        // We don't need to read old data
+        palRequest.ioFlag = req.ioFlag;
+        palRequest.ioFlag.flip();
 
         pPAL->read(palRequest, beginAt);
       }
@@ -847,9 +861,30 @@ void PageMapping::eraseInternal(PAL::Request &req, uint64_t &tick) {
   pPAL->erase(req, tick);
 
   // Check erase count
-  if (block->second.getEraseCount() < threshold) {
+  uint32_t erasedCount = block->second.getEraseCount();
+
+  if (erasedCount < threshold) {
+    // Reverse search
+    auto iter = freeBlocks.end();
+
+    while (true) {
+      iter--;
+
+      if (iter->getEraseCount() <= erasedCount) {
+        // emplace: insert before pos
+        iter++;
+
+        break;
+      }
+
+      if (iter == freeBlocks.begin()) {
+        break;
+      }
+    }
+
     // Insert block to free block list
-    freeBlocks.emplace(std::move(block->second));
+    freeBlocks.emplace(iter, std::move(block->second));
+    nFreeBlocks++;
   }
 
   // Remove block from block list
@@ -866,6 +901,19 @@ float PageMapping::calculateWearLeveling() {
 
   for (auto &iter : blocks) {
     eraseCnt = iter.second.getEraseCount();
+    totalEraseCnt += eraseCnt;
+    sumOfSquaredEraseCnt += eraseCnt * eraseCnt;
+  }
+
+  // freeBlocks is sorted
+  // Calculate from backward, stop when eraseCnt is zero
+  for (auto riter = freeBlocks.rbegin(); riter != freeBlocks.rend(); riter++) {
+    eraseCnt = riter->getEraseCount();
+
+    if (eraseCnt == 0) {
+      break;
+    }
+
     totalEraseCnt += eraseCnt;
     sumOfSquaredEraseCnt += eraseCnt * eraseCnt;
   }

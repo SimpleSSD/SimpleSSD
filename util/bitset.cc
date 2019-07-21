@@ -19,32 +19,52 @@
 
 #include "util/bitset.hh"
 
+#include <cstdlib>
+#include <cstring>
+
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
-Bitset::Bitset(uint32_t size) : dataSize(size) {
-  if (dataSize == 0) {
-    panic("Invalid size of Bitset");
-  }
+Bitset::Bitset() : data(nullptr), dataSize(0), allocSize(0) {}
 
-  allocSize = DIVCEIL(dataSize, 8);
-  data.resize(allocSize);
-}
-
-void Bitset::boundCheck(uint32_t idx) {
-  if (idx >= dataSize) {
-    panic("Index out of range");
+Bitset::Bitset(uint32_t size) : Bitset() {
+  if (size > 0) {
+    dataSize = size;
+    allocSize = DIVCEIL(dataSize, 8);
+    data = (uint8_t *)calloc(allocSize, 1);
   }
 }
 
-bool Bitset::test(uint32_t idx) {
-  boundCheck(idx);
+Bitset::Bitset(const Bitset &rhs) : Bitset(rhs.dataSize) {
+  if (rhs.data) {
+    memcpy(data, rhs.data, allocSize);
+  }
+}
 
+Bitset::Bitset(Bitset &&rhs) noexcept {
+  dataSize = std::move(rhs.dataSize);
+  allocSize = std::move(rhs.allocSize);
+  data = std::move(rhs.data);
+
+  rhs.dataSize = 0;
+  rhs.allocSize = 0;
+  rhs.data = nullptr;
+}
+
+Bitset::~Bitset() {
+  free(data);
+
+  data = nullptr;
+  dataSize = 0;
+  allocSize = 0;
+}
+
+bool Bitset::test(uint32_t idx) noexcept {
   return data[idx / 8] & (0x01 << (idx % 8));
 }
 
-bool Bitset::all() {
+bool Bitset::all() noexcept {
   uint8_t ret = 0xFF;
   uint8_t mask = 0xFF << (dataSize + 8 - allocSize * 8);
 
@@ -57,11 +77,11 @@ bool Bitset::all() {
   return ret == 0xFF;
 }
 
-bool Bitset::any() {
+bool Bitset::any() noexcept {
   return !none();
 }
 
-bool Bitset::none() {
+bool Bitset::none() noexcept {
   uint8_t ret = 0x00;
 
   for (uint32_t i = 0; i < allocSize; i++) {
@@ -71,7 +91,7 @@ bool Bitset::none() {
   return ret == 0x00;
 }
 
-uint32_t Bitset::count() {
+uint32_t Bitset::count() noexcept {
   uint32_t count = 0;
 
   for (uint32_t i = 0; i < allocSize; i++) {
@@ -81,11 +101,11 @@ uint32_t Bitset::count() {
   return count;
 }
 
-uint32_t Bitset::size() {
+uint32_t Bitset::size() noexcept {
   return dataSize;
 }
 
-void Bitset::set() {
+void Bitset::set() noexcept {
   uint8_t mask = 0xFF >> (allocSize * 8 - dataSize);
 
   for (uint32_t i = 0; i < allocSize - 1; i++) {
@@ -95,9 +115,7 @@ void Bitset::set() {
   data[allocSize - 1] = mask;
 }
 
-void Bitset::set(uint32_t idx, bool value) {
-  boundCheck(idx);
-
+void Bitset::set(uint32_t idx, bool value) noexcept {
   data[idx / 8] &= ~(0x01 << (idx % 8));
 
   if (value) {
@@ -105,19 +123,17 @@ void Bitset::set(uint32_t idx, bool value) {
   }
 }
 
-void Bitset::reset() {
+void Bitset::reset() noexcept {
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] = 0x00;
   }
 }
 
-void Bitset::reset(uint32_t idx) {
-  boundCheck(idx);
-
+void Bitset::reset(uint32_t idx) noexcept {
   data[idx / 8] &= ~(0x01 << (idx % 8));
 }
 
-void Bitset::flip() {
+void Bitset::flip() noexcept {
   uint8_t mask = 0xFF >> (allocSize * 8 - dataSize);
 
   for (uint32_t i = 0; i < allocSize; i++) {
@@ -127,14 +143,12 @@ void Bitset::flip() {
   data[allocSize - 1] &= mask;
 }
 
-void Bitset::flip(uint32_t idx) {
-  boundCheck(idx);
-
+void Bitset::flip(uint32_t idx) noexcept {
   data[idx / 8] = (~data[idx / 8] & (0x01 << (idx % 8))) |
                   (data[idx / 8] & ~(0x01 << (idx % 8)));
 }
 
-bool Bitset::operator[](uint32_t idx) {
+bool Bitset::operator[](uint32_t idx) noexcept {
   return test(idx);
 }
 
@@ -169,6 +183,33 @@ Bitset &Bitset::operator^=(const Bitset &rhs) {
 
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] ^= rhs.data[i];
+  }
+
+  return *this;
+}
+
+Bitset &Bitset::operator=(const Bitset &rhs) {
+  if (this != &rhs) {
+    free(data);
+    data = nullptr;
+
+    *this = Bitset(rhs);
+  }
+
+  return *this;
+}
+
+Bitset &Bitset::operator=(Bitset &&rhs) noexcept {
+  if (this != &rhs) {
+    free(data);
+
+    dataSize = std::move(rhs.dataSize);
+    allocSize = std::move(rhs.allocSize);
+    data = std::move(rhs.data);
+
+    rhs.dataSize = 0;
+    rhs.allocSize = 0;
+    rhs.data = nullptr;
   }
 
   return *this;

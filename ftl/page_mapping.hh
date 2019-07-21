@@ -33,13 +33,6 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-class CompareBlock {
- public:
-  bool operator()(Block &lhs, Block &rhs) {
-    return lhs.getEraseCount() < rhs.getEraseCount();
-  }
-};
-
 class PageMapping : public AbstractFTL {
  private:
   PAL::PAL *pPAL;
@@ -49,7 +42,8 @@ class PageMapping : public AbstractFTL {
   std::unordered_map<uint64_t, std::vector<std::pair<uint32_t, uint32_t>>>
       table;
   std::unordered_map<uint32_t, Block> blocks;
-  std::priority_queue<Block, std::vector<Block>, CompareBlock> freeBlocks;
+  std::list<Block> freeBlocks;
+  uint32_t nFreeBlocks;  // For some libraries which std::list::size() is O(n)
   std::vector<uint32_t> lastFreeBlock;
   Bitset lastFreeBlockIOMap;
   uint32_t lastFreeBlockIndex;

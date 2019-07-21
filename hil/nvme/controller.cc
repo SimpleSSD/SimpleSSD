@@ -1422,6 +1422,7 @@ bool Controller::checkQueue(SQueue *pQueue, DMAFunction &func, void *context) {
     SQueue *pQueue;
     DMAFunction function;
     void *context;
+    uint16_t oldhead;
 
     QueueContext(DMAFunction &f) : pQueue(nullptr), function(f) {}
   };
@@ -1433,15 +1434,16 @@ bool Controller::checkQueue(SQueue *pQueue, DMAFunction &func, void *context) {
   DMAFunction doRead = [this](uint64_t now, void *context) {
     QueueContext *pContext = (QueueContext *)context;
 
-    lSQFIFO.push_back(SQEntryWrapper(pContext->entry, pContext->pQueue->getID(),
-                                     pContext->pQueue->getCQID(),
-                                     pContext->pQueue->getHead()));
+    lSQFIFO.push_back(SQEntryWrapper(
+        pContext->entry, pContext->pQueue->getID(), pContext->pQueue->getCQID(),
+        pContext->pQueue->getHead(), pContext->oldhead));
     pContext->function(now, pContext->context);
 
     delete pContext;
   };
 
   if (pQueue->getItemCount() > 0) {
+    queueContext->oldhead = pQueue->getHead();
     pQueue->getData(&queueContext->entry, doRead, queueContext);
 
     return true;

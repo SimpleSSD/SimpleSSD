@@ -32,37 +32,41 @@ namespace SimpleSSD {
 // TODO: use SIMD operation if possible
 class Bitset {
  private:
-  std::vector<uint8_t> data;
+  uint8_t *data;
   uint32_t dataSize;
   uint32_t allocSize;
 
-  void boundCheck(uint32_t);
-
  public:
+  Bitset();
   Bitset(uint32_t);
+  Bitset(const Bitset &);
+  Bitset(Bitset &&) noexcept;
+  ~Bitset();
 
-  bool test(uint32_t);
-  bool all();
-  bool any();
-  bool none();
-  uint32_t count();
-  uint32_t size();
-  void set();
-  void set(uint32_t, bool = true);
-  void reset();
-  void reset(uint32_t);
-  void flip();
-  void flip(uint32_t);
+  bool test(uint32_t) noexcept;
+  bool all() noexcept;
+  bool any() noexcept;
+  bool none() noexcept;
+  uint32_t count() noexcept;
+  uint32_t size() noexcept;
+  void set() noexcept;
+  void set(uint32_t, bool = true) noexcept;
+  void reset() noexcept;
+  void reset(uint32_t) noexcept;
+  void flip() noexcept;
+  void flip(uint32_t) noexcept;
 
-  bool operator[](uint32_t);
+  bool operator[](uint32_t) noexcept;
   Bitset &operator&=(const Bitset &);
   Bitset &operator|=(const Bitset &);
   Bitset &operator^=(const Bitset &);
+  Bitset &operator=(const Bitset &);
+  Bitset &operator=(Bitset &&) noexcept;
   Bitset operator~() const;
 
-  friend Bitset operator&(Bitset lhs, const Bitset &rhs) { return lhs &= rhs; }
-  friend Bitset operator|(Bitset lhs, const Bitset &rhs) { return lhs |= rhs; }
-  friend Bitset operator^(Bitset lhs, const Bitset &rhs) { return lhs ^= rhs; }
+  friend Bitset &operator&(Bitset lhs, const Bitset &rhs) { return lhs &= rhs; }
+  friend Bitset &operator|(Bitset lhs, const Bitset &rhs) { return lhs |= rhs; }
+  friend Bitset &operator^(Bitset lhs, const Bitset &rhs) { return lhs ^= rhs; }
   friend bool operator==(const Bitset &lhs, const Bitset &rhs) {
     bool ret = true;
 

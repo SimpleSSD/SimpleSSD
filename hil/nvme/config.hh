@@ -22,6 +22,8 @@
 #ifndef __HIL_NVME_CONFIG__
 #define __HIL_NVME_CONFIG__
 
+#include <unordered_map>
+
 #include "sim/base_config.hh"
 #include "util/interface.hh"
 
@@ -65,11 +67,11 @@ class Config : public BaseConfig {
   uint16_t wrrHigh;              //!< Default: 2
   uint16_t wrrMedium;            //!< Default: 2
   uint64_t lbaSize;              //!< Default: 512
-  bool enableDefaultNamespace;   //!< Default: True
+  uint16_t defaultNamespace;     //!< Default: 1
   bool enableDiskImage;          //!< Default: False
   bool strictDiskSize;           //!< Default: False
   bool useCopyOnWriteDisk;       //!< Default: False
-  std::string diskImagePath;     //!< Default: ""
+  std::unordered_map<uint16_t, std::string> diskImagePaths;  //!< Default: ""
 
  public:
   Config();

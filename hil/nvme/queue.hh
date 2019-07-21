@@ -81,10 +81,11 @@ typedef struct _SQEntryWrapper {
   uint16_t sqID;
   uint16_t cqID;
   uint16_t sqHead;
+  uint16_t sqUID;  //!< HEAD - 1
 
   bool useSGL;
 
-  _SQEntryWrapper(SQEntry &, uint16_t, uint16_t, uint16_t);
+  _SQEntryWrapper(SQEntry &, uint16_t, uint16_t, uint16_t, uint16_t);
 } SQEntryWrapper;
 
 typedef struct _CQEntryWrapper {
@@ -92,7 +93,8 @@ typedef struct _CQEntryWrapper {
 
   uint64_t submitAt;
 
-  uint16_t cqID;
+  uint16_t cqID;   //!< sqID at entry.dword2
+  uint16_t sqUID;  //!< Head - 1
 
   _CQEntryWrapper(SQEntryWrapper &);
   void makeStatus(bool, bool, STATUS_CODE_TYPE, int);

@@ -59,10 +59,9 @@ Config::Config() {
   wrrHigh = 2;
   wrrMedium = 2;
   lbaSize = 512;
-  enableDefaultNamespace = true;
+  defaultNamespace = 1;
   enableDiskImage = false;
   strictDiskSize = false;
-  diskImagePath = "";
   useCopyOnWriteDisk = false;
 }
 
@@ -138,7 +137,7 @@ bool Config::setConfig(const char *name, const char *value) {
     wrrMedium = (uint16_t)strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_ENABLE_DEFAULT_NAMESPACE)) {
-    enableDefaultNamespace = convertBool(value);
+    defaultNamespace = (uint16_t)strtoul(value, nullptr, 10);
   }
   else if (MATCH_NAME(NAME_LBA_SIZE)) {
     lbaSize = strtoul(value, nullptr, 10);
@@ -149,8 +148,21 @@ bool Config::setConfig(const char *name, const char *value) {
   else if (MATCH_NAME(NAME_STRICT_DISK_SIZE)) {
     strictDiskSize = convertBool(value);
   }
-  else if (MATCH_NAME(NAME_DISK_IMAGE_PATH)) {
-    diskImagePath = value;
+  else if (strncmp(name, NAME_DISK_IMAGE_PATH, strlen(NAME_DISK_IMAGE_PATH)) ==
+           0) {
+    uint16_t index =
+        (uint16_t)strtoul(name + strlen(NAME_DISK_IMAGE_PATH), nullptr, 10);
+
+    if (index > 0) {
+      auto find = diskImagePaths.find(index);
+
+      if (find == diskImagePaths.end()) {
+        diskImagePaths.insert({index, value});
+      }
+      else {
+        find->second = value;
+      }
+    }
   }
   else if (MATCH_NAME(NAME_USE_COW_DISK)) {
     useCopyOnWriteDisk = convertBool(value);
@@ -220,6 +232,9 @@ uint64_t Config::readUint(uint32_t idx) {
     case NVME_WRR_MEDIUM:
       ret = wrrMedium;
       break;
+    case NVME_ENABLE_DEFAULT_NAMESPACE:
+      ret = defaultNamespace;
+      break;
     case NVME_LBA_SIZE:
       ret = lbaSize;
       break;
@@ -231,10 +246,14 @@ uint64_t Config::readUint(uint32_t idx) {
 std::string Config::readString(uint32_t idx) {
   std::string ret("");
 
-  switch (idx) {
-    case NVME_DISK_IMAGE_PATH:
-      ret = diskImagePath;
-      break;
+  if (idx >= NVME_DISK_IMAGE_PATH) {
+    idx -= NVME_DISK_IMAGE_PATH;
+
+    auto find = diskImagePaths.find((uint16_t)idx);
+
+    if (find != diskImagePaths.end()) {
+      ret = find->second;
+    }
   }
 
   return ret;
@@ -244,9 +263,6 @@ bool Config::readBoolean(uint32_t idx) {
   bool ret = false;
 
   switch (idx) {
-    case NVME_ENABLE_DEFAULT_NAMESPACE:
-      ret = enableDefaultNamespace;
-      break;
     case NVME_ENABLE_DISK_IMAGE:
       ret = enableDiskImage;
       break;
