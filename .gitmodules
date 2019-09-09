@@ -1,3 +1,6 @@
 [submodule "lib/pugixml"]
 	path = lib/pugixml
 	url = git@github.com:zeux/pugixml
+[submodule "lib/mcpat"]
+	path = lib/mcpat
+	url = git@camel.kaist.ac.kr:simplessd/mcpat
