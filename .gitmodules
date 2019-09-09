@@ -1,0 +1,3 @@
+[submodule "lib/pugixml"]
+	path = lib/pugixml
+	url = git@github.com:zeux/pugixml
