@@ -7,7 +7,9 @@
 
 #include "sim/base_config.hh"
 
+#include <iostream>
 #include <regex>
+#include <vector>
 
 namespace SimpleSSD {
 
@@ -156,6 +158,39 @@ uint64_t BaseConfig::convertTime(const char *value, bool *valid) {
   }
 
   return ret;
+}
+
+void BaseConfig::panic_if(bool eval, const char *format, ...) {
+  if (eval) {
+    va_list copy, args;
+    std::vector<char> str;
+
+    va_start(args, format);
+    va_copy(copy, args);
+    str.resize(vsnprintf(nullptr, 0, format, copy) + 1);
+    va_end(copy);
+    vsnprintf(str.data(), str.size(), format, args);
+    va_end(args);
+
+    std::cerr << "panic: " << str.data() << std::endl;
+    abort();
+  }
+}
+
+void BaseConfig::warn_if(bool eval, const char *format, ...) {
+  if (eval) {
+    va_list copy, args;
+    std::vector<char> str;
+
+    va_start(args, format);
+    va_copy(copy, args);
+    str.resize(vsnprintf(nullptr, 0, format, copy) + 1);
+    va_end(copy);
+    vsnprintf(str.data(), str.size(), format, args);
+    va_end(args);
+
+    std::cerr << "warn: " << str.data() << std::endl;
+  }
 }
 
 }  // namespace SimpleSSD

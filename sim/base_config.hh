@@ -126,6 +126,9 @@ class BaseConfig {
   uint64_t convertUint(const char *, bool * = nullptr);
   uint64_t convertTime(const char *, bool * = nullptr);
 
+  static void panic_if(bool, const char *, ...);
+  static void warn_if(bool, const char *, ...);
+
  public:
   BaseConfig();
   virtual ~BaseConfig();
