@@ -38,13 +38,13 @@ class SimConfig : public BaseConfig {
   SimConfig();
   ~SimConfig();
 
-  const char *getSectionName() { return "sim"; }
+  const char *getSectionName() override { return "sim"; }
 
-  void loadFrom(pugi::xml_node &);
-  void storeTo(pugi::xml_node &);
+  void loadFrom(pugi::xml_node &) override;
+  void storeTo(pugi::xml_node &) override;
 
-  std::string readString(uint32_t);
-  bool writeString(uint32_t, std::string);
+  std::string readString(uint32_t) override;
+  bool writeString(uint32_t, std::string &) override;
 };
 
 }  // namespace SimpleSSD

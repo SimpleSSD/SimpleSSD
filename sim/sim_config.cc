@@ -54,7 +54,7 @@ std::string SimConfig::readString(uint32_t idx) {
   return "";
 }
 
-bool SimConfig::writeString(uint32_t idx, std::string value) {
+bool SimConfig::writeString(uint32_t idx, std::string &value) {
   bool ret = true;
 
   switch (idx) {

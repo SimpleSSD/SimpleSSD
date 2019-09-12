@@ -85,7 +85,7 @@ class BaseConfig {
   virtual bool writeInt(uint32_t, int64_t) { return false; }
   virtual bool writeUint(uint32_t, uint64_t) { return false; }
   virtual bool writeFloat(uint32_t, float) { return false; }
-  virtual bool writeString(uint32_t, std::string) { return false; }
+  virtual bool writeString(uint32_t, std::string &) { return false; }
   virtual bool writeBoolean(uint32_t, bool) { return false; }
 };
 
