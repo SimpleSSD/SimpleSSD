@@ -68,6 +68,7 @@ void Config::load(std::string &path) {
 void Config::save(const char *path) {
   // Create simplessd node
   auto config = file.append_child(CONFIG_NODE_NAME);
+  config.append_attribute("version").set_value("2.1"); // TODO: FIX ME!
 
   // Append configuration sections
   pugi::xml_node section;
