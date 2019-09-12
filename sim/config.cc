@@ -48,6 +48,9 @@ void Config::load(const char *path) {
         simConfig.loadFrom(section);
       }
     }
+
+    // Update config objects
+    simConfig.update();
   }
 
   // Close
