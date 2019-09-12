@@ -10,6 +10,10 @@
 #ifndef __SIM_SIMPLESSD_HH__
 #define __SIM_SIMPLESSD_HH__
 
+#include "sim/config.hh"
+#include "sim/engine.hh"
+#include "sim/log.hh"
+
 namespace SimpleSSD {
 
 /**
@@ -23,6 +27,17 @@ class SimpleSSD {
  private:
   bool inited;  //!< Flag whether this object is initialized
 
+  Config *config; //!< Config object provided by simulation system
+  Engine *engine; //!< Engine object provided by simulation system
+  Log log; //!< Log system
+
+  std::ofstream outfile;
+  std::ofstream errfile;
+  std::ofstream debugfile;
+
+  void joinPath(std::string &, std::string &) noexcept;
+  void openStream(std::ofstream &, std::string &, std::string &) noexcept;
+
  public:
   SimpleSSD();
   SimpleSSD(const SimpleSSD &) = delete;
@@ -32,7 +47,7 @@ class SimpleSSD {
   SimpleSSD &operator=(const SimpleSSD &) = delete;
   SimpleSSD &operator=(SimpleSSD &&) noexcept = default;
 
-  bool init() noexcept;
+  bool init(Config *, Engine *) noexcept;
   void deinit() noexcept;
 
   void createCheckpoint() noexcept;

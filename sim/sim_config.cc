@@ -25,9 +25,9 @@ SimConfig::~SimConfig() {}
 void SimConfig::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TEXT(node, NAME_OUTPUT_DIRECTORY, outputDirectory, ".");
-    LOAD_NAME_TEXT(node, NAME_OUTPUT_FILE, outputFile, "STDOUT");
-    LOAD_NAME_TEXT(node, NAME_ERROR_FILE, errorFile, "STDERR");
-    LOAD_NAME_TEXT(node, NAME_DEBUG_FILE, debugFile, "STDOUT");
+    LOAD_NAME_TEXT(node, NAME_OUTPUT_FILE, outputFile, FILE_STDOUT);
+    LOAD_NAME_TEXT(node, NAME_ERROR_FILE, errorFile, FILE_STDERR);
+    LOAD_NAME_TEXT(node, NAME_DEBUG_FILE, debugFile, FILE_STDOUT);
   }
 }
 

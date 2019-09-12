@@ -37,7 +37,7 @@ Log::~Log() {
  *
  * \param[in]  outfile    std::ofstream object for output file
  * \param[in]  errfile    std::ofstream object for error file
- * \param[out] debugfile std::ofstream object for debug log file
+ * \param[in]  debugfile std::ofstream object for debug log file
  */
 void Log::init(std::ofstream &outfile, std::ofstream &errfile,
                std::ofstream &debugfile) noexcept {

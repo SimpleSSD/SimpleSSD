@@ -12,6 +12,9 @@
 
 #include "sim/base_config.hh"
 
+#define FILE_STDOUT "STDOUT"
+#define FILE_STDERR "STDERR"
+
 namespace SimpleSSD {
 
 /**
