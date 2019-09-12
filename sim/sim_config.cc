@@ -22,10 +22,6 @@ SimConfig::SimConfig() {}
 //! A destructor
 SimConfig::~SimConfig() {}
 
-void SimConfig::getSectionName(std::string &name) {
-  name = "sim";
-}
-
 void SimConfig::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TEXT(node, NAME_OUTPUT_DIRECTORY, outputDirectory, ".");

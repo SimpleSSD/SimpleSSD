@@ -38,7 +38,7 @@ class SimConfig : public BaseConfig {
   SimConfig();
   ~SimConfig();
 
-  void getSectionName(std::string &);
+  const char *getSectionName() { return "sim"; }
 
   void loadFrom(pugi::xml_node &);
   void storeTo(pugi::xml_node &);

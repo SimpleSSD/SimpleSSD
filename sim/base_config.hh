@@ -70,7 +70,7 @@ class BaseConfig {
   BaseConfig() {}
   virtual ~BaseConfig() {}
 
-  virtual void getSectionName(std::string &) = 0;
+  virtual const char *getSectionName() = 0;
 
   virtual void loadFrom(pugi::xml_node &) = 0;
   virtual void storeTo(pugi::xml_node &) = 0;
