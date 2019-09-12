@@ -17,18 +17,23 @@
 
 namespace SimpleSSD {
 
+#define CONFIG_NODE_NAME "simplessd"
+#define CONFIG_SECTION_NAME "section"
+#define CONFIG_KEY_NAME "config"
+#define CONFIG_ATTRIBUTE "name"
+
 // Use following macros only in BaseConfig (and its child class)
 
 #define LOAD_NAME(node, attr, out, op, def)                                    \
   {                                                                            \
-    if (strcmp((node).attribute("name").value(), attr) == 0) {                 \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       out = (int64_t)(node).text().op(def);                                    \
     }                                                                          \
   }
 
 #define LOAD_NAME_INT(node, attr, out, def)                                    \
   {                                                                            \
-    if (strcmp((node).attribute("name").value(), attr) == 0) {                 \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
                                                                                \
@@ -42,7 +47,7 @@ namespace SimpleSSD {
 
 #define LOAD_NAME_UINT(node, attr, out, def)                                   \
   {                                                                            \
-    if (strcmp((node).attribute("name").value(), attr) == 0) {                 \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
                                                                                \
@@ -56,7 +61,7 @@ namespace SimpleSSD {
 
 #define LOAD_NAME_TIME(node, attr, out, def)                                   \
   {                                                                            \
-    if (strcmp((node).attribute("name").value(), attr) == 0) {                 \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
                                                                                \
@@ -79,10 +84,10 @@ namespace SimpleSSD {
 
 #define STORE_NAME(section, attr, type, in)                                    \
   {                                                                            \
-    auto child = (section).append_child(attr);                                 \
+    auto child = (section).append_child(CONFIG_KEY_NAME);                      \
                                                                                \
     if (child) {                                                               \
-      child.append_attribute("name").set_value(attr);                          \
+      child.append_attribute(CONFIG_ATTRIBUTE).set_value(attr);                \
       child.text().set((type)in);                                              \
     }                                                                          \
   }
@@ -102,6 +107,12 @@ namespace SimpleSSD {
   STORE_NAME(section, attr, const char *, in)
 
 #define STORE_NAME_FLOAT(section, attr, in) STORE_NAME(section, attr, float, in)
+
+#define STORE_SECTION(parent, name, section)                                   \
+  {                                                                            \
+    section = parent.append_child(CONFIG_SECTION_NAME);                        \
+    section.append_attribute(CONFIG_ATTRIBUTE).set_value(name);                \
+  }
 
 /**
  * \brief BaseConfig object declaration

@@ -10,8 +10,6 @@
 #include <cstring>
 #include <iostream>
 
-#define CONFIG_NODE_NAME "simplessd"
-
 namespace SimpleSSD {
 
 //! Config constructor
@@ -42,7 +40,7 @@ void Config::load(const char *path) {
     // Travel sections
     for (auto section = config.first_child(); section;
          section = section.next_sibling()) {
-      auto name = section.attribute("name").value();
+      auto name = section.attribute(CONFIG_ATTRIBUTE).value();
 
       if (strcmp(name, simConfig.getSectionName()) == 0) {
         simConfig.loadFrom(section);
@@ -72,8 +70,9 @@ void Config::save(const char *path) {
   auto config = file.append_child(CONFIG_NODE_NAME);
 
   // Append configuration sections
-  auto section = config.append_child(simConfig.getSectionName());
-  simConfig.storeTo(section);
+  pugi::xml_node section;
+
+  STORE_SECTION(config, simConfig.getSectionName(), section);
 
   auto result =
       file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
