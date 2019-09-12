@@ -15,7 +15,7 @@
 namespace SimpleSSD {
 
 const std::string idPrefix[] = {
-  "global", //!< ID::Common
+    "global",  //!< ID::Common
 };
 
 //! A constructor
