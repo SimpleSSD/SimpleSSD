@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include "lib/pugixml/src/pugixml.hpp"
+#include "sim/sim_config.hh"
 
 namespace SimpleSSD {
 
@@ -23,8 +23,15 @@ namespace SimpleSSD {
  * Also, you can override configuration by calling set function.
  */
 class Config {
+ public:
+  enum class Section {
+    Sim,
+  };
+
  private:
   pugi::xml_document file;
+
+  SimConfig simConfig;
 
  public:
   Config();
@@ -40,6 +47,18 @@ class Config {
 
   void save(const char *) noexcept;
   void save(std::string &) noexcept;
+
+  int64_t readInt(Section, uint32_t);
+  uint64_t readUint(Section, uint32_t);
+  float readFloat(Section, uint32_t);
+  std::string readString(Section, uint32_t);
+  bool readBoolean(Section, uint32_t);
+
+  bool writeInt(Section, uint32_t, int64_t);
+  bool writeUint(Section, uint32_t, uint64_t);
+  bool writeFloat(Section, uint32_t, float);
+  bool writeString(Section, uint32_t, std::string);
+  bool writeBoolean(Section, uint32_t, bool);
 };
 
 }  // namespace SimpleSSD
