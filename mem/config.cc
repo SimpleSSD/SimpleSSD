@@ -9,7 +9,7 @@
 
 #include <cstring>
 
-namespace SimpleSSD {
+namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
 const char NAME_WAY[] = "Way";
@@ -69,7 +69,7 @@ const char NAME_IDD6_1[] = "IDD6_1";
 const char NAME_VDD_0[] = "VDD_0";
 const char NAME_VDD_1[] = "VDD_1";
 
-MemConfig::MemConfig() {
+Config::Config() {
   /* 32KB L1 cache */
   level1.model = Model::Simple;
   level1.way = 4;
@@ -146,9 +146,9 @@ MemConfig::MemConfig() {
   power.pVDD[1] = 1.2f;
 }
 
-MemConfig::~MemConfig() {}
+Config::~Config() {}
 
-void MemConfig::loadCache(pugi::xml_node &section, CacheParameter *param) {
+void Config::loadCache(pugi::xml_node &section, CacheParameter *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_MODEL, Model, param->model);
     LOAD_NAME_UINT_TYPE(node, NAME_WAY, uint8_t, param->way);
@@ -158,8 +158,7 @@ void MemConfig::loadCache(pugi::xml_node &section, CacheParameter *param) {
   }
 }
 
-void MemConfig::loadDRAMStructure(pugi::xml_node &section,
-                                  DRAMStructure *param) {
+void Config::loadDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint8_t, param->channel);
     LOAD_NAME_UINT_TYPE(node, NAME_RANK, uint8_t, param->rank);
@@ -171,7 +170,7 @@ void MemConfig::loadDRAMStructure(pugi::xml_node &section,
   }
 }
 
-void MemConfig::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
+void Config::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_TCK, uint32_t, param->tCK);
     LOAD_NAME_UINT_TYPE(node, NAME_TRCD, uint32_t, param->tRCD);
@@ -197,7 +196,7 @@ void MemConfig::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   }
 }
 
-void MemConfig::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
+void Config::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_FLOAT(node, NAME_IDD0_0, param->pIDD0[0]);
     LOAD_NAME_FLOAT(node, NAME_IDD0_1, param->pIDD0[1]);
@@ -226,7 +225,7 @@ void MemConfig::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   }
 }
 
-void MemConfig::storeCache(pugi::xml_node &section, CacheParameter *param) {
+void Config::storeCache(pugi::xml_node &section, CacheParameter *param) {
   STORE_NAME_UINT(section, NAME_MODEL, param->model);
   STORE_NAME_UINT(section, NAME_WAY, param->way);
   STORE_NAME_UINT(section, NAME_LINE_SIZE, param->lineSize);
@@ -234,8 +233,7 @@ void MemConfig::storeCache(pugi::xml_node &section, CacheParameter *param) {
   STORE_NAME_UINT(section, NAME_LATENCY, param->latency);
 }
 
-void MemConfig::storeDRAMStructure(pugi::xml_node &section,
-                                   DRAMStructure *param) {
+void Config::storeDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
   STORE_NAME_UINT(section, NAME_CHANNEL, param->channel);
   STORE_NAME_UINT(section, NAME_RANK, param->rank);
   STORE_NAME_UINT(section, NAME_BANK, param->bank);
@@ -245,7 +243,7 @@ void MemConfig::storeDRAMStructure(pugi::xml_node &section,
   STORE_NAME_UINT(section, NAME_CHIP_SIZE, param->chipSize);
 }
 
-void MemConfig::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
+void Config::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   STORE_NAME_UINT(section, NAME_TCK, param->tCK);
   STORE_NAME_UINT(section, NAME_TRCD, param->tRCD);
   STORE_NAME_UINT(section, NAME_TCL, param->tCL);
@@ -269,7 +267,7 @@ void MemConfig::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   STORE_NAME_UINT(section, NAME_TXSDLL, param->tXSDLL);
 }
 
-void MemConfig::storeDRAMPower(pugi::xml_node &section, DRAMPower *param) {
+void Config::storeDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   STORE_NAME_FLOAT(section, NAME_IDD0_0, param->pIDD0[0]);
   STORE_NAME_FLOAT(section, NAME_IDD0_1, param->pIDD0[1]);
   STORE_NAME_FLOAT(section, NAME_IDD2P0_0, param->pIDD2P0[0]);
@@ -296,7 +294,7 @@ void MemConfig::storeDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   STORE_NAME_FLOAT(section, NAME_VDD_1, param->pVDD[1]);
 }
 
-void MemConfig::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -327,7 +325,7 @@ void MemConfig::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void MemConfig::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node, node2;
 
   STORE_SECTION(section, "level1", node);
@@ -349,7 +347,7 @@ void MemConfig::storeTo(pugi::xml_node &section) {
   storeDRAMPower(node2, &power);
 }
 
-void MemConfig::update() {
+void Config::update() {
   // Fill cache param
   level1.set = level1.size / level1.way / level1.lineSize;
   level2.set = level2.size / level2.way / level2.lineSize;
@@ -361,7 +359,7 @@ void MemConfig::update() {
            "Level 2 cache size is not aligned");
 }
 
-uint64_t MemConfig::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
     case Key::DRAMModel:
       return dramModel;
@@ -370,7 +368,7 @@ uint64_t MemConfig::readUint(uint32_t idx) {
   return 0;
 }
 
-bool MemConfig::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
   switch (idx) {
@@ -385,24 +383,24 @@ bool MemConfig::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-MemConfig::CacheParameter *MemConfig::getLevel1() {
+Config::CacheParameter *Config::getLevel1() {
   return &level1;
 }
 
-MemConfig::CacheParameter *MemConfig::getLevel2() {
+Config::CacheParameter *Config::getLevel2() {
   return &level2;
 }
 
-MemConfig::DRAMStructure *MemConfig::getDRAM() {
+Config::DRAMStructure *Config::getDRAM() {
   return &dram;
 }
 
-MemConfig::DRAMTiming *MemConfig::getDRAMTiming() {
+Config::DRAMTiming *Config::getDRAMTiming() {
   return &timing;
 }
 
-MemConfig::DRAMPower *MemConfig::getDRAMPower() {
+Config::DRAMPower *Config::getDRAMPower() {
   return &power;
 }
 
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::Memory

@@ -12,14 +12,14 @@
 
 #include "sim/base_config.hh"
 
-namespace SimpleSSD {
+namespace SimpleSSD::Memory {
 
 /**
- * \brief MemConfig object declaration
+ * \brief Memory Config object declaration
  *
  * Stores DRAM and cache configurations.
  */
-class MemConfig : public BaseConfig {
+class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
     DRAMModel,
@@ -115,8 +115,8 @@ class MemConfig : public BaseConfig {
   void storeDRAMPower(pugi::xml_node &, DRAMPower *);
 
  public:
-  MemConfig();
-  ~MemConfig();
+  Config();
+  ~Config();
 
   const char *getSectionName() override { return "memory"; }
 
@@ -134,6 +134,6 @@ class MemConfig : public BaseConfig {
   DRAMPower *getDRAMPower();
 };
 
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::Memory
 
 #endif
