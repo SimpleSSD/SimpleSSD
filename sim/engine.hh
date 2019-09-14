@@ -28,7 +28,6 @@ struct _Event {
 };
 #endif
 
-using Tick = uint64_t;
 using Event = uint64_t;
 using EventFunction = std::function<void(uint64_t)>;
 
@@ -44,7 +43,7 @@ class Engine {
   virtual ~Engine() {}
 
   //! Return current simulation tick in pico-second unit
-  virtual Tick getTick() = 0;
+  virtual uint64_t getTick() = 0;
 
 #ifdef DEBUG_SIMPLESSD
   //! Create event with SimpleSSD::EventFunction, with description.
@@ -54,7 +53,7 @@ class Engine {
   virtual Event createEvent(EventFunction) = 0;
 #endif
   //! Schedule event.
-  virtual void schedule(Event, Tick) = 0;
+  virtual void schedule(Event, uint64_t) = 0;
 
   //! Deschedule event.
   virtual void deschedule(Event) = 0;
