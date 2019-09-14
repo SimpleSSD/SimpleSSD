@@ -24,18 +24,19 @@ namespace SimpleSSD {
 
 // Use following macros only in BaseConfig (and its child class)
 
-#define LOAD_NAME(node, attr, out, op, def)                                    \
+#define LOAD_NAME(node, attr, out, op)                                         \
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
-      out = (int64_t)(node).text().op(def);                                    \
+      out = (node).text().op(out);                                             \
     }                                                                          \
   }
 
-#define LOAD_NAME_INT(node, attr, out, def)                                    \
+#define LOAD_NAME_INT(node, attr, out)                                         \
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
+      auto def = out;                                                          \
                                                                                \
       out = convertInt(str, &flag);                                            \
                                                                                \
@@ -45,13 +46,14 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
-#define LOAD_NAME_UINT(node, attr, out, def)                                   \
+#define LOAD_NAME_UINT_TYPE(node, attr, type, out)                             \
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
+      auto def = out;                                                          \
                                                                                \
-      out = convertUint(str, &flag);                                           \
+      out = (type)convertUint(str, &flag);                                     \
                                                                                \
       if (!flag) {                                                             \
         out = def;                                                             \
@@ -59,11 +61,15 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
-#define LOAD_NAME_TIME(node, attr, out, def)                                   \
+#define LOAD_NAME_UINT(node, attr, out)                                        \
+  LOAD_NAME_UINT_TYPE(node, attr, uint64_t, out)
+
+#define LOAD_NAME_TIME(node, attr, out)                                        \
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
+      auto def = out;                                                          \
                                                                                \
       out = convertTime(str, &flag);                                           \
                                                                                \
@@ -73,14 +79,18 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
-#define LOAD_NAME_BOOLEAN(node, attr, out, def)                                \
-  LOAD_NAME(node, attr, out, as_bool, def)
+#define LOAD_NAME_BOOLEAN(node, attr, out) LOAD_NAME(node, attr, out, as_bool)
 
-#define LOAD_NAME_TEXT(node, attr, out, def)                                   \
-  LOAD_NAME(node, attr, out, as_string, def)
+#define LOAD_NAME_TEXT(node, attr, out) LOAD_NAME(node, attr, out, as_string)
 
-#define LOAD_NAME_FLOAT(node, attr, out, def)                                  \
-  LOAD_NAME(node, attr, out, as_float, def)
+#define LOAD_NAME_STRING(node, attr, out)                                      \
+  {                                                                            \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+      out = (node).text().as_string(out.c_str());                              \
+    }                                                                          \
+  }
+
+#define LOAD_NAME_FLOAT(node, attr, out) LOAD_NAME(node, attr, out, as_float)
 
 #define STORE_NAME(section, attr, type, in)                                    \
   {                                                                            \
@@ -105,6 +115,9 @@ namespace SimpleSSD {
 
 #define STORE_NAME_TEXT(section, attr, in)                                     \
   STORE_NAME(section, attr, const char *, in)
+
+#define STORE_NAME_STRING(section, attr, in)                                   \
+  STORE_NAME(section, attr, const char *, in.c_str())
 
 #define STORE_NAME_FLOAT(section, attr, in) STORE_NAME(section, attr, float, in)
 

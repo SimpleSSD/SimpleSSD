@@ -17,26 +17,31 @@ const char NAME_ERROR_FILE[] = "ErrorFile";
 const char NAME_DEBUG_FILE[] = "DebugFile";
 
 //! A constructor
-SimConfig::SimConfig() {}
+SimConfig::SimConfig() {
+  outputDirectory = ".";
+  outputFile = FILE_STDOUT;
+  errorFile = FILE_STDERR;
+  debugFile = FILE_STDOUT;
+}
 
 //! A destructor
 SimConfig::~SimConfig() {}
 
 void SimConfig::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_TEXT(node, NAME_OUTPUT_DIRECTORY, outputDirectory, ".");
-    LOAD_NAME_TEXT(node, NAME_OUTPUT_FILE, outputFile, FILE_STDOUT);
-    LOAD_NAME_TEXT(node, NAME_ERROR_FILE, errorFile, FILE_STDERR);
-    LOAD_NAME_TEXT(node, NAME_DEBUG_FILE, debugFile, FILE_STDOUT);
+    LOAD_NAME_STRING(node, NAME_OUTPUT_DIRECTORY, outputDirectory);
+    LOAD_NAME_STRING(node, NAME_OUTPUT_FILE, outputFile);
+    LOAD_NAME_STRING(node, NAME_ERROR_FILE, errorFile);
+    LOAD_NAME_STRING(node, NAME_DEBUG_FILE, debugFile);
   }
 }
 
 void SimConfig::storeTo(pugi::xml_node &section) {
   // Assume section node is empty
-  STORE_NAME_TEXT(section, NAME_OUTPUT_DIRECTORY, outputDirectory.c_str());
-  STORE_NAME_TEXT(section, NAME_OUTPUT_FILE, outputFile.c_str());
-  STORE_NAME_TEXT(section, NAME_ERROR_FILE, errorFile.c_str());
-  STORE_NAME_TEXT(section, NAME_DEBUG_FILE, debugFile.c_str());
+  STORE_NAME_STRING(section, NAME_OUTPUT_DIRECTORY, outputDirectory);
+  STORE_NAME_STRING(section, NAME_OUTPUT_FILE, outputFile);
+  STORE_NAME_STRING(section, NAME_ERROR_FILE, errorFile);
+  STORE_NAME_STRING(section, NAME_DEBUG_FILE, debugFile);
 }
 
 std::string SimConfig::readString(uint32_t idx) {
