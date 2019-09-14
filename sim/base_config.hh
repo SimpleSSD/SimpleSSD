@@ -11,6 +11,7 @@
 #define __SIM_BASE_CONFIG_HH__
 
 #include <cinttypes>
+#include <cstring>
 #include <string>
 
 #include "lib/pugixml/src/pugixml.hpp"

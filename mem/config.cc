@@ -7,8 +7,6 @@
 
 #include "mem/config.hh"
 
-#include <cstring>
-
 namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
