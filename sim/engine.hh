@@ -45,13 +45,9 @@ class Engine {
   //! Return current simulation tick in pico-second unit
   virtual uint64_t getTick() = 0;
 
-#ifdef DEBUG_SIMPLESSD
   //! Create event with SimpleSSD::EventFunction, with description.
   virtual Event createEvent(EventFunction, std::string) = 0;
-#else
-  //! Create event with SimpleSSD::EventFunction.
-  virtual Event createEvent(EventFunction) = 0;
-#endif
+
   //! Schedule event.
   virtual void schedule(Event, uint64_t) = 0;
 
