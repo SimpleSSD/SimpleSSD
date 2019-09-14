@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __MEM_MEM_CONFIG_HH__
-#define __MEM_MEM_CONFIG_HH__
+#ifndef __MEM_CONFIG_HH__
+#define __MEM_CONFIG_HH__
 
 #include "sim/base_config.hh"
 

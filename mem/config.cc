@@ -5,7 +5,7 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "mem/mem_config.hh"
+#include "mem/config.hh"
 
 #include <cstring>
 
