@@ -68,24 +68,24 @@ class Object {
   inline void removeEvent(Event e) noexcept { engine->removeEvent(e); }
 
   /* Helper APIs for Config */
-  inline int64_t readConfigInt(Section s, uint32_t k) noexcept {
+  inline int64_t readConfigInt(Config::Section s, uint32_t k) noexcept {
     return config->readInt(s, k);
   }
-  inline uint64_t readConfigUint(Section s, uint32_t k) noexcept {
+  inline uint64_t readConfigUint(Config::Section s, uint32_t k) noexcept {
     return config->readUint(s, k);
   }
-  inline float readConfigFloat(Section s, uint32_t k) noexcept {
+  inline float readConfigFloat(Config::Section s, uint32_t k) noexcept {
     return config->readFloat(s, k);
   }
-  inline std::string readConfigString(Section s, uint32_t k) noexcept {
+  inline std::string readConfigString(Config::Section s, uint32_t k) noexcept {
     return config->readString(s, k);
   }
-  inline bool readConfigBoolean(Section s, uint32_t k) noexcept {
+  inline bool readConfigBoolean(Config::Section s, uint32_t k) noexcept {
     return config->readBoolean(s, k);
   }
 
  public:
-  Object() {}
+  Object(Engine *e, Config *c, Log *l) : engine(e), config(c), log(l) {}
   virtual ~Object() {}
 
   /* Statistic API */
