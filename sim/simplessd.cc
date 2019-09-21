@@ -101,14 +101,12 @@ bool SimpleSSD::init(Config *c, Engine *e, Interface *i) noexcept {
   interface = i;
 
   // Open file streams
-  auto prefix = config->readString(Config::Section::Simulation,
-                                   SimConfig::OutputDirectory);
-  auto outpath =
-      config->readString(Config::Section::Simulation, SimConfig::OutputFile);
-  auto errpath =
-      config->readString(Config::Section::Simulation, SimConfig::ErrorFile);
+  auto prefix =
+      config->readString(Section::Simulation, SimConfig::OutputDirectory);
+  auto outpath = config->readString(Section::Simulation, SimConfig::OutputFile);
+  auto errpath = config->readString(Section::Simulation, SimConfig::ErrorFile);
   auto debugpath =
-      config->readString(Config::Section::Simulation, SimConfig::DebugFile);
+      config->readString(Section::Simulation, SimConfig::DebugFile);
 
   openStream(outfile, prefix, outpath);
   openStream(errfile, prefix, errpath);

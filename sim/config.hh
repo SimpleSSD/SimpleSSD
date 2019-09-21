@@ -18,6 +18,13 @@
 
 namespace SimpleSSD {
 
+//! Configuration section enum.
+enum class Section {
+  Simulation,
+  CPU,
+  Memory,
+};
+
 /**
  * \brief Config object declaration
  *
@@ -25,13 +32,6 @@ namespace SimpleSSD {
  * Also, you can override configuration by calling set function.
  */
 class Config {
- public:
-  enum class Section {
-    Simulation,
-    CPU,
-    Memory,
-  };
-
  private:
   pugi::xml_document file;
 
