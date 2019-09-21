@@ -33,15 +33,15 @@ class Log {
   Engine *engine;  //!< Simulation engine
   bool inited;     //!< Flag whether this object is initialized
 
-  std::ofstream *out;    //!< File for info
-  std::ofstream *err;    //!< File for warn/panic
-  std::ofstream *debug;  //!< File for debug printout
+  std::ostream *out;    //!< File for info
+  std::ostream *err;    //!< File for warn/panic
+  std::ostream *debug;  //!< File for debug printout
 
-  bool checkStandardIO(std::ofstream &) noexcept;
-  void print(std::ofstream &, const char *, va_list) noexcept;
+  bool checkStandardIO(std::ostream *) noexcept;
+  void print(std::ostream *, const char *, va_list) noexcept;
 
  public:
-  Log(Engine *);
+  Log();
   Log(const Log &) = delete;
   Log(Log &&) = default;
   ~Log();
@@ -49,7 +49,7 @@ class Log {
   Log &operator=(const Log &) = delete;
   Log &operator=(Log &&) noexcept = default;
 
-  void init(std::ofstream &, std::ofstream &, std::ofstream &) noexcept;
+  void init(Engine *, std::ostream *, std::ostream *, std::ostream *) noexcept;
   void deinit() noexcept;
 
   void panic(const char *, ...) noexcept;

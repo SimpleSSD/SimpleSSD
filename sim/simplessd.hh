@@ -31,12 +31,12 @@ class SimpleSSD {
   Engine *engine; //!< Engine object provided by simulation system
   Log log; //!< Log system
 
-  std::ofstream outfile;
-  std::ofstream errfile;
-  std::ofstream debugfile;
+  std::ostream *outfile;
+  std::ostream *errfile;
+  std::ostream *debugfile;
 
   void joinPath(std::string &, std::string &) noexcept;
-  void openStream(std::ofstream &, std::string &, std::string &) noexcept;
+  void openStream(std::ostream *, std::string &, std::string &) noexcept;
 
  public:
   SimpleSSD();

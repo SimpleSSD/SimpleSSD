@@ -7,10 +7,18 @@
 
 #include "sim/simplessd.hh"
 
+#include <iostream>
+
 namespace SimpleSSD {
 
 //! SimpleSSD constructor
-SimpleSSD::SimpleSSD() : inited(false), config(nullptr), engine(nullptr) {}
+SimpleSSD::SimpleSSD()
+    : inited(false),
+      config(nullptr),
+      engine(nullptr),
+      outfile(nullptr),
+      errfile(nullptr),
+      debugfile(nullptr) {}
 
 //! SimpleSSD destructor
 SimpleSSD::~SimpleSSD() {
@@ -49,25 +57,26 @@ void SimpleSSD::joinPath(std::string &prefix, std::string &path) noexcept {
  * \param[in]  prefix First path string (directory path)
  * \param[in]  path   Second path string (file name)
  */
-void SimpleSSD::openStream(std::ofstream &os, std::string &prefix,
+void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
                            std::string &path) noexcept {
   // Check path is FILE_STDOUT or FILE_STDERR
   if (path.compare(FILE_STDOUT) == 0) {
     std::streambuf *sb = std::cout.rdbuf();
-    os = std::ofstream(sb);
+    os = new std::ostream(sb);
   }
   else if (path.compare(FILE_STDERR) == 0) {
     std::streambuf *sb = std::cerr.rdbuf();
-    os = std::ofstream(sb);
+
+    os = new std::ostream(sb);
   }
   else {
     std::string filepath = prefix;
 
     joinPath(filepath, path);
 
-    os.open(filepath);
+    os = new std::ofstream(filepath);
 
-    if (!os.is_open()) {
+    if (!((std::ofstream *)os)->is_open()) {
       // Log system not initialized yet
       std::cerr << "panic: Failed to open file: " << filepath << std::endl;
       abort();
@@ -85,7 +94,7 @@ void SimpleSSD::openStream(std::ofstream &os, std::string &prefix,
  * \param[in]  e  SimpleSSD::Engine object.
  * \return Initialization result.
  */
-bool SimpleSSD::init(Config *c, engine *e) noexcept {
+bool SimpleSSD::init(Config *c, Engine *e) noexcept {
   config = c;
   engine = e;
 
@@ -103,7 +112,7 @@ bool SimpleSSD::init(Config *c, engine *e) noexcept {
   openStream(debugfile, prefix, debugpath);
 
   // Initialize log system
-  log.init(outfile, errfile, debugfile);
+  log.init(engine, outfile, errfile, debugfile);
 
   // Initialize objects
   inited = true;
@@ -122,6 +131,13 @@ void SimpleSSD::deinit() noexcept {
     log.deinit();
 
     // outfile, errfile and debugfile are closed by Log::deinit()
+    delete outfile;
+    delete errfile;
+    delete debugfile;
+
+    outfile = nullptr;
+    errfile = nullptr;
+    debugfile = nullptr;
   }
 
   inited = false;

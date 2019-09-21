@@ -19,8 +19,7 @@ const std::string idPrefix[] = {
 };
 
 //! A constructor
-Log::Log(Engine *e)
-    : engine(e), inited(false), out(nullptr), err(nullptr), debug(nullptr) {}
+Log::Log() : inited(false), out(nullptr), err(nullptr), debug(nullptr) {}
 
 //! A destructor
 Log::~Log() {
@@ -35,48 +34,51 @@ Log::~Log() {
  * Initialize log system by provided file stream.
  * All std::ofstream objects should be opened.
  *
- * \param[in]  outfile    std::ofstream object for output file
- * \param[in]  errfile    std::ofstream object for error file
+ * \param[in]  e         Pointer to simulation engine
+ * \param[in]  outfile   std::ofstream object for output file
+ * \param[in]  errfile   std::ofstream object for error file
  * \param[in]  debugfile std::ofstream object for debug log file
  */
-void Log::init(std::ofstream &outfile, std::ofstream &errfile,
-               std::ofstream &debugfile) noexcept {
-  if (!outfile.is_open()) {
+void Log::init(Engine *e, std::ostream *outfile, std::ostream *errfile,
+               std::ostream *debugfile) noexcept {
+  engine = e;
+
+  if (!outfile->good()) {
     // We don't have panic yet
     std::cerr << "panic: outfile is not opened" << std::endl;
 
     abort();
   }
 
-  if (!errfile.is_open()) {
+  if (!errfile->good()) {
     std::cerr << "panic: errfile is not opened" << std::endl;
 
     abort();
   }
 
-  if (!debugfile.is_open()) {
+  if (!debugfile->good()) {
     std::cerr << "panic: debugfile is not opened" << std::endl;
 
     abort();
   }
 
-  out = &outfile;
-  err = &errfile;
-  debug = &debugfile;
+  out = outfile;
+  err = errfile;
+  debug = debugfile;
 
   inited = true;
 }
 
 //! Deinitialize log system
 void Log::deinit() noexcept {
-  if (out->is_open() && !checkStandardIO(*out)) {
-    out->close();
+  if (!checkStandardIO(out)) {
+    ((std::ofstream *)out)->close();
   }
-  if (err->is_open() && !checkStandardIO(*err)) {
-    err->close();
+  if (!checkStandardIO(err)) {
+    ((std::ofstream *)err)->close();
   }
-  if (debug->is_open() && !checkStandardIO(*debug)) {
-    debug->close();
+  if (!checkStandardIO(debug)) {
+    ((std::ofstream *)debug)->close();
   }
 
   inited = false;
@@ -84,13 +86,13 @@ void Log::deinit() noexcept {
 
 //! Print log and terminate program
 void Log::panic(const char *format, ...) noexcept {
-  if (err->is_open()) {
+  if (err->good()) {
     va_list args;
 
     *err << engine->getTick() << ": panic: ";
 
     va_start(args, format);
-    print(*err, format, args);
+    print(err, format, args);
     va_end(args);
 
     *err << std::endl;
@@ -104,13 +106,13 @@ void Log::panic(const char *format, ...) noexcept {
 
 //! Print log
 void Log::warn(const char *format, ...) noexcept {
-  if (err->is_open()) {
+  if (err->good()) {
     va_list args;
 
     *err << engine->getTick() << ": warn: ";
 
     va_start(args, format);
-    print(*err, format, args);
+    print(err, format, args);
     va_end(args);
 
     *err << std::endl;
@@ -124,13 +126,13 @@ void Log::warn(const char *format, ...) noexcept {
 
 //! Print log
 void Log::info(const char *format, ...) noexcept {
-  if (out->is_open()) {
+  if (out->good()) {
     va_list args;
 
     *out << engine->getTick() << ": warn: ";
 
     va_start(args, format);
-    print(*out, format, args);
+    print(out, format, args);
     va_end(args);
 
     *out << std::endl;
@@ -143,13 +145,13 @@ void Log::info(const char *format, ...) noexcept {
 }
 
 void Log::debugprint(ID id, const char *format, ...) noexcept {
-  if (debug->is_open()) {
+  if (debug->good()) {
     va_list args;
 
-    *debug << engine->getTick() << idPrefix[id] << ": warn: ";
+    *debug << engine->getTick() << idPrefix[(uint32_t)id] << ": warn: ";
 
     va_start(args, format);
-    print(*debug, format, args);
+    print(debug, format, args);
     va_end(args);
 
     *debug << std::endl;
@@ -167,8 +169,8 @@ void Log::debugprint(ID id, const char *format, ...) noexcept {
  * \param[in]  os std::ofstream object to check
  * \return True if os is stdout or stderr
  */
-bool Log::checkStandardIO(std::ofstream &os) noexcept {
-  if (os.rdbuf() == std::cout.rdbuf() || os.rdbuf() == std::cerr.rdbuf()) {
+bool Log::checkStandardIO(std::ostream *os) noexcept {
+  if (os->rdbuf() == std::cout.rdbuf() || os->rdbuf() == std::cerr.rdbuf()) {
     return true;
   }
 
@@ -182,7 +184,7 @@ bool Log::checkStandardIO(std::ofstream &os) noexcept {
  * \param[in]  format Format string
  * \param[in]  args   Argument list
  */
-void Log::print(std::ofstream &os, const char *format, va_list args) noexcept {
+void Log::print(std::ostream *os, const char *format, va_list args) noexcept {
   va_list copy;
   std::vector<char> str;
 
@@ -192,7 +194,7 @@ void Log::print(std::ofstream &os, const char *format, va_list args) noexcept {
 
   vsnprintf(str.data(), str.size(), format, args);
 
-  os << str.data();
+  *os << str.data();
 }
 
 }  // namespace SimpleSSD
