@@ -1,20 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
- * Copyright (C) 2017 CAMELab
+ * Copyright (C) 2019 CAMELab
  *
- * This file is part of SimpleSSD.
- *
- * SimpleSSD is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * SimpleSSD is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SimpleSSD.  If not, see <http://www.gnu.org/licenses/>.
+ * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
 #pragma once
@@ -29,14 +17,9 @@
 
 #include "cpu/def.hh"
 #include "lib/mcpat/mcpat.h"
-#include "sim/config_reader.hh"
-#include "sim/dma_interface.hh"
-#include "sim/simulator.hh"
-#include "sim/statistics.hh"
+#include "sim/object.hh"
 
-namespace SimpleSSD {
-
-namespace CPU {
+namespace SimpleSSD::CPU {
 
 typedef struct _InstStat {
   // Instruction count
@@ -58,16 +41,16 @@ typedef struct _InstStat {
 } InstStat;
 
 typedef struct _JobEntry {
-  DMAFunction func;
+  EventFunction func;
   void *context;
   InstStat *inst;
   uint64_t submitAt;
   uint64_t delay;
 
-  _JobEntry(DMAFunction &, void *, InstStat *);
+  _JobEntry(EventFunction &, void *, InstStat *);
 } JobEntry;
 
-class CPU : public StatObject {
+class CPU : public Object {
  private:
   struct CoreStat {
     InstStat instStat;
@@ -78,6 +61,7 @@ class CPU : public StatObject {
 
   class Core {
    private:
+    Engine *engine;
     bool busy;
 
     Event jobEvent;
@@ -89,7 +73,7 @@ class CPU : public StatObject {
     void jobDone();
 
    public:
-    Core();
+    Core(Engine *);
     ~Core();
 
     void submitJob(JobEntry, uint64_t = 0);
@@ -101,7 +85,6 @@ class CPU : public StatObject {
     CoreStat &getStat();
   };
 
-  ConfigReader &conf;
   uint64_t lastResetStat;
 
   uint64_t clockSpeed;
@@ -113,28 +96,27 @@ class CPU : public StatObject {
   std::vector<Core> ftlCore;
 
   // CPIs
-  std::unordered_map<uint16_t, std::unordered_map<uint16_t, InstStat>> cpi;
+  std::unordered_map<Namespace, std::unordered_map<Function, InstStat>> cpi;
 
   uint32_t leastBusyCPU(std::vector<Core> &);
   void calculatePower(Power &);
 
  public:
-  CPU(ConfigReader &);
+  CPU(Engine *, ConfigReader *, Log *);
   ~CPU();
 
-  void execute(NAMESPACE, FUNCTION, DMAFunction &, void * = nullptr,
+  void execute(Namespace, Function, EventFunction &, void * = nullptr,
                uint64_t = 0);
-  uint64_t applyLatency(NAMESPACE, FUNCTION);
+  uint64_t applyLatency(Namespace, Function);
 
-  void getStatList(std::vector<Stats> &, std::string) override;
-  void getStatValues(std::vector<double> &) override;
-  void resetStatValues() override;
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
 
-  void printLastStat();
+  void createCheckpoint() noexcept override;
+  void restoreCheckpoint() noexcept override;
 };
 
-}  // namespace CPU
-
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::CPU
 
 #endif
