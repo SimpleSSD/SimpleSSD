@@ -10,7 +10,7 @@
 #ifndef __SIM_SIMPLESSD_HH__
 #define __SIM_SIMPLESSD_HH__
 
-#include "sim/config.hh"
+#include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/interface.hh"
 #include "sim/log.hh"
@@ -28,7 +28,7 @@ class SimpleSSD {
  private:
   bool inited;  //!< Flag whether this object is initialized
 
-  Config *config;        //!< Config object provided by simulation system
+  ConfigReader *config;  //!< Config object provided by simulation system
   Engine *engine;        //!< Engine object provided by simulation system
   Log log;               //!< Log system
   Interface *interface;  //!< Interface object provided by simulation system
@@ -49,7 +49,7 @@ class SimpleSSD {
   SimpleSSD &operator=(const SimpleSSD &) = delete;
   SimpleSSD &operator=(SimpleSSD &&) noexcept = default;
 
-  bool init(Config *, Engine *, Interface *) noexcept;
+  bool init(Engine *, ConfigReader *, Interface *) noexcept;
   void deinit() noexcept;
 
   void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) noexcept;

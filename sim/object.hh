@@ -10,7 +10,7 @@
 #ifndef __SIM_OBJECT_HH__
 #define __SIM_OBJECT_HH__
 
-#include "sim/config.hh"
+#include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/log.hh"
 
@@ -53,9 +53,9 @@ class Object {
   };
 
  protected:
-  Engine *engine;  //!< Current simulation engine
-  Config *config;  //!< Current simulation configuration
-  Log *log;        //!< Current log system
+  Engine *engine;        //!< Current simulation engine
+  ConfigReader *config;  //!< Current simulation configuration
+  Log *log;              //!< Current log system
 
   /* Helper APIs for Engine */
   inline uint64_t getTick() noexcept { return engine->getTick(); }
@@ -85,7 +85,7 @@ class Object {
   }
 
  public:
-  Object(Engine *e, Config *c, Log *l) : engine(e), config(c), log(l) {}
+  Object(Engine *e, ConfigReader *c, Log *l) : engine(e), config(c), log(l) {}
   virtual ~Object() {}
 
   /* Statistic API */

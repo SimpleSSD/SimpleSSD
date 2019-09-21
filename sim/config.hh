@@ -10,61 +10,44 @@
 #ifndef __SIM_CONFIG_HH__
 #define __SIM_CONFIG_HH__
 
-#include <string>
+#include "sim/base_config.hh"
 
-#include "cpu/config.hh"
-#include "mem/config.hh"
-#include "sim/sim_config.hh"
+#define FILE_STDOUT "STDOUT"
+#define FILE_STDERR "STDERR"
 
 namespace SimpleSSD {
 
-//! Configuration section enum.
-enum class Section {
-  Simulation,
-  CPU,
-  Memory,
-};
-
 /**
- * \brief Config object declaration
+ * \brief SimConfig object declaration
  *
- * SSD configuration object. This object provides configuration parser.
- * Also, you can override configuration by calling set function.
+ * Stores simulation configurations such as simulation output directory.
  */
-class Config {
- private:
-  pugi::xml_document file;
+class Config : public BaseConfig {
+ public:
+  enum Key : uint32_t {
+    OutputDirectory,
+    OutputFile,
+    ErrorFile,
+    DebugFile,
+  };
 
-  SimConfig simConfig;
-  CPU::Config cpuConfig;
-  Memory::Config memConfig;
+ private:
+  std::string outputDirectory;
+  std::string outputFile;
+  std::string errorFile;
+  std::string debugFile;
 
  public:
   Config();
-  Config(const Config &) = delete;
-  Config(Config &&) = default;
   ~Config();
 
-  Config &operator=(const Config &) = delete;
-  Config &operator=(Config &&) noexcept = default;
+  const char *getSectionName() override { return "sim"; }
 
-  void load(const char *) noexcept;
-  void load(std::string &) noexcept;
+  void loadFrom(pugi::xml_node &) override;
+  void storeTo(pugi::xml_node &) override;
 
-  void save(const char *) noexcept;
-  void save(std::string &) noexcept;
-
-  int64_t readInt(Section, uint32_t);
-  uint64_t readUint(Section, uint32_t);
-  float readFloat(Section, uint32_t);
-  std::string readString(Section, uint32_t);
-  bool readBoolean(Section, uint32_t);
-
-  bool writeInt(Section, uint32_t, int64_t);
-  bool writeUint(Section, uint32_t, uint64_t);
-  bool writeFloat(Section, uint32_t, float);
-  bool writeString(Section, uint32_t, std::string);
-  bool writeBoolean(Section, uint32_t, bool);
+  std::string readString(uint32_t) override;
+  bool writeString(uint32_t, std::string &) override;
 };
 
 }  // namespace SimpleSSD

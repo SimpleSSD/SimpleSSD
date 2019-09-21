@@ -8,262 +8,75 @@
 #include "sim/config.hh"
 
 #include <cstring>
-#include <iostream>
 
 namespace SimpleSSD {
 
-//! Config constructor
-Config::Config() {}
+const char NAME_OUTPUT_DIRECTORY[] = "OutputDirectory";
+const char NAME_OUTPUT_FILE[] = "OutputFile";
+const char NAME_ERROR_FILE[] = "ErrorFile";
+const char NAME_DEBUG_FILE[] = "DebugFile";
 
-//! Config destructor
+//! A constructor
+Config::Config() {
+  outputDirectory = ".";
+  outputFile = FILE_STDOUT;
+  errorFile = FILE_STDERR;
+  debugFile = FILE_STDOUT;
+}
+
+//! A destructor
 Config::~Config() {}
 
-/**
- * \brief Load configuration from file
- *
- * \param[in] path Input file path
- */
-void Config::load(const char *path) {
-  auto result = file.load_file(path, pugi::parse_default, pugi::encoding_utf8);
-
-  if (!result) {
-    std::cerr << "Failed to parse configuration file: " << result.description()
-              << std::endl;
-
-    abort();
-  }
-
-  // Check node
-  auto config = file.child(CONFIG_NODE_NAME);
-
-  if (config) {
-    // Travel sections
-    for (auto section = config.first_child(); section;
-         section = section.next_sibling()) {
-      auto name = section.attribute(CONFIG_ATTRIBUTE).value();
-
-      if (strcmp(name, simConfig.getSectionName()) == 0) {
-        simConfig.loadFrom(section);
-      }
-      else if (strcmp(name, cpuConfig.getSectionName()) == 0) {
-        cpuConfig.loadFrom(section);
-      }
-      else if (strcmp(name, memConfig.getSectionName()) == 0) {
-        memConfig.loadFrom(section);
-      }
-    }
-
-    // Update config objects
-    simConfig.update();
-    cpuConfig.update();
-    memConfig.update();
-  }
-
-  // Close
-  file.reset();
-}
-
-//! Load configuration from file
-void Config::load(std::string &path) {
-  load(path.c_str());
-}
-
-/**
- * \brief Save configuration to file
- *
- * \param[in] path Output file path
- */
-void Config::save(const char *path) {
-  // Create simplessd node
-  auto config = file.append_child(CONFIG_NODE_NAME);
-  config.append_attribute("version").set_value("2.1");  // TODO: FIX ME!
-
-  // Append configuration sections
-  pugi::xml_node section;
-
-  STORE_SECTION(config, simConfig.getSectionName(), section);
-  simConfig.storeTo(section);
-
-  STORE_SECTION(config, cpuConfig.getSectionName(), section);
-  cpuConfig.storeTo(section);
-
-  STORE_SECTION(config, memConfig.getSectionName(), section)
-  memConfig.storeTo(section);
-
-  auto result =
-      file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
-
-  if (!result) {
-    std::cerr << "Failed to save configuration file" << std::endl;
-
-    abort();
+void Config::loadFrom(pugi::xml_node &section) {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    LOAD_NAME_STRING(node, NAME_OUTPUT_DIRECTORY, outputDirectory);
+    LOAD_NAME_STRING(node, NAME_OUTPUT_FILE, outputFile);
+    LOAD_NAME_STRING(node, NAME_ERROR_FILE, errorFile);
+    LOAD_NAME_STRING(node, NAME_DEBUG_FILE, debugFile);
   }
 }
 
-//! Save configuration to file
-void Config::save(std::string &path) {
-  save(path.c_str());
+void Config::storeTo(pugi::xml_node &section) {
+  // Assume section node is empty
+  STORE_NAME_STRING(section, NAME_OUTPUT_DIRECTORY, outputDirectory);
+  STORE_NAME_STRING(section, NAME_OUTPUT_FILE, outputFile);
+  STORE_NAME_STRING(section, NAME_ERROR_FILE, errorFile);
+  STORE_NAME_STRING(section, NAME_DEBUG_FILE, debugFile);
 }
 
-//! Read configuration as int64
-int64_t Config::readInt(Section section, uint32_t key) {
-  switch (section) {
-    case Section::Simulation:
-      return simConfig.readInt(key);
-    case Section::CPU:
-      return cpuConfig.readInt(key);
-    case Section::Memory:
-      return memConfig.readInt(key);
-  }
-
-  return 0ll;
-}
-
-//! Read configuration as uint64
-uint64_t Config::readUint(Section section, uint32_t key) {
-  switch (section) {
-    case Section::Simulation:
-      return simConfig.readUint(key);
-    case Section::CPU:
-      return cpuConfig.readUint(key);
-    case Section::Memory:
-      return memConfig.readUint(key);
-  }
-
-  return 0ull;
-}
-
-//! Read configuration as float
-float Config::readFloat(Section section, uint32_t key) {
-  switch (section) {
-    case Section::Simulation:
-      return simConfig.readFloat(key);
-    case Section::CPU:
-      return cpuConfig.readFloat(key);
-    case Section::Memory:
-      return memConfig.readFloat(key);
-  }
-
-  return 0.f;
-}
-
-//! Read configuration as string
-std::string Config::readString(Section section, uint32_t key) {
-  switch (section) {
-    case Section::Simulation:
-      return simConfig.readString(key);
-    case Section::CPU:
-      return cpuConfig.readString(key);
-    case Section::Memory:
-      return memConfig.readString(key);
+std::string Config::readString(uint32_t idx) {
+  switch (idx) {
+    case Key::OutputDirectory:
+      return outputDirectory;
+    case Key::OutputFile:
+      return outputFile;
+    case Key::ErrorFile:
+      return errorFile;
+    case Key::DebugFile:
+      return debugFile;
   }
 
   return "";
 }
 
-//! Read configuration as boolean
-bool Config::readBoolean(Section section, uint32_t key) {
-  switch (section) {
-    case Section::Simulation:
-      return simConfig.readBoolean(key);
-    case Section::CPU:
-      return cpuConfig.readBoolean(key);
-    case Section::Memory:
-      return memConfig.readBoolean(key);
-  }
+bool Config::writeString(uint32_t idx, std::string &value) {
+  bool ret = true;
 
-  return "";
-}
-
-//! Write configuration as int64
-bool Config::writeInt(Section section, uint32_t key, int64_t value) {
-  bool ret = false;
-
-  switch (section) {
-    case Section::Simulation:
-      ret = simConfig.writeInt(key, value);
+  switch (idx) {
+    case Key::OutputDirectory:
+      outputDirectory = value;
       break;
-    case Section::CPU:
-      ret = cpuConfig.writeInt(key, value);
+    case Key::OutputFile:
+      outputFile = value;
       break;
-    case Section::Memory:
-      ret = memConfig.writeInt(key, value);
+    case Key::ErrorFile:
+      errorFile = value;
       break;
-  }
-
-  return ret;
-}
-
-//! Write configuration as uint64
-bool Config::writeUint(Section section, uint32_t key, uint64_t value) {
-  bool ret = false;
-
-  switch (section) {
-    case Section::Simulation:
-      ret = simConfig.writeUint(key, value);
+    case Key::DebugFile:
+      debugFile = value;
       break;
-    case Section::CPU:
-      ret = cpuConfig.writeUint(key, value);
-      break;
-    case Section::Memory:
-      ret = memConfig.writeUint(key, value);
-      break;
-  }
-
-  return ret;
-}
-
-//! Write configuration as float
-bool Config::writeFloat(Section section, uint32_t key, float value) {
-  bool ret = false;
-
-  switch (section) {
-    case Section::Simulation:
-      ret = simConfig.writeFloat(key, value);
-      break;
-    case Section::CPU:
-      ret = cpuConfig.writeFloat(key, value);
-      break;
-    case Section::Memory:
-      ret = memConfig.writeFloat(key, value);
-      break;
-  }
-
-  return ret;
-}
-
-//! Write configuration as string
-bool Config::writeString(Section section, uint32_t key, std::string value) {
-  bool ret = false;
-
-  switch (section) {
-    case Section::Simulation:
-      ret = simConfig.writeString(key, value);
-      break;
-    case Section::CPU:
-      ret = cpuConfig.writeString(key, value);
-      break;
-    case Section::Memory:
-      ret = memConfig.writeString(key, value);
-      break;
-  }
-
-  return ret;
-}
-
-//! Write configuration as boolean
-bool Config::writeBoolean(Section section, uint32_t key, bool value) {
-  bool ret = false;
-
-  switch (section) {
-    case Section::Simulation:
-      ret = simConfig.writeBoolean(key, value);
-      break;
-    case Section::CPU:
-      ret = cpuConfig.writeBoolean(key, value);
-      break;
-    case Section::Memory:
-      ret = memConfig.writeBoolean(key, value);
+    default:
+      ret = false;
       break;
   }
 

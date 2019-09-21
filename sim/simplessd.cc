@@ -95,18 +95,17 @@ void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
  * \param[in]  i  SimpleSSD::Interface object.
  * \return Initialization result.
  */
-bool SimpleSSD::init(Config *c, Engine *e, Interface *i) noexcept {
-  config = c;
+bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
   engine = e;
+  config = c;
   interface = i;
 
   // Open file streams
   auto prefix =
-      config->readString(Section::Simulation, SimConfig::OutputDirectory);
-  auto outpath = config->readString(Section::Simulation, SimConfig::OutputFile);
-  auto errpath = config->readString(Section::Simulation, SimConfig::ErrorFile);
-  auto debugpath =
-      config->readString(Section::Simulation, SimConfig::DebugFile);
+      config->readString(Section::Simulation, Config::OutputDirectory);
+  auto outpath = config->readString(Section::Simulation, Config::OutputFile);
+  auto errpath = config->readString(Section::Simulation, Config::ErrorFile);
+  auto debugpath = config->readString(Section::Simulation, Config::DebugFile);
 
   openStream(outfile, prefix, outpath);
   openStream(errfile, prefix, errpath);
