@@ -29,7 +29,7 @@ struct _Event {
 #endif
 
 using Event = uint64_t;
-using EventFunction = std::function<void(uint64_t)>;
+using EventFunction = std::function<void(uint64_t, void *)>;
 
 /**
  * \brief Engine object declaration
@@ -49,7 +49,7 @@ class Engine {
   virtual Event createEvent(EventFunction, std::string) = 0;
 
   //! Schedule event.
-  virtual void schedule(Event, uint64_t) = 0;
+  virtual void schedule(Event, uint64_t, void * = nullptr) = 0;
 
   //! Deschedule event.
   virtual void deschedule(Event) = 0;
