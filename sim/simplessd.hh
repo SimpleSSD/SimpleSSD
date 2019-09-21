@@ -12,6 +12,7 @@
 
 #include "sim/config.hh"
 #include "sim/engine.hh"
+#include "sim/interface.hh"
 #include "sim/log.hh"
 
 namespace SimpleSSD {
@@ -27,9 +28,10 @@ class SimpleSSD {
  private:
   bool inited;  //!< Flag whether this object is initialized
 
-  Config *config; //!< Config object provided by simulation system
-  Engine *engine; //!< Engine object provided by simulation system
-  Log log; //!< Log system
+  Config *config;        //!< Config object provided by simulation system
+  Engine *engine;        //!< Engine object provided by simulation system
+  Log log;               //!< Log system
+  Interface *interface;  //!< Interface object provided by simulation system
 
   std::ostream *outfile;
   std::ostream *errfile;
@@ -47,8 +49,13 @@ class SimpleSSD {
   SimpleSSD &operator=(const SimpleSSD &) = delete;
   SimpleSSD &operator=(SimpleSSD &&) noexcept = default;
 
-  bool init(Config *, Engine *) noexcept;
+  bool init(Config *, Engine *, Interface *) noexcept;
   void deinit() noexcept;
+
+  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) noexcept;
+  uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept;
+  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) noexcept;
+  uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept;
 
   void createCheckpoint() noexcept;
   void restoreCheckpoint() noexcept;

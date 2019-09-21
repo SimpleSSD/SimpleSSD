@@ -92,11 +92,13 @@ void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
  *
  * \param[in]  c  SimpleSSD::Config object.
  * \param[in]  e  SimpleSSD::Engine object.
+ * \param[in]  i  SimpleSSD::Interface object.
  * \return Initialization result.
  */
-bool SimpleSSD::init(Config *c, Engine *e) noexcept {
+bool SimpleSSD::init(Config *c, Engine *e, Interface *i) noexcept {
   config = c;
   engine = e;
+  interface = i;
 
   // Open file streams
   auto prefix =
@@ -141,6 +143,68 @@ void SimpleSSD::deinit() noexcept {
   }
 
   inited = false;
+}
+
+/**
+ * \brief Read register
+ *
+ * Read controller register of SSD.
+ *
+ * \param[in]  offset   Offset of controller register
+ * \param[in]  length   Length to read
+ * \param[out] buffer   Buffer
+ * \param[in]  eid      Event ID
+ * \param[in]  context  User data
+ */
+void SimpleSSD::read(uint64_t offset, uint64_t length, uint8_t *buffer,
+                     Event eid, void *context) noexcept {
+  uint64_t latency = read(offset, length, buffer);
+
+  engine->schedule(eid, engine->getTick() + latency, context);
+}
+
+/**
+ * \brief Read register
+ *
+ * Simulator can use this simple version of read function when Event is not
+ * necessary.
+ */
+uint64_t SimpleSSD::read(uint64_t offset, uint64_t length,
+                         uint8_t *buffer) noexcept {
+  // TODO: Return from HIL's read function
+
+  return 0;
+}
+
+/**
+ * \brief Write register
+ *
+ * Write controller register of SSD.
+ *
+ * \param[in] offset  Offset of controller register
+ * \param[in] length  Length to write
+ * \param[in] buffer  Data to write
+ * \param[in] eid     Event ID
+ * \param[in] context User data
+ */
+void SimpleSSD::write(uint64_t offset, uint64_t length, uint8_t *buffer,
+                      Event eid, void *context) noexcept {
+  uint64_t latency = write(offset, length, buffer);
+
+  engine->schedule(eid, engine->getTick() + latency, context);
+}
+
+/**
+ * \brief Write register
+ *
+ * Simulator can use this simple version of write function when Event is not
+ * necessary.
+ */
+uint64_t SimpleSSD::write(uint64_t offset, uint64_t length,
+                          uint8_t *buffer) noexcept {
+  // TODO: Return from HIL's write function
+
+  return 0;
 }
 
 }  // namespace SimpleSSD
