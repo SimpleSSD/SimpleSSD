@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include "cpu/config.hh"
+#include "mem/config.hh"
 #include "sim/sim_config.hh"
 
 namespace SimpleSSD {
@@ -25,13 +27,17 @@ namespace SimpleSSD {
 class Config {
  public:
   enum class Section {
-    Sim,
+    Simulation,
+    CPU,
+    Memory,
   };
 
  private:
   pugi::xml_document file;
 
   SimConfig simConfig;
+  CPU::Config cpuConfig;
+  Memory::Config memConfig;
 
  public:
   Config();
