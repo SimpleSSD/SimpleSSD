@@ -160,6 +160,14 @@ uint64_t BaseConfig::convertTime(const char *value, bool *valid) {
   return ret;
 }
 
+bool BaseConfig::isSection(pugi::xml_node &node) {
+  return strcmp(node.name(), CONFIG_SECTION_NAME) == 0;
+}
+
+bool BaseConfig::isKey(pugi::xml_node &node) {
+  return strcmp(node.name(), CONFIG_KEY_NAME) == 0;
+}
+
 void BaseConfig::panic_if(bool eval, const char *format, ...) {
   if (eval) {
     va_list copy, args;

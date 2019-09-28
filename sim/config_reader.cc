@@ -40,6 +40,10 @@ void ConfigReader::load(const char *path) {
     // Travel sections
     for (auto section = config.first_child(); section;
          section = section.next_sibling()) {
+      if (strcmp(section.name(), CONFIG_SECTION_NAME)) {
+        continue;
+      }
+
       auto name = section.attribute(CONFIG_ATTRIBUTE).value();
 
       if (strcmp(name, simConfig.getSectionName()) == 0) {

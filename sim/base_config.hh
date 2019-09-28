@@ -27,14 +27,16 @@ namespace SimpleSSD {
 
 #define LOAD_NAME(node, attr, out, op)                                         \
   {                                                                            \
-    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
+        isKey(node)) {                                                         \
       out = (node).text().op(out);                                             \
     }                                                                          \
   }
 
 #define LOAD_NAME_INT(node, attr, out)                                         \
   {                                                                            \
-    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
+        isKey(node)) {                                                         \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
       auto def = out;                                                          \
@@ -49,7 +51,8 @@ namespace SimpleSSD {
 
 #define LOAD_NAME_UINT_TYPE(node, attr, type, out)                             \
   {                                                                            \
-    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
+        isKey(node)) {                                                         \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
       auto def = out;                                                          \
@@ -67,7 +70,8 @@ namespace SimpleSSD {
 
 #define LOAD_NAME_TIME(node, attr, out)                                        \
   {                                                                            \
-    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
+        isKey(node)) {                                                         \
       bool flag = false;                                                       \
       auto str = (node).child_value();                                         \
       auto def = out;                                                          \
@@ -86,7 +90,8 @@ namespace SimpleSSD {
 
 #define LOAD_NAME_STRING(node, attr, out)                                      \
   {                                                                            \
-    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0) {       \
+    if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
+        isKey(node)) {                                                         \
       out = (node).text().as_string(out.c_str());                              \
     }                                                                          \
   }
@@ -139,6 +144,9 @@ class BaseConfig {
   int64_t convertInt(const char *, bool * = nullptr);
   uint64_t convertUint(const char *, bool * = nullptr);
   uint64_t convertTime(const char *, bool * = nullptr);
+
+  static bool isSection(pugi::xml_node &);
+  static bool isKey(pugi::xml_node &);
 
   static void panic_if(bool, const char *, ...);
   static void warn_if(bool, const char *, ...);

@@ -282,7 +282,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    if (strcmp(name, "sram") == 0) {
+    if (strcmp(name, "sram") == 0 && isSection(node)) {
       loadSRAM(node, &sram);
     }
     else if (strcmp(name, "dram") == 0) {
@@ -290,13 +290,13 @@ void Config::loadFrom(pugi::xml_node &section) {
            node2 = node2.next_sibling()) {
         auto name2 = node2.attribute("name").value();
 
-        if (strcmp(name2, "struct") == 0) {
+        if (strcmp(name2, "struct") == 0 && isSection(node2)) {
           loadDRAMStructure(node2, &dram);
         }
-        else if (strcmp(name2, "timing") == 0) {
+        else if (strcmp(name2, "timing") == 0 && isSection(node2)) {
           loadDRAMTiming(node2, &timing);
         }
-        else if (strcmp(name2, "power") == 0) {
+        else if (strcmp(name2, "power") == 0 && isSection(node2)) {
           loadDRAMPower(node2, &power);
         }
 
