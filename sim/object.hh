@@ -63,7 +63,7 @@ class Object {
   inline void schedule(Event e, uint64_t t) noexcept { engine->schedule(e, t); }
   inline void deschedule(Event e) noexcept { engine->deschedule(e); }
   inline bool isScheduled(Event e) noexcept { engine->isScheduled(e); }
-  inline void removeEvent(Event e) noexcept { engine->removeEvent(e); }
+  inline void destroyEvent(Event e) noexcept { engine->destroyEvent(e); }
 
   /* Helper APIs for Config */
   inline int64_t readConfigInt(Section s, uint32_t k) noexcept {

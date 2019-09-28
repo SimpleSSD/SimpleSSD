@@ -43,7 +43,7 @@ class Engine {
   virtual bool isScheduled(Event) = 0;
 
   //! Remove event.
-  virtual void removeEvent(Event) = 0;
+  virtual void destroyEvent(Event) = 0;
 };
 
 }  // namespace SimpleSSD
