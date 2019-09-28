@@ -27,6 +27,18 @@ typedef enum : uint8_t {
 
 class AbstractDRAM : public Object {
  protected:
+  struct Stats {
+    uint64_t count;
+    uint64_t size;
+
+    Stats() { clear(); }
+
+    void clear() {
+      count = 0;
+      size = 0;
+    }
+  };
+
   Config::DRAMStructure *pStructure;
   Config::DRAMTiming *pTiming;
   Config::DRAMPower *pPower;
@@ -34,10 +46,13 @@ class AbstractDRAM : public Object {
   Data::MemorySpecification spec;
   libDRAMPower *dramPower;
 
-  void convertMemspec();
-
+  Stats readStat;
+  Stats writeStat;
   double totalEnergy;  // Unit: pJ
   double totalPower;   // Unit: mW
+
+  void convertMemspec();
+  void updateStats(uint64_t);
 
  public:
   AbstractDRAM(ObjectData &);

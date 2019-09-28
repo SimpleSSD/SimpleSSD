@@ -31,16 +31,6 @@ SimpleDRAM::~SimpleDRAM() {
   // DO NOTHING
 }
 
-void SimpleDRAM::updateStats(uint64_t cycle) {
-  dramPower->calcWindowEnergy(cycle);
-
-  auto &energy = dramPower->getEnergy();
-  auto &power = dramPower->getPower();
-
-  totalEnergy += energy.window_energy;
-  totalPower = power.average_power;
-}
-
 void SimpleDRAM::read(uint64_t, uint64_t length, Event eid, void *context) {
   uint64_t beginAt = getTick();
   uint64_t pageCount = (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;

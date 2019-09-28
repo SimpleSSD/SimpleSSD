@@ -95,6 +95,16 @@ void AbstractDRAM::convertMemspec() {
   spec.memPowerSpec.vdd2 = pPower->pVDD[1];
 }
 
+void AbstractDRAM::updateStats(uint64_t cycle) {
+  dramPower->calcWindowEnergy(cycle);
+
+  auto &energy = dramPower->getEnergy();
+  auto &power = dramPower->getPower();
+
+  totalEnergy += energy.window_energy;
+  totalPower = power.average_power;
+}
+
 void AbstractDRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
   Stat temp;
 

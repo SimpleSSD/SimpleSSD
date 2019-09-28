@@ -16,27 +16,10 @@ namespace SimpleSSD::Memory::DRAM {
 
 class SimpleDRAM : public AbstractDRAM {
  private:
-  struct Stats {
-    uint64_t count;
-    uint64_t size;
-
-    Stats() { clear(); }
-
-    void clear() {
-      count = 0;
-      size = 0;
-    }
-  };
-
   uint64_t pageFetchLatency;
   double interfaceBandwidth;
 
   Event autoRefresh;
-
-  Stats readStat;
-  Stats writeStat;
-
-  void updateStats(uint64_t);
 
  public:
   SimpleDRAM(ObjectData &);
