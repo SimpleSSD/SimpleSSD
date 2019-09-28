@@ -65,6 +65,13 @@ class ConfigReader {
   bool writeFloat(Section, uint32_t, float);
   bool writeString(Section, uint32_t, std::string);
   bool writeBoolean(Section, uint32_t, bool);
+
+  // Interface for Memory::Config
+  Memory::Config::CacheParameter *getLevel1();
+  Memory::Config::CacheParameter *getLevel2();
+  Memory::Config::DRAMStructure *getDRAM();
+  Memory::Config::DRAMTiming *getDRAMTiming();
+  Memory::Config::DRAMPower *getDRAMPower();
 };
 
 }  // namespace SimpleSSD
