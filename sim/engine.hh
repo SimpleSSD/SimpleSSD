@@ -12,23 +12,26 @@
 
 #include <cinttypes>
 #include <functional>
-
-#ifdef DEBUG_SIMPLESSD
 #include <string>
-#endif
 
 namespace SimpleSSD {
 
-#ifdef DEBUG_SIMPLESSD
-struct _Event {
-  uint64_t eid;
-  std::string name;
-
-  _Event() : eid(0) {}
-};
-#endif
-
+/**
+ * \brief Event ID definition
+ *
+ * Unique ID of events in SimpleSSD. Event ID 0 is invalid.
+ */
 using Event = uint64_t;
+
+const Event InvalidEventID = 0;
+
+/**
+ * \brief Event function definition
+ *
+ * Event function will be called when the event triggered.
+ * First param is current tick, second param is user data passed in schedule
+ * function.
+ */
 using EventFunction = std::function<void(uint64_t, void *)>;
 
 /**
