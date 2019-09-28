@@ -58,8 +58,8 @@
         <int> DRAM model.
 
         Possible values:
-        0: Simple DRAM model based on atomic dram controller of gem5
-        1: DRAM model based on timing dram controller of gem5 <NOT IMPLEMENTED>
+         0: Simple DRAM model based on atomic dram controller of gem5
+         1: DRAM model based on timing dram controller of gem5 <NOT IMPLEMENTED>
        -->
       <config name="Model">0</config>
       <!-- DRAM structural configuration -->
@@ -135,6 +135,142 @@
         <config name="IDD6_1">0</config>
         <config name="VDD_0">1.350</config>
         <config name="VDD_1">0</config>
+      </section>
+    </section>
+  </section>
+  <!--
+    Host Interface Layer configuration
+   -->
+  <section name="hil">
+    <!-- <time> Request collection interval -->
+    <config name="WorkInterval">1us</config>
+    <!-- <int> Internal request queue size -->
+    <config name="RequestQueueSize">8</config>
+    <!--
+      Disk configuration
+
+      When using NVMe interface, "nsid" attribute specifies corresponding
+      Namespace ID.
+      When using other interfaces, only "nsid=1" section will be used.
+     -->
+    <section name="disk" nsid="1">
+      <!-- <bool> Enable disk image mount -->
+      <config name="EnableDiskImage">false</config>
+      <!--
+        <bool> Strick size checking
+
+        If true, you must specify disk image which has exactly same size with
+        current volume size.
+       -->
+      <config name="StrickSizecheck">false</config>
+      <!--
+        <bool> Use copy-on-write mode
+
+        If true, data written to this volume will not saved to disk image.
+        Set true when you simulate multiple instances with a disk image.
+        Set false when you are creating disk image for simulation.
+       -->
+      <config name="UseCopyOnWriteDisk">true</config>
+      <!-- <str> Path to disk image -->
+      <config name="DiskImagePath"></config>
+    </section>
+    <!--
+      Interface and bus configuration
+
+      NVMe uses "pcie" and "axi"
+       PCIe RC -> PCIe -> PCIe EP -> AXI (SSD memory bus)
+      SATA uses "pcie", "sata" and "axi"
+       PCIe RC -> PCIe -> HBA -> SATA -> SATA PHY -> AXI (SSD memory bus)
+      UFS uses "mphy" and "axi"
+       System bus -> UFSHCI -> MPHY -> UFS Device -> AXI (SSD memory bus)
+     -->
+    <section name="interface">
+      <!-- PCIe configuration -->
+      <section name="pcie">
+        <!-- <int> PCIe Generation (1 ~ 3) -->
+        <config name="Generation">3</config>
+        <!-- <int> PCIe Lane (1 ~ 32, power of 2) -->
+        <config name="Lane">4</config>
+      </section>
+      <!-- SATA configuration -->
+      <section name="sata">
+        <!-- <int> SATA Generation (1 ~ 3) -->
+        <config name="Generation">3</config>
+      </section>
+      <!-- MIPI M-PHY configuration -->
+      <section name="mphy">
+        <!--
+          <int> MIPI M-PHY Mode
+
+          Possible values:
+           1: HS-G1 (High Speed Gear 1)
+           2: HS-G2
+           3: HS-G3
+           4: HS-G4
+         -->
+         <config name="Mode">3</config>
+         <!-- <int> M-PHY Lane -->
+         <config name="Lane">2</config>
+      </section>
+      <!-- AXI4 configuration -->
+      <section name="axi">
+        <!-- <int> AXI bus width (32 ~ 1024, power of 2) -->
+        <config name="Width">256</config>
+        <!-- <int> AXI bus speed in Hz -->
+        <config name="Clock">100M</config>
+      </section>
+    </section>
+    <!--
+      NVMe specific configuration
+     -->
+    <section name="nvme">
+      <!-- <int> Maximum number of submission queues -->
+      <config name="MaxSQ">16</config>
+      <!-- <int> Maximum number of completion queues -->
+      <config name="MaxCQ">16</config>
+      <!--
+        <int> Weighted Round Robin High Priority
+
+        Specify maximum number of high priority requests should be inserted
+        before handling medium priority requests.
+       -->
+      <config name="WRRHigh">2</config>
+      <!--
+        <int> Weighted Round Robin Medium Priority
+
+        Specify maximum number of medium priority requests should be inserted
+        before handling low priority requests.
+       -->
+      <config name="WRRMedium">2</config>
+      <!-- <int> Maximum number of namespaces (See NVMe spec) -->
+      <config name="NN">16</config>
+      <!--
+        <int> Initial number of namespaces
+
+        Specify number of namespaces to create at beginning. You must specify
+        per-namespace configuration sections.
+       -->
+      <config name="DefaultNamespace">1</config>
+      <!--
+        Per-namespace configuration
+
+        You may want to add disk section per namespace.
+       -->
+      <section name="namespace" nsid="1">
+        <!--
+          <int> Logical Block size
+
+          Must be power of 2, larger and equal to 512. In Linux, logical block
+          size larger than memory page size (usually 4K) is not supported.
+         -->
+        <config name="LBASize">512</config>
+        <!--
+          <int> Capacity in bytes
+
+          Specify 0 to create evenly divided namespaces. This valus should be
+          aligned with LBASize.
+         -->
+        <config name="Capacity">0</config>
       </section>
     </section>
   </section>
