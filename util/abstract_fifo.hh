@@ -33,7 +33,7 @@ class AbstractFIFO : public Object {
   void writeDone(void *);
 
  public:
-  AbstractFIFO(ObjectData &o);
+  AbstractFIFO(ObjectData &o, std::string);
   virtual ~AbstractFIFO();
 
   void read(void *);

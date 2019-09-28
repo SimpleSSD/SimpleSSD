@@ -9,7 +9,7 @@
 
 namespace SimpleSSD {
 
-AbstractFIFO::AbstractFIFO(ObjectData &o)
+AbstractFIFO::AbstractFIFO(ObjectData &o, std::string prefix)
     : Object(o),
       readPending(false),
       writePending(false),
@@ -17,9 +17,9 @@ AbstractFIFO::AbstractFIFO(ObjectData &o)
       eventWriteDone(InvalidEventID) {
   // Create events
   eventReadDone = createEvent([this](uint64_t, void *c) { readDone(c); },
-                              "SimpleSSD::AbstractFIFO::eventReadDone");
+                              prefix + "::eventReadDone");
   eventWriteDone = createEvent([this](uint64_t, void *c) { writeDone(c); },
-                               "SimpleSSD::AbstractFIFO::eventWriteDone");
+                               prefix + "::eventWriteDone");
 }
 
 AbstractFIFO::~AbstractFIFO() {}
@@ -84,9 +84,13 @@ void AbstractFIFO::write(void *data) {
   }
 }
 
-uint64_t AbstractFIFO::preSubmitRead(void *) { return 0; }
+uint64_t AbstractFIFO::preSubmitRead(void *) {
+  return 0;
+}
 
-uint64_t AbstractFIFO::preSubmitWrite(void *) { return 0; }
+uint64_t AbstractFIFO::preSubmitWrite(void *) {
+  return 0;
+}
 
 void AbstractFIFO::postReadDone(void *) {}
 
