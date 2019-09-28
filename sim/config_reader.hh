@@ -42,11 +42,11 @@ class ConfigReader {
  public:
   ConfigReader();
   ConfigReader(const ConfigReader &) = delete;
-  ConfigReader(ConfigReader &&) = default;
+  ConfigReader(ConfigReader &&) noexcept = default;
   ~ConfigReader();
 
   ConfigReader &operator=(const ConfigReader &) = delete;
-  ConfigReader &operator=(ConfigReader &&) noexcept = default;
+  ConfigReader &operator=(ConfigReader &&) noexcept noexcept = default;
 
   void load(const char *) noexcept;
   void load(std::string &) noexcept;

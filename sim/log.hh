@@ -49,7 +49,7 @@ class Log {
  public:
   Log();
   Log(const Log &) = delete;
-  Log(Log &&) = default;
+  Log(Log &&) noexcept = default;
   ~Log();
 
   Log &operator=(const Log &) = delete;

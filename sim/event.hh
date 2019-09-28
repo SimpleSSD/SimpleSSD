@@ -45,7 +45,7 @@ class Request {
   Request(uint64_t a, uint64_t l, Event e, void *c)
       : offset(a), length(l), eid(e), context(c) {}
   Request(const Request &) = delete;
-  Request(Request &&) = default;
+  Request(Request &&) noexcept = default;
 
   Request &operator=(const Request &) = delete;
   Request &operator=(Request &&) = default;
@@ -59,7 +59,7 @@ class RequestWithData : public Request {
   RequestWithData(uint64_t a, uint64_t l, Event e, void *c, uint8_t *b)
       : Request(a, l, e, c), buffer(b) {}
   RequestWithData(const RequestWithData &) = delete;
-  RequestWithData(RequestWithData &&) = default;
+  RequestWithData(RequestWithData &&) noexcept = default;
 
   RequestWithData &operator=(const RequestWithData &) = delete;
   RequestWithData &operator=(RequestWithData &&) = default;

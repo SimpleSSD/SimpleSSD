@@ -43,7 +43,7 @@ class SimpleSSD {
  public:
   SimpleSSD();
   SimpleSSD(const SimpleSSD &) = delete;
-  SimpleSSD(SimpleSSD &&) = default;
+  SimpleSSD(SimpleSSD &&) noexcept = default;
   ~SimpleSSD();
 
   SimpleSSD &operator=(const SimpleSSD &) = delete;
