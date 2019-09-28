@@ -115,11 +115,41 @@ void AbstractDRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
   temp.name = prefix + "power";
   temp.desc = "Total power comsumed by embedded DRAM (mW)";
   list.push_back(temp);
+
+  temp.name = prefix + "read.request_count";
+  temp.desc = "Read request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "read.bytes";
+  temp.desc = "Read data size in byte";
+  list.push_back(temp);
+
+  temp.name = prefix + "write.request_count";
+  temp.desc = "Write request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "write.bytes";
+  temp.desc = "Write data size in byte";
+  list.push_back(temp);
+
+  temp.name = prefix + "request_count";
+  temp.desc = "Total request count";
+  list.push_back(temp);
+
+  temp.name = prefix + "bytes";
+  temp.desc = "Total data size in byte";
+  list.push_back(temp);
 }
 
 void AbstractDRAM::getStatValues(std::vector<double> &values) {
   values.push_back(totalEnergy);
   values.push_back(totalPower);
+  values.push_back(readStat.count);
+  values.push_back(readStat.size);
+  values.push_back(writeStat.count);
+  values.push_back(writeStat.size);
+  values.push_back(readStat.count + writeStat.count);
+  values.push_back(readStat.size + writeStat.size);
 }
 
 void AbstractDRAM::resetStatValues() {
@@ -128,6 +158,9 @@ void AbstractDRAM::resetStatValues() {
 
   totalEnergy = 0.0;
   totalPower = 0.0;
+
+  readStat.clear();
+  writeStat.clear();
 }
 
 }  // namespace SimpleSSD::Memory::DRAM

@@ -28,10 +28,6 @@ class SimpleDRAM : public AbstractDRAM {
   void read(uint64_t, uint64_t, Event, void * = nullptr) override;
   void write(uint64_t, uint64_t, Event, void * = nullptr) override;
 
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
-
   void createCheckpoint() noexcept override;
   void restoreCheckpoint() noexcept override;
 };
