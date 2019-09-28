@@ -27,17 +27,13 @@ class Config : public BaseConfig {
 
   enum Model : uint8_t {
     Simple,
-    SetAssociative,
     Full = 1,
   };
 
-  //! Cache structure parameters
-  struct CacheParameter {
-    Model model;
-    uint8_t way;
-    uint16_t lineSize;
-    uint32_t set;
+  //! SRAM structure parameters
+  struct SRAMStructure {
     uint64_t size;
+    uint64_t lineSize;
     uint64_t latency;
   };
 
@@ -97,19 +93,18 @@ class Config : public BaseConfig {
   };
 
  private:
-  CacheParameter level1;
-  CacheParameter level2;
+  SRAMStructure sram;
   DRAMStructure dram;
   DRAMTiming timing;
   DRAMPower power;
 
   Model dramModel;
 
-  void loadCache(pugi::xml_node &, CacheParameter *);
+  void loadSRAM(pugi::xml_node &, SRAMStructure *);
   void loadDRAMStructure(pugi::xml_node &, DRAMStructure *);
   void loadDRAMTiming(pugi::xml_node &, DRAMTiming *);
   void loadDRAMPower(pugi::xml_node &, DRAMPower *);
-  void storeCache(pugi::xml_node &, CacheParameter *);
+  void storeSRAM(pugi::xml_node &, SRAMStructure *);
   void storeDRAMStructure(pugi::xml_node &, DRAMStructure *);
   void storeDRAMTiming(pugi::xml_node &, DRAMTiming *);
   void storeDRAMPower(pugi::xml_node &, DRAMPower *);
@@ -127,8 +122,7 @@ class Config : public BaseConfig {
   uint64_t readUint(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
 
-  CacheParameter *getLevel1();
-  CacheParameter *getLevel2();
+  SRAMStructure *getSRAM();
   DRAMStructure *getDRAM();
   DRAMTiming *getDRAMTiming();
   DRAMPower *getDRAMPower();

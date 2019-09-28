@@ -271,12 +271,8 @@ bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
   return ret;
 }
 
-Memory::Config::CacheParameter *ConfigReader::getLevel1() {
-  return memConfig.getLevel1();
-}
-
-Memory::Config::CacheParameter *ConfigReader::getLevel2() {
-  return memConfig.getLevel2();
+Memory::Config::SRAMStructure *ConfigReader::getSRAM() {
+  return memConfig.getSRAM();
 }
 
 Memory::Config::DRAMStructure *ConfigReader::getDRAM() {

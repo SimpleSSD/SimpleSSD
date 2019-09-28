@@ -10,7 +10,6 @@
 namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
-const char NAME_WAY[] = "Way";
 const char NAME_LINE_SIZE[] = "LineSize";
 const char NAME_SIZE[] = "Size";
 const char NAME_LATENCY[] = "Latency";
@@ -68,19 +67,10 @@ const char NAME_VDD_0[] = "VDD_0";
 const char NAME_VDD_1[] = "VDD_1";
 
 Config::Config() {
-  /* 32KB L1 cache */
-  level1.model = Model::Simple;
-  level1.way = 4;
-  level1.lineSize = 64;
-  level1.size = 32768;
-  level1.latency = 5000;
-
-  /* 32MB L2 cache */
-  level2.model = Model::Simple;
-  level2.way = 8;
-  level2.lineSize = 64;
-  level2.size = 33554432;
-  level2.latency = 20000;
+  /* 32MB SRAM */
+  sram.lineSize = 64;
+  sram.size = 33554432;
+  sram.latency = 20;
 
   /* LPDDR3-1600 4Gbit 1x32 */
   dramModel = Model::Simple;
@@ -146,10 +136,8 @@ Config::Config() {
 
 Config::~Config() {}
 
-void Config::loadCache(pugi::xml_node &section, CacheParameter *param) {
+void Config::loadSRAM(pugi::xml_node &section, SRAMStructure *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_MODEL, Model, param->model);
-    LOAD_NAME_UINT_TYPE(node, NAME_WAY, uint8_t, param->way);
     LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, param->lineSize);
     LOAD_NAME_UINT(node, NAME_SIZE, param->size);
     LOAD_NAME_UINT(node, NAME_LATENCY, param->latency);
@@ -223,9 +211,7 @@ void Config::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   }
 }
 
-void Config::storeCache(pugi::xml_node &section, CacheParameter *param) {
-  STORE_NAME_UINT(section, NAME_MODEL, param->model);
-  STORE_NAME_UINT(section, NAME_WAY, param->way);
+void Config::storeSRAM(pugi::xml_node &section, SRAMStructure *param) {
   STORE_NAME_UINT(section, NAME_LINE_SIZE, param->lineSize);
   STORE_NAME_UINT(section, NAME_SIZE, param->size);
   STORE_NAME_UINT(section, NAME_LATENCY, param->latency);
@@ -296,11 +282,8 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    if (strcmp(name, "level1") == 0) {
-      loadCache(node, &level1);
-    }
-    else if (strcmp(name, "level2") == 0) {
-      loadCache(node, &level2);
+    if (strcmp(name, "sram") == 0) {
+      loadSRAM(node, &sram);
     }
     else if (strcmp(name, "dram") == 0) {
       for (auto node2 = node.first_child(); node2;
@@ -326,11 +309,8 @@ void Config::loadFrom(pugi::xml_node &section) {
 void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node, node2;
 
-  STORE_SECTION(section, "level1", node);
-  storeCache(node, &level1);
-
-  STORE_SECTION(section, "level2", node);
-  storeCache(node, &level2);
+  STORE_SECTION(section, "sram", node);
+  storeSRAM(node, &sram);
 
   STORE_SECTION(section, "dram", node);
   STORE_NAME_UINT(node, NAME_MODEL, dramModel);
@@ -346,15 +326,13 @@ void Config::storeTo(pugi::xml_node &section) {
 }
 
 void Config::update() {
-  // Fill cache param
-  level1.set = level1.size / level1.way / level1.lineSize;
-  level2.set = level2.size / level2.way / level2.lineSize;
+  // Validate SRAM
+  panic_if(sram.lineSize == 0, "Invalid line size");
+  panic_if(sram.latency == 0, "Invalid latency");
 
-  // Validate cache
-  panic_if(level1.set * level1.way * level1.lineSize != level1.size,
-           "Level 1 cache size is not aligned");
-  panic_if(level2.set * level2.way * level2.lineSize != level2.size,
-           "Level 2 cache size is not aligned");
+  if (sram.size > 0) {
+    panic_if(sram.lineSize % sram.size != 0, "Size not aligned");
+  }
 }
 
 uint64_t Config::readUint(uint32_t idx) {
@@ -381,12 +359,8 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-Config::CacheParameter *Config::getLevel1() {
-  return &level1;
-}
-
-Config::CacheParameter *Config::getLevel2() {
-  return &level2;
+Config::SRAMStructure *Config::getSRAM() {
+  return &sram;
 }
 
 Config::DRAMStructure *Config::getDRAM() {

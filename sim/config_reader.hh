@@ -67,8 +67,7 @@ class ConfigReader {
   bool writeBoolean(Section, uint32_t, bool);
 
   // Interface for Memory::Config
-  Memory::Config::CacheParameter *getLevel1();
-  Memory::Config::CacheParameter *getLevel2();
+  Memory::Config::SRAMStructure *getSRAM();
   Memory::Config::DRAMStructure *getDRAM();
   Memory::Config::DRAMTiming *getDRAMTiming();
   Memory::Config::DRAMPower *getDRAMPower();
