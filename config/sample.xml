@@ -40,8 +40,7 @@
   </section>
   <!--
     Memory subsystem configuration.
-    Defines caches and DRAM.
-    No instruction cache - we don't have functionally operating CPU model
+    Defines SRAM and DRAM.
    -->
   <section name="memory">
     <!-- SRAM -->
