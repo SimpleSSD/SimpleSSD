@@ -11,11 +11,18 @@
 #include <vector>
 
 #include "sim/engine.hh"
+#include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
 const std::string idPrefix[] = {
     "global",  //!< ID::Common
+};
+
+const std::string logPrefix[] = {
+    "info",   //!< LogID::Info
+    "warn",   //!< LogID::Warn
+    "panic",  //!< LogID::Panic
 };
 
 //! A constructor
@@ -43,20 +50,26 @@ void Log::init(Engine *e, std::ostream *outfile, std::ostream *errfile,
                std::ostream *debugfile) noexcept {
   engine = e;
 
-  if (!outfile->good()) {
+  if (UNLIKELY(outfile == nullptr || errfile == nullptr || debugfile == nullptr)) {
+    std::cerr << "panic: Got null-pointer" << std::endl;
+
+    abort();
+  }
+
+  if (UNLIKELY(!outfile->good())) {
     // We don't have panic yet
     std::cerr << "panic: outfile is not opened" << std::endl;
 
     abort();
   }
 
-  if (!errfile->good()) {
+  if (UNLIKELY(!errfile->good())) {
     std::cerr << "panic: errfile is not opened" << std::endl;
 
     abort();
   }
 
-  if (!debugfile->good()) {
+  if (UNLIKELY(!debugfile->good())) {
     std::cerr << "panic: debugfile is not opened" << std::endl;
 
     abort();
@@ -85,74 +98,62 @@ void Log::deinit() noexcept {
 }
 
 //! Print log and terminate program
-void Log::panic(const char *format, ...) noexcept {
-  if (err->good()) {
-    va_list args;
+void Log::print(LogID id, const char *format, va_list args) noexcept {
+  std::ostream *stream = nullptr;
 
-    *err << engine->getTick() << ": panic: ";
+  if (UNLIKELY(!inited)) {
+    std::cerr << "panic: Log system not initialized" << std::endl;
 
-    va_start(args, format);
-    print(err, format, args);
-    va_end(args);
+    abort();
+  }
 
-    *err << std::endl;
+  switch (id) {
+    case LogID::Info:
+      stream = out;
+
+      break;
+    case LogID::Warn:
+    case LogID::Panic:
+      stream = err;
+
+      break;
+    default:
+      std::cerr << "panic: Undefined Log ID: " << (uint32_t)id << std::endl;
+
+      abort();
+
+      break;
+  }
+
+  if (LIKELY(err->good())) {
+    *stream << engine->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
+
+    print(stream, format, args);
+
+    *stream << std::endl;
   }
   else {
-    std::cerr << "panic: errfile is not opened" << std::endl;
+    std::cerr << "panic: Stream is not opened" << std::endl;
+
+    abort();
   }
 
-  abort();
-}
-
-//! Print log
-void Log::warn(const char *format, ...) noexcept {
-  if (err->good()) {
-    va_list args;
-
-    *err << engine->getTick() << ": warn: ";
-
-    va_start(args, format);
-    print(err, format, args);
-    va_end(args);
-
-    *err << std::endl;
-  }
-  else {
-    std::cerr << "panic: errfile is not opened" << std::endl;
-
+  if (id == LogID::Panic) {
     abort();
   }
 }
 
-//! Print log
-void Log::info(const char *format, ...) noexcept {
-  if (out->good()) {
-    va_list args;
-
-    *out << engine->getTick() << ": warn: ";
-
-    va_start(args, format);
-    print(out, format, args);
-    va_end(args);
-
-    *out << std::endl;
-  }
-  else {
-    std::cerr << "panic: outfile is not opened" << std::endl;
+void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
+  if (UNLIKELY(!inited)) {
+    std::cerr << "panic: Log system not initialized" << std::endl;
 
     abort();
   }
-}
 
-void Log::debugprint(ID id, const char *format, ...) noexcept {
-  if (debug->good()) {
-    va_list args;
+  if (LIKELY(debug->good())) {
+    *debug << engine->getTick() << ": " << idPrefix[(uint32_t)id] << ": ";
 
-    *debug << engine->getTick() << idPrefix[(uint32_t)id] << ": warn: ";
-
-    va_start(args, format);
     print(debug, format, args);
-    va_end(args);
 
     *debug << std::endl;
   }

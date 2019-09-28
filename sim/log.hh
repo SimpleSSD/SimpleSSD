@@ -25,8 +25,14 @@ class Engine;
  */
 class Log {
  public:
-  enum class ID : uint32_t {
+  enum class DebugID : uint32_t {
     Common,
+  };
+
+  enum class LogID : uint32_t {
+    Info,
+    Warn,
+    Panic,
   };
 
  private:
@@ -38,7 +44,7 @@ class Log {
   std::ostream *debug;  //!< File for debug printout
 
   bool checkStandardIO(std::ostream *) noexcept;
-  void print(std::ostream *, const char *, va_list) noexcept;
+  inline void print(std::ostream *, const char *, va_list) noexcept;
 
  public:
   Log();
@@ -52,10 +58,8 @@ class Log {
   void init(Engine *, std::ostream *, std::ostream *, std::ostream *) noexcept;
   void deinit() noexcept;
 
-  void panic(const char *, ...) noexcept;
-  void warn(const char *, ...) noexcept;
-  void info(const char *, ...) noexcept;
-  void debugprint(ID, const char *, ...) noexcept;
+  void print(LogID, const char *, va_list) noexcept;
+  void debugprint(DebugID, const char *, va_list) noexcept;
 };
 
 }  // namespace SimpleSSD

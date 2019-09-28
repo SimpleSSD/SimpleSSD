@@ -13,31 +13,29 @@
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/log.hh"
+#include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
-#define panic(format, ...)                                                     \
-  { log->panic(format, __VA_ARGS__); }
-
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
-    if (cond) {                                                                \
-      log->panic(format, __VA_ARGS__);                                         \
+    if (UNLIKELY(cond)) {                                                      \
+      panic(format, ##__VA_ARGS__);                                            \
     }                                                                          \
   }
-
-#define warn(format, ...)                                                      \
-  { log->warn(format, __VA_ARGS__); }
 
 #define warn_if(cond, format, ...)                                             \
   {                                                                            \
-    if (cond) {                                                                \
-      log->warn(format, __VA_ARGS__);                                          \
+    if (UNLIKELY(cond)) {                                                      \
+      warn(format, ##__VA_ARGS__);                                             \
     }                                                                          \
   }
 
-#define info(format, ...)                                                      \
-  { log->info(format, __VA_ARGS__); }
+using ObjectData = struct {
+  Engine *engine;
+  ConfigReader *config;
+  Log *log;
+};
 
 /**
  * \brief Object object declaration
@@ -84,8 +82,38 @@ class Object {
     return config->readBoolean(s, k);
   }
 
+  /* Helper APIs for Log */
+  inline void info(const char *format, ...) noexcept {
+    va_list args;
+
+    va_start(args, format);
+    log->print(Log::LogID::Info, format, args);
+    va_end(args);
+  }
+  inline void warn(const char *format, ...) noexcept {
+    va_list args;
+
+    va_start(args, format);
+    log->print(Log::LogID::Warn, format, args);
+    va_end(args);
+  }
+  inline void panic(const char *format, ...) noexcept {
+    va_list args;
+
+    va_start(args, format);
+    log->print(Log::LogID::Panic, format, args);
+    va_end(args);
+  }
+  inline void debugprint(Log::DebugID id, const char *format, ...) noexcept {
+    va_list args;
+
+    va_start(args, format);
+    log->debugprint(id, format, args);
+    va_end(args);
+  }
+
  public:
-  Object(Engine *e, ConfigReader *c, Log *l) : engine(e), config(c), log(l) {}
+  Object(ObjectData &o) : engine(o.engine), config(o.config), log(o.log) {}
   virtual ~Object() {}
 
   /* Statistic API */
