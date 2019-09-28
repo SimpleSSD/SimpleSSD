@@ -27,22 +27,21 @@ class AbstractFIFO : public Object {
   std::queue<void *> readQueue;
   std::queue<void *> writeQueue;
 
+  void read(void *);
   void submitRead();
   void readDone(void *);
+  void write(void *);
   void submitWrite();
   void writeDone(void *);
-
- public:
-  AbstractFIFO(ObjectData &o, std::string);
-  virtual ~AbstractFIFO();
-
-  void read(void *);
-  void write(void *);
 
   virtual uint64_t preSubmitRead(void *);
   virtual uint64_t preSubmitWrite(void *);
   virtual void postReadDone(void *);
   virtual void postWriteDone(void *);
+
+ public:
+  AbstractFIFO(ObjectData &, std::string);
+  virtual ~AbstractFIFO();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
