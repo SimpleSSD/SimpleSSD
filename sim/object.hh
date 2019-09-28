@@ -60,7 +60,9 @@ class Object {
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return engine->createEvent(ef, s);
   }
-  inline void schedule(Event e, uint64_t t) noexcept { engine->schedule(e, t); }
+  inline void schedule(Event e, uint64_t t, void *c = nullptr) noexcept {
+    engine->schedule(e, t, c);
+  }
   inline void deschedule(Event e) noexcept { engine->deschedule(e); }
   inline bool isScheduled(Event e) noexcept { engine->isScheduled(e); }
   inline void destroyEvent(Event e) noexcept { engine->destroyEvent(e); }
