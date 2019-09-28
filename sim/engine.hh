@@ -12,6 +12,7 @@
 
 #include <cinttypes>
 #include <functional>
+#include <queue>
 #include <string>
 
 namespace SimpleSSD {
@@ -33,6 +34,9 @@ const Event InvalidEventID = 0;
  * function.
  */
 using EventFunction = std::function<void(uint64_t, void *)>;
+
+//! Event Queue definition
+using EventQueue = std::queue<Event>;
 
 /**
  * \brief Engine object declaration
