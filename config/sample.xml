@@ -55,7 +55,9 @@
     <!-- DRAM -->
     <section name="dram">
       <!--
-        <int> DRAM model. Possible values:
+        <int> DRAM model.
+
+        Possible values:
         0: Simple DRAM model based on atomic dram controller of gem5
         1: DRAM model based on timing dram controller of gem5 <NOT IMPLEMENTED>
        -->
