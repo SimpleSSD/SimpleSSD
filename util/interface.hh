@@ -11,34 +11,37 @@
 #define __UTIL_INTERFACE__
 
 #include <cinttypes>
+#include <functional>
 
 namespace SimpleSSD {
+
+using DelayFunction = std::function<uint64_t(uint64_t)>;
 
 // SimpleSSD::PCIExpress
 namespace PCIExpress {
 
-typedef enum {
-  PCIE_1_X,  // PCI Express Gen. 1.x
-  PCIE_2_X,  // PCI Express Gen. 2.x
-  PCIE_3_X,  // PCI Express Gen. 3.x
-  PCIE_NUM
-} PCIE_GEN;
+enum class Generation : uint8_t {
+  Gen1,  // PCI Express Gen. 1.x
+  Gen2,  // PCI Express Gen. 2.x
+  Gen3,  // PCI Express Gen. 3.x
+  Size,
+};
 
-uint64_t calculateDelay(PCIE_GEN, uint8_t, uint64_t);
+DelayFunction makeFunction(Generation, uint8_t);
 
 }  // namespace PCIExpress
 
 // SimpleSSD::SATA
 namespace SATA {
 
-typedef enum {
-  SATA_1_0,  // SATA 1.0 (1.5Gbps)
-  SATA_2_0,  // SATA 2.0 (3Gbps)
-  SATA_3_0,  // SATA 3.0/3.1 (6Gbps)
-  SATA_NUM
-} SATA_GEN;
+enum class Generation : uint8_t {
+  Gen1,  // SATA 1.0 (1.5Gbps)
+  Gen2,  // SATA 2.0 (3Gbps)
+  Gen3,  // SATA 3.0/3.1 (6Gbps)
+  Size
+};
 
-uint64_t calculateDelay(SATA_GEN, uint64_t);
+DelayFunction makeFunction(Generation, uint8_t);
 
 }  // namespace SATA
 
@@ -48,22 +51,22 @@ namespace MIPI {
 // SimpleSSD:MIPI::M_PHY
 namespace M_PHY {
 
-typedef enum {
-  HS_G1,  // High Speed Gear 1
-  HS_G2,  // High Speed Gear 2
-  HS_G3,  // High Speed Gear 3
-  HS_G4,  // High Speed Gear 4
-  HS_NUM
-} M_PHY_MODE;
+enum class Mode : uint8_t {
+  HighSpeed_Gear1,  // High Speed Gear 1
+  HighSpeed_Gear2,  // High Speed Gear 2
+  HighSpeed_Gear3,  // High Speed Gear 3
+  HighSpeed_Gear4,  // High Speed Gear 4
+  Size
+};
 
-uint64_t calculateDelay(M_PHY_MODE, uint8_t, uint64_t);
+DelayFunction makeFunction(M_PHY::Mode, uint8_t);
 
 }  // namespace M_PHY
 
 // SimpleSSD::MIPI::UniPro
 namespace UniPro {
 
-uint64_t calculateDelay(M_PHY::M_PHY_MODE, uint8_t, uint64_t);
+DelayFunction makeFunction(M_PHY::Mode, uint8_t);
 
 }  // namespace UniPro
 
@@ -75,21 +78,21 @@ namespace ARM {
 // SimpleSSD::ARM::AXI
 namespace AXI {
 
-typedef enum {
-  BUS_32BIT = 4,
-  BUS_64BIT = 8,
-  BUS_128BIT = 16,
-  BUS_256BIT = 32,
-  BUS_512BIT = 64,
-  BUS_1024BIT = 128,
-} BUS_WIDTH;
+enum class Width : uint8_t {
+  Bit32 = 4,
+  Bit64 = 8,
+  Bit128 = 16,
+  Bit256 = 32,
+  Bit512 = 64,
+  Bit1024 = 128,
+};
 
-uint64_t calculateDelay(uint64_t, BUS_WIDTH, uint64_t);
+DelayFunction makeFunction(uint64_t, Width);
 
 // SimpleSSD::ARM::AXI::Stream
 namespace Stream {
 
-uint64_t calculateDelay(uint64_t, BUS_WIDTH, uint64_t);
+DelayFunction makeFunction(uint64_t, Width);
 
 }  // namespace Stream
 
