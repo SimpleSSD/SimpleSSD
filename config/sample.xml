@@ -242,8 +242,8 @@
         before handling low priority requests.
        -->
       <config name="WRRMedium">2</config>
-      <!-- <int> Maximum number of namespaces (See NVMe spec) -->
-      <config name="NN">16</config>
+      <!-- <int> Maximum number of namespaces supported by controller -->
+      <config name="MaxNamespace">16</config>
       <!--
         <int> Initial number of namespaces
 
@@ -260,8 +260,8 @@
         <!--
           <int> Logical Block size
 
-          Must be power of 2, larger and equal to 512. In Linux, logical block
-          size larger than memory page size (usually 4K) is not supported.
+          Must be power of 2, greater than and equal to 512. In Linux, logical
+          block size greater than page size (usually 4K) is not supported.
          -->
         <config name="LBASize">512</config>
         <!--
