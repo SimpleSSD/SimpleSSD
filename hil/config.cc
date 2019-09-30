@@ -7,6 +7,10 @@
 
 #include "hil/config.hh"
 
+#include <filesystem>
+
+#include "util/algorithm.hh"
+
 namespace SimpleSSD::HIL {
 
 const char NAME_WORK_INTERVAL[] = "WorkInterval";
@@ -165,7 +169,7 @@ void Config::storeNVMe(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_MAX_NAMESPACE, maxNamespace);
   STORE_NAME_UINT(section, NAME_DEFAULT_NAMESPACE, defaultNamespace);
 
-  for (auto ns : namespaceList) {
+  for (auto &ns : namespaceList) {
     STORE_SECTION(section, "namespace", node);
 
     storeNamespace(node, &ns);
@@ -209,7 +213,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_SECTION(section, "interface", node);
   storeInterface(node);
 
-  for (auto disk : diskList) {
+  for (auto &disk : diskList) {
     STORE_SECTION(section, "disk", node);
 
     storeDisk(node, &disk);
@@ -220,8 +224,80 @@ void Config::storeTo(pugi::xml_node &section) {
 }
 
 void Config::update() {
+  // Validates
+  warn_if(workInterval >= 1000000000, "Work interval %" PRIu64 " is too large.",
+          workInterval);
+
+  pcieGen = (PCIExpress::Generation)((uint8_t)pcieGen - 1);
+  panic_if((uint8_t)pcieGen > 2, "Invalid PCIe generation %u.",
+           (uint8_t)pcieGen + 1);
+  panic_if(popcount(pcieLane) != 1 || pcieLane > 32, "Invalid PCIe lane %u.",
+           pcieLane);
+
+  sataGen = (SATA::Generation)((uint8_t)sataGen - 1);
+  panic_if((uint8_t)sataGen > 2, "Invalid SATA generation %u.",
+           (uint8_t)sataGen + 1);
+
+  panic_if((uint8_t)mphyMode > 3, "Invalid M-PHY mode %u.", (uint8_t)mphyMode);
+  panic_if(mphyLane == 0 || mphyLane > 2, "Invalid M-PHY lane %u.", mphyLane);
+
+  panic_if(popcount((uint16_t)axiWidth) != 1 || (uint16_t)axiWidth > 1024 ||
+               (uint16_t)axiWidth < 32,
+           "Invalid AXI bus width %u.", (uint16_t)axiWidth);
+  axiWidth = (ARM::AXI::Width)((uint16_t)axiWidth / 8);
+
+  for (auto &disk : diskList) {
+    panic_if(
+        disk.nsid == 0 || disk.nsid == 0xFFFFFFFF || disk.nsid > maxNamespace,
+        "Invalid namespace ID %u in disk config.", disk.nsid);
+
+    if (disk.enable) {
+      panic_if(!std::filesystem::exists(disk.path),
+               "Specified disk image %s does not exists.", disk.path.c_str());
+    }
+  }
+
+  panic_if(maxSQ < 2, "NVMe requires at least two submission queues.");
+  panic_if(maxCQ < 2, "NVMe requires at least two completion queues.");
+  panic_if(wrrHigh == 0, "Invalid weighted-round-robin high priority value %u.",
+           wrrHigh);
+  panic_if(wrrMedium == 0,
+           "Invalid weighted-round-robin medium priority value %u.", wrrMedium);
+  panic_if(maxNamespace == 0, "Invalid maximum namespace value %u.",
+           maxNamespace);
+  panic_if(defaultNamespace > maxNamespace,
+           "Too many default namespaces (%u > %u).", defaultNamespace,
+           maxNamespace);
+
+  for (auto &ns : namespaceList) {
+    panic_if(ns.nsid == 0 || ns.nsid == 0xFFFFFFFF || ns.nsid > maxNamespace,
+             "Invalid namespace ID %u in namespace config.", ns.nsid);
+
+    panic_if(popcount(ns.lbaSize) != 1 || ns.lbaSize < 512,
+             "Invalid logical block size %u.", ns.lbaSize);
+  }
+
   // Make link between disk and namespace
-  // Convert axi width
+  std::sort(
+      diskList.begin(), diskList.end(),
+      [](const Disk &a, const Disk &b) -> bool { return a.nsid < b.nsid; });
+  std::sort(namespaceList.begin(), namespaceList.end(),
+            [](const Namespace &a, const Namespace &b) -> bool {
+              return a.nsid < b.nsid;
+            });
+
+  // Simple O(n^2) algorithm
+  for (auto &ns : namespaceList) {
+    ns.pDisk = nullptr;
+
+    for (auto &disk : diskList) {
+      if (ns.nsid == disk.nsid) {
+        ns.pDisk = &disk;
+
+        break;
+      }
+    }
+  }
 }
 
 uint64_t Config::readUint(uint32_t idx) {

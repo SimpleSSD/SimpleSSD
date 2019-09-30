@@ -175,13 +175,13 @@
           <int> MIPI M-PHY Mode
 
           Possible values:
-           1: HS-G1 (High Speed Gear 1)
-           2: HS-G2
-           3: HS-G3
-           4: HS-G4
+           0: HS-G1 (High Speed Gear 1)
+           1: HS-G2
+           2: HS-G3
+           3: HS-G4
          -->
-         <config name="Mode">3</config>
-         <!-- <int> M-PHY Lane -->
+         <config name="Mode">2</config>
+         <!-- <int> M-PHY Lane (1 ~ 2) -->
          <config name="Lane">2</config>
       </section>
       <!-- AXI4 configuration -->
