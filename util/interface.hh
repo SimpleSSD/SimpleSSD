@@ -78,7 +78,7 @@ namespace ARM {
 // SimpleSSD::ARM::AXI
 namespace AXI {
 
-enum class Width : uint8_t {
+enum class Width : uint16_t {
   Bit32 = 4,
   Bit64 = 8,
   Bit128 = 16,
