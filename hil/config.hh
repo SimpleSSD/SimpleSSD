@@ -11,6 +11,7 @@
 #define __HIL_CONFIG_HH__
 
 #include "sim/base_config.hh"
+#include "util/interface.hh"
 
 namespace SimpleSSD::HIL {
 
@@ -22,17 +23,68 @@ namespace SimpleSSD::HIL {
 class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
-    Clock,
-    HILCore,
-    ICLCore,
-    FTLCore,
+    WorkInterval,
+    RequestQueueSize,
+    PCIeGeneration,
+    PCIeLane,
+    SATAGeneration,
+    MPHYMode,
+    MPHYLane,
+    AXIWidth,
+    AXIClock,
+    NVMeMaxSQ,
+    NVMeMaxCQ,
+    NVMeWRRHigh,
+    NVMeWRRMedium,
+    NVMeMaxNamespace,
+    NVMeDefaultNamespace,
+  };
+
+  struct Disk {
+    uint32_t nsid;
+    bool enable;
+    bool strict;
+    bool useCoW;
+    std::string path;
+  };
+
+  struct Namespace {
+    uint32_t nsid;
+    uint16_t lbaSize;
+    uint64_t capacity;
+    Disk *pDisk;
   };
 
  private:
-  uint64_t clock;
-  uint32_t hilCore;
-  uint32_t iclCore;
-  uint32_t ftlCore;
+  uint64_t workInterval;
+  uint64_t requestQueueSize;
+
+  PCIExpress::Generation pcieGen;
+  uint8_t pcieLane;
+  SATA::Generation sataGen;
+  MIPI::M_PHY::Mode mphyMode;
+  uint8_t mphyLane;
+  ARM::AXI::Width axiWidth;
+  uint64_t axiClock;
+
+  uint16_t maxSQ;
+  uint16_t maxCQ;
+  uint16_t wrrHigh;
+  uint16_t wrrMedium;
+  uint32_t maxNamespace;
+  uint32_t defaultNamespace;
+
+  std::vector<Disk> diskList;
+  std::vector<Namespace> namespaceList;
+
+  void loadInterface(pugi::xml_node &);
+  void loadDisk(pugi::xml_node &, Disk *);
+  void loadNVMe(pugi::xml_node &);
+  void loadNamespace(pugi::xml_node &, Namespace *);
+  void storeInterface(pugi::xml_node &);
+  void storeDisk(pugi::xml_node &, Disk *);
+  void storeNVMe(pugi::xml_node &);
+  void storeNamespace(pugi::xml_node &, Namespace *);
 
  public:
   Config();
@@ -46,6 +98,9 @@ class Config : public BaseConfig {
 
   uint64_t readUint(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
+
+  std::vector<Disk> &getDiskList();
+  std::vector<Namespace> &getNamespaceList();
 };
 
 }  // namespace SimpleSSD::HIL

@@ -147,34 +147,6 @@
     <!-- <int> Internal request queue size -->
     <config name="RequestQueueSize">8</config>
     <!--
-      Disk configuration
-
-      When using NVMe interface, "nsid" attribute specifies corresponding
-      Namespace ID.
-      When using other interfaces, only "nsid=1" section will be used.
-     -->
-    <section name="disk" nsid="1">
-      <!-- <bool> Enable disk image mount -->
-      <config name="EnableDiskImage">false</config>
-      <!--
-        <bool> Strick size checking
-
-        If true, you must specify disk image which has exactly same size with
-        current volume size.
-       -->
-      <config name="StrickSizecheck">false</config>
-      <!--
-        <bool> Use copy-on-write mode
-
-        If true, data written to this volume will not saved to disk image.
-        Set true when you simulate multiple instances with a disk image.
-        Set false when you are creating disk image for simulation.
-       -->
-      <config name="UseCopyOnWriteDisk">true</config>
-      <!-- <str> Path to disk image -->
-      <config name="DiskImagePath"></config>
-    </section>
-    <!--
       Interface and bus configuration
 
       NVMe uses "pcie" and "axi"
@@ -182,7 +154,7 @@
       SATA uses "pcie", "sata" and "axi"
        PCIe RC -> PCIe -> HBA -> SATA -> SATA PHY -> AXI (SSD memory bus)
       UFS uses "mphy" and "axi"
-       System bus -> UFSHCI -> MPHY -> UFS Device -> AXI (SSD memory bus)
+       System bus -> UFSHCI -> MPHY -> PHY -> AXI (SSD memory bus)
      -->
     <section name="interface">
       <!-- PCIe configuration -->
@@ -219,6 +191,34 @@
         <!-- <int> AXI bus speed in Hz -->
         <config name="Clock">100M</config>
       </section>
+    </section>
+    <!--
+      Disk configuration
+
+      When using NVMe interface, "nsid" attribute specifies corresponding
+      Namespace ID.
+      When using other interfaces, only "nsid=1" section will be used.
+     -->
+    <section name="disk" nsid="1">
+      <!-- <bool> Enable disk image mount -->
+      <config name="EnableDiskImage">false</config>
+      <!--
+        <bool> Strick size checking
+
+        If true, you must specify disk image which has exactly same size with
+        current volume size.
+       -->
+      <config name="StrickSizecheck">false</config>
+      <!--
+        <bool> Use copy-on-write mode
+
+        If true, data written to this volume will not saved to disk image.
+        Set true when you simulate multiple instances with a disk image.
+        Set false when you are creating disk image for simulation.
+       -->
+      <config name="UseCopyOnWriteDisk">true</config>
+      <!-- <str> Path to disk image -->
+      <config name="DiskImagePath"></config>
     </section>
     <!--
       NVMe specific configuration
