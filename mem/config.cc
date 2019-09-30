@@ -136,7 +136,7 @@ Config::Config() {
 
 Config::~Config() {}
 
-void Config::loadSRAM(pugi::xml_node &section, SRAMStructure *param) {
+void Config::loadSRAM(pugi::xml_node &section, Config::SRAMStructure *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, param->lineSize);
     LOAD_NAME_UINT(node, NAME_SIZE, param->size);
@@ -144,7 +144,8 @@ void Config::loadSRAM(pugi::xml_node &section, SRAMStructure *param) {
   }
 }
 
-void Config::loadDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
+void Config::loadDRAMStructure(pugi::xml_node &section,
+                               Config::DRAMStructure *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint8_t, param->channel);
     LOAD_NAME_UINT_TYPE(node, NAME_RANK, uint8_t, param->rank);
@@ -156,7 +157,8 @@ void Config::loadDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
   }
 }
 
-void Config::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
+void Config::loadDRAMTiming(pugi::xml_node &section,
+                            Config::DRAMTiming *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_TCK, uint32_t, param->tCK);
     LOAD_NAME_UINT_TYPE(node, NAME_TRCD, uint32_t, param->tRCD);
@@ -182,7 +184,7 @@ void Config::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   }
 }
 
-void Config::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
+void Config::loadDRAMPower(pugi::xml_node &section, Config::DRAMPower *param) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_FLOAT(node, NAME_IDD0_0, param->pIDD0[0]);
     LOAD_NAME_FLOAT(node, NAME_IDD0_1, param->pIDD0[1]);
@@ -211,13 +213,14 @@ void Config::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
   }
 }
 
-void Config::storeSRAM(pugi::xml_node &section, SRAMStructure *param) {
+void Config::storeSRAM(pugi::xml_node &section, Config::SRAMStructure *param) {
   STORE_NAME_UINT(section, NAME_LINE_SIZE, param->lineSize);
   STORE_NAME_UINT(section, NAME_SIZE, param->size);
   STORE_NAME_UINT(section, NAME_LATENCY, param->latency);
 }
 
-void Config::storeDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
+void Config::storeDRAMStructure(pugi::xml_node &section,
+                                Config::DRAMStructure *param) {
   STORE_NAME_UINT(section, NAME_CHANNEL, param->channel);
   STORE_NAME_UINT(section, NAME_RANK, param->rank);
   STORE_NAME_UINT(section, NAME_BANK, param->bank);
@@ -227,7 +230,8 @@ void Config::storeDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
   STORE_NAME_UINT(section, NAME_CHIP_SIZE, param->chipSize);
 }
 
-void Config::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
+void Config::storeDRAMTiming(pugi::xml_node &section,
+                             Config::DRAMTiming *param) {
   STORE_NAME_UINT(section, NAME_TCK, param->tCK);
   STORE_NAME_UINT(section, NAME_TRCD, param->tRCD);
   STORE_NAME_UINT(section, NAME_TCL, param->tCL);
@@ -251,7 +255,7 @@ void Config::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
   STORE_NAME_UINT(section, NAME_TXSDLL, param->tXSDLL);
 }
 
-void Config::storeDRAMPower(pugi::xml_node &section, DRAMPower *param) {
+void Config::storeDRAMPower(pugi::xml_node &section, Config::DRAMPower *param) {
   STORE_NAME_FLOAT(section, NAME_IDD0_0, param->pIDD0[0]);
   STORE_NAME_FLOAT(section, NAME_IDD0_1, param->pIDD0[1]);
   STORE_NAME_FLOAT(section, NAME_IDD2P0_0, param->pIDD2P0[0]);
