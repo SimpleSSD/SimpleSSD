@@ -55,12 +55,16 @@ void ConfigReader::load(const char *path) {
       else if (strcmp(name, memConfig.getSectionName()) == 0) {
         memConfig.loadFrom(section);
       }
+      else if (strcmp(name, hilConfig.getSectionName()) == 0) {
+        hilConfig.loadFrom(section);
+      }
     }
 
     // Update config objects
     simConfig.update();
     cpuConfig.update();
     memConfig.update();
+    hilConfig.update();
   }
 
   // Close
@@ -118,6 +122,8 @@ int64_t ConfigReader::readInt(Section section, uint32_t key) {
       return cpuConfig.readInt(key);
     case Section::Memory:
       return memConfig.readInt(key);
+    case Section::HostInterface:
+      return hilConfig.readInt(key);
   }
 
   return 0ll;
@@ -132,6 +138,8 @@ uint64_t ConfigReader::readUint(Section section, uint32_t key) {
       return cpuConfig.readUint(key);
     case Section::Memory:
       return memConfig.readUint(key);
+    case Section::HostInterface:
+      return hilConfig.readUint(key);
   }
 
   return 0ull;
@@ -146,6 +154,8 @@ float ConfigReader::readFloat(Section section, uint32_t key) {
       return cpuConfig.readFloat(key);
     case Section::Memory:
       return memConfig.readFloat(key);
+    case Section::HostInterface:
+      return hilConfig.readFloat(key);
   }
 
   return 0.f;
@@ -160,6 +170,8 @@ std::string ConfigReader::readString(Section section, uint32_t key) {
       return cpuConfig.readString(key);
     case Section::Memory:
       return memConfig.readString(key);
+    case Section::HostInterface:
+      return hilConfig.readString(key);
   }
 
   return "";
@@ -174,6 +186,8 @@ bool ConfigReader::readBoolean(Section section, uint32_t key) {
       return cpuConfig.readBoolean(key);
     case Section::Memory:
       return memConfig.readBoolean(key);
+    case Section::HostInterface:
+      return hilConfig.readBoolean(key);
   }
 
   return "";
@@ -192,6 +206,9 @@ bool ConfigReader::writeInt(Section section, uint32_t key, int64_t value) {
       break;
     case Section::Memory:
       ret = memConfig.writeInt(key, value);
+      break;
+    case Section::HostInterface:
+      ret = hilConfig.writeInt(key, value);
       break;
   }
 
@@ -212,6 +229,9 @@ bool ConfigReader::writeUint(Section section, uint32_t key, uint64_t value) {
     case Section::Memory:
       ret = memConfig.writeUint(key, value);
       break;
+    case Section::HostInterface:
+      ret = hilConfig.writeUint(key, value);
+      break;
   }
 
   return ret;
@@ -230,6 +250,9 @@ bool ConfigReader::writeFloat(Section section, uint32_t key, float value) {
       break;
     case Section::Memory:
       ret = memConfig.writeFloat(key, value);
+      break;
+    case Section::HostInterface:
+      ret = hilConfig.writeFloat(key, value);
       break;
   }
 
@@ -251,6 +274,9 @@ bool ConfigReader::writeString(Section section, uint32_t key,
     case Section::Memory:
       ret = memConfig.writeString(key, value);
       break;
+    case Section::HostInterface:
+      ret = hilConfig.writeString(key, value);
+      break;
   }
 
   return ret;
@@ -269,6 +295,9 @@ bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
       break;
     case Section::Memory:
       ret = memConfig.writeBoolean(key, value);
+      break;
+    case Section::HostInterface:
+      ret = hilConfig.writeBoolean(key, value);
       break;
   }
 
@@ -289,6 +318,14 @@ Memory::Config::DRAMTiming *ConfigReader::getDRAMTiming() {
 
 Memory::Config::DRAMPower *ConfigReader::getDRAMPower() {
   return memConfig.getDRAMPower();
+}
+
+std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
+  return hilConfig.getDiskList();
+}
+
+std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() {
+  return hilConfig.getNamespaceList();
 }
 
 }  // namespace SimpleSSD

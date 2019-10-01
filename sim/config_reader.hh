@@ -13,6 +13,7 @@
 #include <string>
 
 #include "cpu/config.hh"
+#include "hil/config.hh"
 #include "mem/config.hh"
 #include "sim/config.hh"
 
@@ -23,6 +24,7 @@ enum class Section {
   Simulation,
   CPU,
   Memory,
+  HostInterface,
 };
 
 /**
@@ -38,6 +40,7 @@ class ConfigReader {
   Config simConfig;
   CPU::Config cpuConfig;
   Memory::Config memConfig;
+  HIL::Config hilConfig;
 
  public:
   ConfigReader();
@@ -46,7 +49,7 @@ class ConfigReader {
   ~ConfigReader();
 
   ConfigReader &operator=(const ConfigReader &) = delete;
-  ConfigReader &operator=(ConfigReader &&) noexcept noexcept = default;
+  ConfigReader &operator=(ConfigReader &&) noexcept = default;
 
   void load(const char *) noexcept;
   void load(std::string &) noexcept;
@@ -71,6 +74,10 @@ class ConfigReader {
   Memory::Config::DRAMStructure *getDRAM();
   Memory::Config::DRAMTiming *getDRAMTiming();
   Memory::Config::DRAMPower *getDRAMPower();
+
+  // Interface for HIL::Config
+  std::vector<HIL::Config::Disk> &getDiskList();
+  std::vector<HIL::Config::Namespace> &getNamespaceList();
 };
 
 }  // namespace SimpleSSD
