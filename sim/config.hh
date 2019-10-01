@@ -29,6 +29,15 @@ class Config : public BaseConfig {
     OutputFile,
     ErrorFile,
     DebugFile,
+    CheckpointFile,
+    Controller,
+  };
+
+  enum class Mode : uint8_t {
+    None,
+    NVMe,
+    SATA,
+    UFS,
   };
 
  private:
@@ -36,6 +45,8 @@ class Config : public BaseConfig {
   std::string outputFile;
   std::string errorFile;
   std::string debugFile;
+  std::string checkpointFile;
+  Mode mode;
 
  public:
   Config();
@@ -46,7 +57,9 @@ class Config : public BaseConfig {
   void loadFrom(pugi::xml_node &) override;
   void storeTo(pugi::xml_node &) override;
 
+  uint64_t readUint(uint32_t) override;
   std::string readString(uint32_t) override;
+  bool writeUint(uint32_t, uint64_t) override;
   bool writeString(uint32_t, std::string &) override;
 };
 

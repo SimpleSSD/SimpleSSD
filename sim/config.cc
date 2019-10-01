@@ -15,6 +15,8 @@ const char NAME_OUTPUT_DIRECTORY[] = "OutputDirectory";
 const char NAME_OUTPUT_FILE[] = "OutputFile";
 const char NAME_ERROR_FILE[] = "ErrorFile";
 const char NAME_DEBUG_FILE[] = "DebugFile";
+const char NAME_CHECKPOINT_FILE[] = "CheckpointFile";
+const char NAME_CONTROLLER[] = "Controller";
 
 //! A constructor
 Config::Config() {
@@ -22,6 +24,8 @@ Config::Config() {
   outputFile = FILE_STDOUT;
   errorFile = FILE_STDERR;
   debugFile = FILE_STDOUT;
+  checkpointFile = "checkpoint.bin";
+  mode = Mode::None;
 }
 
 //! A destructor
@@ -33,6 +37,8 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_STRING(node, NAME_OUTPUT_FILE, outputFile);
     LOAD_NAME_STRING(node, NAME_ERROR_FILE, errorFile);
     LOAD_NAME_STRING(node, NAME_DEBUG_FILE, debugFile);
+    LOAD_NAME_STRING(node, NAME_CHECKPOINT_FILE, checkpointFile);
+    LOAD_NAME_UINT_TYPE(node, NAME_CONTROLLER, Mode, mode);
   }
 }
 
@@ -42,6 +48,17 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_STRING(section, NAME_OUTPUT_FILE, outputFile);
   STORE_NAME_STRING(section, NAME_ERROR_FILE, errorFile);
   STORE_NAME_STRING(section, NAME_DEBUG_FILE, debugFile);
+  STORE_NAME_STRING(section, NAME_CHECKPOINT_FILE, checkpointFile);
+  STORE_NAME_UINT(section, NAME_CONTROLLER, mode);
+}
+
+uint64_t Config::readUint(uint32_t idx) {
+  switch (idx) {
+    case Key::Controller:
+      return (uint64_t)mode;
+  }
+
+  return 0;
 }
 
 std::string Config::readString(uint32_t idx) {
@@ -54,9 +71,26 @@ std::string Config::readString(uint32_t idx) {
       return errorFile;
     case Key::DebugFile:
       return debugFile;
+    case Key::CheckpointFile:
+      return checkpointFile;
   }
 
   return "";
+}
+
+bool Config::writeUint(uint32_t idx, uint64_t value) {
+  bool ret = true;
+
+  switch (idx) {
+    case Key::Controller:
+      mode = (Mode)value;
+      break;
+    default:
+      ret = false;
+      break;
+  }
+
+  return ret;
 }
 
 bool Config::writeString(uint32_t idx, std::string &value) {
@@ -74,6 +108,9 @@ bool Config::writeString(uint32_t idx, std::string &value) {
       break;
     case Key::DebugFile:
       debugFile = value;
+      break;
+    case Key::CheckpointFile:
+      checkpointFile = value;
       break;
     default:
       ret = false;
