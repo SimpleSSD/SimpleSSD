@@ -23,6 +23,7 @@ class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
     Clock,
+    UseDedicatedCore,
     HILCore,
     ICLCore,
     FTLCore,
@@ -30,6 +31,7 @@ class Config : public BaseConfig {
 
  private:
   uint64_t clock;
+  bool useDedicatedCore;
   uint32_t hilCore;
   uint32_t iclCore;
   uint32_t ftlCore;
@@ -45,7 +47,9 @@ class Config : public BaseConfig {
   void update() override;
 
   uint64_t readUint(uint32_t) override;
+  bool readBoolean(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
+  bool writeBoolean(uint32_t, bool) override;
 };
 
 }  // namespace SimpleSSD::CPU

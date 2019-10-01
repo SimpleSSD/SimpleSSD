@@ -25,22 +25,27 @@
             s, ms, us, ns, ps
    -->
   <!--
-    Simulation configuration.
-    This section may overwritten by gem5.
+    CPU configuration
    -->
-  <section name="sim">
-    <!-- <str> Prefix of each file names -->
-    <config name="OutputDirectory">.</config>
-    <!-- <str> Output file for info log -->
-    <config name="OutputFile">STDOUT</config>
-    <!-- <str> Output file for warn/panic log -->
-    <config name="ErrorFile">STDERR</config>
-    <!-- <str> Output file for debugprint -->
-    <config name="DebugFile">STDOUT</config>
+  <section name="cpu">
+    <!-- <int> CPU clock speed in Hz -->
+    <config name="ClockSpeed">400M</config>
+    <!--
+      <bool> Use dedicated core
+
+      If true, each firmware components runs on dedicated core(s).
+      If not, all firmware components shares all cores.
+     -->
+    <config name="UseDedicatedCore">true</config>
+    <!-- <int> # cores for Host Interface (HIL) -->
+    <config name="HILCoreCount">1</config>
+    <!-- <int> # cores for Data Cache (ICL) -->
+    <config name="ICLCoreCount">1</config>
+    <!-- <int> # cores for Flash Translation Layer (FTL) -->
+    <config name="FTLCoreCount">1</config>
   </section>
   <!--
     Memory subsystem configuration.
-    Defines SRAM and DRAM.
    -->
   <section name="memory">
     <!-- SRAM -->
