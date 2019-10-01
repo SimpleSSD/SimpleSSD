@@ -280,13 +280,26 @@ void Config::update() {
   // Make link between disk and namespace
   std::sort(
       diskList.begin(), diskList.end(),
-      [](const Disk &a, const Disk &b) -> bool { return a.nsid < b.nsid; });
-  std::sort(namespaceList.begin(), namespaceList.end(),
-            [](const Namespace &a, const Namespace &b) -> bool {
-              return a.nsid < b.nsid;
-            });
+      [](const Disk &a, const Disk &b) -> bool {
+        panic_if(UNLIKELY(a.nsid == b.nsid),
+                 "Duplicated namespace ID %u while sorting disk configuration.",
+                 a.nsid);
+
+        return a.nsid < b.nsid;
+      });
+  std::sort(
+      namespaceList.begin(), namespaceList.end(),
+      [](const Namespace &a, const Namespace &b) -> bool {
+        panic_if(
+            UNLIKELY(a.nsid == b.nsid),
+            "Duplicated namespace ID %u while sorting namespace configuration.",
+            a.nsid);
+
+        return a.nsid < b.nsid;
+      });
 
   // Simple O(n^2) algorithm
+  // Do we need to change this to O(n) algorithm?
   for (auto &ns : namespaceList) {
     ns.pDisk = nullptr;
 
