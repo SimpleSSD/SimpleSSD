@@ -16,6 +16,8 @@ SimpleSSD::SimpleSSD()
     : inited(false),
       config(nullptr),
       engine(nullptr),
+      interface(nullptr),
+      pHIL(nullptr),
       outfile(nullptr),
       errfile(nullptr),
       debugfile(nullptr) {}
@@ -169,9 +171,7 @@ void SimpleSSD::read(uint64_t offset, uint64_t length, uint8_t *buffer,
  */
 uint64_t SimpleSSD::read(uint64_t offset, uint64_t length,
                          uint8_t *buffer) noexcept {
-  // TODO: Return from HIL's read function
-
-  return 0;
+  return pHIL->read(offset, length, buffer);
 }
 
 /**
@@ -200,9 +200,7 @@ void SimpleSSD::write(uint64_t offset, uint64_t length, uint8_t *buffer,
  */
 uint64_t SimpleSSD::write(uint64_t offset, uint64_t length,
                           uint8_t *buffer) noexcept {
-  // TODO: Return from HIL's write function
-
-  return 0;
+  return pHIL->write(offset, length, buffer);
 }
 
 }  // namespace SimpleSSD

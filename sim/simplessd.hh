@@ -11,6 +11,7 @@
 #define __SIM_SIMPLESSD_HH__
 
 #include "sim/config_reader.hh"
+#include "sim/controller.hh"
 #include "sim/engine.hh"
 #include "sim/interface.hh"
 #include "sim/log.hh"
@@ -32,6 +33,8 @@ class SimpleSSD {
   Engine *engine;        //!< Engine object provided by simulation system
   Log log;               //!< Log system
   Interface *interface;  //!< Interface object provided by simulation system
+
+  Controller *pHIL;
 
   std::ostream *outfile;
   std::ostream *errfile;
