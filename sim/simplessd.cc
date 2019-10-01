@@ -108,6 +108,8 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
   auto outpath = config->readString(Section::Simulation, Config::OutputFile);
   auto errpath = config->readString(Section::Simulation, Config::ErrorFile);
   auto debugpath = config->readString(Section::Simulation, Config::DebugFile);
+  auto mode =
+      (Config::Mode)config->readUint(Section::Simulation, Config::Controller);
 
   openStream(outfile, prefix, outpath);
   openStream(errfile, prefix, errpath);
@@ -117,6 +119,16 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
   log.init(engine, outfile, errfile, debugfile);
 
   // Initialize objects
+  switch (mode) {
+    case Config::Mode::NVMe:
+      // pHIL = ;
+      break;
+    default:
+      std::cerr << "Invalid controller selected." << std::endl;
+
+      abort();
+  }
+
   inited = true;
 
   return inited;
@@ -129,6 +141,11 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
  */
 void SimpleSSD::deinit() noexcept {
   if (inited) {
+    // Delete objects
+    delete pHIL;
+
+    pHIL = nullptr;
+
     // Deinitialize log system
     log.deinit();
 
