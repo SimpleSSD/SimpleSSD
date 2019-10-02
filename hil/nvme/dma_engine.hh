@@ -16,17 +16,17 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-class PRP {
- public:
-  uint64_t address;
-  uint64_t size;
-
-  PRP();
-  PRP(uint64_t, uint64_t);
-};
-
 class PRPEngine : public DMAEngine {
  private:
+  class PRP {
+   public:
+    uint64_t address;
+    uint64_t size;
+
+    PRP();
+    PRP(uint64_t, uint64_t);
+  };
+
   class PRPInitContext {
    public:
     uint64_t handledSize;
@@ -58,6 +58,8 @@ class PRPEngine : public DMAEngine {
   void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
   void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
 };
+
+class SGLEngine : public DMAEngine {};
 
 }  // namespace SimpleSSD::HIL::NVMe
 

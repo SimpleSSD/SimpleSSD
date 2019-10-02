@@ -9,9 +9,9 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-PRP::PRP() : address(0), size(0) {}
+PRPEngine::PRP::PRP() : address(0), size(0) {}
 
-PRP::PRP(uint64_t a, uint64_t s) : address(a), size(s) {}
+PRPEngine::PRP::PRP(uint64_t a, uint64_t s) : address(a), size(s) {}
 
 PRPEngine::PRPEngine(ObjectData &&o, Interface *i, uint64_t p)
     : DMAEngine(std::move(o), i), inited(false), totalSize(0), pageSize(p) {
