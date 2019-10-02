@@ -34,7 +34,7 @@ class DMAEngine : public Interface, public Object {
   void dmaDone(uint64_t, DMAContext *);
 
  public:
-  DMAEngine(ObjectData &&, Interface *);
+  DMAEngine(ObjectData &, Interface *);
   DMAEngine(const DMAEngine &) = delete;
   DMAEngine(DMAEngine &&) noexcept = default;
   virtual ~DMAEngine();

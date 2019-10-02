@@ -49,7 +49,7 @@ class PRPEngine : public DMAEngine {
   void getPRPListFromPRP_readDone(uint64_t, PRPInitContext *s);
 
  public:
-  PRPEngine(ObjectData &&, Interface *, uint64_t);
+  PRPEngine(ObjectData &, Interface *, uint64_t);
   ~PRPEngine();
 
   void initData(uint64_t, uint64_t, uint64_t, Event, void * = nullptr);
