@@ -92,7 +92,7 @@ void Config::loadInterface(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDisk(pugi::xml_node &section, Config::Disk *disk) {
+void Config::loadDisk(pugi::xml_node &section, Disk *disk) {
   disk->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
 
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
@@ -122,7 +122,7 @@ void Config::loadNVMe(pugi::xml_node &section) {
   }
 }
 
-void Config::loadNamespace(pugi::xml_node &section, Config::Namespace *ns) {
+void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) {
   ns->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
 
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
@@ -150,7 +150,7 @@ void Config::storeInterface(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_CLOCK, axiClock);
 }
 
-void Config::storeDisk(pugi::xml_node &section, Config::Disk *disk) {
+void Config::storeDisk(pugi::xml_node &section, Disk *disk) {
   section.append_attribute("nsid").set_value(disk->nsid);
 
   STORE_NAME_BOOLEAN(section, NAME_ENABLE_DISK_IMAGE, disk->enable);
@@ -176,7 +176,7 @@ void Config::storeNVMe(pugi::xml_node &section) {
   }
 }
 
-void Config::storeNamespace(pugi::xml_node &section, Config::Namespace *ns) {
+void Config::storeNamespace(pugi::xml_node &section, Namespace *ns) {
   section.attribute("nsid").set_value(ns->nsid);
 
   STORE_NAME_UINT(section, NAME_LBA_SIZE, ns->lbaSize);
