@@ -33,16 +33,29 @@ class Engine {
   //! Create event with SimpleSSD::EventFunction, with description.
   virtual Event createEvent(EventFunction, std::string) = 0;
 
-  //! Schedule event.
+  /**
+   * \brief Schedule event object
+   *
+   * Schedule event at provided tick. If tick < current tick, just schedule at
+   * current tick. Reschedule if event is already scheduled.
+   */
   virtual void schedule(Event, uint64_t, void * = nullptr) = 0;
 
-  //! Deschedule event.
+  /**
+   * \brief Deschedule event object
+   *
+   * Deschedule event. Ignore if event is not scheduled.
+   */
   virtual void deschedule(Event) = 0;
 
   //! Check event is scheduled or not.
   virtual bool isScheduled(Event) = 0;
 
-  //! Remove event.
+  /**
+   * \brief Destroy event object
+   *
+   * Destroy event. Deschedule event if scheduled before destroy.
+   */
   virtual void destroyEvent(Event) = 0;
 };
 
