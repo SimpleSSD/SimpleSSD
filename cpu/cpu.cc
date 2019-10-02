@@ -120,7 +120,7 @@ void CPU::Core::addStat(InstStat &inst) {
   stat.instStat += inst;
 }
 
-CPU::CPU(ObjectData &&o) : Object(std::move(o)), lastResetStat(0) {
+CPU::CPU(ObjectData &o) : Object(o), lastResetStat(0) {
   clockSpeed = readConfigUint(Section::CPU, Config::Key::Clock);
   clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
 

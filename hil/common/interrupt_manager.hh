@@ -48,7 +48,7 @@ class InterruptManager : public Object {
   void disableTimer();
 
  public:
-  InterruptManager(ObjectData &&, Interface *);
+  InterruptManager(ObjectData &, Interface *);
   InterruptManager(const InterruptManager &) = delete;
   InterruptManager(InterruptManager &&) noexcept = default;
   ~InterruptManager();

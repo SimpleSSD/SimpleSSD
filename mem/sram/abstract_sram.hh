@@ -42,7 +42,7 @@ class AbstractSRAM : public AbstractFIFO {
   void rangeCheck(uint64_t, uint64_t) noexcept;
 
  public:
-  AbstractSRAM(ObjectData &&, std::string);
+  AbstractSRAM(ObjectData &, std::string);
   virtual ~AbstractSRAM();
 
   /**

@@ -9,8 +9,8 @@
 
 namespace SimpleSSD {
 
-AbstractFIFO::AbstractFIFO(ObjectData &&o, std::string prefix)
-    : Object(std::move(o)),
+AbstractFIFO::AbstractFIFO(ObjectData &o, std::string prefix)
+    : Object(o),
       readPending(false),
       writePending(false),
       eventReadDone(InvalidEventID),

@@ -13,7 +13,7 @@ namespace SimpleSSD::Memory::DRAM {
 
 #define REFRESH_PERIOD 64000000000
 
-SimpleDRAM::SimpleDRAM(ObjectData &&o) : AbstractDRAM(std::move(o)) {
+SimpleDRAM::SimpleDRAM(ObjectData &o) : AbstractDRAM(o) {
   pageFetchLatency = pTiming->tRP + pTiming->tRAS;
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;

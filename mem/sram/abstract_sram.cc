@@ -9,8 +9,8 @@
 
 namespace SimpleSSD::Memory::SRAM {
 
-AbstractSRAM::AbstractSRAM(ObjectData &&o, std::string prefix)
-    : AbstractFIFO(std::move(o), prefix) {
+AbstractSRAM::AbstractSRAM(ObjectData &o, std::string prefix)
+    : AbstractFIFO(o, prefix) {
   pStructure = config->getSRAM();
 }
 

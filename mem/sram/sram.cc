@@ -9,8 +9,8 @@
 
 namespace SimpleSSD::Memory::SRAM {
 
-SRAM::SRAM(ObjectData &&o)
-    : AbstractSRAM(std::move(o), "SimpleSSD::Memory::SRAM::SRAM") {
+SRAM::SRAM(ObjectData &o)
+    : AbstractSRAM(o, "SimpleSSD::Memory::SRAM::SRAM") {
   // Convert cycle to ps
   pStructure->latency =
       (uint64_t)(pStructure->latency * 1000000000000.f /
