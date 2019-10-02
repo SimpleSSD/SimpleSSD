@@ -31,10 +31,14 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
-using ObjectData = struct {
+using ObjectData = struct _ObjectData {
   Engine *engine;
   ConfigReader *config;
   Log *log;
+
+  _ObjectData() : engine(nullptr), config(nullptr), log(nullptr) {}
+  _ObjectData(Engine *e, ConfigReader *c, Log *l)
+      : engine(e), config(c), log(l) {}
 };
 
 /**
@@ -55,6 +59,8 @@ class Object {
   ConfigReader *config;  //!< Current simulation configuration
   Log *log;              //!< Current log system
 
+  inline ObjectData makeObject() { return ObjectData(engine, config, log); }
+
   /* Helper APIs for Engine */
   inline uint64_t getTick() noexcept { return engine->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
@@ -64,7 +70,7 @@ class Object {
     engine->schedule(e, t, c);
   }
   inline void deschedule(Event e) noexcept { engine->deschedule(e); }
-  inline bool isScheduled(Event e) noexcept { engine->isScheduled(e); }
+  inline bool isScheduled(Event e) noexcept { return engine->isScheduled(e); }
   inline void destroyEvent(Event e) noexcept { engine->destroyEvent(e); }
 
   /* Helper APIs for Config */
