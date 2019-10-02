@@ -17,13 +17,21 @@ namespace SimpleSSD::HIL {
 
 class DMAEngine : public Interface, public Object {
  protected:
-  Interface *pInterface;
+  class DMAContext {
+   public:
+    int32_t counter;
+    Event eid;
+    void *context;
 
-  uint64_t callCounter;  //!< PRP/SGL/PRDT sub DMA request counter
+    DMAContext(Event);
+    DMAContext(Event, void *);
+  };
+
+  Interface *pInterface;
 
   Event dmaHandler;
 
-  static void dmaDone(uint64_t, void *);
+  void dmaDone(uint64_t, DMAContext *);
 
  public:
   DMAEngine(ObjectData &&, Interface *);
