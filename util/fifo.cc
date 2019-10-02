@@ -44,8 +44,8 @@ ReadEntry::ReadEntry(uint64_t a, uint64_t i, uint64_t d, uint64_t l)
 FIFO::Queue::Queue(uint64_t c)
     : capacity(c), usage(0), insertPending(false), transferPending(false) {}
 
-FIFO::FIFO(ObjectData &o, DMAInterface *up, FIFOParam &p)
-    : Object(o),
+FIFO::FIFO(ObjectData &&o, DMAInterface *up, FIFOParam &p)
+    : Object(std::move(o)),
       upstream(up),
       param(p),
       readQueue(p.rqSize),

@@ -25,7 +25,7 @@ class SRAM : public AbstractSRAM {
   void postWriteDone(void *) override;
 
  public:
-  SRAM(ObjectData &);
+  SRAM(ObjectData &&);
   ~SRAM();
 
   void read(uint64_t, uint64_t, Event, void * = nullptr) override;

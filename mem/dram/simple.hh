@@ -22,7 +22,7 @@ class SimpleDRAM : public AbstractDRAM {
   Event autoRefresh;
 
  public:
-  SimpleDRAM(ObjectData &);
+  SimpleDRAM(ObjectData &&);
   ~SimpleDRAM();
 
   void read(uint64_t, uint64_t, Event, void * = nullptr) override;

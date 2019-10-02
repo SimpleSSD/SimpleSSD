@@ -107,7 +107,7 @@ class FIFO : public DMAInterface, public Object {
 
  public:
   FIFO() = delete;
-  FIFO(ObjectData &, DMAInterface *, FIFOParam &);
+  FIFO(ObjectData &&, DMAInterface *, FIFOParam &);
   FIFO(const FIFO &) = delete;
   FIFO(FIFO &&) noexcept = default;
   ~FIFO();

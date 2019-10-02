@@ -55,7 +55,7 @@ class AbstractDRAM : public Object {
   void updateStats(uint64_t);
 
  public:
-  AbstractDRAM(ObjectData &);
+  AbstractDRAM(ObjectData &&);
   virtual ~AbstractDRAM();
 
   /**

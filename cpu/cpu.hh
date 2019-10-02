@@ -102,7 +102,7 @@ class CPU : public Object {
   void calculatePower(Power &);
 
  public:
-  CPU(ObjectData &);
+  CPU(ObjectData &&);
   ~CPU();
 
   void execute(Namespace, Function, EventFunction &, void * = nullptr,

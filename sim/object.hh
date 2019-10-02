@@ -31,10 +31,14 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
-using ObjectData = struct {
+using ObjectData = struct _ObjectData {
   Engine *engine;
   ConfigReader *config;
   Log *log;
+
+  _ObjectData() : engine(nullptr), config(nullptr), log(nullptr) {}
+  _ObjectData(Engine *e, ConfigReader *c, Log *l)
+      : engine(e), config(c), log(l) {}
 };
 
 /**
@@ -54,6 +58,8 @@ class Object {
   Engine *engine;        //!< Current simulation engine
   ConfigReader *config;  //!< Current simulation configuration
   Log *log;              //!< Current log system
+
+  inline ObjectData &&makeObject() { return ObjectData(engine, config, log); }
 
   /* Helper APIs for Engine */
   inline uint64_t getTick() noexcept { return engine->getTick(); }
@@ -115,7 +121,10 @@ class Object {
   }
 
  public:
-  Object(ObjectData &o) : engine(o.engine), config(o.config), log(o.log) {}
+  Object() = delete;
+  Object(const ObjectData &) = delete;
+  Object(ObjectData &&o) noexcept
+      : engine(o.engine), config(o.config), log(o.log) {}
   virtual ~Object() {}
 
   /* Statistic API */

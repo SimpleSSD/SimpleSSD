@@ -13,8 +13,8 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
-AbstractDRAM::AbstractDRAM(ObjectData &o)
-    : Object(o), totalEnergy(0.0), totalPower(0.0) {
+AbstractDRAM::AbstractDRAM(ObjectData &&o)
+    : Object(std::move(o)), totalEnergy(0.0), totalPower(0.0) {
   pStructure = config->getDRAM();
   pTiming = config->getDRAMTiming();
   pPower = config->getDRAMPower();

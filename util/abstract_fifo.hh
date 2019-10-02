@@ -40,7 +40,7 @@ class AbstractFIFO : public Object {
   virtual void postWriteDone(void *);
 
  public:
-  AbstractFIFO(ObjectData &, std::string);
+  AbstractFIFO(ObjectData &&, std::string);
   virtual ~AbstractFIFO();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

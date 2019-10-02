@@ -12,8 +12,8 @@ namespace SimpleSSD::HIL {
 InterruptManager::CoalesceData::CoalesceData()
     : iv(0xFFFF), pending(false), currentRequestCount(0), nextDeadline(0) {}
 
-InterruptManager::InterruptManager(ObjectData &o, Interface *i)
-    : Object(o),
+InterruptManager::InterruptManager(ObjectData &&o, Interface *i)
+    : Object(std::move(o)),
       pInterface(i),
       interruptCoalescing(false),
       aggregationTime(0),
