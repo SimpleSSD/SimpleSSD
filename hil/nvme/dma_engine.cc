@@ -398,4 +398,107 @@ void SGLEngine::init(uint64_t prp1, uint64_t prp2, Event eid, void *context) {
   }
 }
 
+void SGLEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
+                     Event eid, void *context) {
+  panic_if(!inited, "Accessed to uninitialized SGLEngine.");
+
+  DMAContext *readContext = new DMAContext(eid, context);
+  uint64_t totalRead = 0;
+  uint64_t currentOffset = 0;
+  uint64_t read;
+  bool begin = false;
+
+  for (auto &iter : chunkList) {
+    if (begin) {
+      read = MIN(iter.length, length - totalRead);
+
+      if (!iter.ignore) {
+        readContext->counter++;
+        pInterface->read(iter.address, read, buffer ? buffer + totalRead : NULL,
+                         dmaHandler, readContext);
+      }
+
+      totalRead += read;
+
+      if (totalRead == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.length > offset) {
+      begin = true;
+      totalRead = offset - currentOffset;
+      read = MIN(iter.length - totalRead, length);
+
+      if (!iter.ignore) {
+        readContext->counter++;
+        pInterface->read(iter.address + totalRead, read, buffer, dmaHandler,
+                         readContext);
+      }
+
+      totalRead = read;
+    }
+
+    currentOffset += iter.length;
+  }
+
+  if (readContext->counter == 0) {
+    readContext->counter = 1;
+
+    dmaDone(getTick(), readContext);
+  }
+}
+
+void SGLEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
+                      Event eid, void *context) {
+  panic_if(!inited, "Accessed to uninitialized SGLEngine.");
+
+  DMAContext *writeContext = new DMAContext(eid, context);
+  uint64_t totalWritten = 0;
+  uint64_t currentOffset = 0;
+  uint64_t written;
+  bool begin = false;
+
+  for (auto &iter : chunkList) {
+    if (begin) {
+      written = MIN(iter.length, length - totalWritten);
+
+      if (!iter.ignore) {
+        writeContext->counter++;
+        pInterface->write(iter.address, written,
+                          buffer ? buffer + totalWritten : NULL, dmaHandler,
+                          writeContext);
+      }
+
+      totalWritten += written;
+
+      if (totalWritten == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.length > offset) {
+      begin = true;
+      totalWritten = offset - currentOffset;
+      written = MIN(iter.length - totalWritten, length);
+
+      if (!iter.ignore) {
+        writeContext->counter++;
+        pInterface->write(iter.address + totalWritten, written, buffer,
+                          dmaHandler, writeContext);
+      }
+
+      totalWritten = written;
+    }
+
+    currentOffset += iter.length;
+  }
+
+  if (writeContext->counter == 0) {
+    writeContext->counter = 1;
+
+    dmaDone(getTick(), writeContext);
+  }
+}
+
 }  // namespace SimpleSSD::HIL::NVMe
