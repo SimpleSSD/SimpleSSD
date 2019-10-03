@@ -7,6 +7,7 @@
 
 #include "sim/base_config.hh"
 
+#include <cstdarg>
 #include <iostream>
 #include <regex>
 #include <vector>

@@ -37,8 +37,8 @@ void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
 
 void DMAEngine::resetStatValues() noexcept {}
 
-void DMAEngine::createCheckpoint(std::ostream &out) noexcept {}
+void DMAEngine::createCheckpoint(std::ostream &) noexcept {}
 
-void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {}
+void DMAEngine::restoreCheckpoint(std::istream &) noexcept {}
 
 }  // namespace SimpleSSD::HIL

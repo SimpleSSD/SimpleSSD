@@ -32,7 +32,7 @@ class Scheduler : public Object {
   Event eventWriteDone;
 
   std::queue<Type> readQueue;
-  std::queue<Type *> writeQueue;
+  std::queue<Type> writeQueue;
 
   void submitRead() {
     auto data = std::move(readQueue.front());
@@ -67,7 +67,7 @@ class Scheduler : public Object {
     schedule(eventWriteDone, delay, data);
   }
 
-  void writeDone(Type) {
+  void writeDone(Type data) {
     postWriteDone(data);
 
     if (writeQueue.size() > 0) {
@@ -132,7 +132,7 @@ class Scheduler : public Object {
   void getStatValues(std::vector<double> &) noexcept override {}
   void resetStatValues() noexcept override {}
 
-  void createCheckpoint(std::ostream &) noexcept override {
+  void createCheckpoint(std::ostream &out) noexcept override {
     BACKUP_SCALAR(out, readPending);
     BACKUP_SCALAR(out, writePending);
 
@@ -140,7 +140,7 @@ class Scheduler : public Object {
     BACKUP_SCALAR(out, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      void *item = readQueue.front();
+      auto item = readQueue.front();
 
       backupItem(out, item);
 
@@ -151,7 +151,7 @@ class Scheduler : public Object {
     BACKUP_SCALAR(out, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      void *item = writeQueue.front();
+      auto item = writeQueue.front();
 
       backupItem(out, item);
 
@@ -159,7 +159,7 @@ class Scheduler : public Object {
     }
   }
 
-  void restoreCheckpoint(std::istream &) noexcept override {
+  void restoreCheckpoint(std::istream &in) noexcept override {
     RESTORE_SCALAR(in, readPending);
     RESTORE_SCALAR(in, writePending);
 
@@ -167,7 +167,7 @@ class Scheduler : public Object {
     RESTORE_SCALAR(in, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      void *item = restoreItem(in);
+      auto item = restoreItem(in);
 
       readQueue.push(item);
     }
@@ -175,7 +175,7 @@ class Scheduler : public Object {
     RESTORE_SCALAR(in, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      void *item = restoreItem(in);
+      auto item = restoreItem(in);
 
       writeQueue.push(item);
     }

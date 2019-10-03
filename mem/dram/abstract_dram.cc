@@ -14,7 +14,7 @@
 namespace SimpleSSD::Memory::DRAM {
 
 AbstractDRAM::AbstractDRAM(ObjectData &o)
-    : Object(o), totalEnergy(0.0), totalPower(0.0) {
+    : AbstractRAM(o), totalEnergy(0.0), totalPower(0.0) {
   pStructure = config->getDRAM();
   pTiming = config->getDRAMTiming();
   pPower = config->getDRAMPower();
@@ -105,7 +105,8 @@ void AbstractDRAM::updateStats(uint64_t cycle) {
   totalPower = power.average_power;
 }
 
-void AbstractDRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
+void AbstractDRAM::getStatList(std::vector<Stat> &list,
+                               std::string prefix) noexcept {
   Stat temp;
 
   temp.name = prefix + "energy";
@@ -141,7 +142,7 @@ void AbstractDRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
   list.push_back(temp);
 }
 
-void AbstractDRAM::getStatValues(std::vector<double> &values) {
+void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
   values.push_back(totalEnergy);
   values.push_back(totalPower);
   values.push_back(readStat.count);
@@ -152,7 +153,7 @@ void AbstractDRAM::getStatValues(std::vector<double> &values) {
   values.push_back(readStat.size + writeStat.size);
 }
 
-void AbstractDRAM::resetStatValues() {
+void AbstractDRAM::resetStatValues() noexcept {
   // calcWindowEnergy clears old data
   dramPower->calcWindowEnergy(getTick() / pTiming->tCK);
 

@@ -22,7 +22,8 @@ void AbstractSRAM::rangeCheck(uint64_t address, uint64_t length) noexcept {
            "Address + Length (0x%" PRIx64 ") out of range!", address + length);
 }
 
-void AbstractSRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
+void AbstractSRAM::getStatList(std::vector<Stat> &list,
+                               std::string prefix) noexcept {
   Stat temp;
 
   temp.name = prefix + "read.request_count";
@@ -50,7 +51,7 @@ void AbstractSRAM::getStatList(std::vector<Stat> &list, std::string prefix) {
   list.push_back(temp);
 }
 
-void AbstractSRAM::getStatValues(std::vector<double> &values) {
+void AbstractSRAM::getStatValues(std::vector<double> &values) noexcept {
   values.push_back(readStat.count);
   values.push_back(readStat.size);
   values.push_back(writeStat.count);
@@ -59,7 +60,7 @@ void AbstractSRAM::getStatValues(std::vector<double> &values) {
   values.push_back(readStat.size + writeStat.size);
 }
 
-void AbstractSRAM::resetStatValues() {
+void AbstractSRAM::resetStatValues() noexcept {
   readStat.clear();
   writeStat.clear();
 }

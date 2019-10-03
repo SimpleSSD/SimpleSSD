@@ -130,7 +130,7 @@ DelayFunction makeFunction(uint64_t clock, Width width) {
              uint64_t length) -> uint64_t {
     uint32_t nBeats = MAX(DIVCEIL(length, w), 1);
     uint32_t nBursts = popcount(nBeats) + (length - 1) / mp;
-    uint32_t nClocks = nBeats * 2 + nBeats * 3;
+    uint32_t nClocks = nBeats * 2 + nBursts * 3;
 
     return nClocks * period;
   };

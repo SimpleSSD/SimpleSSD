@@ -23,7 +23,7 @@ ConfigReader::~ConfigReader() {}
  *
  * \param[in] path Input file path
  */
-void ConfigReader::load(const char *path) {
+void ConfigReader::load(const char *path) noexcept {
   auto result = file.load_file(path, pugi::parse_default, pugi::encoding_utf8);
 
   if (!result) {
@@ -72,7 +72,7 @@ void ConfigReader::load(const char *path) {
 }
 
 //! Load configuration from file
-void ConfigReader::load(std::string &path) {
+void ConfigReader::load(std::string &path) noexcept {
   load(path.c_str());
 }
 
@@ -81,7 +81,7 @@ void ConfigReader::load(std::string &path) {
  *
  * \param[in] path Output file path
  */
-void ConfigReader::save(const char *path) {
+void ConfigReader::save(const char *path) noexcept {
   // Create simplessd node
   auto config = file.append_child(CONFIG_NODE_NAME);
   config.append_attribute("version").set_value("2.1");  // TODO: FIX ME!
@@ -109,7 +109,7 @@ void ConfigReader::save(const char *path) {
 }
 
 //! Save configuration to file
-void ConfigReader::save(std::string &path) {
+void ConfigReader::save(std::string &path) noexcept {
   save(path.c_str());
 }
 
