@@ -15,20 +15,44 @@
 #include "sim/log.hh"
 #include "util/algorithm.hh"
 
+#ifndef __FILENAME__
+#define __FILENAME__ __FILE__
+#endif
+
 namespace SimpleSSD {
 
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      panic(format, ##__VA_ARGS__);                                            \
+      panic_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,     \
+                ##__VA_ARGS__);                                                \
     }                                                                          \
+  }
+
+#define panic(format, ...)                                                     \
+  {                                                                            \
+    panic_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,       \
+              ##__VA_ARGS__);                                                  \
   }
 
 #define warn_if(cond, format, ...)                                             \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      warn(format, ##__VA_ARGS__);                                             \
+      warn_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,      \
+               ##__VA_ARGS__);                                                 \
     }                                                                          \
+  }
+
+#define warn(format, ...)                                                      \
+  {                                                                            \
+    warn_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
+             ##__VA_ARGS__);                                                   \
+  }
+
+#define info(format, ...)                                                      \
+  {                                                                            \
+    info_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
+             ##__VA_ARGS__);                                                   \
   }
 
 using ObjectData = struct _ObjectData {
@@ -91,21 +115,21 @@ class Object {
   }
 
   /* Helper APIs for Log */
-  inline void info(const char *format, ...) noexcept {
+  inline void info_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
     log->print(Log::LogID::Info, format, args);
     va_end(args);
   }
-  inline void warn(const char *format, ...) noexcept {
+  inline void warn_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
     log->print(Log::LogID::Warn, format, args);
     va_end(args);
   }
-  inline void panic(const char *format, ...) noexcept {
+  inline void panic_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
