@@ -66,13 +66,13 @@ void SQContext::abort() noexcept {
 
 CQContext::CQContext() : cqID(0) {}
 
-void CQContext::update(SQContext *sqc) noexcept {
-  cqID = sqc->cqID;
-  entry.dword2.sqHead = sqc->sqHead;
-  entry.dword2.sqID = sqc->sqID;
-  entry.dword3.commandID = sqc->entry.dword0.commandID;
+void CQContext::update(SQContext *sqe) noexcept {
+  cqID = sqe->cqID;
+  entry.dword2.sqHead = sqe->sqHead;
+  entry.dword2.sqID = sqe->sqID;
+  entry.dword3.commandID = sqe->entry.dword0.commandID;
 
-  sqc->completed = true;
+  sqe->completed = true;
 }
 
 void CQContext::makeStatus(bool dnr, bool more, StatusType sct,
@@ -89,7 +89,15 @@ CQEntry *CQContext::getData() {
   return &entry;
 }
 
-uint16_t CQContext::getCQID() {
+uint16_t CQContext::getCommandID() noexcept {
+  return entry.dword3.commandID;
+}
+
+uint16_t CQContext::getSQID() noexcept {
+  return entry.dword2.sqID;
+}
+
+uint16_t CQContext::getCQID() noexcept {
   return cqID;
 }
 
@@ -213,6 +221,9 @@ SQContext *Arbitrator::dispatch() {
 
   entry->dispatched = true;
 
+  dispatchedQueue.push_back(entry->commandID, entry);
+  requestQueue.pop_front();
+
   return entry;
 }
 
@@ -242,6 +253,24 @@ void Arbitrator::completion(uint64_t, CQContext *cqe) {
 
   panic_if(!cq, "Completion to invalid completion queue.");
 
+  // Find corresponding SQContext
+  auto sqe = (SQContext *)dispatchedQueue.find(cqe->getCommandID());
+
+  panic_if(!sqe, "Failed to find corresponding submission entry.");
+  panic_if(!sqe->completed, "Corresponding submission entry not completed.");
+
+  if (UNLIKELY(
+          sqe->aborted &&
+          cqe->entry.dword3.sct == (uint8_t)StatusType::GenericCommandStatus &&
+          cqe->entry.dword3.sc == (uint8_t)GenericCommandStatusCode::Success)) {
+    // Aborted after completion
+    // TODO: FILL HERE
+  }
+
+  // Remove SQContext
+  dispatchedQueue.erase(sqe->commandID);
+  delete sqe;
+
   // Write entry to CQ
   cq->setData(cqe->getData(), eventCompDone, cqe);
 }
@@ -253,6 +282,9 @@ void Arbitrator::completion_done(uint64_t now, CQContext *cqe) {
   intrruptContext.post = true;
 
   schedule(interrupt, now, &intrruptContext);
+
+  // Remove CQContext
+  delete cqe;
 }
 
 void Arbitrator::collect(uint64_t now) {

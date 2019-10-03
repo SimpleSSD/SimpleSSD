@@ -55,6 +55,8 @@ class SQContext {
 
 class CQContext {
  private:
+  friend class Arbitrator;
+
   CQEntry entry;
 
   // uint16_t commandID;  //!< commandID at entry.dword3
@@ -69,7 +71,9 @@ class CQContext {
 
   CQEntry *getData();
 
-  uint16_t getCQID();
+  uint16_t getCommandID() noexcept;
+  uint16_t getSQID() noexcept;
+  uint16_t getCQID() noexcept;
 };
 
 class InterruptContext {
@@ -117,6 +121,7 @@ class Arbitrator : public Object {
 
   // Internal queue (Indexed by commandID, sorted by insertion order)
   unordered_map_queue requestQueue;
+  unordered_map_queue dispatchedQueue;
 
   // Completion
   Event eventCompDone;
