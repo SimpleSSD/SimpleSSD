@@ -15,6 +15,11 @@
 
 namespace SimpleSSD::HIL {
 
+/**
+ * \brief DMA Engine abstract class
+ *
+ * DMA engine class for SSD controllers.
+ */
 class DMAEngine : public Interface, public Object {
  protected:
   class DMAContext {

@@ -16,6 +16,12 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+/**
+ * \brief PRP Engine class
+ *
+ * Parse PRP and PRP lists from PRP1/2 of SQ entry. Provides read and write
+ * function to host memory.
+ */
 class PRPEngine : public DMAEngine {
  private:
   class PRP {
@@ -59,6 +65,12 @@ class PRPEngine : public DMAEngine {
   void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
 };
 
+/**
+ * \brief SGL Engine class
+ *
+ * Parse SGL descriptors and SGL segments from PRP1/2 of SQ entry. Provides
+ * read and write function to host memory.
+ */
 class SGLEngine : public DMAEngine {
  private:
   union SGLDescriptor {
