@@ -58,7 +58,18 @@ class Engine {
    */
   virtual void destroyEvent(Event) = 0;
 
+  /**
+   * \brief Create checkpoint
+   *
+   * Store all event ID, scheduled time and name.
+   */
   virtual void createCheckpoint(std::ostream &) = 0;
+
+  /**
+   * \brief Restore from checkpoint
+   *
+   * Erase all current events, restore all event ID, scheduled time and name.
+   */
   virtual void restoreCheckpoint(std::istream &) = 0;
 };
 

@@ -24,19 +24,23 @@
 namespace SimpleSSD {
 
 #define CHECKPOINT_SCALAR(os, value)                                           \
-  { write(os, sizeof(value), &value); }
+  { write_checkpoint(os, sizeof(value), (void *)&value); }
 
 #define CHECKPOINT_BLOB(os, data, length)                                      \
-  { write(os, length, data); }
+  { write_checkpoint(os, length, (void *)data); }
 
 #define RESTORE_SCALAR(is, value)                                              \
-  { read(is, sizeof(value), &value); }
+  {                                                                            \
+    uint32_t length = sizeof(value);                                           \
+                                                                               \
+    read_checkpoint(is, length, (void *)&value);                               \
+  }
 
 #define RESTORE_BLOB(os, data, type)                                           \
   {                                                                            \
     uint32_t length = 0;                                                       \
                                                                                \
-    read(is, length);                                                          \
+    read_checkpoint(is, length);                                               \
                                                                                \
     data = (type)malloc(length);                                               \
                                                                                \
@@ -46,10 +50,11 @@ namespace SimpleSSD {
       abort();                                                                 \
     }                                                                          \
                                                                                \
-    read_data(is, length, data);                                               \
+    read_checkpoint_data(is, length, (void *)data);                            \
   }
 
-inline std::ostream &write(std::ostream &os, uint32_t length, void *ptr) {
+inline std::ostream &write_checkpoint(std::ostream &os, uint32_t length,
+                                      void *ptr) {
   uint32_t header = 0xFE000000 | (length & 0xFFFFFF);
 
   if (UNLIKELY(length > 0xFFFFFF)) {
@@ -64,8 +69,8 @@ inline std::ostream &write(std::ostream &os, uint32_t length, void *ptr) {
   return os;
 }
 
-inline std::istream &read(std::istream &is, uint32_t &length,
-                          void *ptr = nullptr) {
+inline std::istream &read_checkpoint(std::istream &is, uint32_t &length,
+                                     void *ptr = nullptr) {
   uint32_t header;
 
   is.read((char *)&header, 4);
@@ -96,7 +101,8 @@ inline std::istream &read(std::istream &is, uint32_t &length,
   return is;
 }
 
-inline std::istream &read_data(std::istream &is, uint32_t length, void *ptr) {
+inline std::istream &read_checkpoint_data(std::istream &is, uint32_t length,
+                                          void *ptr) {
   // Assume length is validated by preceeding read function
   return is.read((char *)ptr, length);
 }
