@@ -10,14 +10,22 @@
 namespace SimpleSSD::HIL {
 
 InterruptManager::CoalesceData::CoalesceData()
-    : iv(0xFFFF), pending(false), currentRequestCount(0), nextDeadline(0) {}
+    : pending(false), iv(0xFFFF), currentRequestCount(0), nextDeadline(0) {}
 
 InterruptManager::InterruptManager(ObjectData &o, Interface *i)
     : Object(o),
       pInterface(i),
       interruptCoalescing(false),
+      aggregationThreshold(0),
       aggregationTime(0),
-      aggregationThreshold(0) {}
+      coalesceMap([](const void *a, const void *b) -> bool {
+        return ((CoalesceData *)a)->nextDeadline <
+               ((CoalesceData *)b)->nextDeadline;
+      }) {
+  eventTimer = createEvent(
+      [this](uint64_t t, void *c) { timerHandler(t, (CoalesceData *)c); },
+      "HIL::InterruptManager::eventTimer");
+}
 
 InterruptManager::~InterruptManager() {}
 
@@ -25,39 +33,58 @@ void InterruptManager::timerHandler(uint64_t tick, CoalesceData *data) {
   panic_if(data->nextDeadline != tick, "Timer broken in interrupt coalescing.");
 
   data->currentRequestCount = 0;
-  data->nextDeadline = 0;
+  data->nextDeadline = std::numeric_limits<uint64_t>::max();
   data->pending = true;
 
   pInterface->postInterrupt(data->iv, true);
+
+  // Schedule Timer
+  reschedule(data);
+}
+
+void InterruptManager::reschedule(CoalesceData *data) {
+  if (data) {
+    // Sort list again
+    coalesceMap.erase(data->iv);
+    coalesceMap.insert(data->iv, data);
+  }
+
+  if (LIKELY(coalesceMap.size() > 0)) {
+    auto next = (CoalesceData *)coalesceMap.front();
+
+    schedule(eventTimer, next->nextDeadline, next);
+  }
 }
 
 void InterruptManager::postInterrupt(uint16_t iv, bool set) {
   bool immediate = false;
-  auto iter = coalesceMap.find(iv);
+  auto iter = (CoalesceData *)coalesceMap.find(iv);
 
-  if (iter != coalesceMap.end()) {
+  if (iter) {
     if (set) {
-      iter->second.currentRequestCount++;
+      iter->currentRequestCount++;
 
-      if (iter->second.currentRequestCount == 1) {
-        iter->second.nextDeadline = getTick() + aggregationTime;
-        schedule(iter->second.timerEvent, iter->second.nextDeadline,
-                 &iter->second);
+      if (iter->currentRequestCount == 1) {
+        iter->nextDeadline = getTick() + aggregationTime;
+
+        // Schedule Timer
+        reschedule(iter);
       }
-      else if (iter->second.currentRequestCount >= aggregationThreshold) {
+      else if (iter->currentRequestCount >= aggregationThreshold) {
         immediate = true;
 
-        iter->second.currentRequestCount = 0;
-        iter->second.nextDeadline = 0;
-        iter->second.pending = true;
+        iter->currentRequestCount = 0;
+        iter->nextDeadline = std::numeric_limits<uint64_t>::max();
+        iter->pending = true;
 
-        deschedule(iter->second.timerEvent);
+        // Schedule Timer
+        reschedule(iter);
       }
     }
-    else if (iter->second.pending) {
+    else if (iter->pending) {
       immediate = true;
 
-      iter->second.pending = false;
+      iter->pending = false;
     }
   }
   else {
@@ -74,25 +101,23 @@ void InterruptManager::enableCoalescing(bool set, uint16_t iv) {
            "Interrupt coalesceing parameters are not set.");
   panic_if(iv == 0xFFFF, "Invalid interrupt vector.");
 
-  auto iter = coalesceMap.find(iv);
+  auto iter = (CoalesceData *)coalesceMap.find(iv);
 
-  if (set && iter == coalesceMap.end()) {
-    CoalesceData tmp;
+  if (set && !iter) {
+    CoalesceData *tmp = new CoalesceData();
 
-    tmp.timerEvent = createEvent(
-        [this](uint64_t t, void *c) { timerHandler(t, (CoalesceData *)c); },
-        "HIL::InterruptManager::CoalesceData(iv:" + std::to_string(iv) +
-            ")::timerEvent");
-    tmp.iv = iv;
-    tmp.currentRequestCount = 0;
-    tmp.nextDeadline = 0;
+    tmp->iv = iv;
+    tmp->currentRequestCount = 0;
+    tmp->nextDeadline = 0;
 
-    coalesceMap.emplace(std::make_pair(iv, tmp));
+    coalesceMap.insert(iv, tmp);
   }
-  else if (!set && iter != coalesceMap.end()) {
-    destroyEvent(iter->second.timerEvent);
+  else if (!set && iter) {
+    coalesceMap.erase(iv);
 
-    coalesceMap.erase(iter);
+    delete iter;
+
+    reschedule(nullptr);
   }
 }  // namespace SimpleSSD::HIL
 

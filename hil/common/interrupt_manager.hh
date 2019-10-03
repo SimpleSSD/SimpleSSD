@@ -14,6 +14,7 @@
 
 #include "sim/interface.hh"
 #include "sim/object.hh"
+#include "util/sorted_map.hh"
 
 namespace SimpleSSD::HIL {
 
@@ -26,7 +27,6 @@ class InterruptManager : public Object {
  private:
   class CoalesceData {
    public:
-    Event timerEvent;
     bool pending;
     uint16_t iv;
     uint16_t currentRequestCount;
@@ -41,11 +41,12 @@ class InterruptManager : public Object {
   uint16_t aggregationThreshold;  // NVMe 8bit, AHCI 8bit
   uint64_t aggregationTime;  // NVMe 8bit * 100us unit, AHCI 16bit * 1ms unit
 
-  std::map<uint16_t, CoalesceData> coalesceMap;
+  unordered_map_list coalesceMap;
+
+  Event eventTimer;
 
   void timerHandler(uint64_t, CoalesceData *);
-  void enableTimer();
-  void disableTimer();
+  void reschedule(CoalesceData *);
 
  public:
   InterruptManager(ObjectData &, Interface *);
