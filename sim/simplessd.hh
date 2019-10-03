@@ -39,7 +39,7 @@ class SimpleSSD {
   std::ostream *errfile;
   std::ostream *debugfile;
 
-  void joinPath(std::string &, std::string &) noexcept;
+  void joinPath(std::string &, std::string) noexcept;
   void openStream(std::ostream *, std::string &, std::string &) noexcept;
 
  public:
@@ -58,8 +58,8 @@ class SimpleSSD {
   void destroyController(ControllerID);
   AbstractController *getController(ControllerID = 0);
 
-  void createCheckpoint() noexcept;
-  void restoreCheckpoint() noexcept;
+  void createCheckpoint(std::string) noexcept;
+  void restoreCheckpoint(ConfigReader *) noexcept;
 };
 
 }  // namespace SimpleSSD

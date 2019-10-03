@@ -9,6 +9,9 @@
 
 #include <iostream>
 
+#define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
+#define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
+
 namespace SimpleSSD {
 
 //! SimpleSSD constructor
@@ -36,7 +39,7 @@ SimpleSSD::~SimpleSSD() {
  * \param[in,out] prefix First path string
  * \param[in]     path   Second path string
  */
-void SimpleSSD::joinPath(std::string &prefix, std::string &path) noexcept {
+void SimpleSSD::joinPath(std::string &prefix, std::string path) noexcept {
   if (prefix.back() != '/' && prefix.back() != '\\') {
     prefix.push_back('/');
   }
@@ -173,6 +176,60 @@ AbstractController *SimpleSSD::getController(ControllerID cid) {
   }
 
   return nullptr;
+}
+
+void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
+  std::string cpt_file(cpt_dir);
+  std::string cpt_config(cpt_dir);
+
+  joinPath(cpt_file, SIMPLESSD_CHECKPOINT_NAME);
+  joinPath(cpt_config, SIMPLESSD_CHECKPOINT_CONFIG);
+
+  // Try to open file at path
+  std::ofstream file(cpt_file, std::ios::binary);
+
+  if (!file.is_open()) {
+    std::cerr << "Failed to open checkpoint file: " << cpt_file << std::endl;
+
+    abort();
+  }
+
+  // Checkpointing current configuration
+  config->writeString(Section::Simulation, Config::Key::CheckpointFile,
+                      cpt_file);
+  config->save(cpt_config);
+
+  // Checkpointing this
+  // TODO: WRITE VERSION HERE!
+  engine->createCheckpoint(file);
+
+  // Checkpoint chain begins here
+  subsystem->createCheckpoint(file);
+
+  file.close();
+}
+
+void SimpleSSD::restoreCheckpoint(ConfigReader *) noexcept {
+  auto cpt_file =
+      config->readString(Section::Simulation, Config::Key::CheckpointFile);
+
+  // Try to open file
+  std::ifstream file(cpt_file, std::ios::binary);
+
+  if (!file.is_open()) {
+    std::cerr << "Failed to open checkpoint file: " << cpt_file << std::endl;
+
+    abort();
+  }
+
+  // Restore this
+  // TODO: CHECK VERSION HERE!
+  engine->restoreCheckpoint(file);
+
+  // Restore chain begins here
+  subsystem->restoreCheckpoint(file);
+
+  file.close();
 }
 
 }  // namespace SimpleSSD

@@ -58,8 +58,8 @@ class Engine {
    */
   virtual void destroyEvent(Event) = 0;
 
-  virtual void createCheckpoint() = 0;
-  virtual void restoreCheckpoint() = 0;
+  virtual void createCheckpoint(std::ostream &) = 0;
+  virtual void restoreCheckpoint(std::istream &) = 0;
 };
 
 }  // namespace SimpleSSD

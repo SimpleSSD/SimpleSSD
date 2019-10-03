@@ -154,8 +154,8 @@ class Object {
   virtual void resetStatValues() noexcept = 0;
 
   /* Checkpoint API */
-  virtual void createCheckpoint() noexcept = 0;
-  virtual void restoreCheckpoint() noexcept = 0;
+  virtual void createCheckpoint(std::ostream &) noexcept = 0;
+  virtual void restoreCheckpoint(std::istream &) noexcept = 0;
 };
 
 }  // namespace SimpleSSD
