@@ -10,6 +10,7 @@
 #ifndef __SIM_OBJECT_HH__
 #define __SIM_OBJECT_HH__
 
+#include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/log.hh"
