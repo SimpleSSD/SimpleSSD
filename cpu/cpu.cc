@@ -48,13 +48,13 @@ uint64_t InstStat::sum() {
   return branch + load + store + arithmetic + floatingPoint + otherInsts;
 }
 
-JobEntry::_JobEntry(EventFunction &f, void *c, InstStat *i)
-    : func(f), context(c), inst(i) {}
+JobEntry::_JobEntry(Event e, EventContext c, InstStat *i)
+    : eid(e), context(c), inst(i) {}
 
 CPU::CoreStat::CoreStat() : busy(0) {}
 
 CPU::Core::Core(Engine *e) : engine(e), busy(false) {
-  jobEvent = engine->createEvent([this](uint64_t, void *) { jobDone(); },
+  jobEvent = engine->createEvent([this](uint64_t, EventContext) { jobDone(); },
                                  "CPU::Core::jobEvent");
 }
 
@@ -97,13 +97,14 @@ void CPU::Core::handleJob() {
 
   busy = true;
 
-  engine->schedule(jobEvent, finishedAt);
+  engine->schedule(jobEvent, finishedAt, EventContext());
 }
 
 void CPU::Core::jobDone() {
   auto &iter = jobs.front();
 
-  iter.func(engine->getTick(), iter.context);
+  engine->schedule(iter.eid, engine->getTick, iter.context);
+
   stat.busy += iter.inst->latency;
   stat.instStat += *iter.inst;
 
@@ -525,8 +526,8 @@ uint32_t CPU::leastBusyCPU(std::vector<Core> &list) {
   return idx;
 }
 
-void CPU::execute(Namespace ns, Function fct, EventFunction &func,
-                  void *context, uint64_t delay) {
+void CPU::execute(Namespace ns, Function fct, Event eid, EventContext context,
+                  uint64_t delay) {
   Core *pCore = nullptr;
 
   // Find dedicated core
@@ -580,10 +581,10 @@ void CPU::execute(Namespace ns, Function fct, EventFunction &func,
       panic("Namespace %u does not have function %u", ns, fct);
     }
 
-    pCore->submitJob(JobEntry(func, context, &inst->second), delay);
+    pCore->submitJob(JobEntry(eid, context, &inst->second), delay);
   }
   else {
-    func(getTick(), context);
+    schedule(eid, getTick(), context);
   }
 }
 

@@ -41,13 +41,13 @@ typedef struct _InstStat {
 } InstStat;
 
 typedef struct _JobEntry {
-  EventFunction func;
-  void *context;
+  Event eid;
+  EventContext context;
   InstStat *inst;
   uint64_t submitAt;
   uint64_t delay;
 
-  _JobEntry(EventFunction &, void *, InstStat *);
+  _JobEntry(Event, EventContext, InstStat *);
 } JobEntry;
 
 class CPU : public Object {
@@ -105,16 +105,15 @@ class CPU : public Object {
   CPU(ObjectData &);
   ~CPU();
 
-  void execute(Namespace, Function, EventFunction &, void * = nullptr,
-               uint64_t = 0);
+  void execute(Namespace, Function, Event, EventContext, uint64_t = 0);
   uint64_t applyLatency(Namespace, Function);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint() noexcept override;
-  void restoreCheckpoint() noexcept override;
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::CPU
