@@ -23,10 +23,10 @@
 
 namespace SimpleSSD {
 
-#define CHECKPOINT_SCALAR(os, value)                                           \
+#define BACKUP_SCALAR(os, value)                                               \
   { write_checkpoint(os, sizeof(value), (void *)&value); }
 
-#define CHECKPOINT_BLOB(os, data, length)                                      \
+#define BACKUP_BLOB(os, data, length)                                          \
   { write_checkpoint(os, length, (void *)data); }
 
 #define RESTORE_SCALAR(is, value)                                              \
