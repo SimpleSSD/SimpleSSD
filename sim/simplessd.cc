@@ -16,7 +16,7 @@ SimpleSSD::SimpleSSD()
     : inited(false),
       config(nullptr),
       engine(nullptr),
-      interface(nullptr),
+      subsystem(nullptr),
       outfile(nullptr),
       errfile(nullptr),
       debugfile(nullptr) {}
@@ -96,10 +96,9 @@ void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
  * \param[in]  i  SimpleSSD::Interface object.
  * \return Initialization result.
  */
-bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
+bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   engine = e;
   config = c;
-  interface = i;
 
   // Open file streams
   auto prefix =
@@ -127,6 +126,8 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
 
       abort();
   }
+
+  // Create Subsystem
 
   inited = true;
 
@@ -158,7 +159,19 @@ void SimpleSSD::deinit() noexcept {
   inited = false;
 }
 
-AbstractController *SimpleSSD::getController(uint16_t cid) {
+ControllerID SimpleSSD::createController(Interface *i) {
+  return subsystem->createController(i);
+}
+
+void SimpleSSD::destroyController(ControllerID cid) {
+  subsystem->destroyController(cid);
+}
+
+AbstractController *SimpleSSD::getController(ControllerID cid) {
+  if (inited) {
+    return subsystem->getController(cid);
+  }
+
   return nullptr;
 }
 

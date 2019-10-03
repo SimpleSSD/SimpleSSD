@@ -10,8 +10,8 @@
 #ifndef __SIM_SIMPLESSD_HH__
 #define __SIM_SIMPLESSD_HH__
 
-#include "sim/config_reader.hh"
 #include "sim/abstract_controller.hh"
+#include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/interface.hh"
 #include "sim/log.hh"
@@ -32,7 +32,8 @@ class SimpleSSD {
   ConfigReader *config;  //!< Config object provided by simulation system
   Engine *engine;        //!< Engine object provided by simulation system
   Log log;               //!< Log system
-  Interface *interface;  //!< Interface object provided by simulation system
+
+  AbstractSubsystem *subsystem;  //!< NVM Subsystem
 
   std::ostream *outfile;
   std::ostream *errfile;
@@ -50,10 +51,12 @@ class SimpleSSD {
   SimpleSSD &operator=(const SimpleSSD &) = delete;
   SimpleSSD &operator=(SimpleSSD &&) noexcept = default;
 
-  bool init(Engine *, ConfigReader *, Interface *) noexcept;
+  bool init(Engine *, ConfigReader *) noexcept;
   void deinit() noexcept;
 
-  AbstractController *getController(uint16_t = 0);
+  ControllerID createController(Interface *);
+  void destroyController(ControllerID);
+  AbstractController *getController(ControllerID = 0);
 
   void createCheckpoint() noexcept;
   void restoreCheckpoint() noexcept;

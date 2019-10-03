@@ -10,6 +10,7 @@
 #ifndef __SIM_ABSTRACT_CONTROLLER_HH__
 #define __SIM_ABSTRACT_CONTROLLER_HH__
 
+#include "sim/abstract_subsystem.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
 
@@ -23,16 +24,20 @@ namespace SimpleSSD {
  */
 class AbstractController : public Object {
  protected:
-  Interface *pInterface;
+  Interface *pInterface;          //!< Per-controller host interface
+  AbstractSubsystem *pSubsystem;  //!< Connected subsystem
 
  public:
-  AbstractController(ObjectData &o, Interface *i) : Object(o), pInterface(i) {}
+  AbstractController(ObjectData &o, Interface *i, AbstractSubsystem *s)
+      : Object(o), pInterface(i), pSubsystem(s) {}
   AbstractController(const AbstractController &) = delete;
   AbstractController(AbstractController &&) noexcept = default;
   virtual ~AbstractController() {}
 
   AbstractController &operator=(const AbstractController &) = delete;
   AbstractController &operator=(AbstractController &&) noexcept = default;
+
+  virtual Interface *getInterface() noexcept = 0;
 
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
