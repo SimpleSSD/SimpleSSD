@@ -36,22 +36,8 @@ namespace SimpleSSD {
     read_checkpoint(is, length, (void *)&value);                               \
   }
 
-#define RESTORE_BLOB(os, data, type)                                           \
-  {                                                                            \
-    uint32_t length = 0;                                                       \
-                                                                               \
-    read_checkpoint(is, length);                                               \
-                                                                               \
-    data = (type)malloc(length);                                               \
-                                                                               \
-    if (UNLIKELY(!data)) {                                                     \
-      std::cerr << "Out of memory" << std::endl;                               \
-                                                                               \
-      abort();                                                                 \
-    }                                                                          \
-                                                                               \
-    read_checkpoint_data(is, length, (void *)data);                            \
-  }
+#define RESTORE_BLOB(os, data, length)                                         \
+  { read_checkpoint(is, length, (void *)data); }
 
 inline std::ostream &write_checkpoint(std::ostream &os, uint32_t length,
                                       void *ptr) {
