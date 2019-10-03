@@ -17,7 +17,6 @@ SimpleSSD::SimpleSSD()
       config(nullptr),
       engine(nullptr),
       interface(nullptr),
-      pHIL(nullptr),
       outfile(nullptr),
       errfile(nullptr),
       debugfile(nullptr) {}
@@ -142,9 +141,6 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c, Interface *i) noexcept {
 void SimpleSSD::deinit() noexcept {
   if (inited) {
     // Delete objects
-    delete pHIL;
-
-    pHIL = nullptr;
 
     // Deinitialize log system
     log.deinit();
@@ -162,62 +158,8 @@ void SimpleSSD::deinit() noexcept {
   inited = false;
 }
 
-/**
- * \brief Read register
- *
- * Read controller register of SSD.
- *
- * \param[in]  offset   Offset of controller register
- * \param[in]  length   Length to read
- * \param[out] buffer   Buffer
- * \param[in]  eid      Event ID
- * \param[in]  context  User data
- */
-void SimpleSSD::read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid, void *context) noexcept {
-  uint64_t latency = read(offset, length, buffer);
-
-  engine->schedule(eid, engine->getTick() + latency, context);
-}
-
-/**
- * \brief Read register
- *
- * Simulator can use this simple version of read function when Event is not
- * necessary.
- */
-uint64_t SimpleSSD::read(uint64_t offset, uint64_t length,
-                         uint8_t *buffer) noexcept {
-  return pHIL->read(offset, length, buffer);
-}
-
-/**
- * \brief Write register
- *
- * Write controller register of SSD.
- *
- * \param[in] offset  Offset of controller register
- * \param[in] length  Length to write
- * \param[in] buffer  Data to write
- * \param[in] eid     Event ID
- * \param[in] context User data
- */
-void SimpleSSD::write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                      Event eid, void *context) noexcept {
-  uint64_t latency = write(offset, length, buffer);
-
-  engine->schedule(eid, engine->getTick() + latency, context);
-}
-
-/**
- * \brief Write register
- *
- * Simulator can use this simple version of write function when Event is not
- * necessary.
- */
-uint64_t SimpleSSD::write(uint64_t offset, uint64_t length,
-                          uint8_t *buffer) noexcept {
-  return pHIL->write(offset, length, buffer);
+AbstractController *SimpleSSD::getController(uint16_t cid) {
+  return nullptr;
 }
 
 }  // namespace SimpleSSD

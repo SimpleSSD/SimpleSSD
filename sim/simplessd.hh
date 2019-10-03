@@ -11,7 +11,7 @@
 #define __SIM_SIMPLESSD_HH__
 
 #include "sim/config_reader.hh"
-#include "sim/controller.hh"
+#include "sim/abstract_controller.hh"
 #include "sim/engine.hh"
 #include "sim/interface.hh"
 #include "sim/log.hh"
@@ -34,8 +34,6 @@ class SimpleSSD {
   Log log;               //!< Log system
   Interface *interface;  //!< Interface object provided by simulation system
 
-  Controller *pHIL;
-
   std::ostream *outfile;
   std::ostream *errfile;
   std::ostream *debugfile;
@@ -55,10 +53,7 @@ class SimpleSSD {
   bool init(Engine *, ConfigReader *, Interface *) noexcept;
   void deinit() noexcept;
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) noexcept;
-  uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept;
-  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) noexcept;
-  uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept;
+  AbstractController *getController(uint16_t = 0);
 
   void createCheckpoint() noexcept;
   void restoreCheckpoint() noexcept;
