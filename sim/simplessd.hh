@@ -59,7 +59,7 @@ class SimpleSSD {
   AbstractController *getController(ControllerID = 0);
 
   void createCheckpoint(std::string) noexcept;
-  void restoreCheckpoint(ConfigReader *) noexcept;
+  void restoreCheckpoint(Engine *, ConfigReader *) noexcept;
 };
 
 }  // namespace SimpleSSD

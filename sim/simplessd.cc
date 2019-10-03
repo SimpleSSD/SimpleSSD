@@ -209,7 +209,10 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
   file.close();
 }
 
-void SimpleSSD::restoreCheckpoint(ConfigReader *) noexcept {
+void SimpleSSD::restoreCheckpoint(Engine *e, ConfigReader *c) noexcept {
+  // First, create all objects
+  init(e, c);
+
   auto cpt_file =
       config->readString(Section::Simulation, Config::Key::CheckpointFile);
 
