@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_CONTROLLER_HH__
-#define __SIM_CONTROLLER_HH__
+#ifndef __SIM_ABSTRACT_CONTROLLER_HH__
+#define __SIM_ABSTRACT_CONTROLLER_HH__
 
 #include "sim/interface.hh"
 #include "sim/object.hh"
@@ -21,18 +21,18 @@ namespace SimpleSSD {
  * All controllers - NVMe/SATA/UFS - inherits this class. So that SimpleSSD can
  * pass read/write register calls to correct controllers.
  */
-class Controller : public Object {
+class AbstractController : public Object {
  protected:
   Interface *pInterface;
 
  public:
-  Controller(ObjectData &o, Interface *i) : Object(o), pInterface(i) {}
-  Controller(const Controller &) = delete;
-  Controller(Controller &&) noexcept = default;
-  virtual ~Controller() {}
+  AbstractController(ObjectData &o, Interface *i) : Object(o), pInterface(i) {}
+  AbstractController(const AbstractController &) = delete;
+  AbstractController(AbstractController &&) noexcept = default;
+  virtual ~AbstractController() {}
 
-  Controller &operator=(const Controller &) = delete;
-  Controller &operator=(Controller &&) noexcept = default;
+  AbstractController &operator=(const AbstractController &) = delete;
+  AbstractController &operator=(AbstractController &&) noexcept = default;
 
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
