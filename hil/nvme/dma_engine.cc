@@ -7,6 +7,25 @@
 
 #include "hil/nvme/dma_engine.hh"
 
+#define MAKE_SGL_ID(type, subtype)                                             \
+  (uint8_t)(((type << 4) & 0xF0) | (subtype & 0x0F))
+#define SGL_TYPE(id) (uint8_t)(id >> 4)
+#define SGL_SUBTYPE(id) (uint8_t)(id & 0x0F)
+
+enum SGL_DESCRIPTOR_TYPE : uint8_t {
+  TYPE_DATA_BLOCK_DESCRIPTOR = 0x00,
+  TYPE_BIT_BUCKET_DESCRIPTOR = 0x01,
+  TYPE_SEGMENT_DESCRIPTOR = 0x02,
+  TYPE_LAST_SEGMENT_DESCRIPTOR = 0x03,
+  TYPE_KEYED_DATA_BLOCK_DESCRIPTOR = 0x04
+};
+
+enum SGL_DESCRIPTOR_SUBTYPE : uint8_t {
+  SUBTYPE_ADDRESS = 0x00,
+  SUBTYPE_OFFSET = 0x01,
+  SUBTYPE_NVME_TRANSPORT_SPECIFIC = 0x02
+};
+
 namespace SimpleSSD::HIL::NVMe {
 
 PRPEngine::PRP::PRP() : address(0), size(0) {}
@@ -59,6 +78,8 @@ void PRPEngine::getPRPListFromPRP_readDone(uint64_t now, PRPInitContext *data) {
     data->bufferSize = listPRPSize;
     data->buffer = (uint8_t *)malloc(data->bufferSize);
 
+    panic_if(data->buffer == nullptr, "Out of memory.");
+
     pInterface->read(listPRP, data->bufferSize, data->buffer, readPRPList,
                      data);
   }
@@ -84,6 +105,8 @@ void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid, void *context) {
   data->context = context;
   data->bufferSize = getSizeFromPRP(prp);
   data->buffer = (uint8_t *)malloc(data->bufferSize);
+
+  panic_if(data->buffer == nullptr, "Out of memory.");
 
   pInterface->read(prp, data->bufferSize, data->buffer, readPRPList, data);
 }
@@ -165,6 +188,213 @@ void PRPEngine::initQueue(uint64_t base, uint64_t size, bool cont, Event eid,
   }
   else {
     getPRPListFromPRP(base, eid, context);
+  }
+}
+
+void PRPEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
+                     Event eid, void *context) {
+  panic_if(!inited, "Accessed to uninitialized PRPEngine.");
+
+  DMAContext *readContext = new DMAContext(eid, context);
+
+  uint64_t totalRead = 0;
+  uint64_t currentOffset = 0;
+  uint64_t read;
+  bool begin = false;
+
+  for (auto &iter : prpList) {
+    if (begin) {
+      read = MIN(iter.size, length - totalRead);
+      readContext->counter++;
+      pInterface->read(iter.address, read, buffer ? buffer + totalRead : NULL,
+                       dmaHandler, readContext);
+      totalRead += read;
+
+      if (totalRead == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.size > offset) {
+      begin = true;
+      totalRead = offset - currentOffset;
+      read = MIN(iter.size - totalRead, length);
+      readContext->counter++;
+      pInterface->read(iter.address + totalRead, read, buffer, dmaHandler,
+                       readContext);
+      totalRead = read;
+    }
+
+    currentOffset += iter.size;
+  }
+
+  if (readContext->counter == 0) {
+    readContext->counter = 1;
+
+    dmaDone(getTick(), readContext);
+  }
+}
+
+void PRPEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
+                      Event eid, void *context) {
+  panic_if(!inited, "Accessed to uninitialized PRPEngine.");
+
+  DMAContext *writeContext = new DMAContext(eid, context);
+  uint64_t totalWritten = 0;
+  uint64_t currentOffset = 0;
+  uint64_t written;
+  bool begin = false;
+
+  for (auto &iter : prpList) {
+    if (begin) {
+      written = MIN(iter.size, length - totalWritten);
+      writeContext->counter++;
+      pInterface->write(iter.address, written,
+                        buffer ? buffer + totalWritten : NULL, dmaHandler,
+                        writeContext);
+      totalWritten += written;
+
+      if (totalWritten == length) {
+        break;
+      }
+    }
+
+    if (!begin && currentOffset + iter.size > offset) {
+      begin = true;
+      totalWritten = offset - currentOffset;
+      written = MIN(iter.size - totalWritten, length);
+      writeContext->counter++;
+      pInterface->write(iter.address + totalWritten, written, buffer,
+                        dmaHandler, writeContext);
+      totalWritten = written;
+    }
+
+    currentOffset += iter.size;
+  }
+
+  if (writeContext->counter == 0) {
+    writeContext->counter = 1;
+
+    dmaDone(getTick(), writeContext);
+  }
+}
+
+SGLEngine::SGLDescriptor::SGLDescriptor() {
+  memset(data, 0, 16);
+}
+
+SGLEngine::Chunk::Chunk() : address(0), length(0), ignore(true) {}
+
+SGLEngine::Chunk::Chunk(uint64_t a, uint32_t l, bool i)
+    : address(a), length(l), ignore(i) {}
+
+SGLEngine::SGLEngine(ObjectData &o, Interface *i)
+    : DMAEngine(o, i), inited(false), totalSize(0) {}
+
+SGLEngine::~SGLEngine() {}
+
+void SGLEngine::parseSGLDescriptor(SGLDescriptor &desc) {
+  switch (SGL_TYPE(desc.id)) {
+    case TYPE_DATA_BLOCK_DESCRIPTOR:
+    case TYPE_KEYED_DATA_BLOCK_DESCRIPTOR:
+      chunkList.push_back(Chunk(desc.address, desc.length, false));
+      totalSize += desc.length;
+
+      break;
+    case TYPE_BIT_BUCKET_DESCRIPTOR:
+      chunkList.push_back(Chunk(desc.address, desc.length, true));
+      totalSize += desc.length;
+
+      break;
+    default:
+      panic("Invalid SGL descriptor");
+      break;
+  }
+
+  panic_if(SGL_SUBTYPE(desc.id) != SUBTYPE_ADDRESS, "Unexpected SGL subtype");
+}
+
+void SGLEngine::parseSGLSegment(uint64_t address, uint32_t length, Event eid,
+                                void *context) {
+  auto *data = new SGLInitContext();
+
+  // Allocate buffer
+  data->eid = eid;
+  data->context = context;
+  data->bufferSize = length;
+  data->buffer = (uint8_t *)calloc(length, 1);
+
+  panic_if(data->buffer == nullptr, "Out of memory.");
+
+  // Read segment
+  pInterface->read(address, length, data->buffer, readSGL, data);
+}
+
+void SGLEngine::parseSGLSegment_readDone(uint64_t now, SGLInitContext *data) {
+  SGLDescriptor desc;
+  bool next = false;
+
+  for (uint32_t i = 0; i < data->bufferSize; i += 16) {
+    memcpy(desc.data, data->buffer + i, 16);
+
+    switch (SGL_TYPE(desc.id)) {
+      case TYPE_DATA_BLOCK_DESCRIPTOR:
+      case TYPE_KEYED_DATA_BLOCK_DESCRIPTOR:
+      case TYPE_BIT_BUCKET_DESCRIPTOR:
+        parseSGLDescriptor(desc);
+
+        break;
+      case TYPE_SEGMENT_DESCRIPTOR:
+      case TYPE_LAST_SEGMENT_DESCRIPTOR:
+        next = true;
+
+        panic_if(i != data->bufferSize - 16, "Invalid SGL segment");
+
+        break;
+    }
+  }
+
+  free(data->buffer);
+
+  // Go to next
+  if (next) {
+    data->bufferSize = desc.length;
+    data->buffer = (uint8_t *)calloc(desc.length, 1);
+
+    panic_if(data->buffer == nullptr, "Out of memory.");
+
+    pInterface->read(desc.address, desc.length, data->buffer, readSGL, data);
+  }
+  else {
+    inited = true;
+
+    schedule(data->eid, now, data->context);
+
+    delete data;
+  }
+}
+
+void SGLEngine::init(uint64_t prp1, uint64_t prp2, Event eid, void *context) {
+  SGLDescriptor desc;
+
+  // Create first SGL descriptor from PRP pointers
+  memcpy(desc.data, &prp1, 8);
+  memcpy(desc.data + 8, &prp2, 8);
+
+  // Check type
+  if (SGL_TYPE(desc.id) == TYPE_DATA_BLOCK_DESCRIPTOR ||
+      SGL_TYPE(desc.id) == TYPE_KEYED_DATA_BLOCK_DESCRIPTOR) {
+    inited = true;
+
+    // This is entire buffer
+    parseSGLDescriptor(desc);
+
+    schedule(eid, getTick(), context);
+  }
+  else if (SGL_TYPE(desc.id) == TYPE_SEGMENT_DESCRIPTOR ||
+           SGL_TYPE(desc.id) == TYPE_LAST_SEGMENT_DESCRIPTOR) {
+    // This points segment
+    parseSGLSegment(desc.address, desc.length, eid, context);
   }
 }
 

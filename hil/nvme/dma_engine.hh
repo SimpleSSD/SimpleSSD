@@ -59,7 +59,59 @@ class PRPEngine : public DMAEngine {
   void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
 };
 
-class SGLEngine : public DMAEngine {};
+class SGLEngine : public DMAEngine {
+ private:
+  union SGLDescriptor {
+    uint8_t data[16];
+    struct {
+      uint64_t address;
+      uint32_t length;
+      uint8_t reserved[3];
+      uint8_t id;
+    };
+
+    SGLDescriptor();
+  };
+
+  class Chunk {
+   public:
+    uint64_t address;
+    uint32_t length;
+
+    bool ignore;
+
+    Chunk();
+    Chunk(uint64_t, uint32_t, bool);
+  };
+
+  class SGLInitContext {
+   public:
+    uint8_t *buffer;
+    uint64_t bufferSize;
+    Event eid;
+    void *context;
+  };
+
+  bool inited;
+
+  std::vector<Chunk> chunkList;
+  uint64_t totalSize;
+
+  Event readSGL;
+
+  void parseSGLDescriptor(SGLDescriptor &);
+  void parseSGLSegment(uint64_t, uint32_t, Event, void *);
+  void parseSGLSegment_readDone(uint64_t, SGLInitContext *);
+
+ public:
+  SGLEngine(ObjectData &, Interface *);
+  ~SGLEngine();
+
+  void init(uint64_t, uint64_t, Event, void * = nullptr);
+
+  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
+};
 
 }  // namespace SimpleSSD::HIL::NVMe
 
