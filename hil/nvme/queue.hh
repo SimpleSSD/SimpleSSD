@@ -22,15 +22,17 @@ union SQEntry {
   struct {
     struct {
       uint8_t opcode;
-      uint8_t fuse;
+      uint8_t fuse : 2;
+      uint8_t rsvd : 4;
+      uint8_t psdt : 2;
       uint16_t commandID;
     } dword0;
     uint32_t namespaceID;
-    uint32_t reserved1;
-    uint32_t reserved2;
-    uint64_t metadata;
-    uint64_t data1;
-    uint64_t data2;
+    uint32_t rsvd1;
+    uint32_t rsvd2;
+    uint64_t mptr;
+    uint64_t dptr1;
+    uint64_t dptr2;
     uint32_t dword10;
     uint32_t dword11;
     uint32_t dword12;
@@ -40,20 +42,6 @@ union SQEntry {
   };
 
   SQEntry();
-};
-
-class SQEntryWrapper {
- public:
-  SQEntry entry;
-
-  uint16_t requestID;
-  uint16_t sqID;
-  uint16_t cqID;
-  uint16_t sqHead;
-
-  bool useSGL;
-
-  SQEntryWrapper(SQEntry &, uint16_t, uint16_t, uint16_t, uint16_t);
 };
 
 union CQEntry {
@@ -67,29 +55,24 @@ union CQEntry {
     } dword2;
     struct {
       uint16_t commandID;
-      uint16_t status;
+      union {
+        uint16_t status;
+        struct {
+          uint16_t phase : 1;
+          uint16_t sc : 8;
+          uint16_t sct : 3;
+          uint16_t crd : 2;
+          uint16_t more : 1;
+          uint16_t dnr : 1;
+        };
+      };
     } dword3;
   };
 
   CQEntry();
 };
 
-class CQEntryWrapper {
- public:
-  CQEntry entry;
-
-  uint64_t submittedAt;
-
-  uint16_t requestID;
-  uint16_t cqID;
-  // uint16_t sqID;  //!< sqID at entry.dword2
-
-  CQEntryWrapper(SQEntryWrapper &);
-
-  void makeStatus(bool, bool, StatusType, uint8_t);
-};
-
-class Queue : public Object{
+class Queue : public Object {
  protected:
   uint16_t id;
 
@@ -132,7 +115,7 @@ class CQueue : public Queue {
 class SQueue : public Queue {
  protected:
   uint16_t cqID;
-  uint8_t priority;
+  QueuePriority priority;
 
  public:
   SQueue(ObjectData &, uint16_t, uint8_t, uint16_t, uint16_t);
@@ -140,7 +123,7 @@ class SQueue : public Queue {
   uint16_t getCQID();
   void setTail(uint16_t);
   void getData(SQEntry *, Event, void *);
-  uint8_t getPriority();
+  QueuePriority getPriority();
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

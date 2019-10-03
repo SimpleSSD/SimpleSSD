@@ -13,39 +13,8 @@ SQEntry::SQEntry() {
   memset(data, 0, 64);
 }
 
-SQEntryWrapper::SQEntryWrapper(SQEntry &sqdata, uint16_t sqid, uint16_t cqid,
-                               uint16_t sqhead, uint16_t squid)
-    : entry(sqdata),
-      sqID(sqid),
-      cqID(cqid),
-      sqHead(sqhead),
-      requestID(squid),
-      useSGL(true) {
-  if ((sqdata.dword0.fuse >> 6) == 0x00) {
-    useSGL = false;
-  }
-}
-
 CQEntry::CQEntry() {
   memset(data, 0, 16);
-}
-
-CQEntryWrapper::CQEntryWrapper(SQEntryWrapper &sqew) {
-  cqID = sqew.cqID;
-  requestID = sqew.requestID;
-  entry.dword2.sqHead = sqew.sqHead;
-  entry.dword2.sqID = sqew.sqID;
-  entry.dword3.commandID = sqew.entry.dword0.commandID;
-}
-
-void CQEntryWrapper::makeStatus(bool dnr, bool more, StatusType sct,
-                                uint8_t sc) {
-  entry.dword3.status = 0x0000;
-
-  entry.dword3.status = ((dnr ? 1 : 0) << 15);
-  entry.dword3.status |= ((more ? 1 : 0) << 14);
-  entry.dword3.status |= (((uint16_t)sct & 0x07) << 9);
-  entry.dword3.status |= (((uint16_t)sc & 0xFF) << 1);
 }
 
 Queue::Queue(ObjectData &o, uint16_t qid, uint16_t length)
@@ -141,7 +110,7 @@ uint16_t CQueue::getInterruptVector() {
 
 SQueue::SQueue(ObjectData &o, uint16_t cqid, uint8_t pri, uint16_t qid,
                uint16_t size)
-    : Queue(o, qid, size), cqID(cqid), priority(pri) {}
+    : Queue(o, qid, size), cqID(cqid), priority((QueuePriority)pri) {}
 
 uint16_t SQueue::getCQID() {
   return cqID;
@@ -165,7 +134,7 @@ void SQueue::getData(SQEntry *entry, Event eid, void *context) {
   }
 }
 
-uint8_t SQueue::getPriority() {
+QueuePriority SQueue::getPriority() {
   return priority;
 }
 

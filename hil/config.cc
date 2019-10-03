@@ -227,6 +227,7 @@ void Config::update() {
   // Validates
   warn_if(workInterval >= 1000000000, "Work interval %" PRIu64 " is too large.",
           workInterval);
+  panic_if(requestQueueSize == 0, "Invalid request queue size.");
 
   pcieGen = (PCIExpress::Generation)((uint8_t)pcieGen - 1);
   panic_if((uint8_t)pcieGen > 2, "Invalid PCIe generation %u.",
@@ -259,9 +260,9 @@ void Config::update() {
 
   panic_if(maxSQ < 2, "NVMe requires at least two submission queues.");
   panic_if(maxCQ < 2, "NVMe requires at least two completion queues.");
-  panic_if(wrrHigh == 0, "Invalid weighted-round-robin high priority value %u.",
-           wrrHigh);
-  panic_if(wrrMedium == 0,
+  panic_if(wrrHigh == 0 || wrrHigh > 256,
+           "Invalid weighted-round-robin high priority value %u.", wrrHigh);
+  panic_if(wrrMedium == 0 || wrrMedium > 256,
            "Invalid weighted-round-robin medium priority value %u.", wrrMedium);
   panic_if(maxNamespace == 0, "Invalid maximum namespace value %u.",
            maxNamespace);
