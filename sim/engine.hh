@@ -57,6 +57,9 @@ class Engine {
    * Destroy event. Deschedule event if scheduled before destroy.
    */
   virtual void destroyEvent(Event) = 0;
+
+  virtual void createCheckpoint() = 0;
+  virtual void restoreCheckpoint() = 0;
 };
 
 }  // namespace SimpleSSD
