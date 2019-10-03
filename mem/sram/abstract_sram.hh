@@ -12,11 +12,11 @@
 
 #include <cinttypes>
 
-#include "util/abstract_fifo.hh"
+#include "mem/abstract_ram.hh"
 
 namespace SimpleSSD::Memory::SRAM {
 
-class AbstractSRAM : public AbstractFIFO {
+class AbstractSRAM : public AbstractRAM {
  protected:
   struct Stats {
     uint64_t count;
@@ -42,41 +42,15 @@ class AbstractSRAM : public AbstractFIFO {
   void rangeCheck(uint64_t, uint64_t) noexcept;
 
  public:
-  AbstractSRAM(ObjectData &, std::string);
+  AbstractSRAM(ObjectData &);
   virtual ~AbstractSRAM();
-
-  /**
-   * \brief Read SRAM
-   *
-   * Read SRAM with callback event.
-   *
-   * \param[in] address Begin address of SRAM
-   * \param[in] length  Amount of data to read
-   * \param[in] eid     Event ID of callback event
-   * \param[in] context User data of callback
-   */
-  virtual void read(uint64_t address, uint64_t length, Event eid,
-                    void *context = nullptr) = 0;
-
-  /**
-   * \brief Write SRAM
-   *
-   * Write SRAM with callback event.
-   *
-   * \param[in] address Begin address of SRAM
-   * \param[in] length  Amount of data to write
-   * \param[in] eid     Event ID of callback event
-   * \param[in] context User data of callback
-   */
-  virtual void write(uint64_t address, uint64_t length, Event eid,
-                     void *context = nullptr) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint() noexcept override;
-  void restoreCheckpoint() noexcept override;
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::Memory::SRAM

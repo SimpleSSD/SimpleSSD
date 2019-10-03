@@ -94,6 +94,9 @@ class Queue : public Object {
   uint16_t getTail();
   uint16_t getSize();
   void setBase(Interface *, uint64_t);
+
+  virtual void createCheckpoint(std::ostream &) noexcept;
+  virtual void restoreCheckpoint(std::istream &) noexcept;
 };
 
 class CQueue : public Queue {
@@ -105,11 +108,14 @@ class CQueue : public Queue {
  public:
   CQueue(ObjectData &, uint16_t, bool, uint16_t, uint16_t);
 
-  void setData(CQEntry *, Event, void *);
+  void setData(CQEntry *, Event, EventContext);
   uint16_t incHead();
   void setHead(uint16_t);
   bool interruptEnabled();
   uint16_t getInterruptVector();
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class SQueue : public Queue {
@@ -122,8 +128,11 @@ class SQueue : public Queue {
 
   uint16_t getCQID();
   void setTail(uint16_t);
-  void getData(SQEntry *, Event, void *);
+  void getData(SQEntry *, Event, EventContext);
   QueuePriority getPriority();
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

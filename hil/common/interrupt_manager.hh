@@ -66,8 +66,8 @@ class InterruptManager : public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint() noexcept override;
-  void restoreCheckpoint() noexcept override;
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL

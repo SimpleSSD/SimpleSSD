@@ -135,15 +135,21 @@ Arbitrator::Arbitrator(ObjectData &o)
 
   // Create events
   complete = createEvent(
-      [this](uint64_t t, void *c) { completion(t, (CQContext *)c); },
+      [this](uint64_t t, EventContext c) {
+        completion(t, c.get<CQContext *>());
+      },
       "HIL::NVMe::Arbitrator::complete");
-  work = createEvent([this](uint64_t t, void *) { collect(t); },
+  work = createEvent([this](uint64_t t, EventContext) { collect(t); },
                      "HIL::NVMe::Arbitrator::work");
   eventCompDone = createEvent(
-      [this](uint64_t t, void *c) { completion_done(t, (CQContext *)c); },
+      [this](uint64_t t, EventContext c) {
+        completion_done(t, c.get<CQContext *>());
+      },
       "HIL::NVMe::Arbitrator::eventCompDone");
   eventCollect = createEvent(
-      [this](uint64_t t, void *c) { collect_done(t, (SQContext *)c); },
+      [this](uint64_t t, EventContext c) {
+        collect_done(t, c.get<SQContext *>());
+      },
       "HIL::NVMe::Arbitrator::eventCollect");
 
   // Not running!
@@ -406,6 +412,161 @@ void Arbitrator::collectWeightedRoundRobin() {
         }
       }
     }
+  }
+}
+
+void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, inited);
+  BACKUP_SCALAR(out, period);
+  BACKUP_SCALAR(out, internalQueueSize);
+  BACKUP_SCALAR(out, cqSize);
+  BACKUP_SCALAR(out, sqSize);
+  BACKUP_SCALAR(out, intrruptContext);
+  BACKUP_SCALAR(out, mode);
+  BACKUP_SCALAR(out, param);
+  BACKUP_SCALAR(out, run);
+  BACKUP_SCALAR(out, running);
+  BACKUP_SCALAR(out, collectRequested);
+  BACKUP_SCALAR(out, collectCompleted);
+
+  // We stored cqSize and sqSize
+  bool tmp;
+
+  for (uint16_t i = 0; i < cqSize; i++) {
+    tmp = cqList[i] != nullptr;
+
+    BACKUP_SCALAR(out, tmp);
+
+    if (tmp) {
+      cqList[i]->createCheckpoint(out);
+    }
+  }
+
+  for (uint16_t i = 0; i < sqSize; i++) {
+    tmp = sqList[i] != nullptr;
+
+    BACKUP_SCALAR(out, tmp);
+
+    if (tmp) {
+      sqList[i]->createCheckpoint(out);
+    }
+  }
+
+  // Store list by poping all entries
+  auto size = requestQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  while (auto iter = (SQContext *)requestQueue.front()) {
+    BACKUP_BLOB(out, iter->entry.data, 64);
+    BACKUP_SCALAR(out, iter->commandID);
+    BACKUP_SCALAR(out, iter->sqID);
+    BACKUP_SCALAR(out, iter->cqID);
+    BACKUP_SCALAR(out, iter->sqHead);
+    BACKUP_SCALAR(out, iter->useSGL);
+    BACKUP_SCALAR(out, iter->aborted);
+    BACKUP_SCALAR(out, iter->dispatched);
+    BACKUP_SCALAR(out, iter->completed);
+
+    requestQueue.erase(iter->commandID);
+    delete iter;
+  }
+
+  size = dispatchedQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  while (auto iter = (SQContext *)dispatchedQueue.front()) {
+    BACKUP_BLOB(out, iter->entry.data, 64);
+    BACKUP_SCALAR(out, iter->commandID);
+    BACKUP_SCALAR(out, iter->sqID);
+    BACKUP_SCALAR(out, iter->cqID);
+    BACKUP_SCALAR(out, iter->sqHead);
+    BACKUP_SCALAR(out, iter->useSGL);
+    BACKUP_SCALAR(out, iter->aborted);
+    BACKUP_SCALAR(out, iter->dispatched);
+    BACKUP_SCALAR(out, iter->completed);
+
+    dispatchedQueue.erase(iter->commandID);
+    delete iter;
+  }
+}
+
+void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, inited);
+  RESTORE_SCALAR(in, period);
+  RESTORE_SCALAR(in, internalQueueSize);
+  RESTORE_SCALAR(in, cqSize);
+  RESTORE_SCALAR(in, sqSize);
+  RESTORE_SCALAR(in, intrruptContext);
+  RESTORE_SCALAR(in, mode);
+  RESTORE_SCALAR(in, param);
+  RESTORE_SCALAR(in, run);
+  RESTORE_SCALAR(in, running);
+  RESTORE_SCALAR(in, collectRequested);
+  RESTORE_SCALAR(in, collectCompleted);
+
+  // Restore queue
+  // As we are using exactly same configuration, cqSize and sqSize will exactly
+  // same with restore version.
+  bool tmp;
+
+  for (uint16_t i = 0; i < cqSize; i++) {
+    RESTORE_SCALAR(in, tmp);
+
+    if (tmp) {
+      cqList[i]->restoreCheckpoint(in);
+    }
+    else {
+      cqList[i] = nullptr;
+    }
+  }
+
+  for (uint16_t i = 0; i < sqSize; i++) {
+    RESTORE_SCALAR(in, tmp);
+
+    if (tmp) {
+      sqList[i]->restoreCheckpoint(in);
+    }
+    else {
+      sqList[i] = nullptr;
+    }
+  }
+
+  // Restore list by pushing all entries
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = new SQContext();
+
+    RESTORE_BLOB(in, iter->entry.data, 64);
+    RESTORE_SCALAR(in, iter->commandID);
+    RESTORE_SCALAR(in, iter->sqID);
+    RESTORE_SCALAR(in, iter->cqID);
+    RESTORE_SCALAR(in, iter->sqHead);
+    RESTORE_SCALAR(in, iter->useSGL);
+    RESTORE_SCALAR(in, iter->aborted);
+    RESTORE_SCALAR(in, iter->dispatched);
+    RESTORE_SCALAR(in, iter->completed);
+
+    requestQueue.push_back(iter->commandID, iter);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = new SQContext();
+
+    RESTORE_BLOB(in, iter->entry.data, 64);
+    RESTORE_SCALAR(in, iter->commandID);
+    RESTORE_SCALAR(in, iter->sqID);
+    RESTORE_SCALAR(in, iter->cqID);
+    RESTORE_SCALAR(in, iter->sqHead);
+    RESTORE_SCALAR(in, iter->useSGL);
+    RESTORE_SCALAR(in, iter->aborted);
+    RESTORE_SCALAR(in, iter->dispatched);
+    RESTORE_SCALAR(in, iter->completed);
+
+    dispatchedQueue.push_back(iter->commandID, iter);
   }
 }
 

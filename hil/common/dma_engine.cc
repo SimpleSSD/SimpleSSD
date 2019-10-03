@@ -9,16 +9,15 @@
 
 namespace SimpleSSD::HIL {
 
-DMAEngine::DMAContext::DMAContext(Event e)
-    : counter(0), eid(e), context(nullptr) {}
+DMAEngine::DMAContext::DMAContext(Event e) : counter(0), eid(e) {}
 
-DMAEngine::DMAContext::DMAContext(Event e, void *c)
+DMAEngine::DMAContext::DMAContext(Event e, EventContext c)
     : counter(0), eid(e), context(c) {}
 
 DMAEngine::DMAEngine(ObjectData &o, Interface *i) : Object(o), pInterface(i) {
-  dmaHandler =
-      createEvent([this](uint64_t t, void *c) { dmaDone(t, (DMAContext *)c); },
-                  "HIL::DMAEngine::dmaHandler");
+  dmaHandler = createEvent(
+      [this](uint64_t t, EventContext c) { dmaDone(t, c.get<DMAContext *>()); },
+      "HIL::DMAEngine::dmaHandler");
 }
 
 DMAEngine::~DMAEngine() {}
@@ -31,5 +30,15 @@ void DMAEngine::dmaDone(uint64_t tick, DMAContext *context) {
     delete context;
   }
 }
+
+void DMAEngine::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
+
+void DMAEngine::resetStatValues() noexcept {}
+
+void DMAEngine::createCheckpoint(std::ostream &out) noexcept {}
+
+void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {}
 
 }  // namespace SimpleSSD::HIL

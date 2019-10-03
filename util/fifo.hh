@@ -39,10 +39,10 @@ struct FIFOEntry {
   uint64_t insertEndAt;    //!< Request is fully written on FIFO
 
   Event eid;
-  void *context;
+  EventContext context;
 
   FIFOEntry();
-  FIFOEntry(uint64_t, uint64_t, uint8_t *, uint64_t, Event, void *);
+  FIFOEntry(uint64_t, uint64_t, uint8_t *, uint64_t, Event, EventContext);
 };
 
 struct ReadEntry {
@@ -74,6 +74,9 @@ class FIFO : public DMAInterface, public Object {
     bool transferPending;
 
     Queue(uint64_t);
+
+    void backup(std::ostream &) noexcept;
+    void restore(std::istream &) noexcept;
   };
 
   DMAInterface *upstream;
@@ -115,8 +118,15 @@ class FIFO : public DMAInterface, public Object {
   FIFO &operator=(const FIFO &) = delete;
   FIFO &operator=(FIFO &&) noexcept = default;
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD

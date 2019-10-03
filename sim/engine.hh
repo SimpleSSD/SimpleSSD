@@ -39,7 +39,7 @@ class Engine {
    * Schedule event at provided tick. If tick < current tick, just schedule at
    * current tick. Reschedule if event is already scheduled.
    */
-  virtual void schedule(Event, uint64_t, void * = nullptr) = 0;
+  virtual void schedule(Event, uint64_t, EventContext) = 0;
 
   /**
    * \brief Deschedule event object
@@ -68,7 +68,8 @@ class Engine {
   /**
    * \brief Restore from checkpoint
    *
-   * Erase all current events, restore all event ID, scheduled time and name.
+   * Restore all event ID, scheduled time and name.
+   * Must validate created event ID and restored event ID.
    */
   virtual void restoreCheckpoint(std::istream &) = 0;
 };

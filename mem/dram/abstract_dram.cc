@@ -163,4 +163,18 @@ void AbstractDRAM::resetStatValues() {
   writeStat.clear();
 }
 
+void AbstractDRAM::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, readStat);
+  BACKUP_SCALAR(out, writeStat);
+  BACKUP_SCALAR(out, totalEnergy);
+  BACKUP_SCALAR(out, totalPower);
+}
+
+void AbstractDRAM::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, readStat);
+  RESTORE_SCALAR(in, writeStat);
+  RESTORE_SCALAR(in, totalEnergy);
+  RESTORE_SCALAR(in, totalPower);
+}
+
 }  // namespace SimpleSSD::Memory::DRAM

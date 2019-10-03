@@ -174,6 +174,11 @@ class Arbitrator : public Object {
   // Command
   SQContext *dispatch();
   // bool submitCommand(SQContext *);
+
+  // TODO: ADD STAT!
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

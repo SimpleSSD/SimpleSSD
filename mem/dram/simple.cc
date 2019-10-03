@@ -18,11 +18,13 @@ SimpleDRAM::SimpleDRAM(ObjectData &o) : AbstractDRAM(o) {
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;
 
-  autoRefresh = createEvent([this](uint64_t now, void *) {
-    dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
+  autoRefresh = createEvent(
+      [this](uint64_t now, EventContext) {
+        dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
 
-    schedule(autoRefresh, now + REFRESH_PERIOD);
-  }, "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
+        schedule(autoRefresh, now + REFRESH_PERIOD);
+      },
+      "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
 
   schedule(autoRefresh, getTick() + REFRESH_PERIOD);
 }
@@ -31,9 +33,11 @@ SimpleDRAM::~SimpleDRAM() {
   // DO NOTHING
 }
 
-void SimpleDRAM::read(uint64_t, uint64_t length, Event eid, void *context) {
+void SimpleDRAM::read(uint64_t, uint64_t length, Event eid,
+                      EventContext context) {
   uint64_t beginAt = getTick();
-  uint64_t pageCount = (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
+  uint64_t pageCount =
+      (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency =
       (uint64_t)(pageCount * (pageFetchLatency +
                               pStructure->pageSize / interfaceBandwidth));
@@ -61,12 +65,14 @@ void SimpleDRAM::read(uint64_t, uint64_t length, Event eid, void *context) {
   readStat.size += length;
 
   // Schedule callback
-  schedule(eid, beginAt + latency);
+  schedule(eid, beginAt + latency, context);
 }
 
-void SimpleDRAM::write(uint64_t, uint64_t length, Event eid, void *context) {
+void SimpleDRAM::write(uint64_t, uint64_t length, Event eid,
+                       EventContext context) {
   uint64_t beginAt = getTick();
-  uint64_t pageCount = (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
+  uint64_t pageCount =
+      (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
   uint64_t latency =
       (uint64_t)(pageCount * (pageFetchLatency +
                               pStructure->pageSize / interfaceBandwidth));
@@ -94,7 +100,21 @@ void SimpleDRAM::write(uint64_t, uint64_t length, Event eid, void *context) {
   writeStat.size += length;
 
   // Schedule callback
-  schedule(eid, beginAt + latency);
+  schedule(eid, beginAt + latency, context);
+}
+
+void SimpleDRAM::createCheckpoint(std::ostream &out) noexcept {
+  AbstractDRAM::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, pageFetchLatency);
+  BACKUP_SCALAR(out, interfaceBandwidth);
+}
+
+void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractDRAM::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, pageFetchLatency);
+  RESTORE_SCALAR(in, interfaceBandwidth);
 }
 
 }  // namespace SimpleSSD::Memory::DRAM

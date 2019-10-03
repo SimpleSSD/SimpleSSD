@@ -39,7 +39,7 @@ class PRPEngine : public DMAEngine {
     uint8_t *buffer;
     uint64_t bufferSize;
     Event eid;
-    void *context;
+    EventContext context;
   };
 
   bool inited;
@@ -51,18 +51,21 @@ class PRPEngine : public DMAEngine {
   Event readPRPList;
 
   uint64_t getSizeFromPRP(uint64_t);
-  void getPRPListFromPRP(uint64_t, Event, void *);
+  void getPRPListFromPRP(uint64_t, Event, EventContext);
   void getPRPListFromPRP_readDone(uint64_t, PRPInitContext *s);
 
  public:
   PRPEngine(ObjectData &, Interface *, uint64_t);
   ~PRPEngine();
 
-  void initData(uint64_t, uint64_t, uint64_t, Event, void * = nullptr);
-  void initQueue(uint64_t, uint64_t, bool, Event, void * = nullptr);
+  void initData(uint64_t, uint64_t, uint64_t, Event, EventContext);
+  void initQueue(uint64_t, uint64_t, bool, Event, EventContext);
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 /**
@@ -101,7 +104,7 @@ class SGLEngine : public DMAEngine {
     uint8_t *buffer;
     uint64_t bufferSize;
     Event eid;
-    void *context;
+    EventContext context;
   };
 
   bool inited;
@@ -112,17 +115,20 @@ class SGLEngine : public DMAEngine {
   Event readSGL;
 
   void parseSGLDescriptor(SGLDescriptor &);
-  void parseSGLSegment(uint64_t, uint32_t, Event, void *);
+  void parseSGLSegment(uint64_t, uint32_t, Event, EventContext);
   void parseSGLSegment_readDone(uint64_t, SGLInitContext *);
 
  public:
   SGLEngine(ObjectData &, Interface *);
   ~SGLEngine();
 
-  void init(uint64_t, uint64_t, Event, void * = nullptr);
+  void init(uint64_t, uint64_t, Event, EventContext);
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, void * = nullptr) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

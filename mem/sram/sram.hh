@@ -11,25 +11,29 @@
 #define __MEM_SRAM_SRAM_HH__
 
 #include "mem/sram/abstract_sram.hh"
+#include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::SRAM {
 
 class SRAM : public AbstractSRAM {
  protected:
-  inline uint64_t preSubmit(Request *);
-  inline void postDone(Request *);
+  Scheduler<Request *> scheduler;
 
-  uint64_t preSubmitRead(void *) override;
-  uint64_t preSubmitWrite(void *) override;
-  void postReadDone(void *) override;
-  void postWriteDone(void *) override;
+  uint64_t preSubmit(Request *);
+  void postDone(Request *);
+
+  void backupItem(std::ostream &, Request *);
+  Request *restoreItem(std::istream &);
 
  public:
   SRAM(ObjectData &);
   ~SRAM();
 
-  void read(uint64_t, uint64_t, Event, void * = nullptr) override;
-  void write(uint64_t, uint64_t, Event, void * = nullptr) override;
+  void read(uint64_t, uint64_t, Event, EventContext) override;
+  void write(uint64_t, uint64_t, Event, EventContext) override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::Memory::SRAM

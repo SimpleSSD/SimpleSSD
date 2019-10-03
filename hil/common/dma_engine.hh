@@ -26,10 +26,10 @@ class DMAEngine : public Interface, public Object {
    public:
     int32_t counter;
     Event eid;
-    void *context;
+    EventContext context;
 
     DMAContext(Event);
-    DMAContext(Event, void *);
+    DMAContext(Event, EventContext);
   };
 
   Interface *pInterface;
@@ -46,6 +46,13 @@ class DMAEngine : public Interface, public Object {
 
   DMAEngine &operator=(const DMAEngine &) = delete;
   DMAEngine &operator=(DMAEngine &&) noexcept = default;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL

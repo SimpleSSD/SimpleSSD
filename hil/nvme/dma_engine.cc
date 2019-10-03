@@ -37,8 +37,8 @@ PRPEngine::PRPEngine(ObjectData &o, Interface *i, uint64_t p)
   panic_if(popcount(p) != 1, "Invalid memory page size provided.");
 
   readPRPList = createEvent(
-      [this](uint64_t t, void *c) {
-        getPRPListFromPRP_readDone(t, (PRPInitContext *)c);
+      [this](uint64_t t, EventContext c) {
+        getPRPListFromPRP_readDone(t, c.get<PRPInitContext *>());
       },
       "HIL::NVMe::PRPEngine::readPRPList");
 }
@@ -97,7 +97,8 @@ uint64_t PRPEngine::getSizeFromPRP(uint64_t prp) {
   return pageSize - (prp & (pageSize - 1));
 }
 
-void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid, void *context) {
+void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid,
+                                  EventContext context) {
   auto data = new PRPInitContext();
 
   data->handledSize = 0;
@@ -112,7 +113,7 @@ void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid, void *context) {
 }
 
 void PRPEngine::initData(uint64_t prp1, uint64_t prp2, uint64_t sizeLimit,
-                         Event eid, void *context) {
+                         Event eid, EventContext context) {
   bool immediate = true;
   uint8_t mode = 0xFF;
   uint64_t prp1Size = getSizeFromPRP(prp1);
@@ -177,7 +178,7 @@ void PRPEngine::initData(uint64_t prp1, uint64_t prp2, uint64_t sizeLimit,
 }
 
 void PRPEngine::initQueue(uint64_t base, uint64_t size, bool cont, Event eid,
-                          void *context) {
+                          EventContext context) {
   totalSize = size;
 
   if (cont) {
@@ -192,7 +193,7 @@ void PRPEngine::initQueue(uint64_t base, uint64_t size, bool cont, Event eid,
 }
 
 void PRPEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid, void *context) {
+                     Event eid, EventContext context) {
   panic_if(!inited, "Accessed to uninitialized PRPEngine.");
 
   DMAContext *readContext = new DMAContext(eid, context);
@@ -236,7 +237,7 @@ void PRPEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
 }
 
 void PRPEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                      Event eid, void *context) {
+                      Event eid, EventContext context) {
   panic_if(!inited, "Accessed to uninitialized PRPEngine.");
 
   DMAContext *writeContext = new DMAContext(eid, context);
@@ -279,6 +280,32 @@ void PRPEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   }
 }
 
+void PRPEngine::createCheckpoint(std::ostream &out) noexcept {
+  DMAEngine::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, inited);
+  BACKUP_SCALAR(out, totalSize);
+  BACKUP_SCALAR(out, pageSize);
+
+  uint64_t size = prpList.size();
+  BACKUP_SCALAR(out, size);
+  BACKUP_BLOB(out, prpList.data(), size * sizeof(PRP));
+}
+
+void PRPEngine::restoreCheckpoint(std::istream &in) noexcept {
+  DMAEngine::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, inited);
+  RESTORE_SCALAR(in, totalSize);
+  RESTORE_SCALAR(in, pageSize);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  prpList.resize(size);
+  RESTORE_BLOB(in, prpList.data(), size * sizeof(PRP));
+}
+
 SGLEngine::SGLDescriptor::SGLDescriptor() {
   memset(data, 0, 16);
 }
@@ -315,8 +342,8 @@ void SGLEngine::parseSGLDescriptor(SGLDescriptor &desc) {
 }
 
 void SGLEngine::parseSGLSegment(uint64_t address, uint32_t length, Event eid,
-                                void *context) {
-  auto *data = new SGLInitContext();
+                                EventContext context) {
+  auto data = new SGLInitContext();
 
   // Allocate buffer
   data->eid = eid;
@@ -374,7 +401,8 @@ void SGLEngine::parseSGLSegment_readDone(uint64_t now, SGLInitContext *data) {
   }
 }
 
-void SGLEngine::init(uint64_t prp1, uint64_t prp2, Event eid, void *context) {
+void SGLEngine::init(uint64_t prp1, uint64_t prp2, Event eid,
+                     EventContext context) {
   SGLDescriptor desc;
 
   // Create first SGL descriptor from PRP pointers
@@ -399,7 +427,7 @@ void SGLEngine::init(uint64_t prp1, uint64_t prp2, Event eid, void *context) {
 }
 
 void SGLEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid, void *context) {
+                     Event eid, EventContext context) {
   panic_if(!inited, "Accessed to uninitialized SGLEngine.");
 
   DMAContext *readContext = new DMAContext(eid, context);
@@ -450,7 +478,7 @@ void SGLEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
 }
 
 void SGLEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                      Event eid, void *context) {
+                      Event eid, EventContext context) {
   panic_if(!inited, "Accessed to uninitialized SGLEngine.");
 
   DMAContext *writeContext = new DMAContext(eid, context);
@@ -499,6 +527,30 @@ void SGLEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
 
     dmaDone(getTick(), writeContext);
   }
+}
+
+void SGLEngine::createCheckpoint(std::ostream &out) noexcept {
+  DMAEngine::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, inited);
+  BACKUP_SCALAR(out, totalSize);
+
+  uint64_t size = chunkList.size();
+  BACKUP_SCALAR(out, size);
+  BACKUP_BLOB(out, chunkList.data(), size * sizeof(Chunk));
+}
+
+void SGLEngine::restoreCheckpoint(std::istream &in) noexcept {
+  DMAEngine::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, inited);
+  RESTORE_SCALAR(in, totalSize);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  chunkList.resize(size);
+  RESTORE_BLOB(in, chunkList.data(), size * sizeof(Chunk));
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

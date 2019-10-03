@@ -62,10 +62,26 @@ void Queue::setBase(Interface *p, uint64_t s) {
   stride = s;
 }
 
+void Queue::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, id);
+  BACKUP_SCALAR(out, head);
+  BACKUP_SCALAR(out, tail);
+  BACKUP_SCALAR(out, size);
+  BACKUP_SCALAR(out, stride);
+}
+
+void Queue::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, id);
+  RESTORE_SCALAR(in, head);
+  RESTORE_SCALAR(in, tail);
+  RESTORE_SCALAR(in, size);
+  RESTORE_SCALAR(in, stride);
+}
+
 CQueue::CQueue(ObjectData &o, uint16_t iv, bool en, uint16_t qid, uint16_t size)
     : Queue(o, qid, size), ien(en), phase(true), iv(iv) {}
 
-void CQueue::setData(CQEntry *entry, Event eid, void *context) {
+void CQueue::setData(CQEntry *entry, Event eid, EventContext context) {
   if (entry) {
     // Set phase
     entry->dword3.status &= 0xFFFE;
@@ -108,6 +124,22 @@ uint16_t CQueue::getInterruptVector() {
   return iv;
 }
 
+void CQueue::createCheckpoint(std::ostream &out) noexcept {
+  Queue::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, ien);
+  BACKUP_SCALAR(out, phase);
+  BACKUP_SCALAR(out, iv);
+}
+
+void CQueue::restoreCheckpoint(std::istream &in) noexcept {
+  Queue::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, ien);
+  RESTORE_SCALAR(in, phase);
+  RESTORE_SCALAR(in, iv);
+}
+
 SQueue::SQueue(ObjectData &o, uint16_t cqid, uint8_t pri, uint16_t qid,
                uint16_t size)
     : Queue(o, qid, size), cqID(cqid), priority((QueuePriority)pri) {}
@@ -120,7 +152,7 @@ void SQueue::setTail(uint16_t newTail) {
   tail = newTail;
 }
 
-void SQueue::getData(SQEntry *entry, Event eid, void *context) {
+void SQueue::getData(SQEntry *entry, Event eid, EventContext context) {
   if (entry && head != tail) {
     // Read entry
     base->read(head * stride, 0x40, entry->data, eid, context);
@@ -136,6 +168,20 @@ void SQueue::getData(SQEntry *entry, Event eid, void *context) {
 
 QueuePriority SQueue::getPriority() {
   return priority;
+}
+
+void SQueue::createCheckpoint(std::ostream &out) noexcept {
+  Queue::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, cqID);
+  BACKUP_SCALAR(out, priority);
+}
+
+void SQueue::restoreCheckpoint(std::istream &in) noexcept {
+  Queue::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, cqID);
+  RESTORE_SCALAR(in, priority);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

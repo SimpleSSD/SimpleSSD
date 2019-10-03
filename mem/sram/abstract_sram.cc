@@ -9,8 +9,7 @@
 
 namespace SimpleSSD::Memory::SRAM {
 
-AbstractSRAM::AbstractSRAM(ObjectData &o, std::string prefix)
-    : AbstractFIFO(o, prefix) {
+AbstractSRAM::AbstractSRAM(ObjectData &o) : AbstractRAM(o) {
   pStructure = config->getSRAM();
 }
 
@@ -63,6 +62,16 @@ void AbstractSRAM::getStatValues(std::vector<double> &values) {
 void AbstractSRAM::resetStatValues() {
   readStat.clear();
   writeStat.clear();
+}
+
+void AbstractSRAM::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, readStat);
+  BACKUP_SCALAR(out, writeStat);
+}
+
+void AbstractSRAM::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, readStat);
+  RESTORE_SCALAR(in, writeStat);
 }
 
 }  // namespace SimpleSSD::Memory::SRAM

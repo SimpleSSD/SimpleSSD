@@ -10,7 +10,15 @@
 namespace SimpleSSD::Memory::SRAM {
 
 SRAM::SRAM(ObjectData &o)
-    : AbstractSRAM(o, "SimpleSSD::Memory::SRAM::SRAM") {
+    : AbstractSRAM(o),
+      scheduler(
+          o, "Memory::SRAM::scheduler",
+          [this](Request *r) -> uint64_t { return preSubmit(r); },
+          [this](Request *r) -> uint64_t { return preSubmit(r); },
+          [this](Request *r) { postDone(r); },
+          [this](Request *r) { postDone(r); },
+          [this](std::ostream &o, Request *r) { backupItem(o, r); },
+          [this](std::istream &i) -> Request * { return restoreItem(i); }) {
   // Convert cycle to ps
   pStructure->latency =
       (uint64_t)(pStructure->latency * 1000000000000.f /
@@ -31,23 +39,26 @@ void SRAM::postDone(Request *req) {
   delete req;
 }
 
-uint64_t SRAM::preSubmitRead(void *data) {
-  return preSubmit((Request *)data);
+void backupItem(std::ostream &out, Request *item) {
+  BACKUP_SCALAR(out, item->offset);
+  BACKUP_SCALAR(out, item->length);
+  BACKUP_SCALAR(out, item->beginAt);
+  item->context.backup(out);
 }
 
-uint64_t SRAM::preSubmitWrite(void *data) {
-  return preSubmit((Request *)data);
+Request *restoreItem(std::istream &in) {
+  auto item = new Request();
+
+  RESTORE_SCALAR(in, item->offset);
+  RESTORE_SCALAR(in, item->length);
+  RESTORE_SCALAR(in, item->beginAt);
+  item->context.restore(in);
+
+  return item;
 }
 
-void SRAM::postReadDone(void *data) {
-  postDone((Request *)data);
-}
-
-void SRAM::postWriteDone(void *data) {
-  postDone((Request *)data);
-}
-
-void SRAM::read(uint64_t address, uint64_t length, Event eid, void *context) {
+void SRAM::read(uint64_t address, uint64_t length, Event eid,
+                EventContext context) {
   auto req = new Request(address, length, eid, context);
 
   rangeCheck(address, length);
@@ -58,10 +69,11 @@ void SRAM::read(uint64_t address, uint64_t length, Event eid, void *context) {
   readStat.count++;
   readStat.size += length;
 
-  AbstractFIFO::read(req);
+  scheduler.read(req);
 }
 
-void SRAM::write(uint64_t address, uint64_t length, Event eid, void *context) {
+void SRAM::write(uint64_t address, uint64_t length, Event eid,
+                 EventContext context) {
   auto req = new Request(address, length, eid, context);
 
   rangeCheck(address, length);
@@ -72,7 +84,19 @@ void SRAM::write(uint64_t address, uint64_t length, Event eid, void *context) {
   writeStat.count++;
   writeStat.size += length;
 
-  AbstractFIFO::write(req);
+  scheduler.write(req);
+}
+
+void SRAM::createCheckpoint(std::ostream &out) noexcept {
+  AbstractSRAM::createCheckpoint(out);
+
+  scheduler.createCheckpoint(out);
+}
+
+void SRAM::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractSRAM::restoreCheckpoint(in);
+
+  scheduler.restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::Memory::SRAM

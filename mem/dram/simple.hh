@@ -25,11 +25,11 @@ class SimpleDRAM : public AbstractDRAM {
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
 
-  void read(uint64_t, uint64_t, Event, void * = nullptr) override;
-  void write(uint64_t, uint64_t, Event, void * = nullptr) override;
+  void read(uint64_t, uint64_t, Event, EventContext) override;
+  void write(uint64_t, uint64_t, Event, EventContext) override;
 
-  void createCheckpoint() noexcept override;
-  void restoreCheckpoint() noexcept override;
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::Memory::DRAM

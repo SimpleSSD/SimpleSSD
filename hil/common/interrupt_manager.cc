@@ -23,7 +23,9 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i)
                ((CoalesceData *)b)->nextDeadline;
       }) {
   eventTimer = createEvent(
-      [this](uint64_t t, void *c) { timerHandler(t, (CoalesceData *)c); },
+      [this](uint64_t t, EventContext c) {
+        timerHandler(t, c.get<CoalesceData *>());
+      },
       "HIL::InterruptManager::eventTimer");
 }
 
@@ -126,6 +128,54 @@ void InterruptManager::configureCoalescing(uint64_t time, uint16_t count) {
 
   aggregationTime = time;
   aggregationThreshold = count;
+}
+
+void InterruptManager::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void InterruptManager::getStatValues(std::vector<double> &) noexcept {}
+
+void InterruptManager::resetStatValues() noexcept {}
+
+void InterruptManager::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, interruptCoalescing);
+  BACKUP_SCALAR(out, aggregationThreshold);
+  BACKUP_SCALAR(out, aggregationTime);
+
+  // Store list by poping all elements
+  // Larger one first - for faster restore
+  auto size = coalesceMap.size();
+  BACKUP_SCALAR(out, size);
+
+  while (auto iter = (CoalesceData *)coalesceMap.back()) {
+    BACKUP_SCALAR(out, iter->pending);
+    BACKUP_SCALAR(out, iter->iv);
+    BACKUP_SCALAR(out, iter->currentRequestCount);
+    BACKUP_SCALAR(out, iter->nextDeadline);
+
+    coalesceMap.erase(iter->iv);
+    delete iter;
+  }
+}
+
+void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, interruptCoalescing);
+  RESTORE_SCALAR(in, aggregationThreshold);
+  RESTORE_SCALAR(in, aggregationTime);
+
+  // Load list by pushping all elements
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = new CoalesceData();
+
+    RESTORE_SCALAR(in, iter->pending);
+    RESTORE_SCALAR(in, iter->iv);
+    RESTORE_SCALAR(in, iter->currentRequestCount);
+    RESTORE_SCALAR(in, iter->nextDeadline);
+
+    coalesceMap.insert(iter->iv, iter);
+  }
 }
 
 }  // namespace SimpleSSD::HIL

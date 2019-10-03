@@ -13,6 +13,8 @@
 #include <cinttypes>
 #include <functional>
 
+#include "sim/checkpoint.hh"
+
 namespace SimpleSSD {
 
 /**
@@ -24,6 +26,47 @@ using Event = uint64_t;
 
 const Event InvalidEventID = 0;
 
+class EventContext {
+ private:
+  uint64_t size;
+  void *data;
+
+ public:
+  EventContext() : size(0), data(nullptr) {}
+
+  template <class Type>
+  EventContext(Type t) noexcept = delete;
+
+  template <class Type>
+  EventContext(Type *t) noexcept : size(sizeof(Type)), data(t) {}
+
+  template <class Type, std::enable_if_t<!std::is_pointer_v<Type>>* = nullptr>
+  Type get() noexcept = delete;
+
+  template <class Type, std::enable_if_t<std::is_pointer_v<Type>>* = nullptr>
+  Type get() noexcept {
+    return (Type)data;
+  }
+
+  void backup(std::ostream &out) noexcept {
+    BACKUP_SCALAR(out, size);
+
+    if (size > 0) {
+      BACKUP_BLOB(out, data, size);
+    }
+  }
+
+  void restore(std::istream &in) noexcept {
+    RESTORE_SCALAR(in, size);
+
+    if (size > 0) {
+      data = malloc(size);
+
+      RESTORE_BLOB(in, data, size);
+    }
+  }
+};
+
 /**
  * \brief Event function definition
  *
@@ -31,18 +74,18 @@ const Event InvalidEventID = 0;
  * First param is current tick, second param is user data passed in schedule
  * function.
  */
-using EventFunction = std::function<void(uint64_t, void *)>;
+using EventFunction = std::function<void(uint64_t, EventContext)>;
 
 class Request {
  public:
   uint64_t offset;
   uint64_t length;
   Event eid;
-  void *context;
+  EventContext context;
   uint64_t beginAt;
 
-  Request() : offset(0), length(0), eid(InvalidEventID), context(nullptr) {}
-  Request(uint64_t a, uint64_t l, Event e, void *c)
+  Request() : offset(0), length(0), eid(InvalidEventID) {}
+  Request(uint64_t a, uint64_t l, Event e, EventContext c)
       : offset(a), length(l), eid(e), context(c) {}
   Request(const Request &) = delete;
   Request(Request &&) noexcept = default;
@@ -56,7 +99,7 @@ class RequestWithData : public Request {
   uint8_t *buffer;
 
   RequestWithData() : Request(), buffer(nullptr) {}
-  RequestWithData(uint64_t a, uint64_t l, Event e, void *c, uint8_t *b)
+  RequestWithData(uint64_t a, uint64_t l, Event e, EventContext c, uint8_t *b)
       : Request(a, l, e, c), buffer(b) {}
   RequestWithData(const RequestWithData &) = delete;
   RequestWithData(RequestWithData &&) noexcept = default;
