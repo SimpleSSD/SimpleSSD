@@ -188,6 +188,8 @@ Event Arbitrator::init(Event s, Event i, Event t) {
 }
 
 void Arbitrator::enable(bool r) {
+  panic_if(!inited, "Not initialized.");
+
   run = r;
 
   if (run) {
@@ -242,8 +244,6 @@ void Arbitrator::reserveShutdown() {
 
 void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
                                EventContext context) {
-  panic_if(controller == nullptr, "ControllerData not set.");
-
   auto dmaEngine =
       new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
@@ -259,8 +259,6 @@ void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
 
 void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid,
                                EventContext context) {
-  panic_if(controller == nullptr, "ControllerData not set.");
-
   auto dmaEngine =
       new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
