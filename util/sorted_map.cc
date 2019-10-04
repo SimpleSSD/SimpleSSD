@@ -21,9 +21,7 @@ unordered_map_queue::unordered_map_queue() : length(0) {
 }
 
 unordered_map_queue::~unordered_map_queue() {
-  for (auto &iter : map) {
-    free(iter.second);
-  }
+  clear();
 }
 
 void unordered_map_queue::eraseMap(uint64_t key) noexcept {
@@ -167,6 +165,19 @@ void *unordered_map_queue::back() noexcept {
   }
 
   return nullptr;
+}
+
+void unordered_map_queue::clear() noexcept {
+  // Free all objects
+  for (auto &iter : map) {
+    free(iter.second);
+  }
+
+  // Clear structures
+  map.clear();
+
+  listHead.next = &listTail;
+  listTail.prev = &listHead;
 }
 
 unordered_map_list::unordered_map_list(Compare c)

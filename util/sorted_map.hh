@@ -62,6 +62,7 @@ class unordered_map_queue {
   void erase(uint64_t) noexcept;
   void *front() noexcept;
   void *back() noexcept;
+  void clear() noexcept;
 };
 
 /**
