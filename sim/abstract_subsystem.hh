@@ -11,6 +11,7 @@
 #define __SIM_ABSTRACT_SUBSYSTEM_HH__
 
 #include <map>
+#include <set>
 
 #include "sim/interface.hh"
 #include "sim/object.hh"
@@ -19,6 +20,7 @@ namespace SimpleSSD {
 
 // Forward declaration
 class AbstractController;
+class AbstractSubsystem;
 
 /**
  * \brief Controller ID definition
@@ -30,6 +32,12 @@ using ControllerID = uint16_t;
 
 //! Controller data
 class ControllerData {
+ private:
+  friend AbstractSubsystem;
+
+  ControllerID id;
+  std::set<uint32_t> attachedNamespaceList;
+
  public:
   AbstractController *controller;
   Interface *interface;     //!< Top-most host interface
