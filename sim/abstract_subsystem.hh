@@ -32,11 +32,12 @@ using ControllerID = uint16_t;
 class ControllerData {
  public:
   AbstractController *controller;
-  Interface *interface;
+  Interface *interface;     //!< Top-most host interface
+  DMAInterface *dma;        //!< DMA port for current controller
   uint64_t memoryPageSize;  //!< This is only for PRPEngine
 
   ControllerData();
-  ControllerData(AbstractController *, Interface *, uint64_t);
+  ControllerData(AbstractController *, Interface *, DMAInterface *, uint64_t);
 };
 
 /**

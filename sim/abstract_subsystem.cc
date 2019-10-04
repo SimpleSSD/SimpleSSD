@@ -12,10 +12,14 @@
 namespace SimpleSSD {
 
 ControllerData::ControllerData()
-    : controller(nullptr), interface(nullptr), memoryPageSize(0) {}
+    : controller(nullptr),
+      interface(nullptr),
+      dma(nullptr),
+      memoryPageSize(0) {}
 
-ControllerData::ControllerData(AbstractController *c, Interface *i, uint64_t m)
-    : controller(c), interface(i), memoryPageSize(m) {}
+ControllerData::ControllerData(AbstractController *c, Interface *i,
+                               DMAInterface *d, uint64_t m)
+    : controller(c), interface(i), dma(d), memoryPageSize(m) {}
 
 AbstractSubsystem::AbstractSubsystem(ObjectData &o) : Object(o) {}
 

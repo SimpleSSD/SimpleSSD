@@ -24,12 +24,12 @@ namespace SimpleSSD {
  */
 class AbstractController : public Object {
  protected:
-  Interface *pInterface;          //!< Per-controller host interface
-  AbstractSubsystem *pSubsystem;  //!< Connected subsystem
+  Interface *interface;          //!< Per-controller host interface
+  AbstractSubsystem *subsystem;  //!< Connected subsystem
 
  public:
   AbstractController(ObjectData &o, Interface *i, AbstractSubsystem *s)
-      : Object(o), pInterface(i), pSubsystem(s) {}
+      : Object(o), interface(i), subsystem(s) {}
   AbstractController(const AbstractController &) = delete;
   AbstractController(AbstractController &&) noexcept = default;
   virtual ~AbstractController() {}
@@ -37,7 +37,7 @@ class AbstractController : public Object {
   AbstractController &operator=(const AbstractController &) = delete;
   AbstractController &operator=(AbstractController &&) noexcept = default;
 
-  virtual Interface *getInterface() noexcept = 0;
+  virtual ControllerData getControllerData() noexcept = 0;
 
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
