@@ -98,7 +98,7 @@ class Arbitrator : public Object {
  private:
   bool inited;
 
-  ControllerData controller;
+  ControllerData *controller;
 
   Event submit;     // Arbitrator -> Subsystem (Submission)
   Event complete;   // Subsystem -> Arbitrator (Completion)
@@ -161,7 +161,7 @@ class Arbitrator : public Object {
   // bool getFeature(SQContext *);
 
  public:
-  Arbitrator(ObjectData &);
+  Arbitrator(ObjectData &, ControllerData &);
   ~Arbitrator();
 
   /**
@@ -173,7 +173,6 @@ class Arbitrator : public Object {
    * \return Completion Event
    */
   Event init(Event s, Event i, Event t);
-  void setControllerData(ControllerData);
 
   // Register
   void enable(bool);

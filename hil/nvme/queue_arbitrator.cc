@@ -101,9 +101,10 @@ uint16_t CQContext::getCQID() noexcept {
   return cqID;
 }
 
-Arbitrator::Arbitrator(ObjectData &o)
+Arbitrator::Arbitrator(ObjectData &o, ControllerData &c)
     : Object(o),
       inited(false),
+      controller(&c),
       submit(InvalidEventID),
       interrupt(InvalidEventID),
       mode(Arbitration::RoundRobin),
@@ -186,10 +187,6 @@ Event Arbitrator::init(Event s, Event i, Event t) {
   return complete;
 }
 
-void Arbitrator::setControllerData(ControllerData data) {
-  controller = std::move(data);
-}
-
 void Arbitrator::enable(bool r) {
   run = r;
 
@@ -245,10 +242,10 @@ void Arbitrator::reserveShutdown() {
 
 void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
                                EventContext context) {
-  panic_if(controller.dma == nullptr, "ControllerData not set.");
+  panic_if(controller == nullptr, "ControllerData not set.");
 
   auto dmaEngine =
-      new PRPEngine(object, controller.dma, controller.memoryPageSize);
+      new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
   dmaEngine->initQueue(base, size * 16, true, eid, context);
 
@@ -262,10 +259,10 @@ void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
 
 void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid,
                                EventContext context) {
-  panic_if(controller.dma == nullptr, "ControllerData not set.");
+  panic_if(controller == nullptr, "ControllerData not set.");
 
   auto dmaEngine =
-      new PRPEngine(object, controller.dma, controller.memoryPageSize);
+      new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
   dmaEngine->initQueue(base, size * 64, true, eid, context);
 

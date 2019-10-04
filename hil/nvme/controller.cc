@@ -20,7 +20,7 @@ Controller::PersistentMemoryRegion::PersistentMemoryRegion() {
 Controller::Controller(ObjectData &o, Interface *i, AbstractSubsystem *p)
     : AbstractController(o, i, p),
       interruptManager(o, i),
-      arbitrator(o),
+      arbitrator(o, controllerData),
       adminQueueInited(0),
       interruptMask(0),
       adminQueueCreated(0) {
@@ -93,9 +93,6 @@ Controller::Controller(ObjectData &o, Interface *i, AbstractSubsystem *p)
       "HIL::NVMe::Controller::eventShutdown");
 
   eventComplete = arbitrator.init(eventSubmit, eventInterrupt, eventShutdown);
-
-  // At this point, page size is zero. But we need it for creating admin queues
-  arbitrator.setControllerData(getControllerData());
 }
 
 Controller::~Controller() {
@@ -109,10 +106,6 @@ void Controller::postInterrupt(InterruptContext *context) {
 
 void Controller::notifySubsystem() {
   // TODO: FILL HERE
-}
-
-ControllerData Controller::getControllerData() noexcept {
-  return ControllerData(this, interface, pcie, memoryPageSize);
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,
@@ -289,9 +282,7 @@ void Controller::handleControllerConfig(uint32_t update) {
   }
   if (((old >> 7) & 0x0F) != registers.cc.mps) {
     // Memory Page Size changed
-    memoryPageSize = 1ull << (registers.cc.mps + 12);
-
-    arbitrator.setControllerData(getControllerData());
+    controllerData.memoryPageSize = 1ull << (registers.cc.mps + 12);
   }
   if (((old >> 4) & 0x07) != registers.cc.css) {
     // I/O Command Set Selected changed
@@ -321,6 +312,8 @@ void Controller::getStatValues(std::vector<double> &) noexcept {}
 void Controller::resetStatValues() noexcept {}
 
 void Controller::createCheckpoint(std::ostream &out) noexcept {
+  AbstractController::createCheckpoint(out);
+
   interruptManager.createCheckpoint(out);
   arbitrator.createCheckpoint(out);
   pcie->createCheckpoint(out);
@@ -332,11 +325,12 @@ void Controller::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, adminQueueInited);
   BACKUP_SCALAR(out, arbitration);
   BACKUP_SCALAR(out, interruptMask);
-  BACKUP_SCALAR(out, memoryPageSize);
   BACKUP_SCALAR(out, adminQueueCreated);
 }
 
 void Controller::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractController::restoreCheckpoint(in);
+
   interruptManager.restoreCheckpoint(in);
   arbitrator.restoreCheckpoint(in);
   pcie->restoreCheckpoint(in);
@@ -348,7 +342,6 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, adminQueueInited);
   RESTORE_SCALAR(in, arbitration);
   RESTORE_SCALAR(in, interruptMask);
-  RESTORE_SCALAR(in, memoryPageSize);
   RESTORE_SCALAR(in, adminQueueCreated);
 }
 

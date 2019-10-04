@@ -102,7 +102,6 @@ class Controller : public AbstractController {
   uint8_t adminQueueInited;  //!< uint8_t, not bool, for checkout pointer counts
   Arbitration arbitration;   //!< Selected arbitration mechanism
   uint32_t interruptMask;    //!< Current interrupt mask
-  uint64_t memoryPageSize;
 
   // Queue DMA initialization
   uint8_t adminQueueCreated;  //!< When queue DMAEngine initialized
@@ -128,8 +127,6 @@ class Controller : public AbstractController {
  public:
   Controller(ObjectData &, Interface *, AbstractSubsystem *);
   ~Controller();
-
-  ControllerData getControllerData() noexcept override;
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;

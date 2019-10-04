@@ -27,6 +27,8 @@ class AbstractController : public Object {
   Interface *interface;          //!< Per-controller host interface
   AbstractSubsystem *subsystem;  //!< Connected subsystem
 
+  ControllerData controllerData;
+
  public:
   AbstractController(ObjectData &o, Interface *i, AbstractSubsystem *s)
       : Object(o), interface(i), subsystem(s) {}
@@ -37,10 +39,20 @@ class AbstractController : public Object {
   AbstractController &operator=(const AbstractController &) = delete;
   AbstractController &operator=(AbstractController &&) noexcept = default;
 
-  virtual ControllerData getControllerData() noexcept = 0;
+  virtual ControllerData &getControllerData() noexcept {
+    return controllerData;
+  }
 
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
+
+  void createCheckpoint(std::ostream &out) noexcept override {
+    BACKUP_SCALAR(out, controllerData.memoryPageSize);
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept override {
+    RESTORE_SCALAR(in, controllerData.memoryPageSize);
+  }
 };
 
 }  // namespace SimpleSSD
