@@ -30,7 +30,7 @@ AbstractController *AbstractSubsystem::getController(
   auto iter = controllerList.find(cid);
 
   if (iter != controllerList.end()) {
-    return iter->second.controller;
+    return iter->second->controller;
   }
 
   return nullptr;

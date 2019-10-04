@@ -61,7 +61,7 @@ class ControllerData {
  */
 class AbstractSubsystem : public Object {
  protected:
-  std::map<ControllerID, ControllerData> controllerList;
+  std::map<ControllerID, ControllerData *> controllerList;
 
  public:
   AbstractSubsystem(ObjectData &);
