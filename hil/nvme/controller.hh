@@ -32,9 +32,32 @@ class Controller : public AbstractController {
       uint32_t version;
       uint32_t interruptMaskSet;
       uint32_t interruptMaskClear;
-      uint32_t controllerConfiguration;
+      union {
+        uint32_t controllerConfiguration;
+        struct {
+          uint32_t en : 1;
+          uint32_t rsvd1 : 3;
+          uint32_t css : 3;
+          uint32_t mps : 4;
+          uint32_t ams : 3;
+          uint32_t shn : 2;
+          uint32_t iosqes : 4;
+          uint32_t iocqes : 4;
+          uint32_t rsvd2 : 8;
+        } cc;
+      };
       uint32_t reserved;
-      uint32_t controllerStatus;
+      union {
+        uint32_t controllerStatus;
+        struct {
+          uint32_t rdy : 1;
+          uint32_t cfs : 1;
+          uint32_t shst : 2;
+          uint32_t nssro : 1;
+          uint32_t pp : 1;
+          uint32_t rsvd : 26;
+        } cs;
+      };
       uint32_t subsystemReset;
       uint32_t adminQueueAttributes;
       uint64_t adminSQueueBaseAddress;
@@ -65,24 +88,26 @@ class Controller : public AbstractController {
     PersistentMemoryRegion();
   };
 
-  // TODO: Add Subsystem HERE!
   InterruptManager interruptManager;
   Arbitrator arbitrator;
 
-  FIFO *pcie;          //!< FIFO for PCIe bus <-> PCIe PHY
+  FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
   // FIFO *interconnect;  //!< FIFO for PCIe PHY <-> Interconnect
 
   RegisterTable registers;
   PersistentMemoryRegion pmrRegisters;
 
-  uint64_t sqStride;         //!< Calculated SQ stride
-  uint64_t cqStride;         //!< Calculated CQ stride
+  uint64_t sqStride;         //!< Calculated I/O SQ stride
+  uint64_t cqStride;         //!< Calculated I/O CQ stride
   uint8_t adminQueueInited;  //!< uint8_t, not bool, for checkout pointer counts
   Arbitration arbitration;   //!< Selected arbitration mechanism
   uint32_t interruptMask;    //!< Current interrupt mask
+  uint64_t memoryPageSize;
 
-  // TODO: May be removed
-  bool shutdownReserved;
+  // Queue DMA initialization
+  uint8_t adminQueueCreated;  //!< When queue DMAEngine initialized
+
+  Event eventQueueInit;
 
   // Arbitrator -> InterruptManager
   Event eventInterrupt;
@@ -92,12 +117,29 @@ class Controller : public AbstractController {
   Event eventSubmit;
   void notifySubsystem();
 
+  // Subsystem -> Arbitrator
+  Event eventComplete;
+
+  // Arbitrator -> Controller
+  Event eventShutdown;
+
+  void handleControllerConfig(uint32_t);
+
  public:
-  Controller(ObjectData &, Interface *);
+  Controller(ObjectData &, Interface *, AbstractSubsystem *);
   ~Controller();
+
+  ControllerData getControllerData() noexcept override;
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

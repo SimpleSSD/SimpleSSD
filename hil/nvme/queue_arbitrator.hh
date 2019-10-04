@@ -11,6 +11,7 @@
 #define __HIL_NVME_QUEUE_ARBITRATOR_HH__
 
 #include "hil/nvme/queue.hh"
+#include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
 
 namespace SimpleSSD::HIL::NVMe {
@@ -97,6 +98,8 @@ class Arbitrator : public Object {
  private:
   bool inited;
 
+  ControllerData controller;
+
   Event submit;     // Arbitrator -> Subsystem (Submission)
   Event complete;   // Subsystem -> Arbitrator (Completion)
   Event interrupt;  // Arbitrator -> InterruptManager (Interrupt)
@@ -126,6 +129,11 @@ class Arbitrator : public Object {
   // Completion
   Event eventCompDone;
   void completion_done(uint64_t, CQContext *);
+
+  // Shutdown
+  bool shutdownReserved;
+
+  Event eventShutdown;
 
   // Work
   bool run;
@@ -161,21 +169,35 @@ class Arbitrator : public Object {
    *
    * \param[in] s Submission Event
    * \param[in] i Interrupt Event
+   * \param[in] t Shutdown Event
    * \return Completion Event
    */
-  Event init(Event s, Event i);
+  Event init(Event s, Event i, Event t);
+  void setControllerData(ControllerData);
 
   // Register
+  void enable(bool);
   void setMode(Arbitration);
   void ringSQ(uint16_t, uint16_t);
   void ringCQ(uint16_t, uint16_t);
-  void enable(bool);
+  void reserveShutdown();
+  void createAdminSQ(uint64_t, uint16_t, Event, EventContext);
+  void createAdminCQ(uint64_t, uint16_t, Event, EventContext);
 
   // Command
   SQContext *dispatch();
+
+  // bool createSQ(uint16_t, uint16_t, uint16_t, QueuePriority, bool, uint64_t,
+  //               Event, EventContext);
+  // bool createCQ(uint16_t, uint16_t, uint16_t, bool, bool, uint64_t, Event,
+  //               EventContext);
+  // bool deleteSQ(uint16_t);
+  // bool deleteCQ(uint16_t);
   // bool submitCommand(SQContext *);
 
-  // TODO: ADD STAT!
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
 
   void createCheckpoint(std::ostream &) noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

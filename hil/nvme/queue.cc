@@ -58,9 +58,19 @@ uint16_t Queue::getSize() {
 }
 
 void Queue::setBase(DMAInterface *p, uint64_t s) {
+  if (base) {
+    delete base;
+  }
+
   base = p;
   stride = s;
 }
+
+void Queue::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void Queue::getStatValues(std::vector<double> &) noexcept {}
+
+void Queue::resetStatValues() noexcept {}
 
 void Queue::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, id);
@@ -78,7 +88,7 @@ void Queue::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, stride);
 }
 
-CQueue::CQueue(ObjectData &o, uint16_t iv, bool en, uint16_t qid, uint16_t size)
+CQueue::CQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t iv, bool en)
     : Queue(o, qid, size), ien(en), phase(true), iv(iv) {}
 
 void CQueue::setData(CQEntry *entry, Event eid, EventContext context) {
@@ -140,9 +150,9 @@ void CQueue::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, iv);
 }
 
-SQueue::SQueue(ObjectData &o, uint16_t cqid, uint8_t pri, uint16_t qid,
-               uint16_t size)
-    : Queue(o, qid, size), cqID(cqid), priority((QueuePriority)pri) {}
+SQueue::SQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t cqid,
+               QueuePriority pri)
+    : Queue(o, qid, size), cqID(cqid), priority(pri) {}
 
 uint16_t SQueue::getCQID() {
   return cqID;

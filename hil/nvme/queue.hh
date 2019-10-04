@@ -95,6 +95,10 @@ class Queue : public Object {
   uint16_t getSize();
   void setBase(DMAInterface *, uint64_t);
 
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
   virtual void createCheckpoint(std::ostream &) noexcept;
   virtual void restoreCheckpoint(std::istream &) noexcept;
 };
@@ -106,7 +110,7 @@ class CQueue : public Queue {
   uint16_t iv;
 
  public:
-  CQueue(ObjectData &, uint16_t, bool, uint16_t, uint16_t);
+  CQueue(ObjectData &, uint16_t, uint16_t, uint16_t, bool);
 
   void setData(CQEntry *, Event, EventContext);
   uint16_t incHead();
@@ -124,7 +128,7 @@ class SQueue : public Queue {
   QueuePriority priority;
 
  public:
-  SQueue(ObjectData &, uint16_t, uint8_t, uint16_t, uint16_t);
+  SQueue(ObjectData &, uint16_t, uint16_t, uint16_t, QueuePriority);
 
   uint16_t getCQID();
   void setTail(uint16_t);

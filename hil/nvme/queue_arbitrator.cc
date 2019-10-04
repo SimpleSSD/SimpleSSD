@@ -106,7 +106,8 @@ Arbitrator::Arbitrator(ObjectData &o)
       inited(false),
       submit(InvalidEventID),
       interrupt(InvalidEventID),
-      mode(Arbitration::RoundRobin) {
+      mode(Arbitration::RoundRobin),
+      shutdownReserved(false) {
   // Read config
   period = readConfigUint(Section::HostInterface, Config::Key::WorkInterval);
   internalQueueSize =
@@ -175,13 +176,29 @@ Arbitrator::~Arbitrator() {
   free(sqList);
 }
 
-Event Arbitrator::init(Event s, Event i) {
+Event Arbitrator::init(Event s, Event i, Event t) {
   submit = s;
   interrupt = i;
+  eventShutdown = t;
 
   inited = true;
 
   return complete;
+}
+
+void Arbitrator::setControllerData(ControllerData data) {
+  controller = std::move(data);
+}
+
+void Arbitrator::enable(bool r) {
+  run = r;
+
+  if (run) {
+    schedule(work, getTick());
+  }
+  else {
+    deschedule(work);
+  }
 }
 
 void Arbitrator::setMode(Arbitration newMode) {
@@ -211,17 +228,6 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
   }
 }
 
-void Arbitrator::enable(bool r) {
-  run = r;
-
-  if (run) {
-    schedule(work, getTick());
-  }
-  else {
-    deschedule(work);
-  }
-}
-
 SQContext *Arbitrator::dispatch() {
   auto entry = (SQContext *)requestQueue.front();
 
@@ -231,6 +237,44 @@ SQContext *Arbitrator::dispatch() {
   requestQueue.pop_front();
 
   return entry;
+}
+
+void Arbitrator::reserveShutdown() {
+  shutdownReserved = true;
+}
+
+void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
+                               EventContext context) {
+  panic_if(controller.dma == nullptr, "ControllerData not set.");
+
+  auto dmaEngine =
+      new PRPEngine(object, controller.dma, controller.memoryPageSize);
+
+  dmaEngine->initQueue(base, size * 16, true, eid, context);
+
+  if (cqList[0]) {
+    delete cqList[0];
+  }
+
+  cqList[0] = new CQueue(object, 0, size, 0, true);
+  cqList[0]->setBase(dmaEngine, 16);  // Always 16 bytes stride
+}
+
+void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid,
+                               EventContext context) {
+  panic_if(controller.dma == nullptr, "ControllerData not set.");
+
+  auto dmaEngine =
+      new PRPEngine(object, controller.dma, controller.memoryPageSize);
+
+  dmaEngine->initQueue(base, size * 64, true, eid, context);
+
+  if (sqList[0]) {
+    delete sqList[0];
+  }
+
+  sqList[0] = new SQueue(object, 0, size, 0, QueuePriority::Urgent);
+  sqList[0]->setBase(dmaEngine, 64);  // Always 64 bytes stride
 }
 
 // bool Arbitrator::submitCommand(SQContext *sqe) {
@@ -254,7 +298,7 @@ SQContext *Arbitrator::dispatch() {
 //   return false;
 // }
 
-void Arbitrator::completion(uint64_t, CQContext *cqe) {
+void Arbitrator::completion(uint64_t now, CQContext *cqe) {
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
@@ -279,6 +323,13 @@ void Arbitrator::completion(uint64_t, CQContext *cqe) {
 
   // Write entry to CQ
   cq->setData(cqe->getData(), eventCompDone, cqe);
+
+  if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
+    // All pending requests are finished
+    schedule(eventShutdown, now);
+
+    shutdownReserved = false;
+  }
 }
 
 void Arbitrator::completion_done(uint64_t now, CQContext *cqe) {
@@ -295,6 +346,16 @@ void Arbitrator::completion_done(uint64_t now, CQContext *cqe) {
 
 void Arbitrator::collect(uint64_t now) {
   if (UNLIKELY(!run || running)) {
+    return;
+  }
+
+  if (UNLIKELY(shutdownReserved)) {
+    // Terminating
+    run = false;
+
+    // Clear ALL!!
+    requestQueue.clear();
+
     return;
   }
 
@@ -415,6 +476,12 @@ void Arbitrator::collectWeightedRoundRobin() {
   }
 }
 
+void Arbitrator::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void Arbitrator::getStatValues(std::vector<double> &) noexcept {}
+
+void Arbitrator::resetStatValues() noexcept {}
+
 void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, inited);
   BACKUP_SCALAR(out, period);
@@ -424,6 +491,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, intrruptContext);
   BACKUP_SCALAR(out, mode);
   BACKUP_SCALAR(out, param);
+  BACKUP_SCALAR(out, shutdownReserved);
   BACKUP_SCALAR(out, run);
   BACKUP_SCALAR(out, running);
   BACKUP_SCALAR(out, collectRequested);
@@ -499,6 +567,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, intrruptContext);
   RESTORE_SCALAR(in, mode);
   RESTORE_SCALAR(in, param);
+  RESTORE_SCALAR(in, shutdownReserved);
   RESTORE_SCALAR(in, run);
   RESTORE_SCALAR(in, running);
   RESTORE_SCALAR(in, collectRequested);
