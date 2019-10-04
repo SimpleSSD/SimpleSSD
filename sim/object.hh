@@ -80,42 +80,40 @@ class Object {
   };
 
  protected:
-  Engine *engine;        //!< Current simulation engine
-  ConfigReader *config;  //!< Current simulation configuration
-  Log *log;              //!< Current log system
-
-  inline ObjectData makeObject() { return ObjectData(engine, config, log); }
+  ObjectData object;
 
   /* Helper APIs for Engine */
-  inline uint64_t getTick() noexcept { return engine->getTick(); }
+  inline uint64_t getTick() noexcept { return object.engine->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
-    return engine->createEvent(ef, s);
+    return object.engine->createEvent(ef, s);
   }
   inline void schedule(Event e, uint64_t t, EventContext c) noexcept {
-    engine->schedule(e, t, c);
+    object.engine->schedule(e, t, c);
   }
   inline void schedule(Event e, uint64_t t) noexcept {
-    engine->schedule(e, t, EventContext());
+    object.engine->schedule(e, t, EventContext());
   }
-  inline void deschedule(Event e) noexcept { engine->deschedule(e); }
-  inline bool isScheduled(Event e) noexcept { return engine->isScheduled(e); }
-  inline void destroyEvent(Event e) noexcept { engine->destroyEvent(e); }
+  inline void deschedule(Event e) noexcept { object.engine->deschedule(e); }
+  inline bool isScheduled(Event e) noexcept {
+    return object.engine->isScheduled(e);
+  }
+  inline void destroyEvent(Event e) noexcept { object.engine->destroyEvent(e); }
 
   /* Helper APIs for Config */
   inline int64_t readConfigInt(Section s, uint32_t k) noexcept {
-    return config->readInt(s, k);
+    return object.config->readInt(s, k);
   }
   inline uint64_t readConfigUint(Section s, uint32_t k) noexcept {
-    return config->readUint(s, k);
+    return object.config->readUint(s, k);
   }
   inline float readConfigFloat(Section s, uint32_t k) noexcept {
-    return config->readFloat(s, k);
+    return object.config->readFloat(s, k);
   }
   inline std::string readConfigString(Section s, uint32_t k) noexcept {
-    return config->readString(s, k);
+    return object.config->readString(s, k);
   }
   inline bool readConfigBoolean(Section s, uint32_t k) noexcept {
-    return config->readBoolean(s, k);
+    return object.config->readBoolean(s, k);
   }
 
   /* Helper APIs for Log */
@@ -123,33 +121,33 @@ class Object {
     va_list args;
 
     va_start(args, format);
-    log->print(Log::LogID::Info, format, args);
+    object.log->print(Log::LogID::Info, format, args);
     va_end(args);
   }
   inline void warn_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
-    log->print(Log::LogID::Warn, format, args);
+    object.log->print(Log::LogID::Warn, format, args);
     va_end(args);
   }
   inline void panic_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
-    log->print(Log::LogID::Panic, format, args);
+    object.log->print(Log::LogID::Panic, format, args);
     va_end(args);
   }
   inline void debugprint(Log::DebugID id, const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
-    log->debugprint(id, format, args);
+    object.log->debugprint(id, format, args);
     va_end(args);
   }
 
  public:
-  Object(ObjectData &o) : engine(o.engine), config(o.config), log(o.log) {}
+  Object(ObjectData &o) : object(o) {}
   virtual ~Object() {}
 
   /* Statistic API */
