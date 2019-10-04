@@ -28,6 +28,17 @@ class AbstractController;
  */
 using ControllerID = uint16_t;
 
+//! Controller data
+class ControllerData {
+ public:
+  AbstractController *controller;
+  Interface *interface;
+  uint64_t memoryPageSize;  //!< This is only for PRPEngine
+
+  ControllerData();
+  ControllerData(AbstractController *, Interface *, uint64_t);
+};
+
 /**
  * \brief Abstract subsystem declaration
  *
@@ -41,8 +52,7 @@ using ControllerID = uint16_t;
  */
 class AbstractSubsystem : public Object {
  protected:
-  std::map<ControllerID, std::pair<AbstractController *, Interface *>>
-      controllerList;
+  std::map<ControllerID, ControllerData> controllerList;
 
  public:
   AbstractSubsystem(ObjectData &);

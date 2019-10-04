@@ -11,6 +11,12 @@
 
 namespace SimpleSSD {
 
+ControllerData::ControllerData()
+    : controller(nullptr), interface(nullptr), memoryPageSize(0) {}
+
+ControllerData::ControllerData(AbstractController *c, Interface *i, uint64_t m)
+    : controller(c), interface(i), memoryPageSize(m) {}
+
 AbstractSubsystem::AbstractSubsystem(ObjectData &o) : Object(o) {}
 
 AbstractSubsystem::~AbstractSubsystem() {}
@@ -20,7 +26,7 @@ AbstractController *AbstractSubsystem::getController(
   auto iter = controllerList.find(cid);
 
   if (iter != controllerList.end()) {
-    return iter->second.first;
+    return iter->second.controller;
   }
 
   return nullptr;
