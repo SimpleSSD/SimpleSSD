@@ -32,14 +32,14 @@ class DMAEngine : public Interface, public Object {
     DMAContext(Event, EventContext);
   };
 
-  Interface *pInterface;
+  DMAInterface *pInterface;
 
   Event dmaHandler;
 
   void dmaDone(uint64_t, DMAContext *);
 
  public:
-  DMAEngine(ObjectData &, Interface *);
+  DMAEngine(ObjectData &, DMAInterface *);
   DMAEngine(const DMAEngine &) = delete;
   DMAEngine(DMAEngine &&) noexcept = default;
   virtual ~DMAEngine();

@@ -32,7 +32,7 @@ PRPEngine::PRP::PRP() : address(0), size(0) {}
 
 PRPEngine::PRP::PRP(uint64_t a, uint64_t s) : address(a), size(s) {}
 
-PRPEngine::PRPEngine(ObjectData &o, Interface *i, uint64_t p)
+PRPEngine::PRPEngine(ObjectData &o, DMAInterface *i, uint64_t p)
     : DMAEngine(o, i), inited(false), totalSize(0), pageSize(p) {
   panic_if(popcount(p) != 1, "Invalid memory page size provided.");
 
@@ -315,7 +315,7 @@ SGLEngine::Chunk::Chunk() : address(0), length(0), ignore(true) {}
 SGLEngine::Chunk::Chunk(uint64_t a, uint32_t l, bool i)
     : address(a), length(l), ignore(i) {}
 
-SGLEngine::SGLEngine(ObjectData &o, Interface *i)
+SGLEngine::SGLEngine(ObjectData &o, DMAInterface *i)
     : DMAEngine(o, i), inited(false), totalSize(0) {}
 
 SGLEngine::~SGLEngine() {}

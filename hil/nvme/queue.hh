@@ -82,7 +82,7 @@ class Queue : public Object {
   uint16_t size;
   uint64_t stride;
 
-  Interface *base;
+  DMAInterface *base;
 
  public:
   Queue(ObjectData &, uint16_t, uint16_t);
@@ -93,7 +93,7 @@ class Queue : public Object {
   uint16_t getHead();
   uint16_t getTail();
   uint16_t getSize();
-  void setBase(Interface *, uint64_t);
+  void setBase(DMAInterface *, uint64_t);
 
   virtual void createCheckpoint(std::ostream &) noexcept;
   virtual void restoreCheckpoint(std::istream &) noexcept;

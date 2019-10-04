@@ -57,7 +57,7 @@ uint16_t Queue::getSize() {
   return size;
 }
 
-void Queue::setBase(Interface *p, uint64_t s) {
+void Queue::setBase(DMAInterface *p, uint64_t s) {
   base = p;
   stride = s;
 }

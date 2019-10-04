@@ -55,7 +55,7 @@ class PRPEngine : public DMAEngine {
   void getPRPListFromPRP_readDone(uint64_t, PRPInitContext *s);
 
  public:
-  PRPEngine(ObjectData &, Interface *, uint64_t);
+  PRPEngine(ObjectData &, DMAInterface *, uint64_t);
   ~PRPEngine();
 
   void initData(uint64_t, uint64_t, uint64_t, Event, EventContext);
@@ -119,7 +119,7 @@ class SGLEngine : public DMAEngine {
   void parseSGLSegment_readDone(uint64_t, SGLInitContext *);
 
  public:
-  SGLEngine(ObjectData &, Interface *);
+  SGLEngine(ObjectData &, DMAInterface *);
   ~SGLEngine();
 
   void init(uint64_t, uint64_t, Event, EventContext);

@@ -14,7 +14,8 @@ DMAEngine::DMAContext::DMAContext(Event e) : counter(0), eid(e) {}
 DMAEngine::DMAContext::DMAContext(Event e, EventContext c)
     : counter(0), eid(e), context(c) {}
 
-DMAEngine::DMAEngine(ObjectData &o, Interface *i) : Object(o), pInterface(i) {
+DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
+    : Object(o), pInterface(i) {
   dmaHandler = createEvent(
       [this](uint64_t t, EventContext c) { dmaDone(t, c.get<DMAContext *>()); },
       "HIL::DMAEngine::dmaHandler");
