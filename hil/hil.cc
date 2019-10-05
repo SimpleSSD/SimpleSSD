@@ -9,7 +9,7 @@
 
 #ifndef HIL_TEMPLATE
 #define HIL_TEMPLATE                                                           \
-  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>> = 0>
+  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
 
 namespace SimpleSSD::HIL {
 

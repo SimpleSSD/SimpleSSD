@@ -42,7 +42,7 @@ enum class FormatOption {
  *
  * Actually, this is not a HIL - a part of HIL.
  */
-template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>> = 0>
+template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
 class HIL : public Object {
  private:
   // ICL<LPN> *cacheLayer;
