@@ -37,12 +37,7 @@ class DMAInterface {
    * \param[in]  context   User data
    */
   virtual void read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                    Event eid, EventContext context) = 0;
-
-  //! Short-hand read request function
-  void read(uint64_t o, uint64_t l, uint8_t *b, Event e) {
-    read(o, l, b, e, EventContext());
-  }
+                    Event eid, EventContext context = EventContext()) = 0;
 
   /**
    * DMA write request function
@@ -57,12 +52,7 @@ class DMAInterface {
    * \param[in] context   User data
    */
   virtual void write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid, EventContext context) = 0;
-
-  //! Short-hand read request function
-  void write(uint64_t o, uint64_t l, uint8_t *b, Event e) {
-    write(o, l, b, e, EventContext());
-  }
+                     Event eid, EventContext context = EventContext()) = 0;
 };
 
 /**

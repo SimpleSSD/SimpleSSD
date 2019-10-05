@@ -30,9 +30,7 @@ class AbstractRAM : public Object {
    * \param[in] context User data of callback
    */
   virtual void read(uint64_t address, uint64_t length, Event eid,
-                    EventContext context) = 0;
-
-  void read(uint64_t a, uint64_t l, Event e) { read(a, l, e, EventContext()); }
+                    EventContext context = EventContext()) = 0;
 
   /**
    * \brief Write SRAM
@@ -45,11 +43,7 @@ class AbstractRAM : public Object {
    * \param[in] context User data of callback
    */
   virtual void write(uint64_t address, uint64_t length, Event eid,
-                     EventContext context) = 0;
-
-  void write(uint64_t a, uint64_t l, Event e) {
-    write(a, l, e, EventContext());
-  }
+                     EventContext context = EventContext()) = 0;
 };
 
 }  // namespace SimpleSSD::Memory

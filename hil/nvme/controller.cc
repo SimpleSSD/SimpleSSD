@@ -241,11 +241,11 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
     arbitrator.createAdminCQ(registers.adminCQueueBaseAddress, entrySize,
-                             eventQueueInit, EventContext());
+                             eventQueueInit);
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
     arbitrator.createAdminSQ(registers.adminSQueueBaseAddress, entrySize,
-                             eventQueueInit, EventContext());
+                             eventQueueInit);
   }
 
   return 0;

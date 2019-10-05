@@ -87,11 +87,9 @@ class Object {
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return object.engine->createEvent(ef, s);
   }
-  inline void schedule(Event e, uint64_t t, EventContext c) noexcept {
+  inline void schedule(Event e, uint64_t t,
+                       EventContext c = EventContext()) noexcept {
     object.engine->schedule(e, t, c);
-  }
-  inline void schedule(Event e, uint64_t t) noexcept {
-    object.engine->schedule(e, t, EventContext());
   }
   inline void deschedule(Event e) noexcept { object.engine->deschedule(e); }
   inline bool isScheduled(Event e) noexcept {
