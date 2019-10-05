@@ -23,6 +23,8 @@
 #define __builtin_bswap16 _byteswap_ushort
 #define __builtin_bswap32 _byteswap_ulong
 #define __builtin_bswap64 _byteswap_uint64
+#define __builtin_popcountl __popcnt
+#define __builtin_popcountll __popcnt64
 
 inline uint32_t __builtin_clzl(uint32_t val) {
   unsigned long leadingZero = 0;
@@ -76,14 +78,12 @@ inline uint64_t __builtin_ffsll(uint64_t val) {
 
 namespace SimpleSSD {
 
-template <typename T, std::enable_if_t<std::is_integral_v<T>> = 0>
-uint8_t popcount(T v) {
-  v = v - ((v >> 1) & (T) ~(T)0 / 3);
-  v = (v & (T) ~(T)0 / 15 * 3) + ((v >> 2) & (T) ~(T)0 / 15 * 3);
-  v = (v + (v >> 4)) & (T) ~(T)0 / 255 * 15;
-  v = (T)(v * ((T) ~(T)0 / 255)) >> (sizeof(T) - 1) * CHAR_BIT;
+uint8_t popcount(uint64_t val) {
+  return (int)__builtin_popcountll(val);
+}
 
-  return (uint8_t)v;
+uint8_t popcount(uint32_t val) {
+  return (int)__builtin_popcountl(val);
 }
 
 inline uint8_t fastlog2(uint64_t val) {
