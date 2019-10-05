@@ -34,7 +34,7 @@ PRPEngine::PRP::PRP(uint64_t a, uint64_t s) : address(a), size(s) {}
 
 PRPEngine::PRPEngine(ObjectData &o, DMAInterface *i, uint64_t p)
     : DMAEngine(o, i), inited(false), totalSize(0), pageSize(p) {
-  panic_if(popcount(p) != 1, "Invalid memory page size provided.");
+  panic_if(popcount64(p) != 1, "Invalid memory page size provided.");
 
   readPRPList = createEvent(
       [this](uint64_t t, EventContext c) {

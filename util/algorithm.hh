@@ -20,13 +20,14 @@
 
 #include <cstdlib>
 
-#define __builtin_bswap16 _byteswap_ushort
-#define __builtin_bswap32 _byteswap_ulong
-#define __builtin_bswap64 _byteswap_uint64
-#define __builtin_popcountl __popcnt
-#define __builtin_popcountll __popcnt64
+#define bswap16 _byteswap_ushort
+#define bswap32 _byteswap_ulong
+#define bswap64 _byteswap_uint64
+#define popcount16 __popcnt16
+#define popcount32 __popcnt
+#define popcount64 __popcnt64
 
-inline uint32_t __builtin_clzl(uint32_t val) {
+inline uint32_t clz32(uint32_t val) {
   unsigned long leadingZero = 0;
 
   if (_BitScanReverse(&leadingZero, val)) {
@@ -36,7 +37,7 @@ inline uint32_t __builtin_clzl(uint32_t val) {
   return 32;
 }
 
-inline uint32_t __builtin_ffsl(uint32_t val) {
+inline uint32_t ffs32(uint32_t val) {
   unsigned long trailingZero = 0;
 
   if (_BitScanForward(&trailingZero, val)) {
@@ -46,8 +47,8 @@ inline uint32_t __builtin_ffsl(uint32_t val) {
   return 0;
 }
 
-inline uint64_t __builtin_ffsll(uint64_t val) {
-    unsigned long trailingZero = 0;
+inline uint64_t ffs64(uint64_t val) {
+  unsigned long trailingZero = 0;
 
   if (_BitScanForward64(&trailingZero, val)) {
     return trailingZero + 1;
@@ -64,6 +65,23 @@ inline uint64_t __builtin_ffsll(uint64_t val) {
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 
+#define popcount16 __builtin_popcount
+#define popcount32 __builtin_popcount
+#define clz16 __builtin_clz
+#define clz32 __builtin_clz
+#define ffs16 __builtin_ffs
+#define ffs32 __builtin_ffs
+
+#if __WORDSIZE == 64
+#define popcount64 __builtin_popcountl
+#define clz64 __builtin_clzl
+#define ffs64 __builtin_ffsl
+#else
+#define popcount64 __builtin_popcountll
+#define clz64 __builtin_clzll
+#define ffs64 __builtin_ffsll
+#endif
+
 #endif
 
 #ifndef MIN
@@ -78,26 +96,14 @@ inline uint64_t __builtin_ffsll(uint64_t val) {
 
 namespace SimpleSSD {
 
-uint8_t popcount(uint64_t val) {
-  return (int)__builtin_popcountll(val);
-}
-
-uint8_t popcount(uint32_t val) {
-  return (int)__builtin_popcountl(val);
-}
-
-inline uint8_t fastlog2(uint64_t val) {
-  return (uint8_t)__builtin_ffsll(val) - 1;
-}
-
 inline uint64_t generateMask(uint32_t val, uint32_t &count) {
   uint64_t mask = (uint64_t)-1;
   uint32_t tmp = 0;
 
   if (val > 0) {
-    int shift = __builtin_clzl(val);
+    int shift = clz32(val);
 
-    if (shift + __builtin_ffsl(val) == 64) {
+    if (shift + ffs32(val) == 64) {
       shift++;
     }
 
@@ -109,10 +115,6 @@ inline uint64_t generateMask(uint32_t val, uint32_t &count) {
   count += tmp;
 
   return mask;
-}
-
-inline uint16_t bswap16(uint16_t val) {
-  return __builtin_bswap16(val);
 }
 
 }  // namespace SimpleSSD

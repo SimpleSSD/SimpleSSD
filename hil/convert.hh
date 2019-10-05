@@ -29,6 +29,7 @@ namespace SimpleSSD::HIL {
  *
  * Both LBA and LPN must power of 2. (popcount == 1)
  */
+template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
 class Convert : public Object {
  private:
   uint64_t lpnOrder;  //!< Order of LPN size. Fixed in one simulation session.
@@ -37,11 +38,11 @@ class Convert : public Object {
   uint64_t mask;
 
  public:
-  Convert(ObjectData &o, uint64_t lpn)
+  Convert(ObjectData &o, LPN lpn)
       : Object(o), lbaOrder(0), shift(0), mask(0) {
-    panic_if(popcount(lpn) != 1, "Invalid logical page size.");
+    panic_if(popcount64((uint64_t)lpn) != 1, "Invalid logical page size.");
 
-    lpnOrder = fastlog2(lpn);
+    lpnOrder = ffs64((uint64_t)lpn) - 1;
   }
 
   Convert(const Convert &) = delete;
@@ -51,9 +52,9 @@ class Convert : public Object {
   Convert &operator=(Convert &&) noexcept = default;
 
   void setLBASize(uint64_t lba) {
-    panic_if(popcount(lba) != 1, "Invalid logical block size.");
+    panic_if(popcount64(lba) != 1, "Invalid logical block size.");
 
-    lbaOrder = fastlog2(lba);
+    lbaOrder = ffs64(lba) - 1;
     shift = lpnOrder - lbaOrder;
     mask = (1ull << (shift >= 0 ? shift : -shift)) - 1;
   }
@@ -72,11 +73,9 @@ class Convert : public Object {
    * \param[out] skipFirst  The number of bytes to ignore at the beginning
    * \param[out] skipLast   The number of bytes to ignore at the end
    */
-  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
   using ConvertFunction =
       std::function<void(uint64_t, uint64_t, LPN, LPN, uint32_t *, uint32_t *)>;
 
-  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
   ConvertFunction<LPN> getConvertion() {
     if (shift > 0) {
       // LBASize < LPNSize

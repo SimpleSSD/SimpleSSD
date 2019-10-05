@@ -232,7 +232,7 @@ void Config::update() {
   pcieGen = (PCIExpress::Generation)((uint8_t)pcieGen - 1);
   panic_if((uint8_t)pcieGen > 2, "Invalid PCIe generation %u.",
            (uint8_t)pcieGen + 1);
-  panic_if(popcount(pcieLane) != 1 || pcieLane > 32, "Invalid PCIe lane %u.",
+  panic_if(popcount16(pcieLane) != 1 || pcieLane > 32, "Invalid PCIe lane %u.",
            pcieLane);
 
   sataGen = (SATA::Generation)((uint8_t)sataGen - 1);
@@ -242,7 +242,7 @@ void Config::update() {
   panic_if((uint8_t)mphyMode > 3, "Invalid M-PHY mode %u.", (uint8_t)mphyMode);
   panic_if(mphyLane == 0 || mphyLane > 2, "Invalid M-PHY lane %u.", mphyLane);
 
-  panic_if(popcount((uint16_t)axiWidth) != 1 || (uint16_t)axiWidth > 1024 ||
+  panic_if(popcount16((uint16_t)axiWidth) != 1 || (uint16_t)axiWidth > 1024 ||
                (uint16_t)axiWidth < 32,
            "Invalid AXI bus width %u.", (uint16_t)axiWidth);
   axiWidth = (ARM::AXI::Width)((uint16_t)axiWidth / 8);
@@ -274,7 +274,7 @@ void Config::update() {
     panic_if(ns.nsid == 0 || ns.nsid == 0xFFFFFFFF || ns.nsid > maxNamespace,
              "Invalid namespace ID %u in namespace config.", ns.nsid);
 
-    panic_if(popcount(ns.lbaSize) != 1 || ns.lbaSize < 512,
+    panic_if(popcount16(ns.lbaSize) != 1 || ns.lbaSize < 512,
              "Invalid logical block size %u.", ns.lbaSize);
   }
 
