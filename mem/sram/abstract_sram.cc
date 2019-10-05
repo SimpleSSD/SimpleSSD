@@ -10,7 +10,7 @@
 namespace SimpleSSD::Memory::SRAM {
 
 AbstractSRAM::AbstractSRAM(ObjectData &o) : AbstractRAM(o) {
-  pStructure = config->getSRAM();
+  pStructure = o.config->getSRAM();
 }
 
 AbstractSRAM::~AbstractSRAM() {}

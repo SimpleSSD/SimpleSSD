@@ -15,9 +15,9 @@ namespace SimpleSSD::Memory::DRAM {
 
 AbstractDRAM::AbstractDRAM(ObjectData &o)
     : AbstractRAM(o), totalEnergy(0.0), totalPower(0.0) {
-  pStructure = config->getDRAM();
-  pTiming = config->getDRAMTiming();
-  pPower = config->getDRAMPower();
+  pStructure = o.config->getDRAM();
+  pTiming = o.config->getDRAMTiming();
+  pPower = o.config->getDRAMPower();
 
   convertMemspec();
 
