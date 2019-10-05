@@ -27,11 +27,13 @@ class AbstractController : public Object {
   Interface *interface;          //!< Per-controller host interface
   AbstractSubsystem *subsystem;  //!< Connected subsystem
 
+  ControllerID controllerID;
   ControllerData controllerData;
 
  public:
-  AbstractController(ObjectData &o, Interface *i, AbstractSubsystem *s)
-      : Object(o), interface(i), subsystem(s) {}
+  AbstractController(ObjectData &o, ControllerID id, AbstractSubsystem *s,
+                     Interface *i)
+      : Object(o), interface(i), subsystem(s), controllerID(id) {}
   AbstractController(const AbstractController &) = delete;
   AbstractController(AbstractController &&) noexcept = default;
   virtual ~AbstractController() {}

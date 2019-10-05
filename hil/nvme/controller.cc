@@ -17,8 +17,9 @@ Controller::PersistentMemoryRegion::PersistentMemoryRegion() {
   memset(data, 0, sizeof(PersistentMemoryRegion));
 }
 
-Controller::Controller(ObjectData &o, Interface *i, AbstractSubsystem *p)
-    : AbstractController(o, i, p),
+Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
+                       Interface *i)
+    : AbstractController(o, id, p, i),
       interruptManager(o, i),
       arbitrator(o, controllerData),
       adminQueueInited(0),

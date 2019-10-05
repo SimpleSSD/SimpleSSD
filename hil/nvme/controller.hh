@@ -125,7 +125,7 @@ class Controller : public AbstractController {
   void handleControllerConfig(uint32_t);
 
  public:
-  Controller(ObjectData &, Interface *, AbstractSubsystem *);
+  Controller(ObjectData &, ControllerID, AbstractSubsystem *, Interface *);
   ~Controller();
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
