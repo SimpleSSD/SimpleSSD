@@ -14,8 +14,13 @@
 
 #include "sim/abstract_controller.hh"
 #include "sim/object.hh"
+#include "hil/convert.hh"
 
-namespace SimpleSSD::HIL::NVMe {
+namespace SimpleSSD {
+
+class Disk;
+
+namespace HIL::NVMe {
 
 class Subsystem;
 
@@ -60,7 +65,7 @@ union HealthInfo {
     uint64_t writeCommandH;
   };
 
-  HealthInfo() { memset(data, 0, 0x200); }
+  HealthInfo();
 };
 
 class Namespace : public Object {
@@ -69,8 +74,13 @@ class Namespace : public Object {
   NamespaceInformation info;
   HealthInfo health;
 
+  bool inited;
+
   uint32_t nsid;
   std::set<ControllerID> attachList;
+
+  Disk *disk;
+  Convert *convert;
 
  public:
   Namespace(ObjectData &, Subsystem *);
@@ -83,12 +93,12 @@ class Namespace : public Object {
 
   uint32_t getNSID();
 
-  void attach(ControllerID ctrlid);
+  bool attach(ControllerID ctrlid);
   bool isAttached();
   bool isAttached(ControllerID ctrlid);
 
   NamespaceInformation *getInfo();
-  void setInfo(uint32_t, NamespaceInformation *);
+  void setInfo(uint32_t, NamespaceInformation *, Config::Disk *);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -98,6 +108,8 @@ class Namespace : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::HIL::NVMe
+}  // namespace HIL::NVMe
+
+}  // namespace SimpleSSD
 
 #endif

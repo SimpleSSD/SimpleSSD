@@ -150,7 +150,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
 
   // Create namespace
   Namespace *pNS = new Namespace(object, this);
-  pNS->setInfo(nsid, info);
+  pNS->setInfo(nsid, info, disk);
 
   auto ret = namespaceList.emplace(nsid, pNS);
 

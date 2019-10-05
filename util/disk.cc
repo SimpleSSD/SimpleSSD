@@ -166,6 +166,9 @@ void Disk::restoreCheckpoint(std::istream &in) noexcept {
   filename.resize(size);
 
   RESTORE_BLOB(in, filename.c_str(), size);
+
+  // Okay, try to open.
+  open(filename, diskSize, sectorSize);
 }
 
 CoWDisk::CoWDisk(ObjectData &o) : Disk(o) {}
