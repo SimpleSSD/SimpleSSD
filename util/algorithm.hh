@@ -44,6 +44,16 @@ inline uint32_t __builtin_ffsl(uint32_t val) {
   return 0;
 }
 
+inline uint64_t __builtin_ffsll(uint64_t val) {
+    unsigned long trailingZero = 0;
+
+  if (_BitScanForward64(&trailingZero, val)) {
+    return trailingZero + 1;
+  }
+
+  return 0;
+}
+
 #define LIKELY
 #define UNLIKELY
 
@@ -66,7 +76,7 @@ inline uint32_t __builtin_ffsl(uint32_t val) {
 
 namespace SimpleSSD {
 
-template <typename T>
+template <typename T, std::enable_if_t<std::is_integral_v<T>> = 0>
 uint8_t popcount(T v) {
   v = v - ((v >> 1) & (T) ~(T)0 / 3);
   v = (v & (T) ~(T)0 / 15 * 3) + ((v >> 2) & (T) ~(T)0 / 15 * 3);
@@ -74,6 +84,10 @@ uint8_t popcount(T v) {
   v = (T)(v * ((T) ~(T)0 / 255)) >> (sizeof(T) - 1) * CHAR_BIT;
 
   return (uint8_t)v;
+}
+
+inline uint8_t fastlog2(uint64_t val) {
+  return (uint8_t)__builtin_ffsll(val) - 1;
 }
 
 inline uint64_t generateMask(uint32_t val, uint32_t &count) {
