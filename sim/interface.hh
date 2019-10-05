@@ -67,7 +67,7 @@ class Interface : public DMAInterface {
   virtual ~Interface() {}
 
   /**
-   * Interrupt post function
+   * \brief Interrupt post function
    *
    * Simulator must send interrupt to corresponding interrupt controller
    * with provided interrupt vector.
@@ -76,6 +76,19 @@ class Interface : public DMAInterface {
    * \param[in] set True when set the interrupt, False when clear the interrupt
    */
   virtual void postInterrupt(uint16_t iv, bool set) = 0;
+
+  /**
+   * \brief PCI/PCIe ID getter
+   *
+   * NVMe Identify Controller requires PCI VendorID and PCI Subsystem Vendor ID.
+   *
+   * \param[out] vid    PCI Vendor ID
+   * \param[out] ssvid  PCI Subsystem Vendor ID
+   */
+  virtual void getPCIID(uint16_t &vid, uint16_t &ssvid) {
+    vid = 0;
+    ssvid = 0;
+  }
 };
 
 }  // namespace SimpleSSD

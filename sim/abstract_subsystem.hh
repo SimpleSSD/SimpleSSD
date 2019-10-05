@@ -32,12 +32,6 @@ using ControllerID = uint16_t;
 
 //! Controller data
 class ControllerData {
- private:
-  friend AbstractSubsystem;
-
-  ControllerID id;
-  std::set<uint32_t> attachedNamespaceList;
-
  public:
   AbstractController *controller;
   Interface *interface;     //!< Top-most host interface
