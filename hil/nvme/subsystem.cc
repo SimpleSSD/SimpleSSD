@@ -251,9 +251,13 @@ void Subsystem::init() {
       }
     }
   }
+
+  inited = true;
 }
 
 ControllerID Subsystem::createController(Interface *interface) noexcept {
+  panic_if(!inited, "Subsystem not initialized");
+
   auto ctrl = new Controller(object, controllerID, this, interface);
 
   // Insert to list
