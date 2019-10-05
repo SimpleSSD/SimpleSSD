@@ -304,6 +304,11 @@ void Config::update() {
   for (auto &ns : namespaceList) {
     ns.pDisk = nullptr;
 
+    panic_if(ns.nsid > maxNamespace,
+             "Namespace ID is greater than MaxNamespace.");
+    panic_if((ns.capacity % ns.lbaSize) != 0,
+             "Invalid capacity - not aligned to LBASize");
+
     for (auto &disk : diskList) {
       if (ns.nsid == disk.nsid) {
         ns.pDisk = &disk;

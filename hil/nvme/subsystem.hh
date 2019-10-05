@@ -22,16 +22,21 @@ namespace SimpleSSD::HIL::NVMe {
 
 class Subsystem : public AbstractSubsystem {
  protected:
-  using HILPointer = std::variant<HIL<uint16_t> *, HIL<uint32_t> *, HIL<uint64_t> *>;
+  using HILPointer =
+      std::variant<HIL<uint16_t> *, HIL<uint32_t> *, HIL<uint64_t> *>;
 
   HILPointer pHIL;
 
-  std::map<uint32_t, Namespace> namespaceList;
+  ControllerID controllerID;
 
-  HealthInfo globalHealth;
+  std::map<uint32_t, Namespace *> namespaceList;
+
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
   uint64_t allocatedLogicalPages;
+
+  bool createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
+  bool destroyNamespace(uint32_t);
 
  public:
   Subsystem(ObjectData &);

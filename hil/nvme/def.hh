@@ -23,28 +23,6 @@ namespace SimpleSSD::HIL::NVMe {
 #define OCSSD_SSVID_1_2 0x0102
 #define OCSSD_SSVID_2_0 0x0200
 
-union HealthInfo {
-  uint8_t data[0x200];
-  struct {
-    uint8_t status;
-    uint16_t temperature;
-    uint8_t availableSpare;
-    uint8_t spareThreshold;
-    uint8_t lifeUsed;
-    uint8_t reserved[26];
-    uint64_t readL;
-    uint64_t readH;
-    uint64_t writeL;
-    uint64_t writeH;
-    uint64_t readCommandL;
-    uint64_t readCommandH;
-    uint64_t writeCommandL;
-    uint64_t writeCommandH;
-  };
-
-  HealthInfo() { memset(data, 0, 0x200); }
-};
-
 enum class QueuePriority : uint8_t {
   Urgent,
   High,
