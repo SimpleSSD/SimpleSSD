@@ -16,9 +16,11 @@
 #include <map>
 #include <vector>
 
+#include "sim/object.hh"
+
 namespace SimpleSSD {
 
-class Disk {
+class Disk : public Object {
  protected:
   std::string filename;
   uint64_t diskSize;
@@ -27,7 +29,7 @@ class Disk {
   std::fstream disk;
 
  public:
-  Disk();
+  Disk(ObjectData &);
   Disk(const Disk &) = delete;
   Disk(Disk &&) noexcept = default;
   virtual ~Disk();
@@ -41,6 +43,13 @@ class Disk {
   virtual uint16_t read(uint64_t, uint16_t, uint8_t *) noexcept;
   virtual uint16_t write(uint64_t, uint16_t, uint8_t *) noexcept;
   virtual uint16_t erase(uint64_t, uint16_t) noexcept;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class CoWDisk : public Disk {
@@ -48,18 +57,21 @@ class CoWDisk : public Disk {
   std::map<uint64_t, std::vector<uint8_t>> table;
 
  public:
-  CoWDisk();
+  CoWDisk(ObjectData &);
   ~CoWDisk();
 
   void close() noexcept override;
 
   uint16_t read(uint64_t, uint16_t, uint8_t *) noexcept override;
   uint16_t write(uint64_t, uint16_t, uint8_t *) noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class MemDisk : public CoWDisk {
  public:
-  MemDisk();
+  MemDisk(ObjectData &);
   ~MemDisk();
 
   uint64_t open(std::string, uint64_t, uint32_t) noexcept override;

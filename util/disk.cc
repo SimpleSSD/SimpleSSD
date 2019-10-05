@@ -20,17 +20,11 @@
 #include "util/disk.hh"
 
 #include <cstring>
-
-#ifdef _MSC_VER
-#include <Windows.h>
-#else
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
+#include <filesystem>
 
 namespace SimpleSSD {
 
-Disk::Disk() : diskSize(0), sectorSize(0) {}
+Disk::Disk(ObjectData &o) : Object(o), diskSize(0), sectorSize(0) {}
 
 Disk::~Disk() {
   close();
@@ -42,47 +36,14 @@ uint64_t Disk::open(std::string path, uint64_t desiredSize,
   sectorSize = lbaSize;
 
   // Validate size
-#ifdef _MSC_VER
-  LARGE_INTEGER size;
-  HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ | GENERIC_WRITE, NULL,
-                             NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  std::filesystem::path fspath(path);
 
-  if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    if (GetFileSizeEx(hFile, &size)) {
-      diskSize = size.QuadPart;
+  if (std::filesystem::exists(path)) {
+    if (std::filesystem::is_regular_file(path)) {
+      diskSize = std::filesystem::file_size(path);
     }
     else {
-      // panic("Get file size failed!");
-    }
-  }
-  else {
-    size.QuadPart = desiredSize;
-
-    if (SetFilePointerEx(hFile, size, nullptr, FILE_BEGIN)) {
-      if (SetEndOfFile(hFile)) {
-        diskSize = desiredSize;
-      }
-      else {
-        // panic("SetEndOfFile failed");
-      }
-    }
-    else {
-      // panic("SetFilePointerEx failed");
-    }
-  }
-
-  CloseHandle(hFile);
-#else
-  struct stat s;
-
-  if (stat(filename.c_str(), &s) == 0) {
-    // File exists
-    if (S_ISREG(s.st_mode)) {
-      diskSize = s.st_size;
-    }
-    else {
-      // panic("nvme_disk: Specified file %s is not regular file.\n",
-      //       filename.c_str());
+      panic("Provided file is not a regular file.");
     }
   }
   else {
@@ -90,16 +51,13 @@ uint64_t Disk::open(std::string path, uint64_t desiredSize,
     disk.open(filename, std::ios::out | std::ios::binary);
     disk.close();
 
-    // Set file size
-    if (truncate(filename.c_str(), desiredSize) == 0) {
-      diskSize = desiredSize;
+    try {
+      std::filesystem::resize_file(path, desiredSize);
     }
-    else {
-      // panic("nvme_disk: Failed to set disk size %" PRIu64 " errno=%d\n",
-      //       diskSize, errno);
+    catch (std::exception &e) {
+      panic("Failed to create and resize disk image file.");
     }
   }
-#endif
 
   // Open file
   disk.open(filename, std::ios::in | std::ios::out | std::ios::binary);
@@ -183,7 +141,34 @@ uint16_t Disk::erase(uint64_t, uint16_t nlblk) noexcept {
   return nlblk;
 }
 
-CoWDisk::CoWDisk() {}
+void Disk::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void Disk::getStatValues(std::vector<double> &) noexcept {}
+
+void Disk::resetStatValues() noexcept {}
+
+void Disk::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, diskSize);
+  BACKUP_SCALAR(out, sectorSize);
+
+  uint64_t size = filename.size();
+  BACKUP_SCALAR(out, size);
+  BACKUP_BLOB(out, filename.c_str(), size);
+}
+
+void Disk::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, diskSize);
+  RESTORE_SCALAR(in, sectorSize);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  filename.resize(size);
+
+  RESTORE_BLOB(in, filename.c_str(), size);
+}
+
+CoWDisk::CoWDisk(ObjectData &o) : Disk(o) {}
 
 CoWDisk::~CoWDisk() {
   close();
@@ -239,7 +224,43 @@ uint16_t CoWDisk::write(uint64_t slba, uint16_t nlblk,
   return write;
 }
 
-MemDisk::MemDisk() {}
+void CoWDisk::createCheckpoint(std::ostream &out) noexcept {
+  Disk::createCheckpoint(out);
+
+  uint64_t size = table.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : table) {
+    BACKUP_SCALAR(out, iter.first);
+
+    size = iter.second.size();
+    BACKUP_SCALAR(out, size);
+    BACKUP_BLOB(out, iter.second.data(), size);
+  }
+}
+
+void CoWDisk::restoreCheckpoint(std::istream &in) noexcept {
+  uint64_t lba;
+
+  Disk::restoreCheckpoint(in);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, lba);
+
+    auto ret = table.emplace(lba, std::vector<uint8_t>());
+
+    panic_if(!ret.second, "Failed to restore disk contents");
+
+    RESTORE_SCALAR(in, lba);
+    ret.first->second.resize(lba);
+    RESTORE_BLOB(in, ret.first->second.data(), lba);
+  }
+}
+
+MemDisk::MemDisk(ObjectData &o) : CoWDisk(o) {}
 
 MemDisk::~MemDisk() {
   close();
@@ -300,6 +321,7 @@ uint16_t MemDisk::write(uint64_t slba, uint16_t nlblk,
 
   return write;
 }
+
 uint16_t MemDisk::erase(uint64_t slba, uint16_t nlblk) noexcept {
   uint16_t erase = 0;
 
