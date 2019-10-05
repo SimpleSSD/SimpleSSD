@@ -40,7 +40,7 @@ class EventContext {
 
   template <class Type,
             std::enable_if_t<std::is_pointer_v<Type>, Type> * = nullptr>
-  EventContext(Type t) noexcept : size(sizeof(Type)), data(t) {}
+  EventContext(Type t) noexcept : size(sizeof(*t)), data(t) {}
 
   template <class Type,
             std::enable_if_t<!std::is_pointer_v<Type>, Type> * = nullptr>
