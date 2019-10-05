@@ -21,7 +21,8 @@ ControllerData::ControllerData(AbstractController *c, Interface *i,
                                DMAInterface *d, uint64_t m)
     : controller(c), interface(i), dma(d), memoryPageSize(m) {}
 
-AbstractSubsystem::AbstractSubsystem(ObjectData &o) : Object(o) {}
+AbstractSubsystem::AbstractSubsystem(ObjectData &o)
+    : Object(o), inited(false) {}
 
 AbstractSubsystem::~AbstractSubsystem() {}
 

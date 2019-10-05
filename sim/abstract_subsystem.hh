@@ -61,6 +61,8 @@ class ControllerData {
  */
 class AbstractSubsystem : public Object {
  protected:
+  bool inited;
+
   std::map<ControllerID, ControllerData *> controllerList;
 
  public:
@@ -72,9 +74,9 @@ class AbstractSubsystem : public Object {
   AbstractSubsystem &operator=(const AbstractSubsystem &) = delete;
   AbstractSubsystem &operator=(AbstractSubsystem &&) noexcept = default;
 
-  virtual ControllerID createController(Interface *) noexcept = 0;
-  virtual void destroyController(ControllerID) noexcept = 0;
+  virtual void init() = 0;
 
+  virtual ControllerID createController(Interface *) noexcept = 0;
   virtual AbstractController *getController(ControllerID) noexcept;
 };
 
