@@ -16,7 +16,8 @@
 
 namespace SimpleSSD {
 
-template <class Type, std::enable_if_t<std::is_pointer_v<Type>> * = nullptr>
+template <class Type,
+          std::enable_if_t<std::is_pointer_v<Type>, Type> * = nullptr>
 class Scheduler : public Object {
  public:
   using preFunction = std::function<uint64_t(Type)>;
