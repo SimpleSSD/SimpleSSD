@@ -182,6 +182,9 @@ class Arbitrator : public Object {
 
   void createCheckpoint(std::ostream &) noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  // Return restored SQContext
+  SQContext *getRecoveredRequest(uint16_t);
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

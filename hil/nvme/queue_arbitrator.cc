@@ -647,4 +647,9 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
+SQContext *Arbitrator::getRecoveredRequest(uint16_t cid) {
+  // Query from dispatchedQueue
+  return (SQContext *)dispatchedQueue.find(cid);
+}
+
 }  // namespace SimpleSSD::HIL::NVMe
