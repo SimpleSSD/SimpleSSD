@@ -55,7 +55,6 @@ class SimpleSSD {
   void deinit() noexcept;
 
   ControllerID createController(Interface *);
-  void destroyController(ControllerID);
   AbstractController *getController(ControllerID = 0);
 
   void createCheckpoint(std::string) noexcept;

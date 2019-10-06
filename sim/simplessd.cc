@@ -166,10 +166,6 @@ ControllerID SimpleSSD::createController(Interface *i) {
   return subsystem->createController(i);
 }
 
-void SimpleSSD::destroyController(ControllerID cid) {
-  subsystem->destroyController(cid);
-}
-
 AbstractController *SimpleSSD::getController(ControllerID cid) {
   if (inited) {
     return subsystem->getController(cid);
