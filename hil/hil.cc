@@ -9,60 +9,61 @@
 
 #ifndef HIL_TEMPLATE
 #define HIL_TEMPLATE                                                           \
-  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
+  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> T>
 
 namespace SimpleSSD::HIL {
 
 HIL_TEMPLATE
-HIL<LPN>::HIL(ObjectData &o) : Object(0) {}
+HIL<LPN, T>::HIL(ObjectData &o) : Object(o) {}
 
 HIL_TEMPLATE
-HIL<LPN>::~HIL() {}
+HIL<LPN, T>::~HIL() {}
 
 HIL_TEMPLATE
-void HIL<LPN>::readPages(LPN offset, LPN length, uint8_t *buffer, Event eid,
-                         EventContext context) {
+void HIL<LPN, T>::readPages(LPN offset, LPN length, uint8_t *buffer,
+                            Event eid) {
   // TODO: bypass command to ICL
 }
 
 HIL_TEMPLATE
-void HIL<LPN>::writePages(LPN offset, LPN length, uint8_t *buffer,
-                          std::pair<uint32_t, uint32_t> unwritten, Event eid,
-                          EventContext context = EventContext()) {
+void HIL<LPN, T>::writePages(LPN offset, LPN length, uint8_t *buffer,
+                             std::pair<uint32_t, uint32_t> unwritten,
+                             Event eid) {
   // TODO: bypass command to ICL
 }
 
 HIL_TEMPLATE
-void HIL<LPN>::flushCache(LPN offset, LPN length, Event eid,
-                          EventContext context = EventContext()) {
+void HIL<LPN, T>::flushCache(LPN offset, LPN length, Event eid) {
   // TODO: bypass command to ICL
 }
 
 HIL_TEMPLATE
-void HIL<LPN>::trimPages(LPN offset, LPN length, Event eid,
-                         EventContext context = EventContext()) {
+void HIL<LPN, T>::trimPages(LPN offset, LPN length, Event eid) {
   // TODO: bypass command to ICL
 }
 
 HIL_TEMPLATE
-void HIL<LPN>::formatPages(LPN offset, LPN length, FormatOption option,
-                           Event eid, EventContext context = EventContext()) {
+void HIL<LPN, T>::formatPages(LPN offset, LPN length, FormatOption option,
+                              Event eid) {
   // TODO: bypass command to ICL
 }
 
 HIL_TEMPLATE
-LPN HIL<LPN>::getPageUsage() {
+LPN HIL<LPN, T>::getPageUsage() {
   // TODO: bypass command to ICL
+  return (LPN)0;
 }
 
 HIL_TEMPLATE
-LPN HIL<LPN>::getTotalPages() {
+LPN HIL<LPN, T>::getTotalPages() {
   // TODO: bypass command to ICL
+  return (LPN)0;
 }
 
 HIL_TEMPLATE
-uint64_t HIL<LPN>::getLPNSize() {
+uint64_t HIL<LPN, T>::getLPNSize() {
   // TODO: bypass command to ICL
+  return 0;
 }
 
 }  // namespace SimpleSSD::HIL

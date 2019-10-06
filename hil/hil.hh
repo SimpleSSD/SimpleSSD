@@ -63,10 +63,8 @@ class HIL : public Object {
    * \param[in]  length   # of logical pages to read
    * \param[out] buffer   Array for retrived data (length * logical page size)
    * \param[in]  eid      Completion event
-   * \param[in]  context  User data
    */
-  void readPages(LPN offset, LPN length, uint8_t *buffer, Event eid,
-                 EventContext context = EventContext());
+  void readPages(LPN offset, LPN length, uint8_t *buffer, Event eid);
 
   /**
    * \brief Write logical pages
@@ -80,11 +78,9 @@ class HIL : public Object {
    * \param[in] buffer    Array for data to write (length * logical page size)
    * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
    * \param[in] eid       Completion event
-   * \param[in] context   User data
    */
   void writePages(LPN offset, LPN length, uint8_t *buffer,
-                  std::pair<uint32_t, uint32_t> unwritten, Event eid,
-                  EventContext context = EventContext());
+                  std::pair<uint32_t, uint32_t> unwritten, Event eid);
 
   /**
    * \brief Flush cache
@@ -95,10 +91,8 @@ class HIL : public Object {
    * \param[in] offset  Offset in LPN to flush
    * \param[in] length  # of logical pages to flush
    * \param[in] eid     Completion event
-   * \param[in] context User data
    */
-  void flushCache(LPN offset, LPN length, Event eid,
-                  EventContext context = EventContext());
+  void flushCache(LPN offset, LPN length, Event eid);
 
   /**
    * \brief Trim logical pages
@@ -106,10 +100,8 @@ class HIL : public Object {
    * \param[in] offset  Offset in LPN to trim
    * \param[in] length  # of logical pages to trim
    * \param[in] eid     Completion event
-   * \param[in] context User data
    */
-  void trimPages(LPN offset, LPN length, Event eid,
-                 EventContext context = EventContext());
+  void trimPages(LPN offset, LPN length, Event eid);
 
   /**
    * \brief Format logical pages
@@ -121,10 +113,8 @@ class HIL : public Object {
    * \param[in] length  # of logical pages to format
    * \param[in] option  Format method to use
    * \param[in] eid     Completion event
-   * \param[in] context User data
    */
-  void formatPages(LPN offset, LPN length, FormatOption option, Event eid,
-                   EventContext context = EventContext());
+  void formatPages(LPN offset, LPN length, FormatOption option, Event eid);
 
   //! Get logical pages contains data
   LPN getPageUsage();
@@ -134,11 +124,21 @@ class HIL : public Object {
 
   //! Get bytesize of one logical page.
   uint64_t getLPNSize();
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+
+  void getStatValues(std::vector<double> &) noexcept override;
+
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) noexcept override;
+
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL
 
-#endif
-
 // Include source file because HIL is template class
 #include "hil/hil.cc"
+
+#endif
