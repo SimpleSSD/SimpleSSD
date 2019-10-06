@@ -53,6 +53,7 @@ class Command : public Object {
   SQContext *sqc;
   CQContext *cqc;
 
+  void createResponse();
   void createDMAEngine(uint64_t, Event);
 
  public:

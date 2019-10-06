@@ -25,6 +25,16 @@ Command::Command(ObjectData &o, Subsystem *s, ControllerData *c)
 
 Command::~Command() {}
 
+void Command::createResponse() {
+  panic_if(!sqc, "Request not submitted.");
+
+  cqc = new CQContext();
+
+  panic_if(!cqc, "Out of memory.");
+
+  cqc->update(sqc);
+}
+
 /**
  * Create DMAEngine for command handling
  *
