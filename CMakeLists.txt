@@ -38,6 +38,35 @@ message(FATAL_ERROR "Failed to find pugixml library. \
 Check you initialized submodules.")
 endif ()
 
+# Get git version info
+find_package(Git)
+if (GIT_FOUND)
+  execute_process(COMMAND sh -c "git diff --quiet --exit-code || echo +"
+    OUTPUT_VARIABLE GIT_CODE_MODIFIED
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git describe --tags --abbre=0
+    OUTPUT_VARIABLE GIT_TAG
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git log --pretty=format:'%H' -n 1
+    OUTPUT_VARIABLE GIT_REV
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  string(STRIP "${GIT_TAG}" GIT_TAG)
+  string(SUBSTRING "${GIT_REV}" 1 8 GIT_REV)
+
+  if ("${GIT_TAG}" STREQUAL "")
+    execute_process(COMMAND git rev-parse --abbrev-ref HEAD
+      OUTPUT_VARIABLE GIT_TAG
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif ()
+
+  set(VERSION_STRING "${GIT_TAG}-${GIT_REV}${GIT_CODE_MODIFIED}")
+else ()
+  set(VERSION_STRING "2.1-unknown")
+  set(GIT_TAG "2.1")
+endif ()
+
 # Add subproject
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/mcpat)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/pugixml)
@@ -60,7 +89,10 @@ if (MSVC)
   add_compile_options(/wd4305)  # Surpress truncation warning
   add_compile_options(/wd4800)  # Surpress int -> boolean waring
 else ()
-  set(CMAKE_CXX_FLAGS "-g -rdynamic -Wall -Wextra -Werror -D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-g -rdynamic -Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-DSIMPLESSD_FULL='\"${VERSION_STRING}\"' ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-DSIMPLESSD_TAG='\"${GIT_TAG}-\"' ${CMAKE_CXX_FLAGS}")
 
   if (DEBUG_BUILD)
     set(CMAKE_CXX_FLAGS "-O0 ${CMAKE_CXX_FLAGS}")

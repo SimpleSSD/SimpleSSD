@@ -37,6 +37,14 @@ void ConfigReader::load(const char *path) noexcept {
   auto config = file.child(CONFIG_NODE_NAME);
 
   if (config) {
+    // Check version
+    auto version = config.attribute("version").value();
+    if (strncmp(version, SIMPLESSD_TAG, strlen(SIMPLESSD_TAG)) != 0) {
+      std::cerr << "Configuration file version does not match" << std::endl;
+      std::cerr << " File version: " << version << std::endl;
+      std::cerr << " Program version: " << SIMPLESSD_FULL << std::endl;
+    }
+
     // Travel sections
     for (auto section = config.first_child(); section;
          section = section.next_sibling()) {
@@ -84,7 +92,7 @@ void ConfigReader::load(std::string &path) noexcept {
 void ConfigReader::save(const char *path) noexcept {
   // Create simplessd node
   auto config = file.append_child(CONFIG_NODE_NAME);
-  config.append_attribute("version").set_value("2.1");  // TODO: FIX ME!
+  config.append_attribute("version").set_value(SIMPLESSD_FULL);
 
   // Append configuration sections
   pugi::xml_node section;
