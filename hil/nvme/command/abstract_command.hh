@@ -64,7 +64,8 @@ class Command : public Object {
   Command(Command &&) noexcept = default;
   virtual ~Command();
 
-  virtual CQContext *getResult();
+  CQContext *getResult();
+  SQContext *getRequest();
   virtual void setRequest(SQContext *, Event) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

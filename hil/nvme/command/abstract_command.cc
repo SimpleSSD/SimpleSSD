@@ -67,6 +67,12 @@ CQContext *Command::getResult() {
   return cqc;
 }
 
+SQContext *Command::getRequest() {
+  panic_if(!sqc, "Request not submitted.");
+
+  return sqc;
+}
+
 void Command::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Command::getStatValues(std::vector<double> &) noexcept {}
