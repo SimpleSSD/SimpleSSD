@@ -130,7 +130,7 @@ class Controller : public AbstractController {
   ~Controller();
 
   // Arbitrator
-  void notifySubsystem();
+  void notifySubsystem(uint64_t);
   void shutdownComplete();
 
   ControllerData &getControllerData();

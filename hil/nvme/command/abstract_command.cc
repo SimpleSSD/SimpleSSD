@@ -21,12 +21,7 @@ CommandData::CommandData(Subsystem *s, ControllerData *c)
       memoryPageSize(c->memoryPageSize) {}
 
 Command::Command(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Object(o),
-      data(s, c),
-      eid(InvalidEventID),
-      dmaEngine(nullptr),
-      sqc(nullptr),
-      cqc(nullptr) {}
+    : Object(o), data(s, c), dmaEngine(nullptr), sqc(nullptr), cqc(nullptr) {}
 
 Command::~Command() {}
 
@@ -67,10 +62,15 @@ CQContext *Command::getResult() {
   return cqc;
 }
 
-SQContext *Command::getRequest() {
+uint64_t Command::getUniqueID() {
   panic_if(!sqc, "Request not submitted.");
 
-  return sqc;
+  // This ID is unique in subsystem
+  return ((uint64_t)data.controller->getControllerID() << 32) | sqc->getID();
+}
+
+CommandData &Command::getCommandData() {
+  return data;
 }
 
 void Command::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -82,18 +82,16 @@ void Command::resetStatValues() noexcept {}
 void Command::createCheckpoint(std::ostream &out) noexcept {
   bool exist;
 
-  BACKUP_SCALAR(out, eid);
-
-  // Backup only sqc->commandID
+  // Backup only Command Unique ID
   // All SQContext are allocated only once (not copied) and it wiil be backup in
   // SimpleSSD::HIL::NVMe::Arbitrator.
   exist = sqc != nullptr;
   BACKUP_SCALAR(out, exist);
 
   if (exist) {
-    uint16_t cid = sqc->getCommandID();
+    uint32_t id = sqc->getID();
 
-    BACKUP_SCALAR(out, cid);
+    BACKUP_SCALAR(out, id);
   }
 
   // Backup all cqc because we create it.
@@ -111,15 +109,14 @@ void Command::createCheckpoint(std::ostream &out) noexcept {
 void Command::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
-  RESTORE_SCALAR(in, eid);
   RESTORE_SCALAR(in, exist);
 
   if (exist) {
-    uint16_t cid;
+    uint32_t id;
 
-    RESTORE_SCALAR(in, cid);
+    RESTORE_SCALAR(in, id);
 
-    sqc = data.arbitrator->getRecoveredRequest(cid);
+    sqc = data.arbitrator->getRecoveredRequest(id);
 
     panic_if(!sqc, "Invalid SQContext found while recover command status.");
   }

@@ -18,6 +18,7 @@ namespace SimpleSSD::HIL::NVMe {
 class Identify : public Command {
  private:
   Event dmaInitEvent;
+  Event dmaCompleteEvent;
 
   const uint64_t size = 4096;
   uint8_t *buffer;
@@ -27,13 +28,14 @@ class Identify : public Command {
   void makeControllerStructure();
   void makeControllerList(ControllerID, uint32_t = NSID_ALL);
 
-  void dmaInitDone(uint64_t);
+  void dmaInitDone();
+  void dmaComplete();
 
  public:
   Identify(ObjectData &, Subsystem *, ControllerData *);
   ~Identify();
 
-  void setRequest(SQContext *, Event) override;
+  void setRequest(SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

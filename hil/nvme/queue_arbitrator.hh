@@ -49,7 +49,7 @@ class SQContext {
   SQEntry *getData() noexcept;
 
   // Getter
-  uint16_t getCommandID() noexcept;
+  uint32_t getID() noexcept;
   uint16_t getSQID() noexcept;
   uint16_t getCQID() noexcept;
   bool isSGL() noexcept;
@@ -85,7 +85,7 @@ class CQContext {
 
   CQEntry *getData();
 
-  uint16_t getCommandID() noexcept;
+  uint32_t getID() noexcept;
   uint16_t getSQID() noexcept;
   uint16_t getCQID() noexcept;
 };
@@ -150,15 +150,6 @@ class Arbitrator : public Object {
 
   void collect(uint64_t);
 
-  // Admin commands
-  // bool createSQ(SQContext *);
-  // bool createCQ(SQContext *);
-  // bool deleteSQ(SQContext *);
-  // bool deleteCQ(SQContext *);
-  // bool abort(SQContext *);
-  // bool setFeature(SQContext *);
-  // bool getFeature(SQContext *);
-
  public:
   Arbitrator(ObjectData &, ControllerData *);
   ~Arbitrator();
@@ -176,14 +167,6 @@ class Arbitrator : public Object {
   SQContext *dispatch();
   void complete(CQContext *);
 
-  // bool createSQ(uint16_t, uint16_t, uint16_t, QueuePriority, bool, uint64_t,
-  //               Event, EventContext);
-  // bool createCQ(uint16_t, uint16_t, uint16_t, bool, bool, uint64_t, Event,
-  //               EventContext);
-  // bool deleteSQ(uint16_t);
-  // bool deleteCQ(uint16_t);
-  // bool submitCommand(SQContext *);
-
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
@@ -192,7 +175,7 @@ class Arbitrator : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 
   // Return restored SQContext
-  SQContext *getRecoveredRequest(uint16_t);
+  SQContext *getRecoveredRequest(uint32_t);
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

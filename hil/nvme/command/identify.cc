@@ -13,8 +13,10 @@ namespace SimpleSSD::HIL::NVMe {
 
 Identify::Identify(ObjectData &o, Subsystem *s, ControllerData *c)
     : Command(o, s, c), buffer(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t t) { dmaInitDone(t); },
+  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
                              "HIL::NVMe::Identify::dmaInitEvent");
+  dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
+                                 "HIL::NVMe::Identify::dmaCompleteEvent");
 }
 
 Identify::~Identify() {
@@ -640,12 +642,16 @@ void Identify::makeControllerList(ControllerID cntid, uint32_t nsid) {
   *(uint16_t *)(buffer) = size;
 }
 
-void Identify::dmaInitDone(uint64_t now) {
+void Identify::dmaInitDone() {
   // Write buffer to host
-  dmaEngine->write(0, 4096, buffer, eid);
+  dmaEngine->write(0, 4096, buffer, dmaCompleteEvent);
 }
 
-void Identify::setRequest(SQContext *req, Event e) {
+void Identify::dmaComplete() {
+  data.subsystem->complete(sqc->getCommandID());
+}
+
+void Identify::setRequest(SQContext *req) {
   sqc = req;
   auto entry = sqc->getData();
 
@@ -710,14 +716,12 @@ void Identify::setRequest(SQContext *req, Event e) {
   }
 
   if (cqc->isSuccess()) {
-    eid = e;
-
     // Data generated successfully. DMA data
     createDMAEngine(4096, dmaInitEvent);
   }
   else {
     // Complete immediately
-    schedule(e, getTick());
+    data.subsystem->complete(sqc->getCommandID());
   }
 }
 

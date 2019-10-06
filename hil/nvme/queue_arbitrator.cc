@@ -42,8 +42,8 @@ SQEntry *SQContext::getData() noexcept {
   return &entry;
 }
 
-uint16_t SQContext::getCommandID() noexcept {
-  return commandID;
+uint32_t SQContext::getID() noexcept {
+  return ((uint32_t)sqID << 16) | commandID;
 }
 
 uint16_t SQContext::getSQID() noexcept {
@@ -103,8 +103,8 @@ CQEntry *CQContext::getData() {
   return &entry;
 }
 
-uint16_t CQContext::getCommandID() noexcept {
-  return entry.dword3.commandID;
+uint32_t CQContext::getID() noexcept {
+  return ((uint32_t)entry.dword2.sqID << 16) | entry.dword3.commandID;
 }
 
 uint16_t CQContext::getSQID() noexcept {
@@ -256,34 +256,13 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
   sqList[0]->setBase(dmaEngine, 64);  // Always 64 bytes stride
 }
 
-// bool Arbitrator::submitCommand(SQContext *sqe) {
-//   switch ((AdminCommand)sqe->entry.dword0.opcode) {
-//     case AdminCommand::DeleteIOSQ:
-//       return deleteSQ(sqe);
-//     case AdminCommand::CreateIOSQ:
-//       return createSQ(sqe);
-//     case AdminCommand::DeleteIOCQ:
-//       return deleteCQ(sqe);
-//     case AdminCommand::CreateIOCQ:
-//       return createCQ(sqe);
-//     case AdminCommand::Abort:
-//       return abort(sqe);
-//     case AdminCommand::SetFeatures:
-//       return setFeature(sqe);
-//     case AdminCommand::GetFeatures:
-//       return getFeature(sqe);
-//   }
-
-//   return false;
-// }
-
 void Arbitrator::complete(CQContext *cqe) {
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
 
   // Find corresponding SQContext
-  auto sqe = (SQContext *)dispatchedQueue.find(cqe->getCommandID());
+  auto sqe = (SQContext *)dispatchedQueue.find(cqe->getID());
 
   panic_if(!sqe, "Failed to find corresponding submission entry.");
   panic_if(!sqe->completed, "Corresponding submission entry not completed.");
@@ -367,14 +346,14 @@ void Arbitrator::collect_done(uint64_t now) {
 
   sqe->update();
 
-  requestQueue.push_back(sqe->getCommandID(), sqe);
+  requestQueue.push_back(sqe->getID(), sqe);
 
   collectQueue.pop();
 
   if (collectQueue.size() == 0) {
     running = false;
 
-    controller->controller->notifySubsystem();
+    controller->controller->notifySubsystem(internalQueueSize);
   }
 }
 
@@ -659,9 +638,9 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-SQContext *Arbitrator::getRecoveredRequest(uint16_t cid) {
+SQContext *Arbitrator::getRecoveredRequest(uint32_t id) {
   // Query from dispatchedQueue
-  return (SQContext *)dispatchedQueue.find(cid);
+  return (SQContext *)dispatchedQueue.find(id);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

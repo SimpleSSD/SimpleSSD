@@ -9,6 +9,7 @@
 
 #include <list>
 
+#include "hil/nvme/command/command.hh"
 #include "hil/nvme/controller.hh"
 
 namespace SimpleSSD::HIL::NVMe {
@@ -165,8 +166,70 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
   return false;
 }
 
-void Subsystem::triggerDispatch(ControllerData &) {
-  // For optimization, use ControllerData instead of ControllerID
+Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
+  bool isAdmin = sqc->getSQID() == 0;
+  uint8_t opcode = sqc->getData()->dword0.opcode;
+
+  if (isAdmin) {
+    switch ((AdminCommand)opcode) {
+      case AdminCommand::Identify:
+        return new Identify(object, this, cdata);
+      default:
+        return nullptr;
+    }
+  }
+  else {
+    switch ((NVMCommand)opcode) {
+      default:
+        return nullptr;
+    }
+  }
+}
+
+void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
+  // For performance optimization, use ControllerData instead of ControllerID
+
+  for (uint64_t i = 0; i < limit; i++) {
+    auto sqc = cdata.arbitrator->dispatch();
+
+    // No request anymore
+    if (!sqc) {
+      break;
+    }
+
+    // Find command
+    auto command = makeCommand(&cdata, sqc);
+
+    // Do command handling
+    if (command) {
+      command->setRequest(sqc);
+
+      ongoingCommands.push_back(command->getUniqueID(), sqc);
+    }
+    else {
+      auto cqc = new CQContext();
+
+      cqc->update(sqc);
+      cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                      GenericCommandStatusCode::Invalid_Opcode);
+
+      cdata.arbitrator->complete(cqc);
+    }
+  }
+}
+
+void Subsystem::complete(uint16_t cid) {
+  auto command = (Command *)ongoingCommands.find(cid);
+
+  panic_if(!command, "Command not exists.");
+
+  // Complete
+  auto &data = command->getCommandData();
+  data.arbitrator->complete(command->getResult());
+
+  // Erase
+  delete command;
+  ongoingCommands.erase(cid);
 }
 
 void Subsystem::init() {
@@ -345,7 +408,20 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
     }
   }
 
-  // Now checkpoint commands
+  size = ongoingCommands.size();
+  BACKUP_SCALAR(out, size);
+
+  while (auto iter = (Command *)ongoingCommands.front()) {
+    uint64_t uid = iter->getUniqueID();
+
+    // Backup unique ID only -> we can reconstruct command
+    BACKUP_SCALAR(out, uid);
+    iter->createCheckpoint(out);
+
+    ongoingCommands.erase(uid);
+
+    delete iter;
+  }
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
@@ -400,6 +476,33 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, nsid);
       iter.first->second.emplace(nsid);
     }
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t uid;
+
+    RESTORE_SCALAR(in, uid);
+
+    // Find controller data with controller ID
+    auto data = controllerList.find(uid >> 32);
+
+    panic_if(data == controllerList.end(),
+             "Unexpected controller ID while recover.");
+
+    // Get SQContext with SQ ID | Command ID
+    auto sqc = data->second->arbitrator->getRecoveredRequest((uint32_t)uid);
+
+    panic_if(!sqc, "Invalid request ID while recover.s");
+
+    // Re-construct command object
+    auto command = makeCommand(data->second, sqc);
+
+    command->restoreCheckpoint(in);
+
+    // Push to queue
+    ongoingCommands.push_back(uid, command);
   }
 }
 

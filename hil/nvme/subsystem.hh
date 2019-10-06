@@ -17,10 +17,12 @@
 #include "hil/nvme/def.hh"
 #include "hil/nvme/namespace.hh"
 #include "sim/abstract_subsystem.hh"
+#include "util/sorted_map.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 class ControllerData;
+class Command;
 
 class Subsystem : public AbstractSubsystem {
  protected:
@@ -35,6 +37,8 @@ class Subsystem : public AbstractSubsystem {
   std::map<uint32_t, Namespace *> namespaceList;
   std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
+  unordered_map_queue ongoingCommands;
+
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
   uint64_t allocatedLogicalPages;
@@ -42,11 +46,14 @@ class Subsystem : public AbstractSubsystem {
   bool createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
   bool destroyNamespace(uint32_t);
 
+  Command *makeCommand(ControllerData *, SQContext *);
+
  public:
   Subsystem(ObjectData &);
   virtual ~Subsystem();
 
-  void triggerDispatch(ControllerData &);
+  void triggerDispatch(ControllerData &, uint64_t);
+  void complete(uint16_t);
 
   void init() override;
 
