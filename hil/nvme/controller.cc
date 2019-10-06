@@ -11,6 +11,14 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+ControllerData::ControllerData()
+    : controller(nullptr),
+      interface(nullptr),
+      dma(nullptr),
+      interruptManager(nullptr),
+      arbitrator(nullptr),
+      memoryPageSize(0) {}
+
 Controller::RegisterTable::RegisterTable() {
   memset(data, 0, sizeof(RegisterTable));
 }
@@ -107,6 +115,10 @@ void Controller::notifySubsystem(uint64_t limit) {
 void Controller::shutdownComplete() {
   registers.cs.rdy = 0;   // RDY = 0
   registers.cs.shst = 2;  // Shutdown processing complete
+}
+
+ControllerData &Controller::getControllerData() {
+  return controllerData;
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,

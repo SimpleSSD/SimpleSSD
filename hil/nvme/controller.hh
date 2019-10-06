@@ -30,7 +30,6 @@ class ControllerData {
   uint64_t memoryPageSize;  //!< This is only for PRPEngine
 
   ControllerData();
-  ControllerData(Controller *, Interface *, DMAInterface *, uint64_t);
 };
 
 /**

@@ -80,7 +80,15 @@ class CQContext {
                            std::is_enum<Type>,
                            std::is_same<std::underlying_type_t<Type>, uint8_t>>,
                        Type> = Type()>
-  void makeStatus(bool, bool, StatusType, Type) noexcept;
+  void makeStatus(bool dnr, bool more, StatusType sct, Type sc) noexcept {
+    entry.dword3.status = 0;  // Phase field will be filled before DMA
+
+    entry.dword3.dnr = dnr ? 1 : 0;
+    entry.dword3.more = more ? 1 : 0;
+    entry.dword3.sct = (uint8_t)sct;
+    entry.dword3.sc = (uint8_t)sc;
+  }
+
   bool isSuccess() noexcept;
 
   CQEntry *getData();
