@@ -341,10 +341,12 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, id);
 
-    auto ctrl = new Controller(object, id, this, interface);
+    auto iter = controllerList.find(id);
 
-    ctrl->restoreCheckpoint(in);
-    controllerList.emplace(id, &ctrl->getControllerData());
+    panic_if(iter == controllerList.end(),
+             "Invalid controller Id while recover controller.");
+
+    iter->second->controller->restoreCheckpoint(in);
   }
 
   RESTORE_SCALAR(in, size);

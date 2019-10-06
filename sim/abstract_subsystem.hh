@@ -20,7 +20,6 @@ namespace SimpleSSD {
 
 // Forward declaration
 class AbstractController;
-class AbstractSubsystem;
 
 /**
  * \brief Controller ID definition
@@ -46,7 +45,7 @@ class AbstractSubsystem : public Object {
   bool inited;
 
  public:
-  AbstractSubsystem(ObjectData &) {}
+  AbstractSubsystem(ObjectData &o) : Object(o), inited(false) {}
   AbstractSubsystem(const AbstractSubsystem &) = delete;
   AbstractSubsystem(AbstractSubsystem &&) noexcept = default;
   virtual ~AbstractSubsystem() {}
