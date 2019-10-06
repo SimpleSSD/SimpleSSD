@@ -37,8 +37,6 @@ PRPEngine::PRPInitContext::PRPInitContext()
 
 PRPEngine::PRPEngine(ObjectData &o, DMAInterface *i, uint64_t p)
     : DMAEngine(o, i), inited(false), totalSize(0), pageSize(p) {
-  panic_if(popcount64(p) != 1, "Invalid memory page size provided.");
-
   readPRPList =
       createEvent([this](uint64_t t) { getPRPListFromPRP_readDone(t); },
                   "HIL::NVMe::PRPEngine::readPRPList");
@@ -109,6 +107,9 @@ void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid) {
 
 void PRPEngine::init(uint64_t prp1, uint64_t prp2, uint64_t sizeLimit,
                      Event eid) {
+  // Do lazy assertion - when creating Admin Queues, we does not use pageSize.
+  panic_if(popcount64(pageSize) != 1, "Invalid memory page size provided.");
+
   bool immediate = true;
   uint8_t mode = 0xFF;
   uint64_t prp1Size = getSizeFromPRP(prp1);
