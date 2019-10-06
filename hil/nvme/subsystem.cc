@@ -13,20 +13,6 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-const uint32_t nLBAFormat = 4;
-const uint32_t lbaFormat[nLBAFormat] = {
-    0x02090000,  // 512B + 0, Good performance
-    0x020A0000,  // 1KB + 0, Good performance
-    0x010B0000,  // 2KB + 0, Better performance
-    0x000C0000,  // 4KB + 0, Best performance
-};
-const uint32_t lbaSize[nLBAFormat] = {
-    512,   // 512B
-    1024,  // 1KB
-    2048,  // 2KB
-    4096,  // 4KB
-};
-
 Subsystem::Subsystem(ObjectData &o)
     : AbstractSubsystem(o), controllerID(0), allocatedLogicalPages(0) {
   // TODO: Get total physical page count from configuration
@@ -279,6 +265,41 @@ AbstractController *Subsystem::getController(ControllerID ctrlid) noexcept {
   }
 
   return nullptr;
+}
+
+const Subsystem::HILPointer &Subsystem::getHIL() const {
+  return pHIL;
+}
+
+const std::map<uint32_t, Namespace *> &Subsystem::getNamespaceList() const {
+  return namespaceList;
+}
+
+const std::set<uint32_t> *Subsystem::getAttachment(ControllerID ctrlid) const {
+  auto iter = attachmentTable.find(ctrlid);
+
+  if (iter != attachmentTable.end()) {
+    return &iter->second;
+  }
+
+  return nullptr;
+}
+
+const std::map<ControllerID, ControllerData *> &Subsystem::getControllerList()
+    const {
+  return controllerList;
+}
+
+const uint32_t Subsystem::getLPNSize() const {
+  return logicalPageSize;
+}
+
+const uint64_t Subsystem::getTotalPages() const {
+  return totalLogicalPages;
+}
+
+const uint64_t Subsystem::getAllocatedPages() const {
+  return allocatedLogicalPages;
 }
 
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}

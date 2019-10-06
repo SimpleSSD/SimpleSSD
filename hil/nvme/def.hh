@@ -23,6 +23,20 @@ namespace SimpleSSD::HIL::NVMe {
 #define OCSSD_SSVID_1_2 0x0102
 #define OCSSD_SSVID_2_0 0x0200
 
+const uint32_t nLBAFormat = 4;
+const uint32_t lbaFormat[nLBAFormat] = {
+    0x02090000,  // 512B + 0, Good performance
+    0x020A0000,  // 1KB + 0, Good performance
+    0x010B0000,  // 2KB + 0, Better performance
+    0x000C0000,  // 4KB + 0, Best performance
+};
+const uint32_t lbaSize[nLBAFormat] = {
+    512,   // 512B
+    1024,  // 1KB
+    2048,  // 2KB
+    4096,  // 4KB
+};
+
 enum class QueuePriority : uint8_t {
   Urgent,
   High,

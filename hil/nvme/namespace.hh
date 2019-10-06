@@ -100,6 +100,8 @@ class Namespace : public Object {
   NamespaceInformation *getInfo();
   void setInfo(uint32_t, NamespaceInformation *, Config::Disk *);
 
+  const std::set<ControllerID> &getAttachment() const;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

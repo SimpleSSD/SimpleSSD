@@ -48,6 +48,8 @@ class Command : public Object {
  protected:
   CommandData data;
 
+  Event eid;
+
   DMAEngine *dmaEngine;
 
   SQContext *sqc;
@@ -63,7 +65,7 @@ class Command : public Object {
   virtual ~Command();
 
   virtual CQContext *getResult();
-  virtual void setRequest(SQContext *) = 0;
+  virtual void setRequest(SQContext *, Event) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

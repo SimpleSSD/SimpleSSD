@@ -53,6 +53,15 @@ class Subsystem : public AbstractSubsystem {
   ControllerID createController(Interface *) noexcept override;
   AbstractController *getController(ControllerID) noexcept override;
 
+  // Command interface
+  const HILPointer &getHIL() const;
+  const std::map<uint32_t, Namespace *> &getNamespaceList() const;
+  const std::set<uint32_t> *getAttachment(ControllerID ctrlid) const;
+  const std::map<ControllerID, ControllerData *> &getControllerList() const;
+  const uint32_t getLPNSize() const;
+  const uint64_t getTotalPages() const;
+  const uint64_t getAllocatedPages() const;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

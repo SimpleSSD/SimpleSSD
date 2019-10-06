@@ -21,7 +21,12 @@ CommandData::CommandData(Subsystem *s, ControllerData *c)
       memoryPageSize(c->memoryPageSize) {}
 
 Command::Command(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Object(o), data(s, c), dmaEngine(nullptr), sqc(nullptr), cqc(nullptr) {}
+    : Object(o),
+      data(s, c),
+      eid(InvalidEventID),
+      dmaEngine(nullptr),
+      sqc(nullptr),
+      cqc(nullptr) {}
 
 Command::~Command() {}
 

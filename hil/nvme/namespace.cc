@@ -94,6 +94,10 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
   inited = true;
 }
 
+const std::set<ControllerID> &Namespace::getAttachment() const {
+  return attachList;
+}
+
 void Namespace::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Namespace::getStatValues(std::vector<double> &) noexcept {}
