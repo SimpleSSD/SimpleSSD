@@ -174,22 +174,22 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
         break;
       case Register::AdminCQBaseAddress:
         memcpy(&(registers.adminCQueueBaseAddress), buffer, 4);
-        adminQueueInited++;
+        adminQueueInited |= 0x01;
 
         break;
       case Register::AdminCQBaseAddressH:
         memcpy(((uint8_t *)&(registers.adminCQueueBaseAddress)) + 4, buffer, 4);
-        adminQueueInited++;
+        adminQueueInited |= 0x02;
 
         break;
       case Register::AdminSQBaseAddress:
         memcpy(&(registers.adminSQueueBaseAddress), buffer, 4);
-        adminQueueInited++;
+        adminQueueInited |= 0x04;
 
         break;
       case Register::AdminSQBaseAddressH:
         memcpy(((uint8_t *)&(registers.adminSQueueBaseAddress)) + 4, buffer, 4);
-        adminQueueInited++;
+        adminQueueInited |= 0x08;
 
         break;
       default:
@@ -229,12 +229,12 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     switch ((Register)offset) {
       case Register::AdminCQBaseAddress:
         registers.adminCQueueBaseAddress = uiTemp64;
-        adminQueueInited += 2;
+        adminQueueInited |= 0x03;
 
         break;
       case Register::AdminSQBaseAddress:
         registers.adminSQueueBaseAddress = uiTemp64;
-        adminQueueInited += 2;
+        adminQueueInited |= 0x0C;
 
         break;
       default:
@@ -247,14 +247,19 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     panic("Invalid read size (%d) on controller register", size);
   }
 
-  if (adminQueueInited == 4) {
+  if ((adminQueueInited & 0x03) == 0x03) {
     uint16_t entrySize = 0;
 
-    adminQueueInited = 0;
+    adminQueueInited &= 0xFC;
 
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
     controllerData.arbitrator->createAdminCQ(registers.adminCQueueBaseAddress,
                                              entrySize, eventQueueInit);
+  }
+  if ((adminQueueInited & 0x0C) == 0x0C) {
+    uint16_t entrySize = 0;
+
+    adminQueueInited &= 0xF3;
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
     controllerData.arbitrator->createAdminSQ(registers.adminSQueueBaseAddress,
