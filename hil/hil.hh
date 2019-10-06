@@ -116,8 +116,13 @@ class HIL : public Object {
    */
   void formatPages(LPN offset, LPN length, FormatOption option, Event eid);
 
-  //! Get logical pages contains data
-  LPN getPageUsage();
+  /**
+   * \brief Get logical pages contains data
+   *
+   * To implement per-namespace bases utilization, this function requires offset
+   * and length.
+   */
+  LPN getPageUsage(LPN offset, LPN length);
 
   //! Get total logical pages in current HIL object
   LPN getTotalPages();

@@ -49,7 +49,7 @@ void HIL<LPN, T>::formatPages(LPN offset, LPN length, FormatOption option,
 }
 
 HIL_TEMPLATE
-LPN HIL<LPN, T>::getPageUsage() {
+LPN HIL<LPN, T>::getPageUsage(LPN offset, LPN length) {
   // TODO: bypass command to ICL
   return (LPN)0;
 }
