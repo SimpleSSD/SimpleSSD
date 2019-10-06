@@ -94,6 +94,11 @@ void CQContext::makeStatus(bool dnr, bool more, StatusType sct,
   entry.dword3.sc = (uint8_t)sc;
 }
 
+bool CQContext::isSuccess() noexcept {
+  return entry.dword3.sct == (uint8_t)StatusType::GenericCommandStatus &&
+         entry.dword3.sc == (uint8_t)GenericCommandStatusCode::Success;
+}
+
 CQEntry *CQContext::getData() {
   return &entry;
 }

@@ -81,6 +81,7 @@ class CQContext {
                            std::is_same<std::underlying_type_t<Type>, uint8_t>>,
                        Type> = Type()>
   void makeStatus(bool, bool, StatusType, Type) noexcept;
+  bool isSuccess() noexcept;
 
   CQEntry *getData();
 
