@@ -99,10 +99,8 @@ void Command::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, exist);
 
   if (exist) {
-    uint16_t cqid = cqc->getCQID();
-
-    BACKUP_BLOB(out, cqc->getData(), 16);
     // If we have cqc, we always have sqc. Just store data only.
+    BACKUP_BLOB(out, cqc->getData(), 16);
   }
 }
 

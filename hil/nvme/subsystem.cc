@@ -353,15 +353,15 @@ const std::map<ControllerID, ControllerData *> &Subsystem::getControllerList()
   return controllerList;
 }
 
-const uint32_t Subsystem::getLPNSize() const {
+uint32_t Subsystem::getLPNSize() const {
   return logicalPageSize;
 }
 
-const uint64_t Subsystem::getTotalPages() const {
+uint64_t Subsystem::getTotalPages() const {
   return totalLogicalPages;
 }
 
-const uint64_t Subsystem::getAllocatedPages() const {
+uint64_t Subsystem::getAllocatedPages() const {
   return allocatedLogicalPages;
 }
 
@@ -460,7 +460,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
   for (uint64_t i = 0; i < size; i++) {
     ControllerID id;
-    uint64_t length;
+    uint64_t length = 0;
 
     RESTORE_SCALAR(in, id);
 

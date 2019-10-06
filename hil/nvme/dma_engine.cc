@@ -353,8 +353,6 @@ void SGLEngine::parseSGLDescriptor(SGLDescriptor &desc) {
 }
 
 void SGLEngine::parseSGLSegment(uint64_t address, uint32_t length, Event eid) {
-  auto data = new SGLInitContext();
-
   // Allocate buffer
   dmaContext.eid = eid;
   sglContext.bufferSize = length;

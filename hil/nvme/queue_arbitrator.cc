@@ -149,9 +149,9 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
   // Create events
   work = createEvent([this](uint64_t t) { collect(t); },
                      "HIL::NVMe::Arbitrator::work");
-  eventCompDone = createEvent([this](uint64_t t) { completion_done(t); },
+  eventCompDone = createEvent([this](uint64_t) { completion_done(); },
                               "HIL::NVMe::Arbitrator::eventCompDone");
-  eventCollect = createEvent([this](uint64_t t) { collect_done(t); },
+  eventCollect = createEvent([this](uint64_t) { collect_done(); },
                              "HIL::NVMe::Arbitrator::eventCollect");
 
   // Not running!
@@ -305,7 +305,7 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
   }
 }
 
-void Arbitrator::completion_done(uint64_t now) {
+void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
 
@@ -353,7 +353,7 @@ void Arbitrator::collect(uint64_t now) {
   }
 }
 
-void Arbitrator::collect_done(uint64_t now) {
+void Arbitrator::collect_done() {
   auto sqe = collectQueue.front();
 
   sqe->update();

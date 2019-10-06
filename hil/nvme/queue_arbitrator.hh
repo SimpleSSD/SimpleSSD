@@ -131,7 +131,7 @@ class Arbitrator : public Object {
 
   // Completion
   Event eventCompDone;
-  void completion_done(uint64_t);
+  void completion_done();
 
   // Shutdown
   bool shutdownReserved;
@@ -142,7 +142,7 @@ class Arbitrator : public Object {
   std::queue<SQContext *> collectQueue;
 
   Event eventCollect;
-  void collect_done(uint64_t);
+  void collect_done();
 
   bool checkQueue(uint16_t);
   void collectRoundRobin();

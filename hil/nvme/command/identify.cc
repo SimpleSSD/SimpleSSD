@@ -161,14 +161,13 @@ void Identify::makeControllerStructure() {
     memcpy(buffer + 0x0002, &ssvid, 2);
 
     // Serial Number
-    strncpy((char *)buffer + 0x0004, "00000000000000000000", 0x14);
+    memcpy(buffer + 0x0004, "00000000000000000000", 0x14);
 
     // Model Number
-    strncpy((char *)buffer + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ",
-            0x28);
+    memcpy(buffer + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ", 0x28);
 
     // Firmware Revision
-    strncpy((char *)buffer + 0x0040, "03.00.00", 0x08);
+    memcpy(buffer + 0x0040, "03.00.00", 0x08);
 
     // Recommended Arbitration Burst
     buffer[0x0048] = 0x00;
