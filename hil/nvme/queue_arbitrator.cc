@@ -77,14 +77,21 @@ void CQContext::update(SQContext *sqe) noexcept {
   sqe->completed = true;
 }
 
+template <
+    class Type,
+    std::enable_if_t<
+        std::conjunction_v<std::is_enum<Type>,
+                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
+        Type>
+        T>
 void CQContext::makeStatus(bool dnr, bool more, StatusType sct,
-                           uint8_t sc) noexcept {
+                           Type sc) noexcept {
   entry.dword3.status = 0;  // Phase field will be filled before DMA
 
   entry.dword3.dnr = dnr ? 1 : 0;
   entry.dword3.more = more ? 1 : 0;
   entry.dword3.sct = (uint8_t)sct;
-  entry.dword3.sc = sc;
+  entry.dword3.sc = (uint8_t)sc;
 }
 
 CQEntry *CQContext::getData() {

@@ -73,7 +73,14 @@ class CQContext {
   CQContext();
 
   void update(SQContext *) noexcept;
-  void makeStatus(bool, bool, StatusType, uint8_t) noexcept;
+
+  template <
+      class Type,
+      std::enable_if_t<std::conjunction_v<
+                           std::is_enum<Type>,
+                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
+                       Type> = Type()>
+  void makeStatus(bool, bool, StatusType, Type) noexcept;
 
   CQEntry *getData();
 
