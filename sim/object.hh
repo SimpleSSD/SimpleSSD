@@ -29,34 +29,34 @@ namespace SimpleSSD {
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      panic_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,     \
+      panic_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,     \
                 ##__VA_ARGS__);                                                \
     }                                                                          \
   }
 
 #define panic(format, ...)                                                     \
   {                                                                            \
-    panic_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,       \
+    panic_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,       \
               ##__VA_ARGS__);                                                  \
   }
 
 #define warn_if(cond, format, ...)                                             \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      warn_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,      \
+      warn_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,      \
                ##__VA_ARGS__);                                                 \
     }                                                                          \
   }
 
 #define warn(format, ...)                                                      \
   {                                                                            \
-    warn_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
+    warn_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
              ##__VA_ARGS__);                                                   \
   }
 
 #define info(format, ...)                                                      \
   {                                                                            \
-    info_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
+    info_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
              ##__VA_ARGS__);                                                   \
   }
 
