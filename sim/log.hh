@@ -27,6 +27,13 @@ class Log {
  public:
   enum class DebugID : uint32_t {
     Common,
+    CPU,
+    DRAM,
+    SRAM,
+    HIL,
+    HIL_Common,
+    HIL_NVMe,
+    HIL_NVMe_Command,
   };
 
   enum class LogID : uint32_t {

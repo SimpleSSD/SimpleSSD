@@ -16,7 +16,14 @@
 namespace SimpleSSD {
 
 const std::string idPrefix[] = {
-    "global",  //!< ID::Common
+    "global",  //!< DebugID::Common
+    "CPU",
+    "DRAM",
+    "SRAM",
+    "HIL",
+    "HIL::Common",
+    "HIL::NVMe",
+    "HIL::NVMe::Command",
 };
 
 const std::string logPrefix[] = {
@@ -50,7 +57,8 @@ void Log::init(Engine *e, std::ostream *outfile, std::ostream *errfile,
                std::ostream *debugfile) noexcept {
   engine = e;
 
-  if (UNLIKELY(outfile == nullptr || errfile == nullptr || debugfile == nullptr)) {
+  if (UNLIKELY(outfile == nullptr || errfile == nullptr ||
+               debugfile == nullptr)) {
     std::cerr << "panic: Got null-pointer" << std::endl;
 
     abort();
