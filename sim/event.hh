@@ -26,10 +26,31 @@ using Event = uint64_t;
 
 const Event InvalidEventID = 0;
 
+/**
+ * \brief Event Context object
+ *
+ * This object stores user data (and its size) when checkpointing. Only with
+ * pointer (void *), we cannot store struct to binary file -- we don't know the
+ * original size!.
+ *
+ * If you store class with virtual functions, first 8 bytes of the class data
+ * is pointer to vtable. If you compile SimpleSSD with different compiler or
+ * option, vtable posiion may be changed - restored class may have wrong vtable
+ * pointer.
+ *
+ * Sometimes, you want to store EventContext in EventContext. To prevent double
+ * memory allocation, I prevent to store value (it needs copy with memory
+ * allocation). Just use get/setSubdata for such purpose.
+ */
 class EventContext {
  private:
   uint64_t size;
   void *data;
+
+  uint64_t subsize;
+  void *subdata;
+
+  EventContext(uint64_t s, void *p) : size(s), data(p) {}
 
  public:
   EventContext() : size(0), data(nullptr) {}
@@ -52,11 +73,26 @@ class EventContext {
     return (Type)data;
   }
 
+  void setSubdata(EventContext &sub) noexcept {
+    subsize = sub.size;
+    subdata = sub.data;
+  }
+
+  EventContext getSubdata() noexcept {
+    return EventContext(subsize, subdata);
+  }
+
   void backup(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, size);
 
     if (size > 0) {
       BACKUP_BLOB(out, data, size);
+    }
+
+    BACKUP_SCALAR(out, subsize);
+
+    if (subsize > 0) {
+      BACKUP_BLOB(out, subdata, subsize);
     }
   }
 
@@ -67,6 +103,14 @@ class EventContext {
       data = malloc(size);
 
       RESTORE_BLOB(in, data, size);
+    }
+
+    RESTORE_SCALAR(in, subsize);
+
+    if (subsize > 0) {
+      subdata = malloc(subsize);
+
+      RESTORE_BLOB(in, subdata, size);
     }
   }
 };
