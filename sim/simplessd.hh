@@ -57,6 +57,10 @@ class SimpleSSD {
   ControllerID createController(Interface *);
   AbstractController *getController(ControllerID = 0);
 
+  void getStatList(std::vector<Object::Stat> &, std::string) noexcept;
+  void getStatValues(std::vector<double> &) noexcept;
+  void resetStatValues() noexcept;
+
   void createCheckpoint(std::string) noexcept;
   void restoreCheckpoint(Engine *, ConfigReader *) noexcept;
 };

@@ -174,6 +174,13 @@ AbstractController *SimpleSSD::getController(ControllerID cid) {
   return nullptr;
 }
 
+void SimpleSSD::getStatList(std::vector<Object::Stat> &, std::string) noexcept {
+}
+
+void SimpleSSD::getStatValues(std::vector<double> &) noexcept {}
+
+void SimpleSSD::resetStatValues() noexcept {}
+
 void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
   std::string cpt_file(cpt_dir);
   std::string cpt_config(cpt_dir);
