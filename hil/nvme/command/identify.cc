@@ -728,11 +728,30 @@ void Identify::getStatValues(std::vector<double> &) noexcept {}
 void Identify::resetStatValues() noexcept {}
 
 void Identify::createCheckpoint(std::ostream &out) noexcept {
+  bool exist;
+
   Command::createCheckpoint(out);
+
+  exist = buffer != nullptr;
+  BACKUP_SCALAR(out, exist);
+
+  if (exist) {
+    BACKUP_BLOB(out, buffer, size);
+  }
 }
 
 void Identify::restoreCheckpoint(std::istream &in) noexcept {
+  bool exist;
+
   Command::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, exist);
+
+  if (exist) {
+    buffer = (uint8_t *)malloc(size);
+
+    RESTORE_BLOB(in, buffer, size);
+  }
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

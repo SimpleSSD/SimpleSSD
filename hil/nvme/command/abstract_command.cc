@@ -76,6 +76,8 @@ void Command::resetStatValues() noexcept {}
 void Command::createCheckpoint(std::ostream &out) noexcept {
   bool exist;
 
+  BACKUP_SCALAR(out, eid);
+
   // Backup only sqc->commandID
   // All SQContext are allocated only once (not copied) and it wiil be backup in
   // SimpleSSD::HIL::NVMe::Arbitrator.
@@ -103,6 +105,7 @@ void Command::createCheckpoint(std::ostream &out) noexcept {
 void Command::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
+  RESTORE_SCALAR(in, eid);
   RESTORE_SCALAR(in, exist);
 
   if (exist) {
