@@ -181,7 +181,6 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
 
 void Subsystem::triggerDispatch(ControllerData &) {
   // For optimization, use ControllerData instead of ControllerID
-
 }
 
 void Subsystem::init() {
@@ -294,12 +293,38 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, allocatedLogicalPages);
 
-  uint64_t size = namespaceList.size();
+  uint64_t size = controllerList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : controllerList) {
+    // Only store controller ID, data must be reconstructed
+    BACKUP_SCALAR(out, iter.first);
+
+    iter.second->controller->createCheckpoint(out);
+  }
+
+  size = namespaceList.size();
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : namespaceList) {
     iter.second->createCheckpoint(out);
   }
+
+  size = attachmentTable.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : attachmentTable) {
+    BACKUP_SCALAR(out, iter.first);
+
+    size = iter.second.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &set : iter.second) {
+      BACKUP_SCALAR(out, set);
+    }
+  }
+
+  // Now checkpoint commands
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
@@ -312,11 +337,46 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
+    ControllerID id;
+
+    RESTORE_SCALAR(in, id);
+
+    auto ctrl = new Controller(object, id, this, interface);
+
+    ctrl->restoreCheckpoint(in);
+    controllerList.emplace(id, &ctrl->getControllerData());
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
     auto ns = new Namespace(object, this);
 
     ns->restoreCheckpoint(in);
 
     namespaceList.emplace(ns->getNSID(), ns);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    ControllerID id;
+    uint64_t length;
+
+    RESTORE_SCALAR(in, id);
+
+    auto iter = attachmentTable.emplace(id, std::set<uint32_t>());
+
+    panic_if(!iter.second, "Invalid controller ID while recover.");
+
+    RESTORE_SCALAR(in, length);
+
+    for (uint64_t j = 0; j < length; j++) {
+      uint32_t nsid;
+
+      RESTORE_SCALAR(in, nsid);
+      iter.first->second.emplace(nsid);
+    }
   }
 }
 
