@@ -22,6 +22,10 @@
 #define __FILENAME__ __FILE__
 #endif
 
+#ifdef _MSC_VER
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
 namespace SimpleSSD {
 
 #ifndef NO_LOG_MACRO
@@ -29,35 +33,35 @@ namespace SimpleSSD {
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      panic_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,     \
-                ##__VA_ARGS__);                                                \
+      panic_log("%s:%u: %s:\n  " format, __FILENAME__, __LINE__,               \
+                __PRETTY_FUNCTION__, ##__VA_ARGS__);                           \
     }                                                                          \
   }
 
 #define panic(format, ...)                                                     \
   {                                                                            \
-    panic_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,       \
-              ##__VA_ARGS__);                                                  \
+    panic_log("%s:%u: %s:\n  " format, __FILENAME__, __LINE__,                 \
+              __PRETTY_FUNCTION__, ##__VA_ARGS__);                             \
   }
 
 #define warn_if(cond, format, ...)                                             \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      warn_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,      \
-               ##__VA_ARGS__);                                                 \
+      warn_log("%s:%u: %s:\n  " format, __FILENAME__, __LINE__,                \
+               __PRETTY_FUNCTION__, ##__VA_ARGS__);                            \
     }                                                                          \
   }
 
 #define warn(format, ...)                                                      \
   {                                                                            \
-    warn_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
-             ##__VA_ARGS__);                                                   \
+    warn_log("%s:%u: %s:\n  " format, __FILENAME__, __LINE__,                  \
+             __PRETTY_FUNCTION__, ##__VA_ARGS__);                              \
   }
 
 #define info(format, ...)                                                      \
   {                                                                            \
-    info_log("%s:%u: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
-             ##__VA_ARGS__);                                                   \
+    info_log("%s:%u: %s:\n  " format, __FILENAME__, __LINE__,                  \
+             __PRETTY_FUNCTION__, ##__VA_ARGS__);                              \
   }
 
 #endif
