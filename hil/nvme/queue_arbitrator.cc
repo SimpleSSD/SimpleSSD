@@ -101,12 +101,12 @@ uint16_t CQContext::getCQID() noexcept {
   return cqID;
 }
 
-Arbitrator::Arbitrator(ObjectData &o, ControllerData &c)
+Arbitrator::Arbitrator(ObjectData &o, ControllerData &c, InterruptFunction i)
     : Object(o),
       inited(false),
       controller(&c),
       submit(InvalidEventID),
-      interrupt(InvalidEventID),
+      postInterrupt(std::move(i)),
       mode(Arbitration::RoundRobin),
       shutdownReserved(false) {
   // Read config
@@ -136,8 +136,6 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData &c)
   sqList = (SQueue **)calloc(sqSize, sizeof(SQueue *));
 
   // Create events
-  complete = createEvent([this](uint64_t t) { completion(t); },
-                         "HIL::NVMe::Arbitrator::complete");
   work = createEvent([this](uint64_t t) { collect(t); },
                      "HIL::NVMe::Arbitrator::work");
   eventCompDone = createEvent([this](uint64_t t) { completion_done(t); },
@@ -168,14 +166,11 @@ Arbitrator::~Arbitrator() {
   free(sqList);
 }
 
-Event Arbitrator::init(Event s, Event i, Event t) {
+void Arbitrator::init(Event s, Event t) {
   submit = s;
-  interrupt = i;
   eventShutdown = t;
 
   inited = true;
-
-  return complete;
 }
 
 void Arbitrator::enable(bool r) {
@@ -211,10 +206,7 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
   cq->setHead(head);
 
   if (cq->getItemCount() == 0) {
-    intrruptContext.iv = cq->getInterruptVector();
-    intrruptContext.post = false;
-
-    schedule(interrupt, getTick(), &intrruptContext);
+    postInterrupt(cq->getInterruptVector(), false);
   }
 }
 
@@ -282,7 +274,7 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
 //   return false;
 // }
 
-void Arbitrator::completion(uint64_t now, CQContext *cqe) {
+void Arbitrator::complete(CQContext *cqe) {
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
@@ -305,24 +297,27 @@ void Arbitrator::completion(uint64_t now, CQContext *cqe) {
   dispatchedQueue.erase(sqe->commandID);
   delete sqe;
 
+  // Insert to completion queue
+  completionQueue.push(cqe);
+
   // Write entry to CQ
-  cq->setData(cqe->getData(), eventCompDone, cqe);
+  cq->setData(cqe->getData(), eventCompDone);
 
   if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
     // All pending requests are finished
-    schedule(eventShutdown, now);
+    schedule(eventShutdown, getTick());
 
     shutdownReserved = false;
   }
 }
 
-void Arbitrator::completion_done(uint64_t now, CQContext *cqe) {
+void Arbitrator::completion_done(uint64_t now) {
+  auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
 
-  intrruptContext.iv = cq->getInterruptVector();
-  intrruptContext.post = true;
+  completionQueue.pop();
 
-  schedule(interrupt, now);
+  postInterrupt(cq->getInterruptVector(), true);
 
   // Remove CQContext
   delete cqe;
@@ -353,9 +348,6 @@ void Arbitrator::collect(uint64_t now) {
   running = true;
 
   // Collect requests
-  collectRequested = 0;
-  collectCompleted = 0;
-
   if (LIKELY(mode == Arbitration::RoundRobin)) {
     collectRoundRobin();
   }
@@ -367,14 +359,16 @@ void Arbitrator::collect(uint64_t now) {
   }
 }
 
-void Arbitrator::collect_done(uint64_t now, SQContext *sqe) {
-  collectCompleted++;
+void Arbitrator::collect_done(uint64_t now) {
+  auto sqe = collectQueue.front();
 
   sqe->update();
 
   requestQueue.push_back(sqe->getCommandID(), sqe);
 
-  if (collectCompleted == collectRequested) {
+  collectQueue.pop();
+
+  if (collectQueue.size() == 0) {
     running = false;
 
     schedule(submit, now);
@@ -385,12 +379,12 @@ bool Arbitrator::checkQueue(uint16_t qid) {
   auto sq = sqList[qid];
 
   if (sq && sq->getItemCount() > 0) {
-    SQContext *entry = new SQContext();
+    auto *entry = new SQContext();
 
-    collectRequested++;
+    collectQueue.push(entry);
 
     entry->update(qid, sq->getCQID(), sq->getHead());
-    sq->getData(entry->getData(), eventCollect, entry);
+    sq->getData(entry->getData(), eventCollect);
 
     return true;
   }
@@ -472,14 +466,11 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, internalQueueSize);
   BACKUP_SCALAR(out, cqSize);
   BACKUP_SCALAR(out, sqSize);
-  BACKUP_SCALAR(out, intrruptContext);
   BACKUP_SCALAR(out, mode);
   BACKUP_SCALAR(out, param);
   BACKUP_SCALAR(out, shutdownReserved);
   BACKUP_SCALAR(out, run);
   BACKUP_SCALAR(out, running);
-  BACKUP_SCALAR(out, collectRequested);
-  BACKUP_SCALAR(out, collectCompleted);
 
   // We stored cqSize and sqSize
   bool tmp;
@@ -540,6 +531,32 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
     dispatchedQueue.erase(iter->commandID);
     delete iter;
   }
+
+  size = completionQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = completionQueue.front();
+
+    BACKUP_BLOB(out, iter->entry.data, 16);
+    BACKUP_SCALAR(out, iter->cqID);
+
+    completionQueue.pop();
+    delete iter;
+  }
+
+  size = collectQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = collectQueue.front();
+
+    // For collecting queue, only data is used
+    BACKUP_BLOB(out, iter->entry.data, 64);
+
+    collectQueue.pop();
+    delete iter;
+  }
 }
 
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
@@ -548,14 +565,11 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, internalQueueSize);
   RESTORE_SCALAR(in, cqSize);
   RESTORE_SCALAR(in, sqSize);
-  RESTORE_SCALAR(in, intrruptContext);
   RESTORE_SCALAR(in, mode);
   RESTORE_SCALAR(in, param);
   RESTORE_SCALAR(in, shutdownReserved);
   RESTORE_SCALAR(in, run);
   RESTORE_SCALAR(in, running);
-  RESTORE_SCALAR(in, collectRequested);
-  RESTORE_SCALAR(in, collectCompleted);
 
   // Restore queue
   // As we are using exactly same configuration, cqSize and sqSize will exactly
@@ -620,6 +634,27 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->completed);
 
     dispatchedQueue.push_back(iter->commandID, iter);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = new CQContext();
+
+    RESTORE_BLOB(in, iter->entry.data, 16);
+    RESTORE_SCALAR(in, iter->cqID);
+
+    completionQueue.push(iter);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto iter = new SQContext();
+
+    RESTORE_BLOB(in, iter->entry.data, 64);
+
+    collectQueue.push(iter);
   }
 }
 

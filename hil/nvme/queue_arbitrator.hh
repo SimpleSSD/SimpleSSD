@@ -10,6 +10,9 @@
 #ifndef __HIL_NVME_QUEUE_ARBITRATOR_HH__
 #define __HIL_NVME_QUEUE_ARBITRATOR_HH__
 
+#include <functional>
+#include <queue>
+
 #include "hil/nvme/queue.hh"
 #include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
@@ -77,12 +80,6 @@ class CQContext {
   uint16_t getCQID() noexcept;
 };
 
-class InterruptContext {
- public:
-  uint16_t iv;
-  bool post;
-};
-
 union ArbitrationData {
   uint32_t data;
   struct {
@@ -95,15 +92,18 @@ union ArbitrationData {
 };
 
 class Arbitrator : public Object {
+ public:
+  using InterruptFunction = std::function<void(uint16_t, bool)>;
+
  private:
   bool inited;
 
   ControllerData *controller;
 
   Event submit;     // Arbitrator -> Subsystem (Submission)
-  Event complete;   // Subsystem -> Arbitrator (Completion)
-  Event interrupt;  // Arbitrator -> InterruptManager (Interrupt)
   Event work;
+
+  InterruptFunction postInterrupt;
 
   // Work params
   uint64_t period;
@@ -115,9 +115,6 @@ class Arbitrator : public Object {
   CQueue **cqList;
   SQueue **sqList;
 
-  // Interrupt context
-  InterruptContext intrruptContext;
-
   // WRR params (See Set/Get Features > Arbitration)
   Arbitration mode;
   ArbitrationData param;
@@ -125,10 +122,11 @@ class Arbitrator : public Object {
   // Internal queue (Indexed by commandID, sorted by insertion order)
   unordered_map_queue requestQueue;
   unordered_map_queue dispatchedQueue;
+  std::queue<CQContext *> completionQueue;
 
   // Completion
   Event eventCompDone;
-  void completion_done(uint64_t, CQContext *);
+  void completion_done(uint64_t);
 
   // Shutdown
   bool shutdownReserved;
@@ -138,17 +136,15 @@ class Arbitrator : public Object {
   // Work
   bool run;
   bool running;
-  uint64_t collectRequested;
-  uint64_t collectCompleted;
+  std::queue<SQContext *> collectQueue;
 
   Event eventCollect;
-  void collect_done(uint64_t, SQContext *);
+  void collect_done(uint64_t);
 
   bool checkQueue(uint16_t);
   void collectRoundRobin();
   void collectWeightedRoundRobin();
 
-  void completion(uint64_t, CQContext *);
   void collect(uint64_t);
 
   // Admin commands
@@ -161,18 +157,17 @@ class Arbitrator : public Object {
   // bool getFeature(SQContext *);
 
  public:
-  Arbitrator(ObjectData &, ControllerData &);
+  Arbitrator(ObjectData &, ControllerData &, InterruptFunction i);
   ~Arbitrator();
 
   /**
    * \brief Initialize Queue Arbitrator
    *
    * \param[in] s Submission Event
-   * \param[in] i Interrupt Event
    * \param[in] t Shutdown Event
-   * \return Completion Event
+   * \param[in] i Interrupt function
    */
-  Event init(Event s, Event i, Event t);
+  void init(Event s, Event t);
 
   // Register
   void enable(bool);
@@ -185,6 +180,7 @@ class Arbitrator : public Object {
 
   // Command
   SQContext *dispatch();
+  void complete(CQContext *);
 
   // bool createSQ(uint16_t, uint16_t, uint16_t, QueuePriority, bool, uint64_t,
   //               Event, EventContext);
