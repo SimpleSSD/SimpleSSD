@@ -54,7 +54,7 @@ enum class Register : uint64_t {
   NVMSubsystemReset = 0x20,
   AdminQueueAttributes = 0x24,
   AdminSQBaseAddress = 0x28,
-  AdminSQBaseAddressH = 0x2B,
+  AdminSQBaseAddressH = 0x2C,
   AdminCQBaseAddress = 0x30,
   AdminCQBaseAddressH = 0x34,
   ControllerMemoryBufferLocation = 0x38,

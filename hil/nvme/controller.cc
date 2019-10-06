@@ -194,7 +194,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
         break;
       default:
         if (offset < (uint64_t)Register::DoorbellBegin) {
-          panic("Write on read only register");
+          panic("Write on read only register (offset: 0x%" PRIx64 ")", offset);
         }
 
         break;
@@ -238,7 +238,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
         break;
       default:
-        panic("Write on read only register");
+        panic("Write on read only register (offset: 0x%" PRIx64 ")", offset);
 
         break;
     }
