@@ -20,6 +20,8 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+class ControllerData;
+
 class Subsystem : public AbstractSubsystem {
  protected:
   using HILPointer =
@@ -29,7 +31,9 @@ class Subsystem : public AbstractSubsystem {
 
   ControllerID controllerID;
 
+  std::map<ControllerID, ControllerData *> controllerList;
   std::map<uint32_t, Namespace *> namespaceList;
+  std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
@@ -42,9 +46,12 @@ class Subsystem : public AbstractSubsystem {
   Subsystem(ObjectData &);
   virtual ~Subsystem();
 
+  void triggerDispatch(ControllerData &);
+
   void init() override;
 
   ControllerID createController(Interface *) noexcept override;
+  AbstractController *getController(ControllerID) noexcept override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

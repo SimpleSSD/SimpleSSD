@@ -179,6 +179,11 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
   return false;
 }
 
+void Subsystem::triggerDispatch(ControllerData &) {
+  // For optimization, use ControllerData instead of ControllerID
+
+}
+
 void Subsystem::init() {
   uint16_t nNamespaces =
       readConfigUint(Section::HostInterface, Config::Key::NVMeDefaultNamespace);
@@ -265,6 +270,16 @@ ControllerID Subsystem::createController(Interface *interface) noexcept {
   controllerList.emplace(controllerID, &ctrl->getControllerData());
 
   return controllerID++;
+}
+
+AbstractController *Subsystem::getController(ControllerID ctrlid) noexcept {
+  auto iter = controllerList.find(ctrlid);
+
+  if (iter != controllerList.end()) {
+    return iter->second->controller;
+  }
+
+  return nullptr;
 }
 
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
