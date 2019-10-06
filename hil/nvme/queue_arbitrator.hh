@@ -165,7 +165,7 @@ class Arbitrator : public Object {
 
   // Command
   SQContext *dispatch();
-  void complete(CQContext *);
+  void complete(CQContext *, bool = false);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

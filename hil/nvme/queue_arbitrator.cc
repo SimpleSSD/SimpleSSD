@@ -214,12 +214,30 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
 }
 
 SQContext *Arbitrator::dispatch() {
+dispatch_again:
   auto entry = (SQContext *)requestQueue.front();
 
   entry->dispatched = true;
 
-  dispatchedQueue.push_back(entry->commandID, entry);
+  auto ret = dispatchedQueue.push_back(entry->getID(), entry);
   requestQueue.pop_front();
+
+  if (UNLIKELY(!ret)) {
+    // Command ID duplication
+    auto cqe = new CQContext();
+
+    cqe->update(entry);
+    cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
+                    GenericCommandStatusCode::CommandIDConflict);
+
+    complete(cqe, true);
+
+    // cqe is deleted by complete function
+    delete entry;
+
+    // Retry
+    goto dispatch_again;
+  }
 
   return entry;
 }
@@ -256,28 +274,22 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
   sqList[0]->setBase(dmaEngine, 64);  // Always 64 bytes stride
 }
 
-void Arbitrator::complete(CQContext *cqe) {
+void Arbitrator::complete(CQContext *cqe, bool ignore) {
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
 
   // Find corresponding SQContext
-  auto sqe = (SQContext *)dispatchedQueue.find(cqe->getID());
+  if (UNLIKELY(!ignore)) {
+    auto sqe = (SQContext *)dispatchedQueue.find(cqe->getID());
 
-  panic_if(!sqe, "Failed to find corresponding submission entry.");
-  panic_if(!sqe->completed, "Corresponding submission entry not completed.");
+    panic_if(!sqe, "Failed to find corresponding submission entry.");
+    panic_if(!sqe->completed, "Corresponding submission entry not completed.");
 
-  if (UNLIKELY(
-          sqe->aborted &&
-          cqe->entry.dword3.sct == (uint8_t)StatusType::GenericCommandStatus &&
-          cqe->entry.dword3.sc == (uint8_t)GenericCommandStatusCode::Success)) {
-    // Aborted after completion
-    // TODO: FILL HERE
+    // Remove SQContext
+    dispatchedQueue.erase(sqe->commandID);
+    delete sqe;
   }
-
-  // Remove SQContext
-  dispatchedQueue.erase(sqe->commandID);
-  delete sqe;
 
   // Insert to completion queue
   completionQueue.push(cqe);
@@ -346,9 +358,23 @@ void Arbitrator::collect_done(uint64_t now) {
 
   sqe->update();
 
-  requestQueue.push_back(sqe->getID(), sqe);
+  auto ret = requestQueue.push_back(sqe->getID(), sqe);
 
   collectQueue.pop();
+
+  if (UNLIKELY(!ret)) {
+    // Command ID duplication
+    auto cqe = new CQContext();
+
+    cqe->update(sqe);
+    cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
+                    GenericCommandStatusCode::CommandIDConflict);
+
+    complete(cqe, true);
+
+    // cqe is deleted by complete function
+    delete sqe;
+  }
 
   if (collectQueue.size() == 0) {
     running = false;
