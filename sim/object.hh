@@ -24,6 +24,8 @@
 
 namespace SimpleSSD {
 
+#ifndef NO_LOG_MACRO
+
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
@@ -57,6 +59,8 @@ namespace SimpleSSD {
     info_log("%s:%s: %s:" format, __FILENAME__, __LINE__, __FUNCTION__,        \
              ##__VA_ARGS__);                                                   \
   }
+
+#endif
 
 using ObjectData = struct _ObjectData {
   Engine *engine;
