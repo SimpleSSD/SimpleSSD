@@ -18,6 +18,9 @@
 
 namespace SimpleSSD {
 
+#undef panic_if
+#undef warn_if
+
 #define CONFIG_NODE_NAME "simplessd"
 #define CONFIG_SECTION_NAME "section"
 #define CONFIG_KEY_NAME "config"
