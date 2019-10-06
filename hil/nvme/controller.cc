@@ -319,6 +319,7 @@ void Controller::createCheckpoint(std::ostream &out) noexcept {
   controllerData.arbitrator->createCheckpoint(out);
   ((FIFO *)controllerData.dma)->createCheckpoint(out);
 
+  BACKUP_SCALAR(out, controllerData.memoryPageSize);
   BACKUP_BLOB(out, registers.data, sizeof(RegisterTable));
   BACKUP_BLOB(out, pmrRegisters.data, sizeof(PersistentMemoryRegion));
   BACKUP_SCALAR(out, sqStride);
@@ -336,6 +337,7 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
   controllerData.arbitrator->restoreCheckpoint(in);
   ((FIFO *)controllerData.dma)->restoreCheckpoint(in);
 
+  RESTORE_SCALAR(in, controllerData.memoryPageSize);
   RESTORE_BLOB(in, registers.data, sizeof(RegisterTable));
   RESTORE_BLOB(in, pmrRegisters.data, sizeof(PersistentMemoryRegion));
   RESTORE_SCALAR(in, sqStride);
