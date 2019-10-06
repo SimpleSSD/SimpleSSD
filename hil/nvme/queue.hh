@@ -112,7 +112,7 @@ class CQueue : public Queue {
  public:
   CQueue(ObjectData &, uint16_t, uint16_t, uint16_t, bool);
 
-  void setData(CQEntry *, Event, EventContext);
+  void setData(CQEntry *, Event);
   uint16_t incHead();
   void setHead(uint16_t);
   bool interruptEnabled();
@@ -132,7 +132,7 @@ class SQueue : public Queue {
 
   uint16_t getCQID();
   void setTail(uint16_t);
-  void getData(SQEntry *, Event, EventContext);
+  void getData(SQEntry *, Event);
   QueuePriority getPriority();
 
   void createCheckpoint(std::ostream &) noexcept override;

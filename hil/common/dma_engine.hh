@@ -26,17 +26,17 @@ class DMAEngine : public DMAInterface, public Object {
    public:
     int32_t counter;
     Event eid;
-    EventContext context;
 
+    DMAContext();
     DMAContext(Event);
-    DMAContext(Event, EventContext);
   };
 
   DMAInterface *pInterface;
 
   Event dmaHandler;
+  DMAContext dmaContext;
 
-  void dmaDone(uint64_t, DMAContext *);
+  void dmaDone(uint64_t);
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);
@@ -46,6 +46,8 @@ class DMAEngine : public DMAInterface, public Object {
 
   DMAEngine &operator=(const DMAEngine &) = delete;
   DMAEngine &operator=(DMAEngine &&) noexcept = default;
+
+  virtual void init(uint64_t, uint64_t, uint64_t, Event) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

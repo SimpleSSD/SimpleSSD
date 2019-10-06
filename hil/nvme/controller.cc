@@ -7,6 +7,8 @@
 
 #include "hil/nvme/controller.hh"
 
+#include "hil/nvme/subsystem.hh"
+
 namespace SimpleSSD::HIL::NVMe {
 
 Controller::RegisterTable::RegisterTable() {
@@ -67,7 +69,7 @@ Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
 
   // Create events
   eventQueueInit = createEvent(
-      [this](uint64_t, EventContext) {
+      [this](uint64_t) {
         adminQueueCreated++;
 
         if (adminQueueCreated == 2 && registers.cc.en &&
@@ -78,16 +80,12 @@ Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
         }
       },
       "HIL::NVMe::Controller::eventQueueInit");
-  eventInterrupt = createEvent(
-      [this](uint64_t, EventContext c) {
-        postInterrupt(c.get<InterruptContext *>());
-      },
-      "HIL::NVMe::Controller::eventInterrupt");
-  eventSubmit =
-      createEvent([this](uint64_t, EventContext) { notifySubsystem(); },
-                  "HIL::NVMe::Controller::eventSubmit");
+  eventInterrupt = createEvent([this](uint64_t) { postInterrupt(); },
+                               "HIL::NVMe::Controller::eventInterrupt");
+  eventSubmit = createEvent([this](uint64_t) { notifySubsystem(); },
+                            "HIL::NVMe::Controller::eventSubmit");
   eventShutdown = createEvent(
-      [this](uint64_t, EventContext) {
+      [this](uint64_t) {
         registers.cs.rdy = 0;   // RDY = 0
         registers.cs.shst = 2;  // Shutdown processing complete
       },
@@ -106,7 +104,16 @@ void Controller::postInterrupt(InterruptContext *context) {
 }
 
 void Controller::notifySubsystem() {
-  // TODO: FILL HERE
+  // NVMe::Controller always has NVMe::Subsystem
+  ((Subsystem *)subsystem)->triggerDispatch(controllerData);
+}
+
+Arbitrator &Controller::getArbitrator() {
+  return arbitrator;
+}
+
+InterruptManager &Controller::getInterruptManager() {
+  return interruptManager;
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,

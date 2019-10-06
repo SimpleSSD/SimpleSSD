@@ -33,7 +33,9 @@ class Scheduler : public Object {
   Event eventWriteDone;
 
   std::queue<Type> readQueue;
+  std::queue<Type> readPendingQueue;
   std::queue<Type> writeQueue;
+  std::queue<Type> writePendingQueue;
 
   void submitRead() {
     auto data = std::move(readQueue.front());
@@ -42,11 +44,15 @@ class Scheduler : public Object {
     readPending = true;
 
     auto delay = preSubmitRead(data);
+    readPendingQueue.emplace(data);
 
-    schedule(eventReadDone, delay, data);
+    schedule(eventReadDone, delay);
   }
 
-  void readDone(Type data) {
+  void readDone() {
+    auto data = std::move(readPendingQueue.front());
+
+    readPendingQueue.pop();
     postReadDone(data);
 
     if (readQueue.size() > 0) {
@@ -64,11 +70,15 @@ class Scheduler : public Object {
     writePending = true;
 
     auto delay = preSubmitWrite(data);
+    writePendingQueue.emplace(data);
 
-    schedule(eventWriteDone, delay, data);
+    schedule(eventWriteDone, delay);
   }
 
-  void writeDone(Type data) {
+  void writeDone() {
+    auto data = std::move(writePendingQueue.front());
+
+    writePendingQueue.pop();
     postWriteDone(data);
 
     if (writeQueue.size() > 0) {
@@ -103,12 +113,10 @@ class Scheduler : public Object {
         backupItem(b),
         restoreItem(r) {
     // Create events
-    eventReadDone = createEvent(
-        [this](uint64_t, EventContext c) { readDone(c.get<Type>()); },
-        prefix + "::eventReadDone");
-    eventWriteDone = createEvent(
-        [this](uint64_t, EventContext c) { writeDone(c.get<Type>()); },
-        prefix + "::eventWriteDone");
+    eventReadDone = createEvent([this](uint64_t) { readDone(); },
+                                prefix + "::eventReadDone");
+    eventWriteDone = createEvent([this](uint64_t) { writeDone(); },
+                                 prefix + "::eventWriteDone");
   }
 
   virtual ~Scheduler() {}
@@ -148,6 +156,17 @@ class Scheduler : public Object {
       readQueue.pop();
     }
 
+    size = readPendingQueue.size();
+    BACKUP_SCALAR(out, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      auto item = readPendingQueue.front();
+
+      backupItem(out, item);
+
+      readPendingQueue.pop();
+    }
+
     size = writeQueue.size();
     BACKUP_SCALAR(out, size);
 
@@ -157,6 +176,17 @@ class Scheduler : public Object {
       backupItem(out, item);
 
       writeQueue.pop();
+    }
+
+    size = writePendingQueue.size();
+    BACKUP_SCALAR(out, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      auto item = writePendingQueue.front();
+
+      backupItem(out, item);
+
+      writePendingQueue.pop();
     }
   }
 
@@ -178,7 +208,23 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
+      readPendingQueue.push(item);
+    }
+
+    RESTORE_SCALAR(in, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      auto item = restoreItem(in);
+
       writeQueue.push(item);
+    }
+
+    RESTORE_SCALAR(in, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      auto item = restoreItem(in);
+
+      writePendingQueue.push(item);
     }
   }
 };

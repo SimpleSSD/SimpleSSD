@@ -22,16 +22,15 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i)
         return ((CoalesceData *)a)->nextDeadline <
                ((CoalesceData *)b)->nextDeadline;
       }) {
-  eventTimer = createEvent(
-      [this](uint64_t t, EventContext c) {
-        timerHandler(t, c.get<CoalesceData *>());
-      },
-      "HIL::InterruptManager::eventTimer");
+  eventTimer = createEvent([this](uint64_t t) { timerHandler(t); },
+                           "HIL::InterruptManager::eventTimer");
 }
 
 InterruptManager::~InterruptManager() {}
 
-void InterruptManager::timerHandler(uint64_t tick, CoalesceData *data) {
+void InterruptManager::timerHandler(uint64_t tick) {
+  auto data = (CoalesceData *)coalesceMap.front();
+
   panic_if(data->nextDeadline != tick, "Timer broken in interrupt coalescing.");
 
   data->currentRequestCount = 0;
@@ -54,7 +53,7 @@ void InterruptManager::reschedule(CoalesceData *data) {
   if (LIKELY(coalesceMap.size() > 0)) {
     auto next = (CoalesceData *)coalesceMap.front();
 
-    schedule(eventTimer, next->nextDeadline, next);
+    schedule(eventTimer, next->nextDeadline);
   }
 }
 

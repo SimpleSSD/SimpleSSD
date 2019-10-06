@@ -136,23 +136,14 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData &c)
   sqList = (SQueue **)calloc(sqSize, sizeof(SQueue *));
 
   // Create events
-  complete = createEvent(
-      [this](uint64_t t, EventContext c) {
-        completion(t, c.get<CQContext *>());
-      },
-      "HIL::NVMe::Arbitrator::complete");
-  work = createEvent([this](uint64_t t, EventContext) { collect(t); },
+  complete = createEvent([this](uint64_t t) { completion(t); },
+                         "HIL::NVMe::Arbitrator::complete");
+  work = createEvent([this](uint64_t t) { collect(t); },
                      "HIL::NVMe::Arbitrator::work");
-  eventCompDone = createEvent(
-      [this](uint64_t t, EventContext c) {
-        completion_done(t, c.get<CQContext *>());
-      },
-      "HIL::NVMe::Arbitrator::eventCompDone");
-  eventCollect = createEvent(
-      [this](uint64_t t, EventContext c) {
-        collect_done(t, c.get<SQContext *>());
-      },
-      "HIL::NVMe::Arbitrator::eventCollect");
+  eventCompDone = createEvent([this](uint64_t t) { completion_done(t); },
+                              "HIL::NVMe::Arbitrator::eventCompDone");
+  eventCollect = createEvent([this](uint64_t t) { collect_done(t); },
+                             "HIL::NVMe::Arbitrator::eventCollect");
 
   // Not running!
   run = false;
@@ -242,12 +233,11 @@ void Arbitrator::reserveShutdown() {
   shutdownReserved = true;
 }
 
-void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
-                               EventContext context) {
+void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid) {
   auto dmaEngine =
       new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
-  dmaEngine->initQueue(base, size * 16, true, eid, context);
+  dmaEngine->initQueue(base, size * 16, true, eid);
 
   if (cqList[0]) {
     delete cqList[0];
@@ -257,12 +247,11 @@ void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid,
   cqList[0]->setBase(dmaEngine, 16);  // Always 16 bytes stride
 }
 
-void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid,
-                               EventContext context) {
+void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
   auto dmaEngine =
       new PRPEngine(object, controller->dma, controller->memoryPageSize);
 
-  dmaEngine->initQueue(base, size * 64, true, eid, context);
+  dmaEngine->initQueue(base, size * 64, true, eid);
 
   if (sqList[0]) {
     delete sqList[0];
@@ -333,7 +322,7 @@ void Arbitrator::completion_done(uint64_t now, CQContext *cqe) {
   intrruptContext.iv = cq->getInterruptVector();
   intrruptContext.post = true;
 
-  schedule(interrupt, now, &intrruptContext);
+  schedule(interrupt, now);
 
   // Remove CQContext
   delete cqe;
@@ -388,7 +377,7 @@ void Arbitrator::collect_done(uint64_t now, SQContext *sqe) {
   if (collectCompleted == collectRequested) {
     running = false;
 
-    schedule(submit, now, this);
+    schedule(submit, now);
   }
 }
 

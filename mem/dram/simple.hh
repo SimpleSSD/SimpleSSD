@@ -25,8 +25,8 @@ class SimpleDRAM : public AbstractDRAM {
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
 
-  void read(uint64_t, uint64_t, Event, EventContext) override;
-  void write(uint64_t, uint64_t, Event, EventContext) override;
+  void read(uint64_t, uint64_t, Event) override;
+  void write(uint64_t, uint64_t, Event) override;
 
   void createCheckpoint(std::ostream &) noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

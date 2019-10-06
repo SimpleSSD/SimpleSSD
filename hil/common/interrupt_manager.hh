@@ -45,7 +45,7 @@ class InterruptManager : public Object {
 
   Event eventTimer;
 
-  void timerHandler(uint64_t, CoalesceData *);
+  void timerHandler(uint64_t);
   void reschedule(CoalesceData *);
 
  public:

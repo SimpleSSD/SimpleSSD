@@ -34,7 +34,7 @@ uint64_t SRAM::preSubmit(Request *req) {
 
 void SRAM::postDone(Request *req) {
   // Call handler
-  schedule(req->eid, getTick(), req->context);
+  schedule(req->eid, getTick());
 
   delete req;
 }
@@ -43,7 +43,6 @@ void backupItem(std::ostream &out, Request *item) {
   BACKUP_SCALAR(out, item->offset);
   BACKUP_SCALAR(out, item->length);
   BACKUP_SCALAR(out, item->beginAt);
-  item->context.backup(out);
 }
 
 Request *restoreItem(std::istream &in) {
@@ -52,14 +51,12 @@ Request *restoreItem(std::istream &in) {
   RESTORE_SCALAR(in, item->offset);
   RESTORE_SCALAR(in, item->length);
   RESTORE_SCALAR(in, item->beginAt);
-  item->context.restore(in);
 
   return item;
 }
 
-void SRAM::read(uint64_t address, uint64_t length, Event eid,
-                EventContext context) {
-  auto req = new Request(address, length, eid, context);
+void SRAM::read(uint64_t address, uint64_t length, Event eid) {
+  auto req = new Request(address, length, eid);
 
   rangeCheck(address, length);
 
@@ -72,9 +69,8 @@ void SRAM::read(uint64_t address, uint64_t length, Event eid,
   scheduler.read(req);
 }
 
-void SRAM::write(uint64_t address, uint64_t length, Event eid,
-                 EventContext context) {
-  auto req = new Request(address, length, eid, context);
+void SRAM::write(uint64_t address, uint64_t length, Event eid) {
+  auto req = new Request(address, length, eid);
 
   rangeCheck(address, length);
 

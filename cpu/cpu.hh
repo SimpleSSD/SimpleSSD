@@ -42,12 +42,11 @@ typedef struct _InstStat {
 
 typedef struct _JobEntry {
   Event eid;
-  EventContext context;
   InstStat *inst;
   uint64_t submitAt;
   uint64_t delay;
 
-  _JobEntry(Event, EventContext, InstStat *);
+  _JobEntry(Event, InstStat *);
 } JobEntry;
 
 class CPU : public Object {
@@ -105,7 +104,7 @@ class CPU : public Object {
   CPU(ObjectData &);
   ~CPU();
 
-  void execute(Namespace, Function, Event, EventContext, uint64_t = 0);
+  void execute(Namespace, Function, Event, uint64_t = 0);
   uint64_t applyLatency(Namespace, Function);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

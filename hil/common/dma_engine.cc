@@ -9,26 +9,23 @@
 
 namespace SimpleSSD::HIL {
 
-DMAEngine::DMAContext::DMAContext(Event e) : counter(0), eid(e) {}
+DMAEngine::DMAContext::DMAContext() : counter(0), eid(InvalidEventID) {}
 
-DMAEngine::DMAContext::DMAContext(Event e, EventContext c)
-    : counter(0), eid(e), context(c) {}
+DMAEngine::DMAContext::DMAContext(Event e) : counter(0), eid(e) {}
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
     : Object(o), pInterface(i) {
-  dmaHandler = createEvent(
-      [this](uint64_t t, EventContext c) { dmaDone(t, c.get<DMAContext *>()); },
-      "HIL::DMAEngine::dmaHandler");
+  dmaHandler = createEvent([this](uint64_t t) { dmaDone(t); },
+                           "HIL::DMAEngine::dmaHandler");
 }
 
 DMAEngine::~DMAEngine() {}
 
-void DMAEngine::dmaDone(uint64_t tick, DMAContext *context) {
-  context->counter--;
+void DMAEngine::dmaDone(uint64_t tick) {
+  dmaContext.counter--;
 
-  if (context->counter == 0) {
-    schedule(context->eid, tick, context->context);
-    delete context;
+  if (dmaContext.counter == 0) {
+    schedule(dmaContext.eid, tick);
   }
 }
 
@@ -38,8 +35,12 @@ void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
 
 void DMAEngine::resetStatValues() noexcept {}
 
-void DMAEngine::createCheckpoint(std::ostream &) noexcept {}
+void DMAEngine::createCheckpoint(std::ostream &out) noexcept {
+  BACKUP_SCALAR(out, dmaContext);
+}
 
-void DMAEngine::restoreCheckpoint(std::istream &) noexcept {}
+void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, dmaContext);
+}
 
 }  // namespace SimpleSSD::HIL

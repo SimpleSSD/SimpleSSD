@@ -22,8 +22,7 @@ FIFOEntry::FIFOEntry()
       insertEndAt(0),
       eid(InvalidEventID) {}
 
-FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e,
-                     EventContext c)
+FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e)
     : last(true),
       id(0),
       addr(a),
@@ -32,8 +31,7 @@ FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e,
       arrivedAt(t),
       insertBeginAt(0),
       insertEndAt(0),
-      eid(e),
-      context(c) {}
+      eid(e) {}
 
 ReadEntry::ReadEntry() : id(0), insertEndAt(0), dmaEndAt(0), latency(0) {}
 
@@ -60,8 +58,8 @@ void FIFO::Queue::backup(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, iter.arrivedAt);
     BACKUP_SCALAR(out, iter.insertBeginAt);
     BACKUP_SCALAR(out, iter.insertEndAt);
+    BACKUP_SCALAR(out, iter.eid);
     BACKUP_BLOB(out, iter.buffer, iter.size);
-    iter.context.backup(out);
   }
 
   size = transferQueue.size();
@@ -77,8 +75,8 @@ void FIFO::Queue::backup(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, iter.arrivedAt);
     BACKUP_SCALAR(out, iter.insertBeginAt);
     BACKUP_SCALAR(out, iter.insertEndAt);
+    BACKUP_SCALAR(out, iter.eid);
     BACKUP_BLOB(out, iter.buffer, iter.size);
-    iter.context.backup(out);
 
     transferQueue.pop();
   }
@@ -103,8 +101,8 @@ void FIFO::Queue::restore(std::istream &in) noexcept {
     RESTORE_SCALAR(in, waitQueue.back().arrivedAt);
     RESTORE_SCALAR(in, waitQueue.back().insertBeginAt);
     RESTORE_SCALAR(in, waitQueue.back().insertEndAt);
+    RESTORE_SCALAR(in, waitQueue.back().eid);
     RESTORE_BLOB(in, waitQueue.back().buffer, waitQueue.back().size);
-    waitQueue.back().context.restore(in);
   }
 
   RESTORE_SCALAR(in, size);
@@ -119,8 +117,8 @@ void FIFO::Queue::restore(std::istream &in) noexcept {
     RESTORE_SCALAR(in, transferQueue.back().arrivedAt);
     RESTORE_SCALAR(in, transferQueue.back().insertBeginAt);
     RESTORE_SCALAR(in, transferQueue.back().insertEndAt);
+    RESTORE_SCALAR(in, waitQueue.back().eid);
     RESTORE_BLOB(in, transferQueue.back().buffer, transferQueue.back().size);
-    transferQueue.back().context.restore(in);
   }
 }
 
@@ -140,30 +138,25 @@ FIFO::FIFO(ObjectData &o, DMAInterface *up, FIFOParam &p)
   unitLatency = param.latency(param.transferUnit);
 
   // Allocate events and functions for each queue
-  writeQueue.insertDone =
-      createEvent([this](uint64_t, EventContext) { insertWriteDone(); },
-                  "FIFO::writeQueue::insertDone");
-  writeQueue.beginTransfer =
-      createEvent([this](uint64_t, EventContext) { transferWrite(); },
-                  "FIFO::writeQueue::beginTransfer");
+  writeQueue.insertDone = createEvent([this](uint64_t) { insertWriteDone(); },
+                                      "FIFO::writeQueue::insertDone");
+  writeQueue.beginTransfer = createEvent([this](uint64_t) { transferWrite(); },
+                                         "FIFO::writeQueue::beginTransfer");
   writeQueue.submitCompletion =
-      createEvent([this](uint64_t, EventContext) { transferWriteDoneNext(); },
+      createEvent([this](uint64_t) { transferWriteDoneNext(); },
                   "FIFO::writeQueue::submitCompletion");
   writeQueue.transferDone =
-      createEvent([this](uint64_t, EventContext) { transferWriteDone(); },
+      createEvent([this](uint64_t) { transferWriteDone(); },
                   "FIFO::writeQueue::transferDone");
-  readQueue.insertDone =
-      createEvent([this](uint64_t, EventContext) { insertReadDone(); },
-                  "FIFO::readQueue::insertDone");
-  readQueue.beginTransfer =
-      createEvent([this](uint64_t, EventContext) { insertRead(); },
-                  "FIFO::readQueue::beginTransfer");
+  readQueue.insertDone = createEvent([this](uint64_t) { insertReadDone(); },
+                                     "FIFO::readQueue::insertDone");
+  readQueue.beginTransfer = createEvent([this](uint64_t) { insertRead(); },
+                                        "FIFO::readQueue::beginTransfer");
   readQueue.submitCompletion =
-      createEvent([this](uint64_t, EventContext) { insertReadDoneNext(); },
+      createEvent([this](uint64_t) { insertReadDoneNext(); },
                   "FIFO::readQueue::submitCompletion");
-  readQueue.transferDone =
-      createEvent([this](uint64_t, EventContext) { transferReadDone(); },
-                  "FIFO::readQueue::transferDone");
+  readQueue.transferDone = createEvent([this](uint64_t) { transferReadDone(); },
+                                       "FIFO::readQueue::transferDone");
 }
 
 FIFO::~FIFO() {}
@@ -293,7 +286,7 @@ void FIFO::transferWriteDoneNext() {
 
   // Call handler
   if (iter.last) {
-    schedule(iter.eid, now, iter.context);
+    schedule(iter.eid, now);
   }
 
   // Transfer done
@@ -453,7 +446,7 @@ void FIFO::insertReadDoneNext() {
 
   // Call handler
   if (iter.last) {
-    schedule(iter.eid, now, iter.context);
+    schedule(iter.eid, now);
   }
 
   // Insert done
@@ -474,30 +467,26 @@ void FIFO::insertReadDoneNext() {
   }
 }
 
-void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
-                EventContext context) {
+void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
   if (size == 0) {
     warn("FIFO: zero-size DMA read request. Ignore.");
 
     return;
   }
 
-  readQueue.waitQueue.push_back(
-      FIFOEntry(addr, size, buffer, getTick(), eid, context));
+  readQueue.waitQueue.push_back(FIFOEntry(addr, size, buffer, getTick(), eid));
 
   transferRead();
 }
 
-void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
-                 EventContext context) {
+void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
   if (size == 0) {
     warn("FIFO: zero-size DMA write request. Ignore.");
 
     return;
   }
 
-  writeQueue.waitQueue.push_back(
-      FIFOEntry(addr, size, buffer, getTick(), eid, context));
+  writeQueue.waitQueue.push_back(FIFOEntry(addr, size, buffer, getTick(), eid));
 
   insertWrite();
 }

@@ -36,10 +36,10 @@ class PRPEngine : public DMAEngine {
   class PRPInitContext {
    public:
     uint64_t handledSize;
-    uint8_t *buffer;
     uint64_t bufferSize;
-    Event eid;
-    EventContext context;
+    uint8_t *buffer;
+
+    PRPInitContext();
   };
 
   bool inited;
@@ -49,20 +49,21 @@ class PRPEngine : public DMAEngine {
   uint64_t pageSize;
 
   Event readPRPList;
+  PRPInitContext prpContext;
 
   uint64_t getSizeFromPRP(uint64_t);
-  void getPRPListFromPRP(uint64_t, Event, EventContext);
-  void getPRPListFromPRP_readDone(uint64_t, PRPInitContext *s);
+  void getPRPListFromPRP(uint64_t, Event);
+  void getPRPListFromPRP_readDone(uint64_t);
 
  public:
   PRPEngine(ObjectData &, DMAInterface *, uint64_t);
   ~PRPEngine();
 
-  void initData(uint64_t, uint64_t, uint64_t, Event, EventContext);
-  void initQueue(uint64_t, uint64_t, bool, Event, EventContext);
+  void init(uint64_t, uint64_t, uint64_t, Event) override;
+  void initQueue(uint64_t, uint64_t, bool, Event);
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event) override;
 
   void createCheckpoint(std::ostream &) noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
@@ -101,10 +102,10 @@ class SGLEngine : public DMAEngine {
 
   class SGLInitContext {
    public:
-    uint8_t *buffer;
     uint64_t bufferSize;
-    Event eid;
-    EventContext context;
+    uint8_t *buffer;
+
+    SGLInitContext();
   };
 
   bool inited;
@@ -113,19 +114,20 @@ class SGLEngine : public DMAEngine {
   uint64_t totalSize;
 
   Event readSGL;
+  SGLInitContext sglContext;
 
   void parseSGLDescriptor(SGLDescriptor &);
-  void parseSGLSegment(uint64_t, uint32_t, Event, EventContext);
-  void parseSGLSegment_readDone(uint64_t, SGLInitContext *);
+  void parseSGLSegment(uint64_t, uint32_t, Event);
+  void parseSGLSegment_readDone(uint64_t);
 
  public:
   SGLEngine(ObjectData &, DMAInterface *);
   ~SGLEngine();
 
-  void init(uint64_t, uint64_t, Event, EventContext);
+  void init(uint64_t, uint64_t, uint64_t, Event) override;
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event) override;
 
   void createCheckpoint(std::ostream &) noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

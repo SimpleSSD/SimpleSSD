@@ -19,7 +19,7 @@ SimpleDRAM::SimpleDRAM(ObjectData &o) : AbstractDRAM(o) {
                        pStructure->channel / 8.0 / pTiming->tCK;
 
   autoRefresh = createEvent(
-      [this](uint64_t now, EventContext) {
+      [this](uint64_t now) {
         dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
 
         schedule(autoRefresh, now + REFRESH_PERIOD);
@@ -33,8 +33,7 @@ SimpleDRAM::~SimpleDRAM() {
   // DO NOTHING
 }
 
-void SimpleDRAM::read(uint64_t, uint64_t length, Event eid,
-                      EventContext context) {
+void SimpleDRAM::read(uint64_t, uint64_t length, Event eid) {
   uint64_t beginAt = getTick();
   uint64_t pageCount =
       (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
@@ -65,11 +64,10 @@ void SimpleDRAM::read(uint64_t, uint64_t length, Event eid,
   readStat.size += length;
 
   // Schedule callback
-  schedule(eid, beginAt + latency, context);
+  schedule(eid, beginAt + latency);
 }
 
-void SimpleDRAM::write(uint64_t, uint64_t length, Event eid,
-                       EventContext context) {
+void SimpleDRAM::write(uint64_t, uint64_t length, Event eid) {
   uint64_t beginAt = getTick();
   uint64_t pageCount =
       (length > 0) ? (length - 1) / pStructure->pageSize + 1 : 0;
@@ -100,7 +98,7 @@ void SimpleDRAM::write(uint64_t, uint64_t length, Event eid,
   writeStat.size += length;
 
   // Schedule callback
-  schedule(eid, beginAt + latency, context);
+  schedule(eid, beginAt + latency);
 }
 
 void SimpleDRAM::createCheckpoint(std::ostream &out) noexcept {

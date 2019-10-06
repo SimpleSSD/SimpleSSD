@@ -34,10 +34,9 @@ class DMAInterface {
    * \param[in]  length    # of bytes to read
    * \param[out] buffer    Buffer. can be nullptr
    * \param[in]  eid       Event ID of callback function
-   * \param[in]  context   User data
    */
   virtual void read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                    Event eid, EventContext context = EventContext()) = 0;
+                    Event eid) = 0;
 
   /**
    * DMA write request function
@@ -49,10 +48,9 @@ class DMAInterface {
    * \param[in] length    # of bytes to write
    * \param[in] buffer    Data to write. can be nullptr
    * \param[in] eid       Event ID of callback function
-   * \param[in] context   User data
    */
   virtual void write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid, EventContext context = EventContext()) = 0;
+                     Event eid) = 0;
 };
 
 /**

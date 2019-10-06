@@ -91,14 +91,14 @@ void Queue::restoreCheckpoint(std::istream &in) noexcept {
 CQueue::CQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t iv, bool en)
     : Queue(o, qid, size), ien(en), phase(true), iv(iv) {}
 
-void CQueue::setData(CQEntry *entry, Event eid, EventContext context) {
+void CQueue::setData(CQEntry *entry, Event eid) {
   if (entry) {
     // Set phase
     entry->dword3.status &= 0xFFFE;
     entry->dword3.status |= (phase ? 0x0001 : 0x0000);
 
     // Write entry
-    base->write(tail * stride, 0x10, entry->data, eid, context);
+    base->write(tail * stride, 0x10, entry->data, eid);
 
     // Increase tail
     tail++;
@@ -162,10 +162,10 @@ void SQueue::setTail(uint16_t newTail) {
   tail = newTail;
 }
 
-void SQueue::getData(SQEntry *entry, Event eid, EventContext context) {
+void SQueue::getData(SQEntry *entry, Event eid) {
   if (entry && head != tail) {
     // Read entry
-    base->read(head * stride, 0x40, entry->data, eid, context);
+    base->read(head * stride, 0x40, entry->data, eid);
 
     // Increase head
     head++;

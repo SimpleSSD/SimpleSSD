@@ -180,8 +180,8 @@ class Arbitrator : public Object {
   void ringSQ(uint16_t, uint16_t);
   void ringCQ(uint16_t, uint16_t);
   void reserveShutdown();
-  void createAdminSQ(uint64_t, uint16_t, Event, EventContext = EventContext());
-  void createAdminCQ(uint64_t, uint16_t, Event, EventContext = EventContext());
+  void createAdminSQ(uint64_t, uint16_t, Event);
+  void createAdminCQ(uint64_t, uint16_t, Event);
 
   // Command
   SQContext *dispatch();

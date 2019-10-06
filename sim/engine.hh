@@ -39,7 +39,7 @@ class Engine {
    * Schedule event at provided tick. If tick < current tick, just schedule at
    * current tick. Reschedule if event is already scheduled.
    */
-  virtual void schedule(Event, uint64_t, EventContext) = 0;
+  virtual void schedule(Event, uint64_t) = 0;
 
   /**
    * \brief Deschedule event object

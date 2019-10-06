@@ -39,10 +39,9 @@ struct FIFOEntry {
   uint64_t insertEndAt;    //!< Request is fully written on FIFO
 
   Event eid;
-  EventContext context;
 
   FIFOEntry();
-  FIFOEntry(uint64_t, uint64_t, uint8_t *, uint64_t, Event, EventContext);
+  FIFOEntry(uint64_t, uint64_t, uint8_t *, uint64_t, Event);
 };
 
 struct ReadEntry {
@@ -118,8 +117,8 @@ class FIFO : public DMAInterface, public Object {
   FIFO &operator=(const FIFO &) = delete;
   FIFO &operator=(FIFO &&) noexcept = default;
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, EventContext) override;
+  void read(uint64_t, uint64_t, uint8_t *, Event) override;
+  void write(uint64_t, uint64_t, uint8_t *, Event) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
