@@ -28,7 +28,6 @@ class AbstractController : public Object {
   AbstractSubsystem *subsystem;  //!< Connected subsystem
 
   ControllerID controllerID;
-  ControllerData controllerData;
 
  public:
   AbstractController(ObjectData &o, ControllerID id, AbstractSubsystem *s,
@@ -41,19 +40,15 @@ class AbstractController : public Object {
   AbstractController &operator=(const AbstractController &) = delete;
   AbstractController &operator=(AbstractController &&) noexcept = default;
 
-  virtual ControllerData &getControllerData() noexcept {
-    return controllerData;
-  }
-
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
 
   void createCheckpoint(std::ostream &out) noexcept override {
-    BACKUP_SCALAR(out, controllerData.memoryPageSize);
+    BACKUP_SCALAR(out, controllerID);
   }
 
   void restoreCheckpoint(std::istream &in) noexcept override {
-    RESTORE_SCALAR(in, controllerData.memoryPageSize);
+    RESTORE_SCALAR(in, controllerID);
   }
 };
 

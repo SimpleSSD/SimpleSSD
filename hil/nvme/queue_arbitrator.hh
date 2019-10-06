@@ -19,6 +19,8 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+class ControllerData;
+
 class SQContext {
  private:
   friend class CQContext;
@@ -96,14 +98,9 @@ class Arbitrator : public Object {
   using InterruptFunction = std::function<void(uint16_t, bool)>;
 
  private:
-  bool inited;
-
   ControllerData *controller;
 
-  Event submit;     // Arbitrator -> Subsystem (Submission)
   Event work;
-
-  InterruptFunction postInterrupt;
 
   // Work params
   uint64_t period;
@@ -131,8 +128,6 @@ class Arbitrator : public Object {
   // Shutdown
   bool shutdownReserved;
 
-  Event eventShutdown;
-
   // Work
   bool run;
   bool running;
@@ -157,17 +152,8 @@ class Arbitrator : public Object {
   // bool getFeature(SQContext *);
 
  public:
-  Arbitrator(ObjectData &, ControllerData &, InterruptFunction i);
+  Arbitrator(ObjectData &, ControllerData *);
   ~Arbitrator();
-
-  /**
-   * \brief Initialize Queue Arbitrator
-   *
-   * \param[in] s Submission Event
-   * \param[in] t Shutdown Event
-   * \param[in] i Interrupt function
-   */
-  void init(Event s, Event t);
 
   // Register
   void enable(bool);

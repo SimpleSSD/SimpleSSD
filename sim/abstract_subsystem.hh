@@ -30,18 +30,6 @@ class AbstractSubsystem;
  */
 using ControllerID = uint16_t;
 
-//! Controller data
-class ControllerData {
- public:
-  AbstractController *controller;
-  Interface *interface;     //!< Top-most host interface
-  DMAInterface *dma;        //!< DMA port for current controller
-  uint64_t memoryPageSize;  //!< This is only for PRPEngine
-
-  ControllerData();
-  ControllerData(AbstractController *, Interface *, DMAInterface *, uint64_t);
-};
-
 /**
  * \brief Abstract subsystem declaration
  *
@@ -57,13 +45,11 @@ class AbstractSubsystem : public Object {
  protected:
   bool inited;
 
-  std::map<ControllerID, ControllerData *> controllerList;
-
  public:
-  AbstractSubsystem(ObjectData &);
+  AbstractSubsystem(ObjectData &) {}
   AbstractSubsystem(const AbstractSubsystem &) = delete;
   AbstractSubsystem(AbstractSubsystem &&) noexcept = default;
-  virtual ~AbstractSubsystem();
+  virtual ~AbstractSubsystem() {}
 
   AbstractSubsystem &operator=(const AbstractSubsystem &) = delete;
   AbstractSubsystem &operator=(AbstractSubsystem &&) noexcept = default;
@@ -71,7 +57,7 @@ class AbstractSubsystem : public Object {
   virtual void init() = 0;
 
   virtual ControllerID createController(Interface *) noexcept = 0;
-  virtual AbstractController *getController(ControllerID) noexcept;
+  virtual AbstractController *getController(ControllerID) noexcept = 0;
 };
 
 }  // namespace SimpleSSD

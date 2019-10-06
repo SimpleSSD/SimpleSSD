@@ -7,6 +7,8 @@
 
 #include "hil/nvme/queue_arbitrator.hh"
 
+#include "hil/nvme/controller.hh"
+
 namespace SimpleSSD::HIL::NVMe {
 
 SQContext::SQContext()
@@ -101,12 +103,9 @@ uint16_t CQContext::getCQID() noexcept {
   return cqID;
 }
 
-Arbitrator::Arbitrator(ObjectData &o, ControllerData &c, InterruptFunction i)
+Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
     : Object(o),
-      inited(false),
-      controller(&c),
-      submit(InvalidEventID),
-      postInterrupt(std::move(i)),
+      controller(c),
       mode(Arbitration::RoundRobin),
       shutdownReserved(false) {
   // Read config
@@ -166,16 +165,7 @@ Arbitrator::~Arbitrator() {
   free(sqList);
 }
 
-void Arbitrator::init(Event s, Event t) {
-  submit = s;
-  eventShutdown = t;
-
-  inited = true;
-}
-
 void Arbitrator::enable(bool r) {
-  panic_if(!inited, "Not initialized.");
-
   run = r;
 
   if (run) {
@@ -206,7 +196,8 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
   cq->setHead(head);
 
   if (cq->getItemCount() == 0) {
-    postInterrupt(cq->getInterruptVector(), false);
+    controller->interruptManager->postInterrupt(cq->getInterruptVector(),
+                                                false);
   }
 }
 
@@ -305,7 +296,7 @@ void Arbitrator::complete(CQContext *cqe) {
 
   if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
     // All pending requests are finished
-    schedule(eventShutdown, getTick());
+    controller->controller->shutdownComplete();
 
     shutdownReserved = false;
   }
@@ -317,7 +308,7 @@ void Arbitrator::completion_done(uint64_t now) {
 
   completionQueue.pop();
 
-  postInterrupt(cq->getInterruptVector(), true);
+  controller->interruptManager->postInterrupt(cq->getInterruptVector(), true);
 
   // Remove CQContext
   delete cqe;
@@ -371,7 +362,7 @@ void Arbitrator::collect_done(uint64_t now) {
   if (collectQueue.size() == 0) {
     running = false;
 
-    schedule(submit, now);
+    controller->controller->notifySubsystem();
   }
 }
 
@@ -461,7 +452,6 @@ void Arbitrator::getStatValues(std::vector<double> &) noexcept {}
 void Arbitrator::resetStatValues() noexcept {}
 
 void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
-  BACKUP_SCALAR(out, inited);
   BACKUP_SCALAR(out, period);
   BACKUP_SCALAR(out, internalQueueSize);
   BACKUP_SCALAR(out, cqSize);
@@ -560,7 +550,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
 }
 
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, inited);
   RESTORE_SCALAR(in, period);
   RESTORE_SCALAR(in, internalQueueSize);
   RESTORE_SCALAR(in, cqSize);

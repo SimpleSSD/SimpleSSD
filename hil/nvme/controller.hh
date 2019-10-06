@@ -17,6 +17,21 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+class Subsystem;
+
+class ControllerData {
+ public:
+  Controller *controller;
+  Interface *interface;     //!< Top-most host interface
+  DMAInterface *dma;        //!< DMA port for current controller
+  InterruptManager *interruptManager;
+  Arbitrator *arbitrator;
+  uint64_t memoryPageSize;  //!< This is only for PRPEngine
+
+  ControllerData();
+  ControllerData(Controller *, Interface *, DMAInterface *, uint64_t);
+};
+
 /**
  * \brief NVMe Controller object
  *
@@ -88,10 +103,9 @@ class Controller : public AbstractController {
     PersistentMemoryRegion();
   };
 
-  InterruptManager interruptManager;
-  Arbitrator arbitrator;
+  ControllerData controllerData;
 
-  FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
+  // FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
   // FIFO *interconnect;  //!< FIFO for PCIe PHY <-> Interconnect
 
   RegisterTable registers;
@@ -108,25 +122,17 @@ class Controller : public AbstractController {
 
   Event eventQueueInit;
 
-  // Arbitrator -> InterruptManager
-  Event eventInterrupt;
-  void postInterrupt(InterruptContext *);
-
-  // Arbitrator -> Subsystem
-  Event eventSubmit;
-  void notifySubsystem();
-
-  // Subsystem -> Arbitrator
-  Event eventComplete;
-
-  // Arbitrator -> Controller
-  Event eventShutdown;
-
   void handleControllerConfig(uint32_t);
 
  public:
-  Controller(ObjectData &, ControllerID, AbstractSubsystem *, Interface *);
+  Controller(ObjectData &, ControllerID, Subsystem *, Interface *);
   ~Controller();
+
+  // Arbitrator
+  void notifySubsystem();
+  void shutdownComplete();
+
+  ControllerData &getControllerData();
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;

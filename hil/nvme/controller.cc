@@ -19,14 +19,20 @@ Controller::PersistentMemoryRegion::PersistentMemoryRegion() {
   memset(data, 0, sizeof(PersistentMemoryRegion));
 }
 
-Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
+Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
                        Interface *i)
     : AbstractController(o, id, p, i),
-      interruptManager(o, i),
-      arbitrator(o, controllerData),
       adminQueueInited(0),
       interruptMask(0),
       adminQueueCreated(0) {
+  // Fill me!
+  controllerData.controller = this;
+  controllerData.interface = interface;
+  controllerData.dma = nullptr;
+  controllerData.interruptManager = nullptr;
+  controllerData.arbitrator = nullptr;
+  controllerData.memoryPageSize = 0;
+
   // Initialize FIFO queues
   auto axiWidth = (ARM::AXI::Width)readConfigUint(Section::HostInterface,
                                                   Config::Key::AXIWidth);
@@ -39,7 +45,7 @@ Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
   param.transferUnit = 64;
   param.latency = ARM::AXI::makeFunction(axiClock, axiWidth);
 
-  pcie = new FIFO(o, i, param);
+  controllerData.dma = new FIFO(o, i, param);
 
   // [Bits ] Name  : Description                        : Current Setting
   // [63:58] Reserved
@@ -67,6 +73,10 @@ Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
 
   registers.version = 0x00010400;  // NVMe 1.4
 
+  // Creates modules
+  controllerData.interruptManager = new InterruptManager(object, interface);
+  controllerData.arbitrator = new Arbitrator(object, &controllerData);
+
   // Create events
   eventQueueInit = createEvent(
       [this](uint64_t) {
@@ -76,31 +86,17 @@ Controller::Controller(ObjectData &o, ControllerID id, AbstractSubsystem *p,
             registers.cs.rdy == 0) {
           registers.cs.rdy = 1;
 
-          arbitrator.enable(true);
+          controllerData.arbitrator->enable(true);
         }
       },
       "HIL::NVMe::Controller::eventQueueInit");
-  eventInterrupt = createEvent([this](uint64_t) { postInterrupt(); },
-                               "HIL::NVMe::Controller::eventInterrupt");
-  eventSubmit = createEvent([this](uint64_t) { notifySubsystem(); },
-                            "HIL::NVMe::Controller::eventSubmit");
-  eventShutdown = createEvent(
-      [this](uint64_t) {
-        registers.cs.rdy = 0;   // RDY = 0
-        registers.cs.shst = 2;  // Shutdown processing complete
-      },
-      "HIL::NVMe::Controller::eventShutdown");
-
-  eventComplete = arbitrator.init(eventSubmit, eventInterrupt, eventShutdown);
 }
 
 Controller::~Controller() {
-  delete pcie;
+  delete controllerData.interruptManager;
+  delete controllerData.arbitrator;
+  delete controllerData.dma;
   // delete interconnect;
-}
-
-void Controller::postInterrupt(InterruptContext *context) {
-  interruptManager.postInterrupt(context->iv, context->post);
 }
 
 void Controller::notifySubsystem() {
@@ -108,12 +104,9 @@ void Controller::notifySubsystem() {
   ((Subsystem *)subsystem)->triggerDispatch(controllerData);
 }
 
-Arbitrator &Controller::getArbitrator() {
-  return arbitrator;
-}
-
-InterruptManager &Controller::getInterruptManager() {
-  return interruptManager;
+void Controller::shutdownComplete() {
+  registers.cs.rdy = 0;   // RDY = 0
+  registers.cs.shst = 2;  // Shutdown processing complete
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,
@@ -211,10 +204,10 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
       uiTemp = (uiTemp >> 1);          // Queue ID
 
       if (uiMask) {  // Completion Queue
-        arbitrator.ringCQ(uiTemp, uiDoorbell);
+        controllerData.arbitrator->ringCQ(uiTemp, uiDoorbell);
       }
       else {  // Submission Queue
-        arbitrator.ringSQ(uiTemp, uiDoorbell);
+        controllerData.arbitrator->ringSQ(uiTemp, uiDoorbell);
       }
     }
   }
@@ -248,12 +241,12 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     adminQueueInited = 0;
 
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
-    arbitrator.createAdminCQ(registers.adminCQueueBaseAddress, entrySize,
-                             eventQueueInit);
+    controllerData.arbitrator->createAdminCQ(registers.adminCQueueBaseAddress,
+                                             entrySize, eventQueueInit);
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
-    arbitrator.createAdminSQ(registers.adminSQueueBaseAddress, entrySize,
-                             eventQueueInit);
+    controllerData.arbitrator->createAdminSQ(registers.adminSQueueBaseAddress,
+                                             entrySize, eventQueueInit);
   }
 
   return 0;
@@ -281,7 +274,7 @@ void Controller::handleControllerConfig(uint32_t update) {
       registers.cs.rdy = 1;   // RDY = 1
       registers.cs.shst = 1;  // Shutdown processing occurring
 
-      arbitrator.reserveShutdown();
+      controllerData.arbitrator->reserveShutdown();
     }
   }
   if (((old >> 11) & 0x07) != registers.cc.ams) {
@@ -302,13 +295,13 @@ void Controller::handleControllerConfig(uint32_t update) {
       if (adminQueueCreated == 2) {
         registers.cs.rdy = 1;
 
-        arbitrator.enable(true);
+        controllerData.arbitrator->enable(true);
       }
     }
     else {
       registers.cs.rdy = 0;
 
-      arbitrator.enable(false);
+      controllerData.arbitrator->enable(false);
     }
   }
 }
@@ -322,9 +315,9 @@ void Controller::resetStatValues() noexcept {}
 void Controller::createCheckpoint(std::ostream &out) noexcept {
   AbstractController::createCheckpoint(out);
 
-  interruptManager.createCheckpoint(out);
-  arbitrator.createCheckpoint(out);
-  pcie->createCheckpoint(out);
+  controllerData.interruptManager->createCheckpoint(out);
+  controllerData.arbitrator->createCheckpoint(out);
+  ((FIFO *)controllerData.dma)->createCheckpoint(out);
 
   BACKUP_BLOB(out, registers.data, sizeof(RegisterTable));
   BACKUP_BLOB(out, pmrRegisters.data, sizeof(PersistentMemoryRegion));
@@ -339,9 +332,9 @@ void Controller::createCheckpoint(std::ostream &out) noexcept {
 void Controller::restoreCheckpoint(std::istream &in) noexcept {
   AbstractController::restoreCheckpoint(in);
 
-  interruptManager.restoreCheckpoint(in);
-  arbitrator.restoreCheckpoint(in);
-  pcie->restoreCheckpoint(in);
+  controllerData.interruptManager->restoreCheckpoint(in);
+  controllerData.arbitrator->restoreCheckpoint(in);
+  ((FIFO *)controllerData.dma)->restoreCheckpoint(in);
 
   RESTORE_BLOB(in, registers.data, sizeof(RegisterTable));
   RESTORE_BLOB(in, pmrRegisters.data, sizeof(PersistentMemoryRegion));
