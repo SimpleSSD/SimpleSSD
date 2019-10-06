@@ -29,8 +29,7 @@ class SimpleSSD {
  private:
   bool inited;  //!< Flag whether this object is initialized
 
-  ConfigReader *config;  //!< Config object provided by simulation system
-  Engine *engine;        //!< Engine object provided by simulation system
+  ObjectData object;
   Log log;               //!< Log system
 
   AbstractSubsystem *subsystem;  //!< NVM Subsystem

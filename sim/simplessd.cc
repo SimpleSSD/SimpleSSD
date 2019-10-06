@@ -9,6 +9,8 @@
 
 #include <iostream>
 
+#include "hil/nvme/subsystem.hh"
+
 #define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
 #define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
 
@@ -17,8 +19,6 @@ namespace SimpleSSD {
 //! SimpleSSD constructor
 SimpleSSD::SimpleSSD()
     : inited(false),
-      config(nullptr),
-      engine(nullptr),
       subsystem(nullptr),
       outfile(nullptr),
       errfile(nullptr),
@@ -104,29 +104,29 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
  * \return Initialization result.
  */
 bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
-  engine = e;
-  config = c;
+  object.engine = e;
+  object.config = c;
+  object.log = &log;
 
   // Open file streams
-  auto prefix =
-      config->readString(Section::Simulation, Config::OutputDirectory);
-  auto outpath = config->readString(Section::Simulation, Config::OutputFile);
-  auto errpath = config->readString(Section::Simulation, Config::ErrorFile);
-  auto debugpath = config->readString(Section::Simulation, Config::DebugFile);
+  auto prefix = c->readString(Section::Simulation, Config::OutputDirectory);
+  auto outpath = c->readString(Section::Simulation, Config::OutputFile);
+  auto errpath = c->readString(Section::Simulation, Config::ErrorFile);
+  auto debugpath = c->readString(Section::Simulation, Config::DebugFile);
   auto mode =
-      (Config::Mode)config->readUint(Section::Simulation, Config::Controller);
+      (Config::Mode)c->readUint(Section::Simulation, Config::Controller);
 
   outfile = openStream(prefix, outpath);
   errfile = openStream(prefix, errpath);
   debugfile = openStream(prefix, debugpath);
 
   // Initialize log system
-  log.init(engine, outfile, errfile, debugfile);
+  log.init(e, outfile, errfile, debugfile);
 
   // Initialize objects
   switch (mode) {
     case Config::Mode::NVMe:
-      // pHIL = ;
+      subsystem = new HIL::NVMe::Subsystem(object);
       break;
     default:
       std::cerr << "Invalid controller selected." << std::endl;
@@ -202,13 +202,13 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
   }
 
   // Checkpointing current configuration
-  config->writeString(Section::Simulation, Config::Key::CheckpointFile,
-                      cpt_file);
-  config->save(cpt_config);
+  object.config->writeString(Section::Simulation, Config::Key::CheckpointFile,
+                             cpt_file);
+  object.config->save(cpt_config);
 
   // Checkpointing this
   // TODO: WRITE VERSION HERE!
-  engine->createCheckpoint(file);
+  object.engine->createCheckpoint(file);
 
   // Checkpoint chain begins here
   subsystem->createCheckpoint(file);
@@ -221,7 +221,7 @@ void SimpleSSD::restoreCheckpoint(Engine *e, ConfigReader *c) noexcept {
   init(e, c);
 
   auto cpt_file =
-      config->readString(Section::Simulation, Config::Key::CheckpointFile);
+      c->readString(Section::Simulation, Config::Key::CheckpointFile);
 
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);
@@ -234,7 +234,7 @@ void SimpleSSD::restoreCheckpoint(Engine *e, ConfigReader *c) noexcept {
 
   // Restore this
   // TODO: CHECK VERSION HERE!
-  engine->restoreCheckpoint(file);
+  object.engine->restoreCheckpoint(file);
 
   // Restore chain begins here
   subsystem->restoreCheckpoint(file);
