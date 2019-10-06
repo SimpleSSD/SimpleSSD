@@ -40,6 +40,8 @@ class AbstractController : public Object {
   AbstractController &operator=(const AbstractController &) = delete;
   AbstractController &operator=(AbstractController &&) noexcept = default;
 
+  ControllerID getControllerID() { return controllerID; }
+
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
 

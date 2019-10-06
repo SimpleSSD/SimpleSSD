@@ -155,13 +155,13 @@ enum class LogPageID : uint8_t {
 };
 
 enum class IdentifyStructure : uint8_t {
-  IdentifyNamespace,   //!< For specified NSID or common namespace capabilities
-  IdentifyController,  //!< For controller processing the command
+  Namespace,   //!< For specified NSID or common namespace capabilities
+  Controller,  //!< For controller processing the command
   ActiveNamespaceList,
   NamespaceIdentificationDescriptorList,  //!< For specified NSID
   NVMSetList,
   AllocatedNamespaceList = 0x10,
-  IdentifyAllocatedNamespace,
+  AllocatedNamespace,
   AttachedControllerList,  //!< For specified NSID
   ControllerList,          //!< For NVM Subsystem
   PrimaryControllerCapabilities,

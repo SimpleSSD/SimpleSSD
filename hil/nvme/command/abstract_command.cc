@@ -47,6 +47,8 @@ void Command::createDMAEngine(uint64_t size, Event eid) {
 }
 
 CQContext *Command::getResult() {
+  panic_if(!cqc, "Response not created.");
+
   return cqc;
 }
 
