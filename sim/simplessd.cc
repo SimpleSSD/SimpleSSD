@@ -134,7 +134,8 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
       abort();
   }
 
-  // Create Subsystem
+  // Initialize Subsystem
+  subsystem->init();
 
   inited = true;
 
