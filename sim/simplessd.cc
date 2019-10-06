@@ -207,7 +207,12 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
   object.config->save(cpt_config);
 
   // Checkpointing this
-  // TODO: WRITE VERSION HERE!
+  std::string version(SIMPLESSD_FULL);
+  uint64_t size = version.size();
+
+  BACKUP_SCALAR(file, size);
+  BACKUP_BLOB(file, version.c_str(), size);
+
   object.engine->createCheckpoint(file);
 
   // Checkpoint chain begins here
@@ -233,7 +238,21 @@ void SimpleSSD::restoreCheckpoint(Engine *e, ConfigReader *c) noexcept {
   }
 
   // Restore this
-  // TODO: CHECK VERSION HERE!
+  uint64_t size;
+  std::string version;
+
+  RESTORE_SCALAR(file, size);
+
+  version.resize(size);
+
+  RESTORE_BLOB(file, version.c_str(), size);
+
+  if (version.compare(SIMPLESSD_FULL) != 0) {
+    std::cerr << "Version does not match." << std::endl;
+    std::cerr << " Checkpoint file: " << version << std::endl;
+    std::cerr << " Program version: " SIMPLESSD_FULL << std::endl;
+  }
+
   object.engine->restoreCheckpoint(file);
 
   // Restore chain begins here
