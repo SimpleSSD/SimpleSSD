@@ -69,6 +69,21 @@ uint64_t HIL<LPN, T>::getLPNSize() {
   return 0;
 }
 
+HIL_TEMPLATE
+void HIL<LPN, T>::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+HIL_TEMPLATE
+void HIL<LPN, T>::getStatValues(std::vector<double> &) noexcept {}
+
+HIL_TEMPLATE
+void HIL<LPN, T>::resetStatValues() noexcept {}
+
+HIL_TEMPLATE
+void HIL<LPN, T>::createCheckpoint(std::ostream &) noexcept {}
+
+HIL_TEMPLATE
+void HIL<LPN, T>::restoreCheckpoint(std::istream &) noexcept {}
+
 }  // namespace SimpleSSD::HIL
 
 #endif
