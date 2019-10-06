@@ -218,8 +218,8 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   }
 }
 
-void Subsystem::complete(uint16_t cid) {
-  auto command = (Command *)ongoingCommands.find(cid);
+void Subsystem::complete(uint64_t uid) {
+  auto command = (Command *)ongoingCommands.find(uid);
 
   panic_if(!command, "Command not exists.");
 
@@ -229,7 +229,7 @@ void Subsystem::complete(uint16_t cid) {
 
   // Erase
   delete command;
-  ongoingCommands.erase(cid);
+  ongoingCommands.erase(uid);
 }
 
 void Subsystem::init() {

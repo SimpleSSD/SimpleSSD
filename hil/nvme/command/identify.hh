@@ -12,6 +12,7 @@
 
 #include "hil/nvme/command/abstract_command.hh"
 #include "hil/nvme/def.hh"
+#include "sim/abstract_subsystem.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 

@@ -23,6 +23,7 @@ namespace SimpleSSD::HIL::NVMe {
 
 class ControllerData;
 class Command;
+class SQContext;
 
 class Subsystem : public AbstractSubsystem {
  protected:
@@ -53,7 +54,7 @@ class Subsystem : public AbstractSubsystem {
   virtual ~Subsystem();
 
   void triggerDispatch(ControllerData &, uint64_t);
-  void complete(uint16_t);
+  void complete(uint64_t);
 
   void init() override;
 
