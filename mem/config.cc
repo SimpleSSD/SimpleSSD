@@ -331,7 +331,7 @@ void Config::update() {
   panic_if(sram.latency == 0, "Invalid latency");
 
   if (sram.size > 0) {
-    panic_if(sram.lineSize % sram.size != 0, "Size not aligned");
+    panic_if(sram.size % sram.lineSize != 0, "Size not aligned");
   }
 }
 

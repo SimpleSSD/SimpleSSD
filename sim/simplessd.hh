@@ -40,7 +40,7 @@ class SimpleSSD {
   std::ostream *debugfile;
 
   void joinPath(std::string &, std::string) noexcept;
-  void openStream(std::ostream *, std::string &, std::string &) noexcept;
+  std::ostream *openStream(std::string &, std::string &) noexcept;
 
  public:
   SimpleSSD();

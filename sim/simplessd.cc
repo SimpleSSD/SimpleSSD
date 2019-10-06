@@ -61,8 +61,10 @@ void SimpleSSD::joinPath(std::string &prefix, std::string path) noexcept {
  * \param[in]  prefix First path string (directory path)
  * \param[in]  path   Second path string (file name)
  */
-void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
-                           std::string &path) noexcept {
+std::ostream *SimpleSSD::openStream(std::string &prefix,
+                                    std::string &path) noexcept {
+  std::ostream *os = nullptr;
+
   // Check path is FILE_STDOUT or FILE_STDERR
   if (path.compare(FILE_STDOUT) == 0) {
     std::streambuf *sb = std::cout.rdbuf();
@@ -86,6 +88,8 @@ void SimpleSSD::openStream(std::ostream *os, std::string &prefix,
       abort();
     }
   }
+
+  return os;
 }
 
 /**
@@ -112,9 +116,9 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   auto mode =
       (Config::Mode)config->readUint(Section::Simulation, Config::Controller);
 
-  openStream(outfile, prefix, outpath);
-  openStream(errfile, prefix, errpath);
-  openStream(debugfile, prefix, debugpath);
+  outfile = openStream(prefix, outpath);
+  errfile = openStream(prefix, errpath);
+  debugfile = openStream(prefix, debugpath);
 
   // Initialize log system
   log.init(engine, outfile, errfile, debugfile);
