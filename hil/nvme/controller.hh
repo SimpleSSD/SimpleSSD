@@ -18,6 +18,7 @@
 namespace SimpleSSD::HIL::NVMe {
 
 class Subsystem;
+class Controller;
 
 class ControllerData {
  public:

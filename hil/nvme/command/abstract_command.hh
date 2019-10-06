@@ -12,15 +12,19 @@
 
 #include <queue>
 
+#include "hil/nvme/dma_engine.hh"
+#include "sim/interface.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 class Subsystem;
 class Controller;
+class Arbitrator;
 class InterruptManager;
 class SQContext;
-class DMAEngine;
+class CQContext;
+class ControllerData;
 
 class CommandData {
  public:

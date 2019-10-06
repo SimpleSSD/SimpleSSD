@@ -276,7 +276,7 @@ uint64_t MemDisk::open(std::string, uint64_t size, uint32_t lbaSize) noexcept {
   return size;
 }
 
-void MemDisk::close() {
+void MemDisk::close() noexcept {
   table.clear();
 }
 

@@ -102,7 +102,7 @@ void CPU::Core::handleJob() {
 void CPU::Core::jobDone() {
   auto &iter = jobs.front();
 
-  engine->schedule(iter.eid, engine->getTick);
+  engine->schedule(iter.eid, engine->getTick());
 
   stat.busy += iter.inst->latency;
   stat.instStat += *iter.inst;
