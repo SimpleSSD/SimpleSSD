@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __UTIL_SCHEDULER_HH__
-#define __UTIL_SCHEDULER_HH__
+#ifndef __SIMPLESSD_UTIL_SCHEDULER_HH__
+#define __SIMPLESSD_UTIL_SCHEDULER_HH__
 
 #include <queue>
 

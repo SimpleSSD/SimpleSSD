@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_CONVERT_HH__
-#define __HIL_CONVERT_HH__
+#ifndef __SIMPLESSD_HIL_CONVERT_HH__
+#define __SIMPLESSD_HIL_CONVERT_HH__
 
 #include <cinttypes>
 #include <functional>

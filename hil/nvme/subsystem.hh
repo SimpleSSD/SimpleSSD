@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_NVME_SUBSYSTEM_HH__
-#define __HIL_NVME_SUBSYSTEM_HH__
+#ifndef __SIMPLESSD_HIL_NVME_SUBSYSTEM_HH__
+#define __SIMPLESSD_HIL_NVME_SUBSYSTEM_HH__
 
 #include <map>
 #include <variant>

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __MEM_SRAM_SRAM_HH__
-#define __MEM_SRAM_SRAM_HH__
+#ifndef __SIMPLESSD_MEM_SRAM_SRAM_HH__
+#define __SIMPLESSD_MEM_SRAM_SRAM_HH__
 
 #include "mem/sram/abstract_sram.hh"
 #include "util/scheduler.hh"

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __CPU_CONFIG_HH__
-#define __CPU_CONFIG_HH__
+#ifndef __SIMPLESSD_CPU_CONFIG_HH__
+#define __SIMPLESSD_CPU_CONFIG_HH__
 
 #include "sim/base_config.hh"
 

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __UTIL_DISK__
-#define __UTIL_DISK__
+#ifndef __SIMPLESSD_UTIL_DISK__
+#define __SIMPLESSD_UTIL_DISK__
 
 #include <cinttypes>
 #include <fstream>

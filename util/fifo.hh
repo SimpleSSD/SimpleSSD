@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __UTIL_FIFO__
-#define __UTIL_FIFO__
+#ifndef __SIMPLESSD_UTIL_FIFO__
+#define __SIMPLESSD_UTIL_FIFO__
 
 #include <list>
 #include <queue>

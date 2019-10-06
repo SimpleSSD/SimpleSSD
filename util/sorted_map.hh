@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __UTIL_SORTED_MAP_HH__
-#define __UTIL_SORTED_MAP_HH__
+#ifndef __SIMPLESSD_UTIL_SORTED_MAP_HH__
+#define __SIMPLESSD_UTIL_SORTED_MAP_HH__
 
 #include <functional>
 #include <unordered_map>

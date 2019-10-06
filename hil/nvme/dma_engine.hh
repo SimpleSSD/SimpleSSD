@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_NVME_DMA_ENGINE_HH__
-#define __HIL_NVME_DMA_ENGINE_HH__
+#ifndef __SIMPLESSD_HIL_NVME_DMA_ENGINE_HH__
+#define __SIMPLESSD_HIL_NVME_DMA_ENGINE_HH__
 
 #include <vector>
 

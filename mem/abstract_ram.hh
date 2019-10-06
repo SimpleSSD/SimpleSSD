@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __MEM_ABSTRACT_RAM__
-#define __MEM_ABSTRACT_RAM__
+#ifndef __SIMPLESSD_MEM_ABSTRACT_RAM__
+#define __SIMPLESSD_MEM_ABSTRACT_RAM__
 
 #include "sim/object.hh"
 

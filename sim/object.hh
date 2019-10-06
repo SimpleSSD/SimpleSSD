@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_OBJECT_HH__
-#define __SIM_OBJECT_HH__
+#ifndef __SIMPLESSD_SIM_OBJECT_HH__
+#define __SIMPLESSD_SIM_OBJECT_HH__
 
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"

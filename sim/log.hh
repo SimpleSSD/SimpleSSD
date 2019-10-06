@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_log_HH__
-#define __SIM_log_HH__
+#ifndef __SIMPLESSD_SIM_LOG_HH__
+#define __SIMPLESSD_SIM_LOG_HH__
 
 #include <cinttypes>
 #include <cstdarg>

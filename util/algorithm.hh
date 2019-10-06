@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __UTIL_ALGORITHM__
-#define __UTIL_ALGORITHM__
+#ifndef __SIMPLESSD_UTIL_ALGORITHM__
+#define __SIMPLESSD_UTIL_ALGORITHM__
 
 #include <cinttypes>
 #include <climits>

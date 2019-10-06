@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_ABSTRACT_CONTROLLER_HH__
-#define __SIM_ABSTRACT_CONTROLLER_HH__
+#ifndef __SIMPLESSD_SIM_ABSTRACT_CONTROLLER_HH__
+#define __SIMPLESSD_SIM_ABSTRACT_CONTROLLER_HH__
 
 #include "sim/abstract_subsystem.hh"
 #include "sim/interface.hh"

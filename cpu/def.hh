@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __CPU_DEF__
-#define __CPU_DEF__
+#ifndef __SIMPLESSD_CPU_DEF__
+#define __SIMPLESSD_CPU_DEF__
 
 #include <cinttypes>
 

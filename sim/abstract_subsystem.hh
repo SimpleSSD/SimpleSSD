@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_ABSTRACT_SUBSYSTEM_HH__
-#define __SIM_ABSTRACT_SUBSYSTEM_HH__
+#ifndef __SIMPLESSD_SIM_ABSTRACT_SUBSYSTEM_HH__
+#define __SIMPLESSD_SIM_ABSTRACT_SUBSYSTEM_HH__
 
 #include <map>
 #include <set>

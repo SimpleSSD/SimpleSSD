@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_SIMPLESSD_HH__
-#define __SIM_SIMPLESSD_HH__
+#ifndef __SIMPLESSD_SIM_SIMPLESSD_HH__
+#define __SIMPLESSD_SIM_SIMPLESSD_HH__
 
 #include "sim/abstract_controller.hh"
 #include "sim/config_reader.hh"

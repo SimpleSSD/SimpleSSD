@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_ENGINE_HH__
-#define __SIM_ENGINE_HH__
+#ifndef __SIMPLESSD_SIM_ENGINE_HH__
+#define __SIMPLESSD_SIM_ENGINE_HH__
 
 #include <string>
 

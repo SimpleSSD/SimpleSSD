@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_NVME_QUEUE_HH__
-#define __HIL_NVME_QUEUE_HH__
+#ifndef __SIMPLESSD_SIMPLESSD_HIL_NVME_QUEUE_HH__
+#define __SIMPLESSD_SIMPLESSD_HIL_NVME_QUEUE_HH__
 
 #include <cinttypes>
 

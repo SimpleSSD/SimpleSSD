@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_COMMON_DMA_ENGINE_HH__
-#define __HIL_COMMON_DMA_ENGINE_HH__
+#ifndef __SIMPLESSD_HIL_COMMON_DMA_ENGINE_HH__
+#define __SIMPLESSD_HIL_COMMON_DMA_ENGINE_HH__
 
 #include "sim/interface.hh"
 #include "sim/object.hh"

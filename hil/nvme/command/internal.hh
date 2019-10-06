@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_NVME_COMMAND_INTERNAL_HH__
-#define __HIL_NVME_COMMAND_INTERNAL_HH__
+#ifndef __SIMPLESSD_HIL_NVME_COMMAND_INTERNAL_HH__
+#define __SIMPLESSD_HIL_NVME_COMMAND_INTERNAL_HH__
 
 #include "hil/common/interrupt_manager.hh"
 #include "hil/nvme/controller.hh"

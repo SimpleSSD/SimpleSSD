@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __HIL_NVME_CONTROLLER_HH__
-#define __HIL_NVME_CONTROLLER_HH__
+#ifndef __SIMPLESSD_HIL_NVME_CONTROLLER_HH__
+#define __SIMPLESSD_HIL_NVME_CONTROLLER_HH__
 
 #include "hil/common/interrupt_manager.hh"
 #include "hil/nvme/queue_arbitrator.hh"

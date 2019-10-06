@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIM_BASE_CONFIG_HH__
-#define __SIM_BASE_CONFIG_HH__
+#ifndef __SIMPLESSD_SIM_BASE_CONFIG_HH__
+#define __SIMPLESSD_SIM_BASE_CONFIG_HH__
 
 #include <cinttypes>
 #include <cstring>
