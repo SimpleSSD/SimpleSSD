@@ -33,7 +33,7 @@ class ChangedNamespaceList : public Object {
   ChangedNamespaceList &operator=(ChangedNamespaceList &&) noexcept = default;
 
   void appendList(uint32_t);
-  void makeResponse(uint8_t *, uint64_t);
+  void makeResponse(uint64_t, uint64_t, uint8_t *);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

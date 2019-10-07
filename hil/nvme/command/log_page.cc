@@ -27,9 +27,12 @@ void ChangedNamespaceList::appendList(uint32_t nsid) {
   }
 }
 
-void ChangedNamespaceList::makeResponse(uint8_t *buffer, uint64_t limit) {
+void ChangedNamespaceList::makeResponse(uint64_t offset, uint64_t length,
+                                        uint8_t *buffer) {
+  uint64_t limit = offset + length;
+
   if (UNLIKELY(overflowed)) {
-    if (limit >= 4) {
+    if (offset == 0 && limit >= 4) {
       *(uint32_t *)buffer = NSID_ALL;
     }
   }
@@ -39,7 +42,10 @@ void ChangedNamespaceList::makeResponse(uint8_t *buffer, uint64_t limit) {
 
     for (uint64_t i = 0; i < limit; i += 4) {
       if (iter != list.end()) {
-        *(uint32_t *)(buffer + i) = *iter;
+        if (i >= offset) {
+          *(uint32_t *)(buffer + i - offset) = *iter;
+        }
+
         ++iter;
       }
     }
