@@ -21,34 +21,39 @@ HIL<LPN, T>::~HIL() {}
 
 HIL_TEMPLATE
 void HIL<LPN, T>::readPages(LPN /* offset */, LPN /* length */,
-                            uint8_t * /* buffer */, Event /* eid */) {
+                            uint8_t * /* buffer */, Event eid) {
   // TODO: bypass command to ICL
+  schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::writePages(LPN /* offset */, LPN /* length */,
                              uint8_t * /* buffer */,
                              std::pair<uint32_t, uint32_t> /* unwritten */,
-                             Event /* eid */) {
+                             Event eid) {
   // TODO: bypass command to ICL
+  schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */,
-                             Event /* eid */) {
+                             Event eid) {
   // TODO: bypass command to ICL
+  schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */,
-                            Event /* eid */) {
+                            Event eid) {
   // TODO: bypass command to ICL
+  schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::formatPages(LPN /* offset */, LPN /* length */,
-                              FormatOption /* option */, Event /* eid */) {
+                              FormatOption /* option */, Event eid) {
   // TODO: bypass command to ICL
+  schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
@@ -60,13 +65,13 @@ LPN HIL<LPN, T>::getPageUsage(LPN /* offset */, LPN /* length */) {
 HIL_TEMPLATE
 LPN HIL<LPN, T>::getTotalPages() {
   // TODO: bypass command to ICL
-  return (LPN)0;
+  return (LPN)26214400‬;  // * 16K = 400G
 }
 
 HIL_TEMPLATE
 uint64_t HIL<LPN, T>::getLPNSize() {
   // TODO: bypass command to ICL
-  return 0;
+  return 16384;
 }
 
 HIL_TEMPLATE
