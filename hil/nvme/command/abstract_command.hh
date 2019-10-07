@@ -30,7 +30,7 @@ namespace SimpleSSD::HIL::NVMe {
 class Subsystem;
 class Controller;
 class Arbitrator;
-class InterruptManager;
+class ::SimpleSSD::HIL::InterruptManager;
 class SQContext;
 class CQContext;
 class ControllerData;
