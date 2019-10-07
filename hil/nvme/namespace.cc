@@ -21,8 +21,8 @@ NamespaceInformation::NamespaceInformation()
       lbaFormatIndex(0),
       dataProtectionSettings(0),
       namespaceSharingCapabilities(0),
-      nvmSetIdentifier(0),
       anaGroupIdentifier(0),
+      nvmSetIdentifier(0),
       lbaSize(0),
       namespaceRange(0, 0) {}
 
