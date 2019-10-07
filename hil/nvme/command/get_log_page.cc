@@ -45,10 +45,10 @@ void GetLogPage::setRequest(SQContext *req) {
 
   // Get parameters
   uint16_t numdl = entry->dword10 >> 16;
-  bool rae = (entry->dword10 & 0x00008000) != 0;
-  uint8_t lsp = (entry->dword10 >> 8) & 0x0F;
+  // bool rae = (entry->dword10 & 0x00008000) != 0;
+  // uint8_t lsp = (entry->dword10 >> 8) & 0x0F;
   uint16_t lid = entry->dword10 & 0xFF;
-  uint16_t lsi = entry->dword11 >> 16;
+  // uint16_t lsi = entry->dword11 >> 16;
   uint16_t numdu = entry->dword11 & 0xFFFF;
   uint32_t lopl = entry->dword12;
   uint32_t lopu = entry->dword13;
