@@ -12,7 +12,7 @@
 
 #include <array>
 
-#include "hil/nvme/command/abstract_command.hh"
+#include "sim/object.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
