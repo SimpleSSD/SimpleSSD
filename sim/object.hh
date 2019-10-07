@@ -122,6 +122,22 @@ class Object {
   inline bool readConfigBoolean(Section s, uint32_t k) noexcept {
     return object.config->readBoolean(s, k);
   }
+  inline bool writeConfigInt(Section s, uint32_t k, int64_t v) noexcept {
+    return object.config->writeInt(s, k, v);
+  }
+  inline bool writeConfigUint(Section s, uint32_t k, uint64_t v) noexcept {
+    return object.config->writeUint(s, k, v);
+  }
+  inline bool writeConfigFloat(Section s, uint32_t k, float v) noexcept {
+    return object.config->writeFloat(s, k, v);
+  }
+  inline bool writeConfigString(Section s, uint32_t k,
+                                std::string &v) noexcept {
+    return object.config->writeString(s, k, v);
+  }
+  inline bool writeConfigBoolean(Section s, uint32_t k, bool v) noexcept {
+    return object.config->writeBoolean(s, k, v);
+  }
 
   /* Helper APIs for Log */
   inline void info_log(const char *format, ...) noexcept {
