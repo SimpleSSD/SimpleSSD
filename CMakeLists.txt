@@ -143,6 +143,7 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/delete_cq.cc
   hil/nvme/command/create_cq.cc
   hil/nvme/command/identify.cc
+  hil/nvme/command/abort.cc
   hil/nvme/command/set_feature.cc
   hil/nvme/command/get_feature.cc
 )

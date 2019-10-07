@@ -188,7 +188,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::Identify:
         return new Identify(object, this, cdata);
       case AdminCommand::Abort:
-        return nullptr;
+        return new Abort(object, this, cdata);
       case AdminCommand::SetFeatures:
         return new SetFeature(object, this, cdata);
       case AdminCommand::GetFeatures:
