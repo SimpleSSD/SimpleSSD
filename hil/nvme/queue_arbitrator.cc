@@ -508,7 +508,7 @@ void Arbitrator::abort_SQDone() {
 
   // Check completion queue
   for (auto iter = completionQueue.begin(); iter != completionQueue.end();
-       iter++) {
+       ++iter) {
     auto id = (*iter)->getSQID();
 
     auto count = countList.emplace(std::make_pair(id, 0));

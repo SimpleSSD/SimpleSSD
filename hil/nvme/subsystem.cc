@@ -94,7 +94,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
         next = iter;
       }
       else {
-        iter++;
+        ++iter;
       }
     }
   }
@@ -119,7 +119,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
   }
 
   // Allocated unallocated area to namespace
-  for (auto iter = unallocated.begin(); iter != unallocated.end(); iter++) {
+  for (auto iter = unallocated.begin(); iter != unallocated.end(); ++iter) {
     if (iter->second >= requestedLogicalPages) {
       info->namespaceRange = *iter;
       info->namespaceRange.second = requestedLogicalPages;

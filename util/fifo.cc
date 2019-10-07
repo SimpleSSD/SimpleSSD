@@ -160,7 +160,7 @@ FIFO::~FIFO() {}
 std::list<ReadEntry>::iterator FIFO::find(uint64_t id) {
   auto iter = readCompletion.begin();
 
-  for (; iter != readCompletion.end(); iter++) {
+  for (; iter != readCompletion.end(); ++iter) {
     if (iter->id == id) {
       break;
     }
