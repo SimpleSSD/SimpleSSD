@@ -310,6 +310,16 @@ void Arbitrator::applyArbitrationData() {
                   param.mpw + 1);
 }
 
+void Arbitrator::requestIOQueues(uint16_t &nsq, uint16_t &ncq) {
+  // Both values are zero-based
+  if (nsq + 2 > sqSize) {
+    nsq = sqSize - 2;
+  }
+  if (ncq + 2 > cqSize) {
+    ncq = cqSize - 2;
+  }
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
   auto cq = cqList[cqe->getCQID()];
 

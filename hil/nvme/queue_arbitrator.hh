@@ -179,6 +179,7 @@ class Arbitrator : public Object {
   // Command
   ArbitrationData *getArbitrationData();
   void applyArbitrationData();
+  void requestIOQueues(uint16_t &, uint16_t &);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

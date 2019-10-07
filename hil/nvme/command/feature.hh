@@ -49,13 +49,13 @@ class Feature : public Object {
 
   // 06h O Volatile Write Cache -> data.subsystem
   // 07h M Number of Queues -> data.arbitrator
-  union NumberOfQueues {
+  union {
     uint32_t data;
     struct {
       uint16_t nsq;  // Number of I/O Submission Queues
       uint16_t ncq;  // Number of I/O Completion Queues
     };
-  };
+  } noq;
 
   // 08h M Interrupt Coalescing -> data.interrupt
   union InterruptCoalescing {

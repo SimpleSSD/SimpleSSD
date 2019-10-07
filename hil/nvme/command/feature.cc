@@ -32,6 +32,7 @@ void Feature::resetStatValues() noexcept {}
 void Feature::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, pm.data);
   BACKUP_SCALAR(out, er.data);
+  BACKUP_SCALAR(out, noq.data);
   BACKUP_SCALAR(out, wan);
   BACKUP_SCALAR(out, aec.data);
   BACKUP_BLOB(out, overThresholdList.data(), 9);
@@ -41,6 +42,7 @@ void Feature::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, pm.data);
   RESTORE_SCALAR(in, er.data);
+  RESTORE_SCALAR(in, noq.data);
   RESTORE_SCALAR(in, wan);
   RESTORE_SCALAR(in, aec.data);
   RESTORE_BLOB(in, overThresholdList.data(), 9)
