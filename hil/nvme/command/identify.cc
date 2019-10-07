@@ -130,9 +130,13 @@ void Identify::makeNamespaceList(uint32_t nsid, bool force) {
     else {
       auto ctrlID = data.controller->getControllerID();
       auto attachList = data.subsystem->getAttachment(ctrlID);
-      auto nslist = attachList->equal_range(ctrlID);
 
-      for (auto &iter = nslist.first; iter != nslist.second; ++iter) {
+      // No list
+      if (attachList == nullptr) {
+        return;
+      }
+
+      for (auto iter = attachList->begin(); iter != attachList->end(); ++iter) {
         ((uint32_t *)buffer)[idx++] = *iter;
       }
     }
