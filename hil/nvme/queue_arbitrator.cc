@@ -288,6 +288,28 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
   debugprint_ctrl("SQ 0    | CREATE | Entry size %d", size);
 }
 
+ArbitrationData *Arbitrator::getArbitrationData() {
+  return &param;
+}
+
+void Arbitrator::applyArbitrationData() {
+  // Ignore unlimited burst
+  if (param.ab >= 7) {
+    param.ab = 7;
+  }
+
+  // Update queue size
+  internalQueueSize = 1ull << param.ab;
+
+  // Update config
+  writeConfigUint(Section::HostInterface, Config::Key::RequestQueueSize,
+                  internalQueueSize);
+  writeConfigUint(Section::HostInterface, Config::Key::NVMeWRRHigh,
+                  param.hpw + 1);
+  writeConfigUint(Section::HostInterface, Config::Key::NVMeWRRMedium,
+                  param.mpw + 1);
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
   auto cq = cqList[cqe->getCQID()];
 

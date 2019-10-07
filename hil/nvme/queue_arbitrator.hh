@@ -164,6 +164,9 @@ class Arbitrator : public Object {
   Arbitrator(ObjectData &, ControllerData *);
   ~Arbitrator();
 
+  SQContext *dispatch();
+  void complete(CQContext *, bool = false);
+
   // Register
   void enable(bool);
   void setMode(Arbitration);
@@ -174,8 +177,8 @@ class Arbitrator : public Object {
   void createAdminCQ(uint64_t, uint16_t, Event);
 
   // Command
-  SQContext *dispatch();
-  void complete(CQContext *, bool = false);
+  ArbitrationData *getArbitrationData();
+  void applyArbitrationData();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
