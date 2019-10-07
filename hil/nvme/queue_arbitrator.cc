@@ -401,25 +401,6 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
     }
   }
 
-  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();) {
-    auto entry = (SQContext *)iter.getValue();
-
-    panic_if(!entry, "Corrupted dispatch queue.");
-
-    if (entry->getSQID() == id) {
-      // Mark abort to prevent duplicated completion
-      entry->abort();
-
-      // Abort command
-      abortCommand(entry, GenericCommandStatusCode::Abort_SQDeletion);
-
-      // MUST NOT DELETE AND FREE ENTRY
-    }
-    else {
-      ++iter;
-    }
-  }
-
   // Push current event to wait all aborted commands to complete
   abortSQList.emplace(std::make_pair(id, eid));
 
@@ -517,6 +498,15 @@ void Arbitrator::abort_SQDone() {
   std::map<uint16_t, uint32_t> countList;
 
   // Check pending queue
+  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
+       ++iter) {
+    auto id = ((SQContext *)iter.getValue())->getSQID();
+
+    auto count = countList.emplace(std::make_pair(id, 0));
+    count.first->second++;
+  }
+
+  // Check completion queue
   for (auto iter = completionQueue.begin(); iter != completionQueue.end();
        iter++) {
     auto id = (*iter)->getSQID();
