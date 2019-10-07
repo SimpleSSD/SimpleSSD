@@ -45,7 +45,7 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.dma = nullptr;
   controllerData.interruptManager = nullptr;
   controllerData.arbitrator = nullptr;
-  controllerData.memoryPageSize = 0;
+  controllerData.memoryPageSize = 1ull << 12;  // Initial value in NVMe
 
   // Initialize FIFO queues
   auto axiWidth = (ARM::AXI::Width)readConfigUint(Section::HostInterface,
