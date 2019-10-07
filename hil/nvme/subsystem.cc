@@ -176,15 +176,15 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
   if (isAdmin) {
     switch ((AdminCommand)opcode) {
       case AdminCommand::DeleteIOSQ:
-        return nullptr;
+        return new DeleteSQ(object, this, cdata);
       case AdminCommand::CreateIOSQ:
-        return nullptr;
+        return new CreateSQ(object, this, cdata);
       case AdminCommand::GetLogPage:
         return nullptr;
       case AdminCommand::DeleteIOCQ:
-        return nullptr;
+        return new DeleteCQ(object, this, cdata);
       case AdminCommand::CreateIOCQ:
-        return nullptr;
+        return new CreateCQ(object, this, cdata);
       case AdminCommand::Identify:
         return new Identify(object, this, cdata);
       case AdminCommand::Abort:
@@ -452,7 +452,8 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   size = ongoingCommands.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto iter = ongoingCommands.begin(); iter != ongoingCommands.end(); ++iter) {
+  for (auto iter = ongoingCommands.begin(); iter != ongoingCommands.end();
+       ++iter) {
     auto entry = (Command *)iter.getValue();
 
     uint64_t uid = entry->getUniqueID();

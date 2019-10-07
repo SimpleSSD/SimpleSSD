@@ -13,5 +13,9 @@
 #include "hil/nvme/command/identify.hh"
 #include "hil/nvme/command/get_feature.hh"
 #include "hil/nvme/command/set_feature.hh"
+#include "hil/nvme/command/create_cq.hh"
+#include "hil/nvme/command/create_sq.hh"
+#include "hil/nvme/command/delete_cq.hh"
+#include "hil/nvme/command/delete_sq.hh"
 
 #endif
