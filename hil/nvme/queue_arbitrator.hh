@@ -34,7 +34,6 @@ class SQContext {
   uint16_t sqHead;
 
   bool useSGL;
-  bool aborted;
   bool dispatched;
   bool completed;
 
@@ -53,10 +52,6 @@ class SQContext {
   uint16_t getSQID() noexcept;
   uint16_t getCQID() noexcept;
   bool isSGL() noexcept;
-  bool isAbort() noexcept;
-
-  // Setter
-  void abort() noexcept;
 };
 
 class CQContext {
@@ -145,8 +140,10 @@ class Arbitrator : public Object {
 
   // Abort
   std::map<uint16_t, Event> abortSQList;
+  std::map<uint32_t, Event> abortCommandList;
 
   void abort_SQDone();
+  void abort_CommandDone(uint32_t);
 
   // Shutdown
   bool shutdownReserved;
@@ -192,6 +189,7 @@ class Arbitrator : public Object {
   uint8_t createIOCQ(uint64_t, uint16_t, uint16_t, uint16_t, bool, bool, Event);
   uint8_t deleteIOSQ(uint16_t, Event);
   uint8_t deleteIOCQ(uint16_t);
+  uint8_t abortCommand(uint16_t, uint16_t, Event);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

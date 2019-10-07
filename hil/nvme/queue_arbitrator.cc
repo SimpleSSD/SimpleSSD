@@ -23,7 +23,6 @@ SQContext::SQContext()
       cqID(0),
       sqHead(0),
       useSGL(false),
-      aborted(false),
       dispatched(false),
       completed(false) {}
 
@@ -62,14 +61,6 @@ uint16_t SQContext::getCQID() noexcept {
 
 bool SQContext::isSGL() noexcept {
   return useSGL;
-}
-
-bool SQContext::isAbort() noexcept {
-  return aborted;
-}
-
-void SQContext::abort() noexcept {
-  aborted = true;
 }
 
 CQContext::CQContext() : cqID(0) {}
@@ -433,8 +424,37 @@ uint8_t Arbitrator::deleteIOCQ(uint16_t id) {
   return 0;
 }
 
+uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid) {
+  uint32_t id = ((uint32_t)sqid << 16) | cid;
+
+  // Find command
+  auto iter = (SQContext *)requestQueue.find(id);
+
+  if (iter) {
+    // We have command and will aborted
+    abortCommand(iter, GenericCommandStatusCode::Abort_Requested);
+
+    requestQueue.erase(id);
+    delete iter;
+
+    abortCommandList.emplace(std::make_pair(id, eid));
+
+    return 0u;
+  }
+  else {
+    iter = (SQContext *)dispatchedQueue.find(id);
+
+    if (!iter) {
+      // No such command found (may be completed?)
+      return 1u;
+    }
+
+    // Pending command
+    return 2u;
+  }
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
-  bool aborted = false;
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
@@ -446,36 +466,30 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
     panic_if(!sqe, "Failed to find corresponding submission entry.");
     panic_if(!sqe->completed, "Corresponding submission entry not completed.");
 
-    aborted = sqe->aborted;
-
     // Remove SQContext
     dispatchedQueue.erase(sqe->commandID);
     delete sqe;
   }
 
-  if (UNLIKELY(aborted)) {
-    // CQ already submitted.
-    delete cqe;
-  }
-  else {
-    // Insert to completion queue
-    completionQueue.push_back(cqe);
+  // Insert to completion queue
+  completionQueue.push_back(cqe);
 
-    // Write entry to CQ
-    cq->setData(cqe->getData(), eventCompDone);
+  // Write entry to CQ
+  cq->setData(cqe->getData(), eventCompDone);
 
-    if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
-      // All pending requests are finished
-      controller->controller->shutdownComplete();
+  if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
+    // All pending requests are finished
+    controller->controller->shutdownComplete();
 
-      shutdownReserved = false;
-    }
+    shutdownReserved = false;
   }
 }
 
 void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
+
+  auto id = cqe->getID();
 
   completionQueue.pop_front();
 
@@ -488,6 +502,7 @@ void Arbitrator::completion_done() {
 
   // Pending abort events?
   abort_SQDone();
+  abort_CommandDone(id);
 }
 
 void Arbitrator::abort_SQDone() {
@@ -532,6 +547,21 @@ void Arbitrator::abort_SQDone() {
     else {
       ++iter;
     }
+  }
+}
+
+void Arbitrator::abort_CommandDone(uint32_t id) {
+  if (LIKELY(abortCommandList.size() == 0)) {
+    return;
+  }
+
+  auto iter = abortCommandList.find(id);
+
+  if (iter != abortCommandList.end()) {
+    // Aborted command finished
+    schedule(iter->second, getTick());
+
+    abortCommandList.erase(iter);
   }
 }
 
@@ -760,7 +790,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, entry->cqID);
     BACKUP_SCALAR(out, entry->sqHead);
     BACKUP_SCALAR(out, entry->useSGL);
-    BACKUP_SCALAR(out, entry->aborted);
     BACKUP_SCALAR(out, entry->dispatched);
     BACKUP_SCALAR(out, entry->completed);
   }
@@ -778,7 +807,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, entry->cqID);
     BACKUP_SCALAR(out, entry->sqHead);
     BACKUP_SCALAR(out, entry->useSGL);
-    BACKUP_SCALAR(out, entry->aborted);
     BACKUP_SCALAR(out, entry->dispatched);
     BACKUP_SCALAR(out, entry->completed);
   }
@@ -803,6 +831,14 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : abortSQList) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  size = abortCommandList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : abortCommandList) {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second);
   }
@@ -860,7 +896,6 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->cqID);
     RESTORE_SCALAR(in, iter->sqHead);
     RESTORE_SCALAR(in, iter->useSGL);
-    RESTORE_SCALAR(in, iter->aborted);
     RESTORE_SCALAR(in, iter->dispatched);
     RESTORE_SCALAR(in, iter->completed);
 
@@ -878,7 +913,6 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->cqID);
     RESTORE_SCALAR(in, iter->sqHead);
     RESTORE_SCALAR(in, iter->useSGL);
-    RESTORE_SCALAR(in, iter->aborted);
     RESTORE_SCALAR(in, iter->dispatched);
     RESTORE_SCALAR(in, iter->completed);
 
@@ -916,6 +950,18 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, eid);
 
     abortSQList.emplace(std::make_pair(id, eid));
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint32_t id;
+    Event eid;
+
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, eid);
+
+    abortCommandList.emplace(std::make_pair(id, eid));
   }
 }
 
