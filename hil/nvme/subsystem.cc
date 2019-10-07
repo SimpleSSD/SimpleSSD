@@ -363,6 +363,10 @@ uint64_t Subsystem::getAllocatedPages() const {
   return allocatedLogicalPages;
 }
 
+Feature *Subsystem::getFeature() {
+  return &feature;
+}
+
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Subsystem::getStatValues(std::vector<double> &) noexcept {}
