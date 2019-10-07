@@ -190,7 +190,7 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
 
   cq->setHead(head);
 
-  if (cq->getItemCount() == 0) {
+  if (cq->getItemCount() == 0 && cq->interruptEnabled()) {
     controller->interruptManager->postInterrupt(cq->getInterruptVector(),
                                                 false);
   }
@@ -298,7 +298,9 @@ void Arbitrator::completion_done() {
 
   completionQueue.pop();
 
-  controller->interruptManager->postInterrupt(cq->getInterruptVector(), true);
+  if (cq->interruptEnabled()) {
+    controller->interruptManager->postInterrupt(cq->getInterruptVector(), true);
+  }
 
   // Remove CQContext
   delete cqe;
