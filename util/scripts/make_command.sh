@@ -18,6 +18,19 @@ then
   exit 1
 fi
 
+GIT_NAME=$(git config --get user.name)
+GIT_EMAIL=$(git config --get user.email)
+
+if [ $? -ne 0 ]
+then
+  echo "Failed to query user information"
+
+  exit 1
+fi
+
+AUTHOR_STRING=$GIT_NAME" <"$GIT_EMAIL">"
+echo "Using Author: "$AUTHOR_STRING
+
 if [[ ! $1 =~ ^[a-z_]+$ ]]
 then
   echo "Invalid filename \""$1"\""
@@ -42,7 +55,7 @@ cat > $PREFIX"/"$HEADER_FILE << EOF
 /*
  * Copyright (C) 2019 CAMELab
  *
- * Author: Donghyun Gouk <kukdh1@camelab.org>
+ * Author: ${AUTHOR_STRING}
  */
 
 #pragma once
@@ -81,7 +94,7 @@ cat > $PREFIX"/"$SOURCE_FILE << EOF
 /*
  * Copyright (C) 2019 CAMELab
  *
- * Author: Donghyun Gouk <kukdh1@camelab.org>
+ * Author: ${AUTHOR_STRING}
  */
 
 #include "hil/nvme/command/${HEADER_FILE}"
