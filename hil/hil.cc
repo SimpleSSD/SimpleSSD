@@ -75,6 +75,17 @@ uint64_t HIL<LPN, T>::getLPNSize() {
 }
 
 HIL_TEMPLATE
+void HIL<LPN, T>::setCache(bool) {
+  // TODO: bypass command to ICL
+}
+
+HIL_TEMPLATE
+bool HIL<LPN, T>::getCache() {
+  // TODO: bypass command to ICL
+  return true;
+}
+
+HIL_TEMPLATE
 void HIL<LPN, T>::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 HIL_TEMPLATE

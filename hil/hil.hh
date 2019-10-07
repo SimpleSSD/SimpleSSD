@@ -130,6 +130,12 @@ class HIL : public Object {
   //! Get bytesize of one logical page.
   uint64_t getLPNSize();
 
+  //! Enable/disable ICL
+  void setCache(bool);
+
+  //! Get cache enabled
+  bool getCache();
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
 
   void getStatValues(std::vector<double> &) noexcept override;
