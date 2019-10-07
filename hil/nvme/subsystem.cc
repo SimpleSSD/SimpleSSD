@@ -244,6 +244,11 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
       ongoingCommands.push_back(command->getUniqueID(), command);
     }
     else {
+      debugprint(Log::DebugID::HIL_NVMe_Command,
+                 "CTRL %-3u | SQ %2u:%-5u | Unexpected OPCODE %u",
+                 cdata.controller->getControllerID(), sqc->getSQID(),
+                 sqc->getID() & 0xFFFF, sqc->getData()->dword0.opcode);
+
       auto cqc = new CQContext();
 
       cqc->update(sqc);
