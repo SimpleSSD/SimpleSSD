@@ -82,7 +82,10 @@ void SetFeature::setRequest(SQContext *req) {
       case FeatureID::NumberOfQueues: {
         auto feature = data.subsystem->getFeature();
 
+        feature->noq.data = entry->dword11;
         data.arbitrator->requestIOQueues(feature->noq.nsq, feature->noq.ncq);
+
+        cqc->getData()->dword0 = feature->noq.data;
       } break;
       case FeatureID::InterruptCoalescing: {
         Feature::InterruptCoalescing ic;
