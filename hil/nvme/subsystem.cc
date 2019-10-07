@@ -204,7 +204,7 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
     if (command) {
       command->setRequest(sqc);
 
-      ongoingCommands.push_back(command->getUniqueID(), sqc);
+      ongoingCommands.push_back(command->getUniqueID(), command);
     }
     else {
       auto cqc = new CQContext();
@@ -218,10 +218,8 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   }
 }
 
-void Subsystem::complete(uint64_t uid) {
-  auto command = (Command *)ongoingCommands.find(uid);
-
-  panic_if(!command, "Command not exists.");
+void Subsystem::complete(Command *command) {
+  uint64_t uid = command->getUniqueID();
 
   // Complete
   auto &data = command->getCommandData();

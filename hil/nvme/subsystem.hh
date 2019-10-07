@@ -54,7 +54,7 @@ class Subsystem : public AbstractSubsystem {
   virtual ~Subsystem();
 
   void triggerDispatch(ControllerData &, uint64_t);
-  void complete(uint64_t);
+  void complete(Command *);
 
   void init() override;
 

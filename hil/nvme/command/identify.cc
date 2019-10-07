@@ -647,7 +647,7 @@ void Identify::dmaInitDone() {
 }
 
 void Identify::dmaComplete() {
-  data.subsystem->complete(getUniqueID());
+  data.subsystem->complete(this);
 }
 
 void Identify::setRequest(SQContext *req) {
@@ -720,7 +720,7 @@ void Identify::setRequest(SQContext *req) {
   }
   else {
     // Complete immediately
-    data.subsystem->complete(getUniqueID());
+    data.subsystem->complete(this);
   }
 }
 
