@@ -51,8 +51,8 @@ class Subsystem : public AbstractSubsystem {
   uint64_t totalLogicalPages;
   uint64_t allocatedLogicalPages;
 
-  bool createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
-  bool destroyNamespace(uint32_t);
+  bool _createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
+  bool _destroyNamespace(uint32_t);
 
   Command *makeCommand(ControllerData *, SQContext *);
 
@@ -106,6 +106,8 @@ class Subsystem : public AbstractSubsystem {
 
   uint8_t attachController(ControllerID, uint32_t, bool = true);
   uint8_t detachController(ControllerID, uint32_t, bool = true);
+  uint8_t createNamespace(NamespaceInformation *);
+  uint8_t destroyNamespace(uint32_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

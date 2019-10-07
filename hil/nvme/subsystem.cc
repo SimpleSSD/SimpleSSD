@@ -53,8 +53,8 @@ Subsystem::~Subsystem() {
   std::visit([](auto &&hil) { delete hil; }, pHIL);
 }
 
-bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
-                                NamespaceInformation *info) {
+bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
+                                 NamespaceInformation *info) {
   std::list<LPNRange> allocated;
   std::list<LPNRange> unallocated;
 
@@ -154,7 +154,7 @@ bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
   return true;
 }
 
-bool Subsystem::destroyNamespace(uint32_t nsid) {
+bool Subsystem::_destroyNamespace(uint32_t nsid) {
   auto iter = namespaceList.find(nsid);
 
   if (iter != namespaceList.end()) {
@@ -352,7 +352,7 @@ void Subsystem::init() {
       info.size = nsSize;
       info.capacity = info.size;
 
-      if (!createNamespace(ns.nsid, ns.pDisk, &info)) {
+      if (!_createNamespace(ns.nsid, ns.pDisk, &info)) {
         panic("Failed to create namespace %u", ns.nsid);
       }
     }
@@ -537,6 +537,49 @@ uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid,
     if (LIKELY(iter != mapping->second.end())) {
       mapping->second.erase(iter);
     }
+  }
+
+  return 0;
+}
+
+uint8_t Subsystem::createNamespace(NamespaceInformation *info) {
+  uint32_t nsid = NSID_LOWEST;
+  uint32_t max = (uint32_t)readConfigUint(Section::HostInterface,
+                                          Config::Key::NVMeMaxNamespace);
+
+  // Check format
+  if (UNLIKELY(info->lbaFormatIndex >= nLBAFormat)) {
+    return 1u;  // Invalid format
+  }
+
+  // Allocate a namespace ID
+  for (auto &iter : namespaceList) {
+    if (nsid >= iter.first) {
+      ++nsid;
+    }
+    else {
+      break;
+    }
+  }
+
+  if (UNLIKELY(nsid > max)) {
+    return 2u;  // No more identifier
+  }
+
+  bool ret = _createNamespace(nsid, nullptr, info);
+
+  if (UNLIKELY(!ret)) {
+    return 3u;  // Insufficient capacity
+  }
+
+  return 0;
+}
+
+uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
+  bool ret = _destroyNamespace(nsid);
+
+  if (UNLIKELY(!ret)) {
+    return 4u;  // Namespace not exist
   }
 
   return 0;
