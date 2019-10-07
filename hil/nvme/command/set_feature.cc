@@ -107,7 +107,12 @@ void SetFeature::setRequest(SQContext *req) {
 
         break;
       case FeatureID::AsynchronousEventConfiguration:
-        data.subsystem->getFeature()->aec.data = entry->dword11;
+        // We only supports Namespace Attribute Notices.
+        // See constructor of Feature.
+
+        // data.subsystem->getFeature()->aec.data = entry->dword11;
+        cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                        CommandSpecificStatusCode::FeatureNotChangeable);
 
         break;
       default:
