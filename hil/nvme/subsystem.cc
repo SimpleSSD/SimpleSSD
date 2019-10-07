@@ -214,9 +214,9 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::AsyncEventRequest:
         return new AsyncEventRequest(object, this, cdata);
       case AdminCommand::NamespaceManagement:
-        return nullptr;
+        return new NamespaceManagement(object, this, cdata);
       case AdminCommand::NamespaceAttachment:
-        return nullptr;
+        return new NamespaceAttachment(object, this, cdata);
       case AdminCommand::FormatNVM:
         return nullptr;
       default:

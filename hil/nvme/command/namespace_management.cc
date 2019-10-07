@@ -31,8 +31,6 @@ NamespaceManagement::~NamespaceManagement() {
 }
 
 void NamespaceManagement::dmaComplete() {
-  auto entry = sqc->getData();
-
   // Make namespace information
   NamespaceInformation info;
 

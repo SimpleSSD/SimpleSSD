@@ -19,6 +19,8 @@
 #include "hil/nvme/command/get_feature.hh"
 #include "hil/nvme/command/get_log_page.hh"
 #include "hil/nvme/command/identify.hh"
+#include "hil/nvme/command/namespace_attachment.hh"
+#include "hil/nvme/command/namespace_management.hh"
 #include "hil/nvme/command/set_feature.hh"
 
 #endif

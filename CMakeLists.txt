@@ -148,6 +148,8 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/abort.cc
   hil/nvme/command/set_feature.cc
   hil/nvme/command/get_feature.cc
+  hil/nvme/command/namespace_management.cc
+  hil/nvme/command/namespace_attachment.cc
 )
 set(SRC_SIM
   sim/base_config.cc
