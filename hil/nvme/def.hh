@@ -220,6 +220,44 @@ enum class FeatureID : uint8_t {
   MediaFeedback = 0xCA
 };
 
+enum class AsyncEventType : uint8_t {
+  ErrorStatus,
+  HealthStatus,
+  Notice,
+  NVMCommandSetSpecificStatus = 6,
+};
+
+enum class ErrorStatusCode : uint8_t {
+  WriteToInvalidDoorbell,
+  InvalidDoorbellValue,
+  DiagnosticFailure,
+  PersistentInternalError,
+  TransientInternalError,
+  FirmwareImageLoadError,
+};
+
+enum class HealthStatusCode : uint8_t {
+  NVMSubsystemReliability,
+  TemperatureThreshold,
+  SpareBelowThreshold,
+};
+
+enum class NoticeCode : uint8_t {
+  NamespaceAttributeChanged,
+  FirmwareActivationStarting,
+  TelemetryLogChanged,
+  AsymmetricNamespaceAccessChange,
+  PredictableLatencyEventAggregateLogChange,
+  LBAStatusInformationAlert,
+  EnduranceGroupEventAggregateLogPageChange,
+};
+
+enum class NVMCommandSetSpecificStatusCode : uint8_t {
+  ReservationLogPageAvailable,
+  SanitizeOperationCompleted,
+  SanitizeOperationCompletedWithUnexpectedDeallocation,
+};
+
 enum class StatusType : uint8_t {
   GenericCommandStatus,
   CommandSpecificStatus,

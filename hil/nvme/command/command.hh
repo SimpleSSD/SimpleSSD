@@ -11,6 +11,7 @@
 #define __SIMPLESSD_HIL_NVME_COMMAND_COMMAND_HH__
 
 #include "hil/nvme/command/abort.hh"
+#include "hil/nvme/command/async_event_request.hh"
 #include "hil/nvme/command/create_cq.hh"
 #include "hil/nvme/command/create_sq.hh"
 #include "hil/nvme/command/delete_cq.hh"

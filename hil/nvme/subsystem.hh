@@ -14,18 +14,18 @@
 #include <variant>
 
 #include "hil/hil.hh"
-#include "hil/nvme/def.hh"
-#include "hil/nvme/namespace.hh"
+#include "hil/nvme/command/async_event_request.hh"
 #include "hil/nvme/command/feature.hh"
 #include "hil/nvme/command/log_page.hh"
+#include "hil/nvme/def.hh"
+#include "hil/nvme/namespace.hh"
+#include "hil/nvme/queue_arbitrator.hh"
 #include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 class ControllerData;
-class Command;
-class SQContext;
 
 class Subsystem : public AbstractSubsystem {
  protected:
@@ -45,6 +45,7 @@ class Subsystem : public AbstractSubsystem {
   HealthInfo health;
 
   unordered_map_queue ongoingCommands;
+  unordered_map_queue aenCommands;
 
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
@@ -55,12 +56,36 @@ class Subsystem : public AbstractSubsystem {
 
   Command *makeCommand(ControllerData *, SQContext *);
 
+  template <
+      class Type,
+      std::enable_if_t<std::conjunction_v<
+                           std::is_enum<Type>,
+                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
+                       Type> = Type()>
+  void invokeAEN(AsyncEventType aet, Type aei, LogPageID lid) {
+    if (UNLIKELY(aenCommands.size() == 0)) {
+      return;
+    }
+
+    // Get first AEN command
+    auto command = (AsyncEventRequest *)aenCommands.front();
+    auto cqc = command->getResult();
+
+    // Fill entry
+    cqc->getData()->dword0 = (uint8_t)aet;
+    cqc->getData()->dword0 = (uint16_t)aei << 8;
+    cqc->getData()->dword0 = (uint32_t)lid << 16;
+
+    // Complete
+    complete(command, true);
+  }
+
  public:
   Subsystem(ObjectData &);
   virtual ~Subsystem();
 
   void triggerDispatch(ControllerData &, uint64_t);
-  void complete(Command *);
+  void complete(Command *, bool = false);
 
   void init() override;
 

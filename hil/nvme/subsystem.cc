@@ -195,7 +195,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::GetFeatures:
         return new GetFeature(object, this, cdata);
       case AdminCommand::AsyncEventRequest:
-        return nullptr;
+        return new AsyncEventRequest(object, this, cdata);
       case AdminCommand::NamespaceManagement:
         return nullptr;
       case AdminCommand::NamespaceAttachment:
@@ -242,7 +242,13 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
     if (command) {
       command->setRequest(sqc);
 
-      ongoingCommands.push_back(command->getUniqueID(), command);
+      if (UNLIKELY(sqc->getData()->dword0.opcode ==
+                   (uint8_t)AdminCommand::AsyncEventRequest)) {
+        aenCommands.push_back(command->getUniqueID(), command);
+      }
+      else {
+        ongoingCommands.push_back(command->getUniqueID(), command);
+      }
     }
     else {
       debugprint(Log::DebugID::HIL_NVMe_Command,
@@ -261,7 +267,7 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   }
 }
 
-void Subsystem::complete(Command *command) {
+void Subsystem::complete(Command *command, bool aen) {
   uint64_t uid = command->getUniqueID();
 
   // Complete
@@ -270,7 +276,13 @@ void Subsystem::complete(Command *command) {
 
   // Erase
   delete command;
-  ongoingCommands.erase(uid);
+
+  if (UNLIKELY(aen)) {
+    aenCommands.erase(uid);
+  }
+  else {
+    ongoingCommands.erase(uid);
+  }
 }
 
 void Subsystem::init() {
@@ -490,6 +502,19 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, uid);
     entry->createCheckpoint(out);
   }
+
+  size = aenCommands.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
+    auto entry = (Command *)iter.getValue();
+
+    uint64_t uid = entry->getUniqueID();
+
+    // Backup unique ID only -> we can reconstruct command
+    BACKUP_SCALAR(out, uid);
+    entry->createCheckpoint(out);
+  }
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
@@ -567,7 +592,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
     // Get SQContext with SQ ID | Command ID
     auto sqc = data->second->arbitrator->getRecoveredRequest((uint32_t)uid);
 
-    panic_if(!sqc, "Invalid request ID while recover.s");
+    panic_if(!sqc, "Invalid request ID while recover.");
 
     // Re-construct command object
     auto command = makeCommand(data->second, sqc);
@@ -576,6 +601,33 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
     // Push to queue
     ongoingCommands.push_back(uid, command);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t uid;
+
+    RESTORE_SCALAR(in, uid);
+
+    // Find controller data with controller ID
+    auto data = controllerList.find(uid >> 32);
+
+    panic_if(data == controllerList.end(),
+             "Unexpected controller ID while recover.");
+
+    // Get SQContext with SQ ID | Command ID
+    auto sqc = data->second->arbitrator->getRecoveredRequest((uint32_t)uid);
+
+    panic_if(!sqc, "Invalid request ID while recover.");
+
+    // Re-construct command object
+    auto command = makeCommand(data->second, sqc);
+
+    command->restoreCheckpoint(in);
+
+    // Push to queue
+    aenCommands.push_back(uid, sqc);
   }
 }
 
