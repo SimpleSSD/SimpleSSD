@@ -15,7 +15,7 @@ ChangedNamespaceList::ChangedNamespaceList(ObjectData &o)
     : Object(o), overflowed(false) {}
 
 void ChangedNamespaceList::appendList(uint32_t nsid) {
-  if (UNLIKELY(list.size() == 1024)) {
+  if (nsid == NSID_ALL || list.size() == 1024) {
     overflowed = true;
 
     list.clear();
