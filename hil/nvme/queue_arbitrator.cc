@@ -198,31 +198,35 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
 
 SQContext *Arbitrator::dispatch() {
 dispatch_again:
-  auto entry = (SQContext *)requestQueue.front();
+  if (LIKELY(requestQueue.size() > 0)) {
+    auto entry = (SQContext *)requestQueue.front();
 
-  entry->dispatched = true;
+    entry->dispatched = true;
 
-  auto ret = dispatchedQueue.push_back(entry->getID(), entry);
-  requestQueue.pop_front();
+    auto ret = dispatchedQueue.push_back(entry->getID(), entry);
+    requestQueue.pop_front();
 
-  if (UNLIKELY(!ret)) {
-    // Command ID duplication
-    auto cqe = new CQContext();
+    if (UNLIKELY(!ret)) {
+      // Command ID duplication
+      auto cqe = new CQContext();
 
-    cqe->update(entry);
-    cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::CommandIDConflict);
+      cqe->update(entry);
+      cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
+                      GenericCommandStatusCode::CommandIDConflict);
 
-    complete(cqe, true);
+      complete(cqe, true);
 
-    // cqe is deleted by complete function
-    delete entry;
+      // cqe is deleted by complete function
+      delete entry;
 
-    // Retry
-    goto dispatch_again;
+      // Retry
+      goto dispatch_again;
+    }
+
+    return entry;
   }
 
-  return entry;
+  return nullptr;
 }
 
 void Arbitrator::reserveShutdown() {
