@@ -12,6 +12,7 @@
 
 #include <queue>
 
+#include "hil/common/interrupt_manager.hh"
 #include "hil/nvme/dma_engine.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
@@ -30,7 +31,6 @@ namespace SimpleSSD::HIL::NVMe {
 class Subsystem;
 class Controller;
 class Arbitrator;
-class ::SimpleSSD::HIL::InterruptManager;
 class SQContext;
 class CQContext;
 class ControllerData;

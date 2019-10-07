@@ -10,7 +10,6 @@
 #ifndef __SIMPLESSD_HIL_NVME_COMMAND_INTERNAL_HH__
 #define __SIMPLESSD_HIL_NVME_COMMAND_INTERNAL_HH__
 
-#include "hil/common/interrupt_manager.hh"
 #include "hil/nvme/controller.hh"
 #include "hil/nvme/queue_arbitrator.hh"
 #include "hil/nvme/subsystem.hh"

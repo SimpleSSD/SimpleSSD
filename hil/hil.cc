@@ -36,15 +36,13 @@ void HIL<LPN, T>::writePages(LPN /* offset */, LPN /* length */,
 }
 
 HIL_TEMPLATE
-void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */,
-                             Event eid) {
+void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */, Event eid) {
   // TODO: bypass command to ICL
   schedule(eid, getTick() + 1000000);
 }
 
 HIL_TEMPLATE
-void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */,
-                            Event eid) {
+void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */, Event eid) {
   // TODO: bypass command to ICL
   schedule(eid, getTick() + 1000000);
 }
@@ -65,7 +63,7 @@ LPN HIL<LPN, T>::getPageUsage(LPN /* offset */, LPN /* length */) {
 HIL_TEMPLATE
 LPN HIL<LPN, T>::getTotalPages() {
   // TODO: bypass command to ICL
-  return (LPN)26214400‬;  // * 16K = 400G
+  return (LPN)26214400;  // * 16KiB = 400GB
 }
 
 HIL_TEMPLATE
