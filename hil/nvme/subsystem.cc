@@ -175,18 +175,48 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
 
   if (isAdmin) {
     switch ((AdminCommand)opcode) {
+      case AdminCommand::DeleteIOSQ:
+        return nullptr;
+      case AdminCommand::CreateIOSQ:
+        return nullptr;
+      case AdminCommand::GetLogPage:
+        return nullptr;
+      case AdminCommand::DeleteIOCQ:
+        return nullptr;
+      case AdminCommand::CreateIOCQ:
+        return nullptr;
       case AdminCommand::Identify:
         return new Identify(object, this, cdata);
+      case AdminCommand::Abort:
+        return nullptr;
       case AdminCommand::SetFeatures:
         return new SetFeature(object, this, cdata);
       case AdminCommand::GetFeatures:
         return new GetFeature(object, this, cdata);
+      case AdminCommand::AsyncEventRequest:
+        return nullptr;
+      case AdminCommand::NamespaceManagement:
+        return nullptr;
+      case AdminCommand::NamespaceAttachment:
+        return nullptr;
+      case AdminCommand::FormatNVM:
+        return nullptr;
       default:
         return nullptr;
     }
   }
   else {
     switch ((NVMCommand)opcode) {
+      case NVMCommand::Flush:
+        return nullptr;
+      case NVMCommand::Write:
+        return nullptr;
+      case NVMCommand::Read:
+        return nullptr;
+      case NVMCommand::Compare:
+        return nullptr;
+      case NVMCommand::DatasetManagement:
+        return nullptr;
       default:
         return nullptr;
     }
