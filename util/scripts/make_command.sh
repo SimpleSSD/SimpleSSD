@@ -116,9 +116,13 @@ void ${CLASS_NAME}::getStatValues(std::vector<double> &) noexcept {}
 
 void ${CLASS_NAME}::resetStatValues() noexcept {}
 
-void ${CLASS_NAME}::createCheckpoint(std::ostream &) noexcept {}
+void ${CLASS_NAME}::createCheckpoint(std::ostream &out) noexcept {
+  Command::createCheckpoint(out);
+}
 
-void ${CLASS_NAME}::restoreCheckpoint(std::istream &) noexcept {}
+void ${CLASS_NAME}::restoreCheckpoint(std::istream &in) noexcept {
+  Command::restoreCheckpoint(in);
+}
 
 }  // namespace SimpleSSD::HIL::NVMe
 EOF
