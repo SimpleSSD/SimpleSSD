@@ -12,9 +12,9 @@
 
 #include <set>
 
+#include "hil/convert.hh"
 #include "sim/abstract_controller.hh"
 #include "sim/object.hh"
-#include "hil/convert.hh"
 
 namespace SimpleSSD {
 
@@ -37,8 +37,8 @@ class NamespaceInformation {
   uint8_t lbaFormatIndex;                //!< FLBAS
   uint8_t dataProtectionSettings;        //!< DPS
   uint8_t namespaceSharingCapabilities;  //!< NMIC
-  uint8_t nvmSetIdentifier;              //!< NVMSETID
   uint32_t anaGroupIdentifier;           //!< ANAGRPID
+  uint16_t nvmSetIdentifier;             //!< NVMSETID
 
   uint32_t lbaSize;
   LPNRange namespaceRange;
