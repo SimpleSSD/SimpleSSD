@@ -11,7 +11,6 @@
 #define __SIMPLESSD_UTIL_FIFO__
 
 #include <list>
-#include <queue>
 
 #include "sim/interface.hh"
 #include "sim/object.hh"
@@ -62,7 +61,7 @@ class FIFO : public DMAInterface, public Object {
     uint64_t usage;
 
     std::list<FIFOEntry> waitQueue;
-    std::queue<FIFOEntry> transferQueue;
+    std::list<FIFOEntry> transferQueue;
 
     Event insertDone;
     Event beginTransfer;

@@ -452,16 +452,14 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   size = ongoingCommands.size();
   BACKUP_SCALAR(out, size);
 
-  while (auto iter = (Command *)ongoingCommands.front()) {
-    uint64_t uid = iter->getUniqueID();
+  for (auto iter = ongoingCommands.begin(); iter != ongoingCommands.end(); ++iter) {
+    auto entry = (Command *)iter.getValue();
+
+    uint64_t uid = entry->getUniqueID();
 
     // Backup unique ID only -> we can reconstruct command
     BACKUP_SCALAR(out, uid);
-    iter->createCheckpoint(out);
-
-    ongoingCommands.erase(uid);
-
-    delete iter;
+    entry->createCheckpoint(out);
   }
 }
 

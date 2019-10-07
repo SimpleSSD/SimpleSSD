@@ -761,37 +761,36 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   auto size = requestQueue.size();
   BACKUP_SCALAR(out, size);
 
-  while (auto iter = (SQContext *)requestQueue.front()) {
-    BACKUP_BLOB(out, iter->entry.data, 64);
-    BACKUP_SCALAR(out, iter->commandID);
-    BACKUP_SCALAR(out, iter->sqID);
-    BACKUP_SCALAR(out, iter->cqID);
-    BACKUP_SCALAR(out, iter->sqHead);
-    BACKUP_SCALAR(out, iter->useSGL);
-    BACKUP_SCALAR(out, iter->aborted);
-    BACKUP_SCALAR(out, iter->dispatched);
-    BACKUP_SCALAR(out, iter->completed);
+  for (auto iter = requestQueue.begin(); iter != requestQueue.end(); ++iter) {
+    auto entry = (SQContext *)iter.getValue();
 
-    requestQueue.erase(iter->commandID);
-    delete iter;
+    BACKUP_BLOB(out, entry->entry.data, 64);
+    BACKUP_SCALAR(out, entry->commandID);
+    BACKUP_SCALAR(out, entry->sqID);
+    BACKUP_SCALAR(out, entry->cqID);
+    BACKUP_SCALAR(out, entry->sqHead);
+    BACKUP_SCALAR(out, entry->useSGL);
+    BACKUP_SCALAR(out, entry->aborted);
+    BACKUP_SCALAR(out, entry->dispatched);
+    BACKUP_SCALAR(out, entry->completed);
   }
 
   size = dispatchedQueue.size();
   BACKUP_SCALAR(out, size);
 
-  while (auto iter = (SQContext *)dispatchedQueue.front()) {
-    BACKUP_BLOB(out, iter->entry.data, 64);
-    BACKUP_SCALAR(out, iter->commandID);
-    BACKUP_SCALAR(out, iter->sqID);
-    BACKUP_SCALAR(out, iter->cqID);
-    BACKUP_SCALAR(out, iter->sqHead);
-    BACKUP_SCALAR(out, iter->useSGL);
-    BACKUP_SCALAR(out, iter->aborted);
-    BACKUP_SCALAR(out, iter->dispatched);
-    BACKUP_SCALAR(out, iter->completed);
+  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
+       ++iter) {
+    auto entry = (SQContext *)iter.getValue();
 
-    dispatchedQueue.erase(iter->commandID);
-    delete iter;
+    BACKUP_BLOB(out, entry->entry.data, 64);
+    BACKUP_SCALAR(out, entry->commandID);
+    BACKUP_SCALAR(out, entry->sqID);
+    BACKUP_SCALAR(out, entry->cqID);
+    BACKUP_SCALAR(out, entry->sqHead);
+    BACKUP_SCALAR(out, entry->useSGL);
+    BACKUP_SCALAR(out, entry->aborted);
+    BACKUP_SCALAR(out, entry->dispatched);
+    BACKUP_SCALAR(out, entry->completed);
   }
 
   size = completionQueue.size();
@@ -800,8 +799,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   for (auto &iter : completionQueue) {
     BACKUP_BLOB(out, iter->entry.data, 16);
     BACKUP_SCALAR(out, iter->cqID);
-
-    delete iter;
   }
 
   size = collectQueue.size();
@@ -810,8 +807,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   for (auto &iter : collectQueue) {
     // For collecting queue, only data is used
     BACKUP_BLOB(out, iter->entry.data, 64);
-
-    delete iter;
   }
 
   size = abortSQList.size();

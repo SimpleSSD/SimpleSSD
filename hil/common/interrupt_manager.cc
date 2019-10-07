@@ -169,14 +169,13 @@ void InterruptManager::createCheckpoint(std::ostream &out) noexcept {
   auto size = coalesceMap.size();
   BACKUP_SCALAR(out, size);
 
-  while (auto iter = (CoalesceData *)coalesceMap.back()) {
-    BACKUP_SCALAR(out, iter->pending);
-    BACKUP_SCALAR(out, iter->iv);
-    BACKUP_SCALAR(out, iter->currentRequestCount);
-    BACKUP_SCALAR(out, iter->nextDeadline);
+  for (auto iter = coalesceMap.begin(); iter != coalesceMap.end(); ++iter) {
+    auto entry = (CoalesceData *)iter.getValue();
 
-    coalesceMap.erase(iter->iv);
-    delete iter;
+    BACKUP_SCALAR(out, entry->pending);
+    BACKUP_SCALAR(out, entry->iv);
+    BACKUP_SCALAR(out, entry->currentRequestCount);
+    BACKUP_SCALAR(out, entry->nextDeadline);
   }
 }
 

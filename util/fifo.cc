@@ -65,9 +65,7 @@ void FIFO::Queue::backup(std::ostream &out) noexcept {
   size = transferQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (uint64_t i = 0; i < size; i++) {
-    auto &iter = transferQueue.front();
-
+  for (auto &iter : transferQueue) {
     BACKUP_SCALAR(out, iter.last);
     BACKUP_SCALAR(out, iter.id);
     BACKUP_SCALAR(out, iter.addr);
@@ -77,8 +75,6 @@ void FIFO::Queue::backup(std::ostream &out) noexcept {
     BACKUP_SCALAR(out, iter.insertEndAt);
     BACKUP_SCALAR(out, iter.eid);
     BACKUP_BLOB(out, iter.buffer, iter.size);
-
-    transferQueue.pop();
   }
 }
 
@@ -108,7 +104,7 @@ void FIFO::Queue::restore(std::istream &in) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    transferQueue.push(FIFOEntry());
+    transferQueue.push_back(FIFOEntry());
 
     RESTORE_SCALAR(in, transferQueue.back().last);
     RESTORE_SCALAR(in, transferQueue.back().id);
@@ -235,7 +231,7 @@ void FIFO::insertWrite() {
   }
 
   // Push current item to transferQueue
-  writeQueue.transferQueue.push(*iter);
+  writeQueue.transferQueue.push_back(*iter);
 }
 
 void FIFO::insertWriteDone() {
@@ -292,7 +288,7 @@ void FIFO::transferWriteDoneNext() {
   // Transfer done
   writeQueue.usage -= calcSize(iter.size, unused);
   writeQueue.transferPending = false;
-  writeQueue.transferQueue.pop();
+  writeQueue.transferQueue.pop_front();
 
   // Do next transfer if we have
   if (writeQueue.transferQueue.size() > 0) {
@@ -357,7 +353,7 @@ void FIFO::transferRead() {
   }
 
   // Push current item to transferQueue
-  readQueue.transferQueue.push(*iter);
+  readQueue.transferQueue.push_back(*iter);
 }
 
 void FIFO::transferReadDone() {
@@ -452,7 +448,7 @@ void FIFO::insertReadDoneNext() {
   // Insert done
   readQueue.usage -= calcSize(iter.size, unused);
   readQueue.insertPending = false;
-  readQueue.transferQueue.pop();
+  readQueue.transferQueue.pop_front();
 
   // Do next insert if we have
   if (readQueue.transferQueue.size() > 0) {
