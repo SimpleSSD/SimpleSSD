@@ -130,6 +130,15 @@ ControllerData *Controller::getControllerData() {
   return &controllerData;
 }
 
+uint64_t Controller::getCapabilities() {
+  return registers.controllerCapabilities;
+}
+
+void Controller::getQueueStride(uint64_t &sq, uint64_t &cq) {
+  sq = sqStride;
+  cq = cqStride;
+}
+
 uint64_t Controller::read(uint64_t offset, uint64_t size,
                           uint8_t *buffer) noexcept {
   registers.interruptMaskSet = interruptMask;

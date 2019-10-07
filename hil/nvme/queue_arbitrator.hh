@@ -180,6 +180,9 @@ class Arbitrator : public Object {
   ArbitrationData *getArbitrationData();
   void applyArbitrationData();
   void requestIOQueues(uint16_t &, uint16_t &);
+  uint8_t createIOSQ(uint64_t, uint16_t, uint16_t, uint16_t, uint8_t, bool,
+                     uint16_t, Event);
+  uint8_t createIOCQ(uint64_t, uint16_t, uint16_t, uint16_t, bool, bool, Event);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

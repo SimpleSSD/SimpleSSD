@@ -320,6 +320,67 @@ void Arbitrator::requestIOQueues(uint16_t &nsq, uint16_t &ncq) {
   }
 }
 
+uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
+                               uint16_t cqid, uint8_t pri, bool pc,
+                               uint16_t setid, Event eid) {
+  uint64_t sqEntrySize, cqEntrySize;
+
+  if (UNLIKELY(cqList[cqid])) {
+    return (uint8_t)CommandSpecificStatusCode::Invalid_CompletionQueue;
+  }
+
+  if (UNLIKELY(sqList[id])) {
+    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+  }
+
+  controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
+
+  auto sq = new SQueue(object, id, size, cqid, (QueuePriority)pri);
+
+  panic_if(!sq, "Failed to allocate completion queue.");
+
+  sqList[id] = sq;
+
+  auto dma = new PRPEngine(object, controller->dma, controller->memoryPageSize);
+
+  dma->initQueue(base, size * sqEntrySize, pc, eid);
+
+  sq->setBase(dma, sqEntrySize);
+
+  debugprint_ctrl(
+      "SQ %-4d | CREATE | Size %u | CQ %u | Priority %u | Set ID %u", id, size,
+      cqid, pri, setid);
+
+  return true;
+}
+
+uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
+                               uint16_t iv, bool ien, bool pc, Event eid) {
+  uint64_t sqEntrySize, cqEntrySize;
+
+  if (UNLIKELY(cqList[id])) {
+    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+  }
+
+  controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
+
+  auto cq = new CQueue(object, id, size, iv, ien);
+
+  panic_if(!cq, "Failed to allocate completion queue.");
+
+  cqList[id] = cq;
+
+  auto dma = new PRPEngine(object, controller->dma, controller->memoryPageSize);
+
+  dma->initQueue(base, size * cqEntrySize, pc, eid);
+
+  cq->setBase(dma, cqEntrySize);
+
+  debugprint_ctrl("CQ %-4d | CREATE | Size %u | IV %u", id, size, iv);
+
+  return true;
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
   auto cq = cqList[cqe->getCQID()];
 

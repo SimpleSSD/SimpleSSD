@@ -134,6 +134,10 @@ class Controller : public AbstractController {
 
   ControllerData *getControllerData();
 
+  // Command
+  uint64_t getCapabilities();
+  void getQueueStride(uint64_t &, uint64_t &);
+
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;
 
