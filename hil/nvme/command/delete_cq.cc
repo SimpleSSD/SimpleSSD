@@ -50,8 +50,11 @@ void DeleteCQ::getStatValues(std::vector<double> &) noexcept {}
 
 void DeleteCQ::resetStatValues() noexcept {}
 
-void DeleteCQ::createCheckpoint(std::ostream &) noexcept {}
+void DeleteCQ::createCheckpoint(std::ostream &out) noexcept {
+  Command::createCheckpoint(out);
+}
 
-void DeleteCQ::restoreCheckpoint(std::istream &) noexcept {}
-
+void DeleteCQ::restoreCheckpoint(std::istream &in) noexcept {
+  Command::restoreCheckpoint(in);
+}
 }  // namespace SimpleSSD::HIL::NVMe

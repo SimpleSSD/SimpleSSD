@@ -127,8 +127,12 @@ void GetFeature::getStatValues(std::vector<double> &) noexcept {}
 
 void GetFeature::resetStatValues() noexcept {}
 
-void GetFeature::createCheckpoint(std::ostream &) noexcept {}
+void GetFeature::createCheckpoint(std::ostream &out) noexcept {
+  Command::createCheckpoint(out);
+}
 
-void GetFeature::restoreCheckpoint(std::istream &) noexcept {}
+void GetFeature::restoreCheckpoint(std::istream &in) noexcept {
+  Command::restoreCheckpoint(in);
+}
 
 }  // namespace SimpleSSD::HIL::NVMe
