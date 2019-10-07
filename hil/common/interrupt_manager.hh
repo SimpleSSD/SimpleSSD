@@ -12,6 +12,7 @@
 
 #include <map>
 
+#include "sim/abstract_subsystem.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
 #include "util/sorted_map.hh"
@@ -36,6 +37,7 @@ class InterruptManager : public Object {
   };
 
   Interface *pInterface;
+  ControllerID controllerID;
 
   bool interruptCoalescing;
   uint16_t aggregationThreshold;  // NVMe 8bit, AHCI 8bit
@@ -49,7 +51,7 @@ class InterruptManager : public Object {
   void reschedule(CoalesceData *);
 
  public:
-  InterruptManager(ObjectData &, Interface *);
+  InterruptManager(ObjectData &, Interface *, ControllerID);
   InterruptManager(const InterruptManager &) = delete;
   InterruptManager(InterruptManager &&) noexcept = default;
   ~InterruptManager();

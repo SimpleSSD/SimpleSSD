@@ -9,12 +9,19 @@
 
 namespace SimpleSSD::HIL {
 
+#define debugprint_ctrl(format, ...)                                           \
+  {                                                                            \
+    debugprint(Log::DebugID::HIL_NVMe, "CTRL %-3d | " format, controllerID,    \
+               ##__VA_ARGS__);                                                 \
+  }
+
 InterruptManager::CoalesceData::CoalesceData()
     : pending(false), iv(0xFFFF), currentRequestCount(0), nextDeadline(0) {}
 
-InterruptManager::InterruptManager(ObjectData &o, Interface *i)
+InterruptManager::InterruptManager(ObjectData &o, Interface *i, ControllerID id)
     : Object(o),
       pInterface(i),
+      controllerID(id),
       interruptCoalescing(false),
       aggregationThreshold(0),
       aggregationTime(0),
@@ -104,6 +111,9 @@ void InterruptManager::enableCoalescing(bool set, uint16_t iv) {
 
   auto iter = (CoalesceData *)coalesceMap.find(iv);
 
+  debugprint_ctrl("INTR    | %s interrupt coalescing | IV %u",
+                  set ? "Enable" : "Disable", iv);
+
   if (set && !iter) {
     CoalesceData *tmp = new CoalesceData();
 
@@ -124,6 +134,9 @@ void InterruptManager::enableCoalescing(bool set, uint16_t iv) {
 
 void InterruptManager::configureCoalescing(uint64_t time, uint16_t count) {
   panic_if(time == 0 || count < 2, "Invalid coalescing parameters.");
+
+  debugprint_ctrl("INTR    | Update coalescing parameters | TIME %u | THRES %u",
+                  time / 100000000, count);
 
   aggregationTime = time;
   aggregationThreshold = count;

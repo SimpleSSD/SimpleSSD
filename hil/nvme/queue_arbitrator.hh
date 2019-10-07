@@ -115,6 +115,7 @@ class Arbitrator : public Object {
 
  private:
   ControllerData *controller;
+  ControllerID controllerID;
 
   Event work;
 

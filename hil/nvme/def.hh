@@ -46,6 +46,7 @@ enum class QueuePriority : uint8_t {
 
 enum class Register : uint64_t {
   ControllerCapabilities = 0x00,
+  ControllerCapabilitiesH = 0x04,
   Version = 0x08,
   InterruptMaskSet = 0x0C,
   InterruptMaskClear = 0x10,

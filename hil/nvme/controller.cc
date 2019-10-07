@@ -11,6 +11,12 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+#define debugprint_ctrl(format, ...)                                           \
+  {                                                                            \
+    debugprint(Log::DebugID::HIL_NVMe, "CTRL %-3d | " format, controllerID,    \
+               ##__VA_ARGS__);                                                 \
+  }
+
 ControllerData::ControllerData()
     : controller(nullptr),
       interface(nullptr),
@@ -82,7 +88,8 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   registers.version = 0x00010400;  // NVMe 1.4
 
   // Creates modules
-  controllerData.interruptManager = new InterruptManager(object, interface);
+  controllerData.interruptManager =
+      new InterruptManager(object, interface, controllerID);
   controllerData.arbitrator = new Arbitrator(object, &controllerData);
 
   // Create events
@@ -98,6 +105,8 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
         }
       },
       "HIL::NVMe::Controller::eventQueueInit");
+
+  debugprint_ctrl("CREATE");
 }
 
 Controller::~Controller() {
@@ -128,7 +137,51 @@ uint64_t Controller::read(uint64_t offset, uint64_t size,
 
   memcpy(buffer, registers.data + offset, size);
 
-  // TODO: add debug print
+  switch ((Register)offset) {
+    case Register::ControllerCapabilities:
+    case Register::ControllerCapabilitiesH:
+      debugprint_ctrl("BAR0    | READ  | Controller Capabilities");
+      break;
+    case Register::Version:
+      debugprint_ctrl("BAR0    | READ  | Version");
+      break;
+    case Register::InterruptMaskSet:
+      debugprint_ctrl("BAR0    | READ  | Interrupt Mask Set");
+      break;
+    case Register::InterruptMaskClear:
+      debugprint_ctrl("BAR0    | READ  | Interrupt Mask Clear");
+      break;
+    case Register::ControllerConfiguration:
+      debugprint_ctrl("BAR0    | READ  | Controller Configuration");
+      break;
+    case Register::ControllerStatus:
+      debugprint_ctrl("BAR0    | READ  | Controller Status");
+      break;
+    case Register::NVMSubsystemReset:
+      debugprint_ctrl("BAR0    | READ  | NVM Subsystem Reset");
+      break;
+    case Register::AdminQueueAttributes:
+      debugprint_ctrl("BAR0    | READ  | Admin Queue Attributes");
+      break;
+    case Register::AdminSQBaseAddress:
+    case Register::AdminSQBaseAddressH:
+      debugprint_ctrl("BAR0    | READ  | Admin Submission Queue Base Address");
+      break;
+    case Register::AdminCQBaseAddress:
+    case Register::AdminCQBaseAddressH:
+      debugprint_ctrl("BAR0    | READ  | Admin Completion Queue Base Address");
+      break;
+    default:
+      debugprint_ctrl("BAR0    | READ  | Offset 0x%" PRIx64, offset);
+      break;
+  }
+
+  if (size == 4) {
+    debugprint_ctrl("DMAPORT | READ  | DATA %08" PRIX32, *(uint32_t *)buffer);
+  }
+  else {
+    debugprint_ctrl("DMAPORT | READ  | DATA %016" PRIX64, *(uint64_t *)buffer);
+  }
 
   return 0;
 }
@@ -143,18 +196,26 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
     switch ((Register)offset) {
       case Register::InterruptMaskSet:
+        debugprint_ctrl("BAR0    | WRITE | Interrupt Mask Set");
+
         interruptMask |= uiTemp32;
 
         break;
       case Register::InterruptMaskClear:
+        debugprint_ctrl("BAR0    | WRITE | Interrupt Mask Clear");
+
         interruptMask &= ~uiTemp32;
 
         break;
       case Register::ControllerConfiguration:
+        debugprint_ctrl("BAR0    | WRITE | Controller Configuration");
+
         handleControllerConfig(uiTemp32);
 
         break;
       case Register::ControllerStatus:
+        debugprint_ctrl("BAR0    | WRITE | Controller Status");
+
         // Clear NSSRO if set
         if (uiTemp32 & 0x00000010) {
           registers.controllerStatus &= 0xFFFFFFEF;
@@ -162,32 +223,48 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
         break;
       case Register::NVMSubsystemReset:
+        debugprint_ctrl("BAR0    | WRITE | NVM Subsystem Reset");
+
         registers.subsystemReset = uiTemp32;
 
         // FIXME: If NSSR is same as NVMe(0x4E564D65), do NVMe Subsystem reset
         // (when CAP.NSSRS is 1)
         break;
       case Register::AdminQueueAttributes:
+        debugprint_ctrl("BAR0    | WRITE | Admin Queue Attributes");
+
         registers.adminQueueAttributes &= 0xF000F000;
         registers.adminQueueAttributes |= (uiTemp32 & 0x0FFF0FFF);
 
         break;
       case Register::AdminCQBaseAddress:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Completion Queue Base Address | L");
+
         memcpy(&(registers.adminCQueueBaseAddress), buffer, 4);
         adminQueueInited |= 0x01;
 
         break;
       case Register::AdminCQBaseAddressH:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Completion Queue Base Address | H");
+
         memcpy(((uint8_t *)&(registers.adminCQueueBaseAddress)) + 4, buffer, 4);
         adminQueueInited |= 0x02;
 
         break;
       case Register::AdminSQBaseAddress:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Submission Queue Base Address | L");
+
         memcpy(&(registers.adminSQueueBaseAddress), buffer, 4);
         adminQueueInited |= 0x04;
 
         break;
       case Register::AdminSQBaseAddressH:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Submission Queue Base Address | H");
+
         memcpy(((uint8_t *)&(registers.adminSQueueBaseAddress)) + 4, buffer, 4);
         adminQueueInited |= 0x08;
 
@@ -222,17 +299,26 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
         controllerData.arbitrator->ringSQ(uiTemp, uiDoorbell);
       }
     }
+    else {
+      debugprint_ctrl("DMAPORT | WRITE | DATA %08" PRIX32, uiTemp32);
+    }
   }
   else if (size == 8) {
     memcpy(&uiTemp64, buffer, 8);
 
     switch ((Register)offset) {
       case Register::AdminCQBaseAddress:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Completion Queue Base Address");
+
         registers.adminCQueueBaseAddress = uiTemp64;
         adminQueueInited |= 0x03;
 
         break;
       case Register::AdminSQBaseAddress:
+        debugprint_ctrl(
+            "BAR0    | WRITE | Admin Submission Queue Base Address");
+
         registers.adminSQueueBaseAddress = uiTemp64;
         adminQueueInited |= 0x0C;
 
@@ -242,6 +328,8 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
         break;
     }
+
+    debugprint_ctrl("DMAPORT | WRITE | DATA %016" PRIX64, uiTemp64);
   }
   else {
     panic("Invalid read size (%d) on controller register", size);

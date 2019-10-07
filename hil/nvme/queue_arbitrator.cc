@@ -11,6 +11,12 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+#define debugprint_ctrl(format, ...)                                           \
+  {                                                                            \
+    debugprint(Log::DebugID::HIL_NVMe, "CTRL %-3d | " format, controllerID,    \
+               ##__VA_ARGS__);                                                 \
+  }
+
 SQContext::SQContext()
     : commandID(0),
       sqID(0),
@@ -101,6 +107,7 @@ uint16_t CQContext::getCQID() noexcept {
 Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
     : Object(o),
       controller(c),
+      controllerID(c->controller->getControllerID()),
       mode(Arbitration::RoundRobin),
       shutdownReserved(false) {
   // Read config
@@ -180,7 +187,15 @@ void Arbitrator::ringSQ(uint16_t qid, uint16_t tail) {
 
   panic_if(!sq, "Access to unintialized submission queue.");
 
+  auto oldtail = sq->getTail();
+  auto oldcount = sq->getItemCount();
+
   sq->setTail(tail);
+
+  debugprint_ctrl(
+      "SQ %-5d| Submission Queue Tail Doorbell | Item count in queue "
+      "%d -> %d | head %d | tail %d -> %d",
+      qid, oldcount, sq->getItemCount(), sq->getHead(), oldtail, sq->getTail());
 }
 
 void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
@@ -188,7 +203,15 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
 
   panic_if(!cq, "Access to unintialized completion queue.");
 
+  auto oldhead = cq->getHead();
+  auto oldcount = cq->getItemCount();
+
   cq->setHead(head);
+
+  debugprint_ctrl(
+      "CQ %-5d| Completion Queue Head Doorbell | Item count in queue "
+      "%d -> %d | head %d -> %d | tail %d",
+      qid, oldcount, cq->getItemCount(), oldhead, cq->getHead(), cq->getTail());
 
   if (cq->getItemCount() == 0 && cq->interruptEnabled()) {
     controller->interruptManager->postInterrupt(cq->getInterruptVector(),
@@ -245,6 +268,8 @@ void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid) {
 
   cqList[0] = new CQueue(object, 0, size, 0, true);
   cqList[0]->setBase(dmaEngine, 16);  // Always 16 bytes stride
+
+  debugprint_ctrl("CQ 0    | CREATE | Entry size %d", size);
 }
 
 void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
@@ -259,6 +284,8 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
 
   sqList[0] = new SQueue(object, 0, size, 0, QueuePriority::Urgent);
   sqList[0]->setBase(dmaEngine, 64);  // Always 64 bytes stride
+
+  debugprint_ctrl("SQ 0    | CREATE | Entry size %d", size);
 }
 
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
