@@ -43,7 +43,7 @@ class Subsystem : public AbstractSubsystem {
   unordered_map_queue ongoingCommands;
 
   Event eventAEN;
-  ControllerID aenTo;
+  std::vector<ControllerID> aenTo;
   uint32_t aenData;
 
   unordered_map_queue aenCommands;
@@ -57,7 +57,7 @@ class Subsystem : public AbstractSubsystem {
 
   Command *makeCommand(ControllerData *, SQContext *);
   void invokeAEN();
-  void scheduleAEN(ControllerID, AsyncEventType, uint8_t, LogPageID);
+  void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
 
  public:
   Subsystem(ObjectData &);

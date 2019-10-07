@@ -227,36 +227,49 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
 }
 
 void Subsystem::invokeAEN() {
-  // Get first AEN command
-  AsyncEventRequest *command = nullptr;
+  // Get first AEN command of each controller
+  uint64_t size = aenTo.size();
 
-  for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
-    uint16_t ctrlid = iter.getKey() >> 32;
+  std::vector<AsyncEventRequest *> commandList(size, nullptr);
 
-    if (ctrlid == aenTo) {
-      command = (AsyncEventRequest *)iter.getValue();
+  // O(n^2)
+  for (uint64_t i = 0; i < size; i++) {
+    auto ctrl = aenTo.at(i);
 
-      break;
+    for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
+      uint16_t ctrlid = iter.getKey() >> 32;
+
+      if (ctrlid == ctrl) {
+        commandList.at(i) = (AsyncEventRequest *)iter.getValue();
+
+        break;
+      }
     }
   }
 
-  auto cqc = command->getResult();
+  // For all commands
+  for (auto &iter : commandList) {
+    auto cqc = iter->getResult();
 
-  // Fill entry
-  cqc->getData()->dword0 = aenData;
+    // Fill entry
+    cqc->getData()->dword0 = aenData;
 
-  // Complete
-  complete(command, true);
+    // Complete
+    complete(iter, true);
+  }
+
+  aenTo.clear();
 }
 
-void Subsystem::scheduleAEN(ControllerID ctrlid, AsyncEventType aet,
-                            uint8_t aei, LogPageID lid) {
-  if (UNLIKELY(aenCommands.size() == 0)) {
+void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
+  if (UNLIKELY(aenCommands.size() == 0 || aenTo.size() == 0)) {
     return;
   }
 
+  // Sort
+  std::sort(aenTo.begin(), aenTo.end());
+
   // Make entry
-  aenTo = ctrlid;
   aenData = (uint8_t)aet;
   aenData = (uint16_t)aei << 8;
   aenData = (uint32_t)lid << 16;
@@ -639,15 +652,21 @@ void Subsystem::resetStatValues() noexcept {}
 
 void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, controllerID);
-  BACKUP_SCALAR(out, aenTo);
   BACKUP_SCALAR(out, aenData);
   BACKUP_SCALAR(out, logicalPageSize);
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, allocatedLogicalPages);
 
+  uint64_t size = aenTo.size();
+  BACKUP_SCALAR(out, size);
+
+  if (size) {
+    BACKUP_BLOB(out, aenTo.data(), size * sizeof(ControllerID));
+  }
+
   BACKUP_BLOB(out, health.data, 0x200);
 
-  uint64_t size = controllerList.size();
+  size = controllerList.size();
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : controllerList) {
@@ -708,15 +727,22 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, controllerID);
-  RESTORE_SCALAR(in, aenTo);
   RESTORE_SCALAR(in, aenData);
   RESTORE_SCALAR(in, logicalPageSize);
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, allocatedLogicalPages);
 
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  if (size) {
+    aenTo.resize(size);
+
+    RESTORE_BLOB(in, aenTo.data(), size * sizeof(ControllerID));
+  }
+
   RESTORE_BLOB(in, health.data, 0x200);
 
-  uint64_t size;
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
