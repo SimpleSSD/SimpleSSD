@@ -655,12 +655,15 @@ void Identify::setRequest(SQContext *req) {
   auto entry = sqc->getData();
 
   // Get parameters
+  uint32_t nsid = entry->namespaceID;
   uint8_t cns = entry->dword10 & 0xFF;
   uint16_t cntid = (entry->dword10 & 0xFFFF0000) >> 16;
-  // uint16_t setid = entry->dword11 & 0xFFFF;
-  // uint8_t uuid = entry->dword14 & 0x7F;
+  uint16_t setid = entry->dword11 & 0xFFFF;
+  uint8_t uuid = entry->dword14 & 0x7F;
 
-  // TODO: DEBUGPRINT!
+  debugprint_command(
+      "ADMIN   | Identify | CNS %u | CNTID %u | NSID %u | NVMSET %u | UUID %u",
+      cns, cntid, nsid, setid, uuid);
 
   // Make response
   createResponse();
@@ -670,7 +673,7 @@ void Identify::setRequest(SQContext *req) {
 
   switch ((IdentifyStructure)cns) {
     case IdentifyStructure::Namespace:
-      makeNamespaceStructure(entry->namespaceID);
+      makeNamespaceStructure(nsid);
 
       break;
     case IdentifyStructure::Controller:
@@ -678,7 +681,7 @@ void Identify::setRequest(SQContext *req) {
 
       break;
     case IdentifyStructure::ActiveNamespaceList:
-      makeNamespaceList(entry->namespaceID);
+      makeNamespaceList(nsid);
 
       break;
     case IdentifyStructure::NamespaceIdentificationDescriptorList:
@@ -688,15 +691,15 @@ void Identify::setRequest(SQContext *req) {
     case IdentifyStructure::NVMSetList:
       break;
     case IdentifyStructure::AllocatedNamespaceList:
-      makeNamespaceList(entry->namespaceID, true);
+      makeNamespaceList(nsid, true);
 
       break;
     case IdentifyStructure::AllocatedNamespace:
-      makeNamespaceStructure(entry->namespaceID, true);
+      makeNamespaceStructure(nsid, true);
 
       break;
     case IdentifyStructure::AttachedControllerList:
-      makeControllerList(cntid, entry->namespaceID);
+      makeControllerList(cntid, nsid);
 
       break;
     case IdentifyStructure::ControllerList:

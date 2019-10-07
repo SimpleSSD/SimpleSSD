@@ -18,6 +18,15 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+#define debugprint_command(format, ...)                                        \
+  {                                                                            \
+    uint64_t uid = getUniqueID();                                              \
+                                                                               \
+    debugprint(Log::DebugID::HIL_NVMe_Command,                                 \
+               "CTRL %-3u | SQ %2u:%-5u | " format, (uint16_t)(uid >> 32),     \
+               (uint16_t)(uid >> 16), (uint16_t)uid, ##__VA_ARGS__);           \
+  }
+
 class Subsystem;
 class Controller;
 class Arbitrator;
