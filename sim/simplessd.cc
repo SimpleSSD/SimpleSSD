@@ -179,6 +179,10 @@ AbstractController *SimpleSSD::getController(ControllerID cid) {
   return nullptr;
 }
 
+ObjectData &SimpleSSD::getObject() {
+  return object;
+}
+
 void SimpleSSD::getStatList(std::vector<Object::Stat> &, std::string) noexcept {
 }
 

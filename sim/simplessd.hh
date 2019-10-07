@@ -55,6 +55,7 @@ class SimpleSSD {
 
   ControllerID createController(Interface *);
   AbstractController *getController(ControllerID = 0);
+  ObjectData &getObject();
 
   void getStatList(std::vector<Object::Stat> &, std::string) noexcept;
   void getStatValues(std::vector<double> &) noexcept;
