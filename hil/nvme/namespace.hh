@@ -93,9 +93,10 @@ class Namespace : public Object {
 
   uint32_t getNSID();
 
-  bool attach(ControllerID ctrlid);
+  bool attach(ControllerID);
+  bool detach(ControllerID);
   bool isAttached();
-  bool isAttached(ControllerID ctrlid);
+  bool isAttached(ControllerID);
 
   NamespaceInformation *getInfo();
   void setInfo(uint32_t, NamespaceInformation *, Config::Disk *);

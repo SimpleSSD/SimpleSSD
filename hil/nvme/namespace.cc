@@ -48,6 +48,18 @@ bool Namespace::attach(ControllerID ctrlid) {
   return ret.second;
 }
 
+bool Namespace::detach(ControllerID ctrlid) {
+  auto iter = attachList.find(ctrlid);
+
+  if (iter != attachList.end()) {
+    attachList.erase(iter);
+
+    return true;
+  }
+
+  return false;
+}
+
 bool Namespace::isAttached() {
   return attachList.size() > 0;
 }

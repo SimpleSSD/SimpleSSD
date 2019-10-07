@@ -147,7 +147,9 @@ bool Subsystem::createNamespace(uint32_t nsid, Config::Disk *disk,
 
   panic_if(!ret.second, "Duplicated namespace ID %u", nsid);
 
-  // TODO: DEBUGPRINT!
+  debugprint(Log::DebugID::HIL_NVMe,
+             "NS %-4d | CREATE | LBA size %" PRIu32 " | Capacity %" PRIu64,
+             nsid, info->lbaSize, info->size);
 
   return true;
 }
@@ -159,7 +161,8 @@ bool Subsystem::destroyNamespace(uint32_t nsid) {
     auto info = iter->second->getInfo();
 
     allocatedLogicalPages -= info->namespaceRange.second;
-    // TODO: DEBUGPRINT!
+
+    debugprint(Log::DebugID::HIL_NVMe, "NS %-4d | DELETE", nsid);
 
     delete iter->second;
     namespaceList.erase(iter);
@@ -349,10 +352,7 @@ void Subsystem::init() {
       info.size = nsSize;
       info.capacity = info.size;
 
-      if (createNamespace(ns.nsid, ns.pDisk, &info)) {
-        // TODO: do we need to attach all namespaces to first controller?
-      }
-      else {
+      if (!createNamespace(ns.nsid, ns.pDisk, &info)) {
         panic("Failed to create namespace %u", ns.nsid);
       }
     }
@@ -369,6 +369,27 @@ ControllerID Subsystem::createController(Interface *interface) noexcept {
   // Insert to list
   // We use pointer because controller can update its data after creation
   controllerList.emplace(controllerID, ctrl->getControllerData());
+
+  // First controller?
+  if (controllerID == 0) {
+    bool attachAll = readConfigBoolean(
+        Section::HostInterface, Config::Key::NVMeAttachDefaultNamespaces);
+
+    if (attachAll) {
+      // Attach all default namespaces to current controller
+      for (auto iter = namespaceList.begin(); iter != namespaceList.end();
+           ++iter) {
+        // Namespace -> Controller
+        iter->second->attach(controllerID);
+
+        // Controller -> Namespace
+        auto mapping = attachmentTable.emplace(
+            std::make_pair(controllerID, std::set<uint32_t>()));
+
+        mapping.first->second.emplace(iter->first);
+      }
+    }
+  }
 
   return controllerID++;
 }
@@ -439,6 +460,74 @@ HealthInfo *Subsystem::getHealth(uint32_t nsid) {
   }
 
   return nullptr;
+}
+
+uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid) {
+  auto ctrl = controllerList.find(ctrlid);
+
+  if (UNLIKELY(ctrl == controllerList.end())) {
+    return 1u;  // No such controller
+  }
+
+  auto ns = namespaceList.find(nsid);
+
+  if (UNLIKELY(ns == namespaceList.end())) {
+    return 2u;  // No such namespace
+  }
+
+  // Private?
+  bool share = ns->second->getInfo()->namespaceSharingCapabilities == 1;
+
+  // Namespace -> Controller
+  if (ns->second->isAttached(ctrlid)) {
+    return 3u;  // Namespace already attached
+  }
+
+  if (!share && ns->second->isAttached()) {
+    return 4u;  // Namespace is private
+  }
+
+  ns->second->attach(ctrlid);
+
+  // Controller -> Namespace
+  auto iter =
+      attachmentTable.emplace(std::make_pair(ctrlid, std::set<uint32_t>()));
+
+  iter.first->second.emplace(nsid);
+
+  return 0;
+}
+
+uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid) {
+  auto ctrl = controllerList.find(ctrlid);
+
+  if (UNLIKELY(ctrl == controllerList.end())) {
+    return 1u;  // No such controller
+  }
+
+  auto ns = namespaceList.find(nsid);
+
+  if (UNLIKELY(ns == namespaceList.end())) {
+    return 2u;  // No such namespace
+  }
+
+  // Namespace -> Controller
+  if (!ns->second->detach(ctrlid)) {
+    return 5u;  // Namespace not attached
+  }
+
+  // Controller -> Namespace
+  auto mapping = attachmentTable.find(ctrlid);
+
+  if (LIKELY(mapping != attachmentTable.end())) {
+    auto iter = mapping->second.find(nsid);
+
+    if (LIKELY(iter != mapping->second.end())) {
+      mapping->second.erase(iter);
+    }
+  }
+
+  return 0;
 }
 
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
