@@ -104,8 +104,8 @@ class Subsystem : public AbstractSubsystem {
   LogPage *getLogPage();
   HealthInfo *getHealth(uint32_t);
 
-  uint8_t attachController(ControllerID, uint32_t);
-  uint8_t detachController(ControllerID, uint32_t);
+  uint8_t attachController(ControllerID, uint32_t, bool = true);
+  uint8_t detachController(ControllerID, uint32_t, bool = true);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

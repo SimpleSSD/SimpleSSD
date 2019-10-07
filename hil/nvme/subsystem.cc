@@ -462,7 +462,8 @@ HealthInfo *Subsystem::getHealth(uint32_t nsid) {
   return nullptr;
 }
 
-uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid) {
+uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid,
+                                    bool dry) {
   auto ctrl = controllerList.find(ctrlid);
 
   if (UNLIKELY(ctrl == controllerList.end())) {
@@ -487,6 +488,10 @@ uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid) {
     return 4u;  // Namespace is private
   }
 
+  if (dry) {
+    return 0;
+  }
+
   ns->second->attach(ctrlid);
 
   // Controller -> Namespace
@@ -498,7 +503,8 @@ uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid) {
   return 0;
 }
 
-uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid) {
+uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid,
+                                    bool dry) {
   auto ctrl = controllerList.find(ctrlid);
 
   if (UNLIKELY(ctrl == controllerList.end())) {
@@ -512,9 +518,15 @@ uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid) {
   }
 
   // Namespace -> Controller
-  if (!ns->second->detach(ctrlid)) {
+  if (!ns->second->isAttached(ctrlid)) {
     return 5u;  // Namespace not attached
   }
+
+  if (dry) {
+    return 0;
+  }
+
+  ns->second->detach(ctrlid);
 
   // Controller -> Namespace
   auto mapping = attachmentTable.find(ctrlid);
