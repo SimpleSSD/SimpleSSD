@@ -158,6 +158,21 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
 
   if (iter != namespaceList.end()) {
     auto info = iter->second->getInfo();
+    auto list = iter->second->getAttachment();
+
+    for (auto &ctrlid : list) {
+      aenTo.push_back(ctrlid);
+
+      auto mapping = attachmentTable.find(ctrlid);
+
+      if (LIKELY(mapping != attachmentTable.end())) {
+        auto set = mapping->second.find(nsid);
+
+        if (LIKELY(set != mapping->second.end())) {
+          mapping->second.erase(set);
+        }
+      }
+    }
 
     allocatedLogicalPages -= info->namespaceRange.second;
 
@@ -542,6 +557,11 @@ uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid,
 
   iter.first->second.emplace(nsid);
 
+  aenTo.push_back(ctrlid);
+
+  scheduleAEN(AsyncEventType::Notice,
+              (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
+
   return 0;
 }
 
@@ -580,6 +600,11 @@ uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid,
       mapping->second.erase(iter);
     }
   }
+
+  aenTo.push_back(ctrlid);
+
+  scheduleAEN(AsyncEventType::Notice,
+              (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
 
   return 0;
 }
@@ -629,6 +654,12 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
     }
 
     namespaceList.clear();
+
+    // Collected affected controllers
+    for (auto &iter : attachmentTable) {
+      aenTo.emplace_back(iter.first);
+    }
+
     attachmentTable.clear();
   }
   else {
@@ -637,9 +668,10 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
     if (UNLIKELY(!ret)) {
       return 4u;  // Namespace not exist
     }
-
-    // TODO: Notify to attached controller
   }
+
+  scheduleAEN(AsyncEventType::Notice,
+              (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
 
   return 0;
 }

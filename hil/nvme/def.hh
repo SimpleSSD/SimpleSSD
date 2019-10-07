@@ -147,7 +147,8 @@ enum class NVMCommand : uint8_t {
 };
 
 enum class LogPageID : uint8_t {
-  ErrorInformation = 0x01,
+  None,
+  ErrorInformation,
   SMARTInformation,
   FirmwareSlotInformation,
   ChangedNamespaceList,
