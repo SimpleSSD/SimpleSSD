@@ -10,10 +10,10 @@ then
   exit 1
 fi
 
-if [ "$#" -ne 2 ]
+if [ "$#" -ne 1 ]
 then
-  echo "Usage : "$0" <filename without extension> <class name>"
-  echo " Specify snake_case filename and CamelCase class name."
+  echo "Usage : "$0" <filename without extension>"
+  echo " Specify snake_case filename. Filename will be converted to Camel case and used for class name"
 
   exit 1
 fi
@@ -38,17 +38,10 @@ then
   exit 1
 fi
 
-if [[ ! $2 =~ ^[a-zA-Z]+$ ]]
-then
-  echo "Invalid class name \""$2"\""
-
-  exit 1
-fi
-
 HEADER_FILE=$1".hh"
 SOURCE_FILE=$1".cc"
 UPPER_FILENAME=${1^^}
-CLASS_NAME=$2
+CLASS_NAME=$(echo $1 | sed -r 's/(^|_)([a-z])/\U\2/g')
 
 cat > $PREFIX"/"$HEADER_FILE << EOF
 // SPDX-License-Identifier: GPL-3.0-or-later
