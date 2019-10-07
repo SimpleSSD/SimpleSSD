@@ -315,7 +315,7 @@ ControllerID Subsystem::createController(Interface *interface) noexcept {
 
   // Insert to list
   // We use pointer because controller can update its data after creation
-  controllerList.emplace(controllerID, &ctrl->getControllerData());
+  controllerList.emplace(controllerID, ctrl->getControllerData());
 
   return controllerID++;
 }

@@ -126,8 +126,8 @@ void Controller::shutdownComplete() {
   registers.cs.shst = 2;  // Shutdown processing complete
 }
 
-ControllerData &Controller::getControllerData() {
-  return controllerData;
+ControllerData *Controller::getControllerData() {
+  return &controllerData;
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,

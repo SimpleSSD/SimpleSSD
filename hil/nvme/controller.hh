@@ -132,7 +132,7 @@ class Controller : public AbstractController {
   void notifySubsystem(uint64_t);
   void shutdownComplete();
 
-  ControllerData &getControllerData();
+  ControllerData *getControllerData();
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;
