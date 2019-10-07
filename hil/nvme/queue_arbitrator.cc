@@ -301,7 +301,11 @@ void Arbitrator::completion_done() {
 }
 
 void Arbitrator::collect(uint64_t now) {
-  if (UNLIKELY(!run || running)) {
+  bool handled = false;
+
+  lastInvokedAt = now;
+
+  if (UNLIKELY(!run)) {
     return;
   }
 
@@ -315,24 +319,28 @@ void Arbitrator::collect(uint64_t now) {
     return;
   }
 
-  if (requestQueue.size() >= internalQueueSize) {
-    // Nothing to do!
-    schedule(work, now + period);
-
-    return;
-  }
-
+  if (LIKELY(!running && requestQueue.size() < internalQueueSize)) {
   running = true;
 
   // Collect requests
   if (LIKELY(mode == Arbitration::RoundRobin)) {
-    collectRoundRobin();
+      handled = collectRoundRobin();
   }
   else if (mode == Arbitration::WeightedRoundRobin) {
-    collectWeightedRoundRobin();
+      handled = collectWeightedRoundRobin();
   }
   else {
     panic("Invalid arbitration mode");
+  }
+}
+
+  // Schedule collect
+  lastInvokedAt += period;
+
+  schedule(work, lastInvokedAt);
+
+  if (!handled) {
+    running = false;
   }
 }
 
@@ -383,19 +391,24 @@ bool Arbitrator::checkQueue(uint16_t qid) {
   return false;
 }
 
-void Arbitrator::collectRoundRobin() {
+bool Arbitrator::collectRoundRobin() {
+  bool ret = false;
+
   for (uint16_t i = 0; i < sqSize; i++) {
-    checkQueue(i);
+    ret |= checkQueue(i);
   }
+
+  return ret;
 }
 
-void Arbitrator::collectWeightedRoundRobin() {
+bool Arbitrator::collectWeightedRoundRobin() {
+  bool ret = false;
   uint16_t count;
 
   // Check urgent queues
   for (uint16_t i = 0; i < sqSize; i++) {
     if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Urgent) {
-      checkQueue(i);
+      ret |= checkQueue(i);
     }
   }
 
@@ -404,7 +417,7 @@ void Arbitrator::collectWeightedRoundRobin() {
 
   for (uint16_t i = 0; i < sqSize; i++) {
     if (sqList[i] && sqList[i]->getPriority() == QueuePriority::High) {
-      if (checkQueue(i)) {
+      if (ret |= checkQueue(i)) {
         count++;
 
         if (count > param.hpw) {  // Zero-based value
@@ -419,7 +432,7 @@ void Arbitrator::collectWeightedRoundRobin() {
 
   for (uint16_t i = 0; i < sqSize; i++) {
     if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Medium) {
-      if (checkQueue(i)) {
+      if (ret |= checkQueue(i)) {
         count++;
 
         if (count > param.mpw) {  // Zero-based value
@@ -434,7 +447,7 @@ void Arbitrator::collectWeightedRoundRobin() {
 
   for (uint16_t i = 0; i < sqSize; i++) {
     if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Low) {
-      if (checkQueue(i)) {
+      if (ret |= checkQueue(i)) {
         count++;
 
         if (count > param.lpw) {  // Zero-based value
@@ -443,6 +456,8 @@ void Arbitrator::collectWeightedRoundRobin() {
       }
     }
   }
+
+  return ret;
 }
 
 void Arbitrator::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -454,6 +469,7 @@ void Arbitrator::resetStatValues() noexcept {}
 void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, period);
   BACKUP_SCALAR(out, internalQueueSize);
+  BACKUP_SCALAR(out, lastInvokedAt);
   BACKUP_SCALAR(out, cqSize);
   BACKUP_SCALAR(out, sqSize);
   BACKUP_SCALAR(out, mode);
@@ -552,6 +568,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, period);
   RESTORE_SCALAR(in, internalQueueSize);
+  RESTORE_SCALAR(in, lastInvokedAt);
   RESTORE_SCALAR(in, cqSize);
   RESTORE_SCALAR(in, sqSize);
   RESTORE_SCALAR(in, mode);

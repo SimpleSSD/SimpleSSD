@@ -121,6 +121,7 @@ class Arbitrator : public Object {
   // Work params
   uint64_t period;
   uint64_t internalQueueSize;
+  uint64_t lastInvokedAt;
 
   // Queue
   uint16_t cqSize;
@@ -153,8 +154,8 @@ class Arbitrator : public Object {
   void collect_done();
 
   bool checkQueue(uint16_t);
-  void collectRoundRobin();
-  void collectWeightedRoundRobin();
+  bool collectRoundRobin();
+  bool collectWeightedRoundRobin();
 
   void collect(uint64_t);
 
