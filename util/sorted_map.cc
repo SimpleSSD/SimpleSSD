@@ -15,6 +15,53 @@ namespace SimpleSSD {
 
 unordered_map_queue::Entry::Entry() : prev(nullptr), next(nullptr) {}
 
+unordered_map_queue::iterator::iterator(Entry *h, Entry *t, Entry *c)
+    : head(h), tail(t), cur(c) {}
+
+void *unordered_map_queue::iterator::operator*() {
+  return getValue();
+}
+
+unordered_map_queue::iterator &unordered_map_queue::iterator::operator++() {
+  if (cur != nullptr && cur != tail) {
+    cur = cur->next;
+  }
+
+  return *this;
+}
+
+unordered_map_queue::iterator &unordered_map_queue::iterator::operator--() {
+  if (cur != nullptr && cur != head->next) {
+    cur = cur->prev;
+  }
+
+  return *this;
+}
+
+bool unordered_map_queue::iterator::operator==(const iterator &rhs) {
+  return cur == rhs.cur;
+}
+
+bool unordered_map_queue::iterator::operator!=(const iterator &rhs) {
+  return cur != rhs.cur;
+}
+
+uint64_t unordered_map_queue::iterator::getKey() {
+  if (cur != head && cur != tail && cur != nullptr) {
+    return cur->key;
+  }
+
+  return 0;
+}
+
+void *unordered_map_queue::iterator::getValue() {
+  if (cur != head && cur != tail && cur != nullptr) {
+    return cur->value;
+  }
+
+  return nullptr;
+}
+
 unordered_map_queue::unordered_map_queue() : length(0) {
   listHead.next = &listTail;
   listTail.prev = &listHead;
@@ -178,6 +225,30 @@ void unordered_map_queue::clear() noexcept {
 
   listHead.next = &listTail;
   listTail.prev = &listHead;
+}
+
+unordered_map_queue::iterator unordered_map_queue::begin() noexcept {
+  return iterator(&listHead, &listTail, listHead.next);
+}
+
+unordered_map_queue::iterator unordered_map_queue::end() noexcept {
+  return iterator(&listHead, &listTail, &listTail);
+}
+
+unordered_map_queue::iterator unordered_map_queue::erase(iterator &i) noexcept {
+  // Get iterator for internal unordered_map
+  auto iter = map.find(i.cur->key);
+
+  if (iter != map.end()) {
+    // We need to return next iterator
+    Entry *next = i.cur->next;
+
+    erase(i.cur->key);
+
+    return iterator(&listHead, &listTail, next);
+  }
+
+  return i;
 }
 
 unordered_map_list::unordered_map_list(Compare c)

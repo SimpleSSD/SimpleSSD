@@ -11,7 +11,7 @@
 #define __SIMPLESSD_HIL_NVME_QUEUE_ARBITRATOR_HH__
 
 #include <functional>
-#include <queue>
+#include <list>
 
 #include "hil/nvme/queue.hh"
 #include "sim/abstract_subsystem.hh"
@@ -137,11 +137,16 @@ class Arbitrator : public Object {
   // Internal queue (Indexed by commandID, sorted by insertion order)
   unordered_map_queue requestQueue;
   unordered_map_queue dispatchedQueue;
-  std::queue<CQContext *> completionQueue;
+  std::list<CQContext *> completionQueue;
 
   // Completion
   Event eventCompDone;
   void completion_done();
+
+  // Abort
+  std::map<uint16_t, Event> abortSQList;
+
+  void abort_SQDone();
 
   // Shutdown
   bool shutdownReserved;
@@ -149,7 +154,7 @@ class Arbitrator : public Object {
   // Work
   bool run;
   bool running;
-  std::queue<SQContext *> collectQueue;
+  std::list<SQContext *> collectQueue;
 
   Event eventCollect;
   void collect_done();
@@ -158,6 +163,8 @@ class Arbitrator : public Object {
   bool collectRoundRobin();
   bool collectWeightedRoundRobin();
 
+  void abortCommand(SQContext *, GenericCommandStatusCode);
+  void abortCommand(SQContext *, CommandSpecificStatusCode);
   void collect(uint64_t);
 
  public:
@@ -183,6 +190,8 @@ class Arbitrator : public Object {
   uint8_t createIOSQ(uint64_t, uint16_t, uint16_t, uint16_t, uint8_t, bool,
                      uint16_t, Event);
   uint8_t createIOCQ(uint64_t, uint16_t, uint16_t, uint16_t, bool, bool, Event);
+  uint8_t deleteIOSQ(uint16_t, Event);
+  uint8_t deleteIOCQ(uint16_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

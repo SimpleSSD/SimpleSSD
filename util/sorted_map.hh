@@ -37,6 +37,29 @@ class unordered_map_queue {
     Entry();
   };
 
+ public:
+  class iterator {
+   private:
+    friend unordered_map_queue;
+
+    const Entry *head;
+    const Entry *tail;
+    Entry *cur;
+
+    iterator(Entry *, Entry *, Entry *);
+
+   public:
+    void *operator*();
+    iterator &operator++();
+    iterator &operator--();
+    bool operator==(const iterator &rhs);
+    bool operator!=(const iterator &rhs);
+
+    uint64_t getKey();
+    void *getValue();
+  };
+
+ protected:
   uint64_t length;  // Same with map.size()
 
   std::unordered_map<uint64_t, Entry *> map;
@@ -63,6 +86,10 @@ class unordered_map_queue {
   void *front() noexcept;
   void *back() noexcept;
   void clear() noexcept;
+
+  iterator begin() noexcept;
+  iterator end() noexcept;
+  iterator erase(iterator &) noexcept;
 };
 
 /**

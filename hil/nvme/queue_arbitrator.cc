@@ -231,15 +231,8 @@ dispatch_again:
 
     if (UNLIKELY(!ret)) {
       // Command ID duplication
-      auto cqe = new CQContext();
+      abortCommand(entry, GenericCommandStatusCode::CommandIDConflict);
 
-      cqe->update(entry);
-      cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
-                      GenericCommandStatusCode::CommandIDConflict);
-
-      complete(cqe, true);
-
-      // cqe is deleted by complete function
       delete entry;
 
       // Retry
@@ -381,7 +374,86 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
   return true;
 }
 
+uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
+  auto sq = sqList[id];
+
+  panic_if(id == 0, "Cannot delete admin SQ.");
+
+  if (UNLIKELY(!sq || abortSQList.find(id) != abortSQList.end())) {
+    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+  }
+
+  // Abort all commands submitted from current sq
+  for (auto iter = requestQueue.begin(); iter != requestQueue.end();) {
+    auto entry = (SQContext *)iter.getValue();
+
+    panic_if(!entry, "Corrupted request queue.");
+
+    if (entry->getSQID() == id) {
+      // Abort command
+      abortCommand(entry, GenericCommandStatusCode::Abort_SQDeletion);
+
+      iter = requestQueue.erase(iter);
+      delete entry;
+    }
+    else {
+      ++iter;
+    }
+  }
+
+  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();) {
+    auto entry = (SQContext *)iter.getValue();
+
+    panic_if(!entry, "Corrupted dispatch queue.");
+
+    if (entry->getSQID() == id) {
+      // Mark abort to prevent duplicated completion
+      entry->abort();
+
+      // Abort command
+      abortCommand(entry, GenericCommandStatusCode::Abort_SQDeletion);
+
+      // MUST NOT DELETE AND FREE ENTRY
+    }
+    else {
+      ++iter;
+    }
+  }
+
+  // Push current event to wait all aborted commands to complete
+  abortSQList.emplace(std::make_pair(id, eid));
+
+  return 0;
+}
+
+uint8_t Arbitrator::deleteIOCQ(uint16_t id) {
+  auto cq = cqList[id];
+
+  panic_if(id == 0, "Cannot delete admin CQ.");
+
+  if (UNLIKELY(!cq)) {
+    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+  }
+
+  // Check corresponding SQ exists
+  for (uint16_t i = 0; i < sqSize; i++) {
+    if (sqList[i] && sqList[i]->getCQID() == id) {
+      return (uint8_t)CommandSpecificStatusCode::Invalid_QueueDeletion;
+    }
+  }
+
+  // Don't need to check pending requests in CQ
+  // All commands are aborted from SQ -> SQ deletion -> Delete I/O SQ completion
+  debugprint_ctrl("CQ %-4d | DELETE", id);
+
+  delete cq;
+  cqList[id] = nullptr;
+
+  return 0;
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
+  bool aborted = false;
   auto cq = cqList[cqe->getCQID()];
 
   panic_if(!cq, "Completion to invalid completion queue.");
@@ -393,22 +465,30 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
     panic_if(!sqe, "Failed to find corresponding submission entry.");
     panic_if(!sqe->completed, "Corresponding submission entry not completed.");
 
+    aborted = sqe->aborted;
+
     // Remove SQContext
     dispatchedQueue.erase(sqe->commandID);
     delete sqe;
   }
 
-  // Insert to completion queue
-  completionQueue.push(cqe);
+  if (UNLIKELY(aborted)) {
+    // CQ already submitted.
+    delete cqe;
+  }
+  else {
+    // Insert to completion queue
+    completionQueue.push_back(cqe);
 
-  // Write entry to CQ
-  cq->setData(cqe->getData(), eventCompDone);
+    // Write entry to CQ
+    cq->setData(cqe->getData(), eventCompDone);
 
-  if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
-    // All pending requests are finished
-    controller->controller->shutdownComplete();
+    if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
+      // All pending requests are finished
+      controller->controller->shutdownComplete();
 
-    shutdownReserved = false;
+      shutdownReserved = false;
+    }
   }
 }
 
@@ -416,7 +496,7 @@ void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
 
-  completionQueue.pop();
+  completionQueue.pop_front();
 
   if (cq->interruptEnabled()) {
     controller->interruptManager->postInterrupt(cq->getInterruptVector(), true);
@@ -424,6 +504,63 @@ void Arbitrator::completion_done() {
 
   // Remove CQContext
   delete cqe;
+
+  // Pending abort events?
+  abort_SQDone();
+}
+
+void Arbitrator::abort_SQDone() {
+  if (LIKELY(abortSQList.size() == 0)) {
+    return;
+  }
+
+  std::map<uint16_t, uint32_t> countList;
+
+  // Check pending queue
+  for (auto iter = completionQueue.begin(); iter != completionQueue.end();
+       iter++) {
+    auto id = (*iter)->getSQID();
+
+    auto count = countList.emplace(std::make_pair(id, 0));
+    count.first->second++;
+  }
+
+  // Call events that completed
+  for (auto iter = abortSQList.begin(); iter != abortSQList.end();) {
+    auto count = countList.find(iter->first);
+
+    if (count == countList.end()) {
+      debugprint_ctrl("SQ %-4d | DELETE", iter->first);
+
+      delete sqList[iter->first];
+      sqList[iter->first] = nullptr;
+
+      schedule(iter->second, getTick());
+
+      iter = abortSQList.erase(iter);
+    }
+    else {
+      ++iter;
+    }
+  }
+}
+
+void Arbitrator::abortCommand(SQContext *sqe, GenericCommandStatusCode sc) {
+  auto cqe = new CQContext();
+
+  cqe->update(sqe);
+  cqe->makeStatus(false, false, StatusType::GenericCommandStatus, sc);
+
+  complete(cqe, true);
+}
+
+void Arbitrator::abortCommand(SQContext *sqe, CommandSpecificStatusCode sc) {
+  auto cqe = new CQContext();
+
+  cqe->update(sqe);
+  cqe->makeStatus(false, false, StatusType::CommandSpecificStatus, sc);
+
+  complete(cqe, true);
 }
 
 void Arbitrator::collect(uint64_t now) {
@@ -477,19 +614,12 @@ void Arbitrator::collect_done() {
 
   auto ret = requestQueue.push_back(sqe->getID(), sqe);
 
-  collectQueue.pop();
+  collectQueue.pop_front();
 
   if (UNLIKELY(!ret)) {
     // Command ID duplication
-    auto cqe = new CQContext();
+    abortCommand(sqe, GenericCommandStatusCode::CommandIDConflict);
 
-    cqe->update(sqe);
-    cqe->makeStatus(false, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::CommandIDConflict);
-
-    complete(cqe, true);
-
-    // cqe is deleted by complete function
     delete sqe;
   }
 
@@ -506,7 +636,7 @@ bool Arbitrator::checkQueue(uint16_t qid) {
   if (sq && sq->getItemCount() > 0) {
     auto *entry = new SQContext();
 
-    collectQueue.push(entry);
+    collectQueue.push_back(entry);
 
     entry->update(qid, sq->getCQID(), sq->getHead());
     sq->getData(entry->getData(), eventCollect);
@@ -667,27 +797,29 @@ void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
   size = completionQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (uint64_t i = 0; i < size; i++) {
-    auto iter = completionQueue.front();
-
+  for (auto &iter : completionQueue) {
     BACKUP_BLOB(out, iter->entry.data, 16);
     BACKUP_SCALAR(out, iter->cqID);
 
-    completionQueue.pop();
     delete iter;
   }
 
   size = collectQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (uint64_t i = 0; i < size; i++) {
-    auto iter = collectQueue.front();
-
+  for (auto &iter : collectQueue) {
     // For collecting queue, only data is used
     BACKUP_BLOB(out, iter->entry.data, 64);
 
-    collectQueue.pop();
     delete iter;
+  }
+
+  size = abortSQList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : abortSQList) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
   }
 }
 
@@ -776,7 +908,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_BLOB(in, iter->entry.data, 16);
     RESTORE_SCALAR(in, iter->cqID);
 
-    completionQueue.push(iter);
+    completionQueue.push_back(iter);
   }
 
   RESTORE_SCALAR(in, size);
@@ -786,7 +918,19 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_BLOB(in, iter->entry.data, 64);
 
-    collectQueue.push(iter);
+    collectQueue.push_back(iter);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint16_t id;
+    Event eid;
+
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, eid);
+
+    abortSQList.emplace(std::make_pair(id, eid));
   }
 }
 
