@@ -326,19 +326,19 @@ void Arbitrator::collect(uint64_t now) {
   }
 
   if (LIKELY(!running && requestQueue.size() < internalQueueSize)) {
-  running = true;
+    running = true;
 
-  // Collect requests
-  if (LIKELY(mode == Arbitration::RoundRobin)) {
+    // Collect requests
+    if (LIKELY(mode == Arbitration::RoundRobin)) {
       handled = collectRoundRobin();
-  }
-  else if (mode == Arbitration::WeightedRoundRobin) {
+    }
+    else if (mode == Arbitration::WeightedRoundRobin) {
       handled = collectWeightedRoundRobin();
+    }
+    else {
+      panic("Invalid arbitration mode");
+    }
   }
-  else {
-    panic("Invalid arbitration mode");
-  }
-}
 
   // Schedule collect
   lastInvokedAt += period;
