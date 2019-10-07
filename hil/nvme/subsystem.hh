@@ -15,8 +15,6 @@
 
 #include "hil/hil.hh"
 #include "hil/nvme/command/async_event_request.hh"
-#include "hil/nvme/command/feature.hh"
-#include "hil/nvme/command/log_page.hh"
 #include "hil/nvme/def.hh"
 #include "hil/nvme/namespace.hh"
 #include "hil/nvme/queue_arbitrator.hh"
@@ -40,8 +38,6 @@ class Subsystem : public AbstractSubsystem {
   std::map<uint32_t, Namespace *> namespaceList;
   std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
-  Feature feature;
-  LogPage logPage;
   HealthInfo health;
 
   unordered_map_queue ongoingCommands;
@@ -100,8 +96,6 @@ class Subsystem : public AbstractSubsystem {
   uint32_t getLPNSize() const;
   uint64_t getTotalPages() const;
   uint64_t getAllocatedPages() const;
-  Feature *getFeature();
-  LogPage *getLogPage();
   HealthInfo *getHealth(uint32_t);
 
   uint8_t attachController(ControllerID, uint32_t, bool = true);

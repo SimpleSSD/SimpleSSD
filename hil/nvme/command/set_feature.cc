@@ -45,7 +45,7 @@ void SetFeature::setRequest(SQContext *req) {
 
         break;
       case FeatureID::PowerManagement:
-        data.subsystem->getFeature()->pm.data = entry->dword11;
+        data.controller->getFeature()->pm.data = entry->dword11;
 
         break;
       case FeatureID::TemperatureThreshold: {
@@ -58,18 +58,18 @@ void SetFeature::setRequest(SQContext *req) {
         }
         else {
           if (sel == 0) {
-            data.subsystem->getFeature()->overThresholdList[idx] =
+            data.controller->getFeature()->overThresholdList[idx] =
                 (uint16_t)entry->dword11;
           }
           else {
-            data.subsystem->getFeature()->underThresholdList[idx] =
+            data.controller->getFeature()->underThresholdList[idx] =
                 (uint16_t)entry->dword11;
           }
         }
 
       } break;
       case FeatureID::ErrorRecovery:
-        data.subsystem->getFeature()->er.data = entry->dword11;
+        data.controller->getFeature()->er.data = entry->dword11;
 
         break;
       case FeatureID::VolatileWriteCache: {
@@ -80,7 +80,7 @@ void SetFeature::setRequest(SQContext *req) {
                    pHIL);
       } break;
       case FeatureID::NumberOfQueues: {
-        auto feature = data.subsystem->getFeature();
+        auto feature = data.controller->getFeature();
 
         feature->noq.data = entry->dword11;
         data.arbitrator->requestIOQueues(feature->noq.nsq, feature->noq.ncq);
@@ -103,7 +103,7 @@ void SetFeature::setRequest(SQContext *req) {
         data.interrupt->enableCoalescing(ivc.cd == 0, ivc.iv);
       } break;
       case FeatureID::WriteAtomicityNormal:
-        data.subsystem->getFeature()->wan = entry->dword11;
+        data.controller->getFeature()->wan = entry->dword11;
 
         break;
       case FeatureID::AsynchronousEventConfiguration:

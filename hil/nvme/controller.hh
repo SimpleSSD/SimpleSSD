@@ -11,6 +11,8 @@
 #define __SIMPLESSD_HIL_NVME_CONTROLLER_HH__
 
 #include "hil/common/interrupt_manager.hh"
+#include "hil/nvme/command/feature.hh"
+#include "hil/nvme/command/log_page.hh"
 #include "hil/nvme/queue_arbitrator.hh"
 #include "sim/abstract_controller.hh"
 #include "util/fifo.hh"
@@ -23,8 +25,8 @@ class Controller;
 class ControllerData {
  public:
   Controller *controller;
-  Interface *interface;     //!< Top-most host interface
-  DMAInterface *dma;        //!< DMA port for current controller
+  Interface *interface;  //!< Top-most host interface
+  DMAInterface *dma;     //!< DMA port for current controller
   InterruptManager *interruptManager;
   Arbitrator *arbitrator;
   uint64_t memoryPageSize;  //!< This is only for PRPEngine
@@ -111,6 +113,9 @@ class Controller : public AbstractController {
   RegisterTable registers;
   PersistentMemoryRegion pmrRegisters;
 
+  Feature feature;
+  LogPage logPage;
+
   uint64_t sqStride;         //!< Calculated I/O SQ stride
   uint64_t cqStride;         //!< Calculated I/O CQ stride
   uint8_t adminQueueInited;  //!< uint8_t, not bool, for checkout pointer counts
@@ -137,6 +142,8 @@ class Controller : public AbstractController {
   // Command
   uint64_t getCapabilities();
   void getQueueStride(uint64_t &, uint64_t &);
+  Feature *getFeature();
+  LogPage *getLogPage();
 
   uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;

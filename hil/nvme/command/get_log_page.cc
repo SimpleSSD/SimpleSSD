@@ -84,7 +84,7 @@ void GetLogPage::setRequest(SQContext *req) {
       }
     } break;
     case LogPageID::ChangedNamespaceList:
-      data.subsystem->getLogPage()->cnl.makeResponse(offset, size, buffer);
+      data.controller->getLogPage()->cnl.makeResponse(offset, size, buffer);
 
       break;
     default:

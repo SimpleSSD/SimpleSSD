@@ -43,7 +43,7 @@ void GetFeature::setRequest(SQContext *req) {
 
         break;
       case FeatureID::PowerManagement:
-        cqc->getData()->dword0 = data.subsystem->getFeature()->pm.data;
+        cqc->getData()->dword0 = data.controller->getFeature()->pm.data;
 
         break;
       case FeatureID::TemperatureThreshold: {
@@ -57,17 +57,17 @@ void GetFeature::setRequest(SQContext *req) {
         else {
           if (sel == 0) {
             cqc->getData()->dword0 =
-                data.subsystem->getFeature()->overThresholdList[idx];
+                data.controller->getFeature()->overThresholdList[idx];
           }
           else {
             cqc->getData()->dword0 =
-                data.subsystem->getFeature()->underThresholdList[idx];
+                data.controller->getFeature()->underThresholdList[idx];
           }
         }
 
       } break;
       case FeatureID::ErrorRecovery:
-        cqc->getData()->dword0 = data.subsystem->getFeature()->er.data;
+        cqc->getData()->dword0 = data.controller->getFeature()->er.data;
 
         break;
       case FeatureID::VolatileWriteCache: {
@@ -78,7 +78,7 @@ void GetFeature::setRequest(SQContext *req) {
                    pHIL);
       } break;
       case FeatureID::NumberOfQueues:
-        cqc->getData()->dword0 = data.subsystem->getFeature()->noq.data;
+        cqc->getData()->dword0 = data.controller->getFeature()->noq.data;
 
         break;
       case FeatureID::InterruptCoalescing: {
@@ -102,11 +102,11 @@ void GetFeature::setRequest(SQContext *req) {
         cqc->getData()->dword0 = ivc.data;
       } break;
       case FeatureID::WriteAtomicityNormal:
-        cqc->getData()->dword0 = data.subsystem->getFeature()->wan;
+        cqc->getData()->dword0 = data.controller->getFeature()->wan;
 
         break;
       case FeatureID::AsynchronousEventConfiguration:
-        cqc->getData()->dword0 = data.subsystem->getFeature()->aec.data;
+        cqc->getData()->dword0 = data.controller->getFeature()->aec.data;
 
         break;
       default:

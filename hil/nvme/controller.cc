@@ -36,6 +36,8 @@ Controller::PersistentMemoryRegion::PersistentMemoryRegion() {
 Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
                        Interface *i)
     : AbstractController(o, id, p, i),
+      feature(o),
+      logPage(o),
       adminQueueInited(0),
       interruptMask(0),
       adminQueueCreated(0) {
@@ -137,6 +139,14 @@ uint64_t Controller::getCapabilities() {
 void Controller::getQueueStride(uint64_t &sq, uint64_t &cq) {
   sq = sqStride;
   cq = cqStride;
+}
+
+Feature *Controller::getFeature() {
+  return &feature;
+}
+
+LogPage *Controller::getLogPage() {
+  return &logPage;
 }
 
 uint64_t Controller::read(uint64_t offset, uint64_t size,
@@ -433,6 +443,9 @@ void Controller::createCheckpoint(std::ostream &out) noexcept {
   controllerData.arbitrator->createCheckpoint(out);
   ((FIFO *)controllerData.dma)->createCheckpoint(out);
 
+  feature.createCheckpoint(out);
+  logPage.createCheckpoint(out);
+
   BACKUP_SCALAR(out, controllerData.memoryPageSize);
   BACKUP_BLOB(out, registers.data, sizeof(RegisterTable));
   BACKUP_BLOB(out, pmrRegisters.data, sizeof(PersistentMemoryRegion));
@@ -450,6 +463,9 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
   controllerData.interruptManager->restoreCheckpoint(in);
   controllerData.arbitrator->restoreCheckpoint(in);
   ((FIFO *)controllerData.dma)->restoreCheckpoint(in);
+
+  feature.restoreCheckpoint(in);
+  logPage.restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, controllerData.memoryPageSize);
   RESTORE_BLOB(in, registers.data, sizeof(RegisterTable));
