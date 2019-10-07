@@ -130,7 +130,13 @@ void InterruptManager::enableCoalescing(bool set, uint16_t iv) {
 
     reschedule(nullptr);
   }
-}  // namespace SimpleSSD::HIL
+}
+
+bool InterruptManager::isEnabled(uint16_t iv) {
+  auto iter = (CoalesceData *)coalesceMap.find(iv);
+
+  return iter != nullptr;
+}
 
 void InterruptManager::configureCoalescing(uint64_t time, uint16_t count) {
   panic_if(time == 0 || count < 2, "Invalid coalescing parameters.");
@@ -140,6 +146,11 @@ void InterruptManager::configureCoalescing(uint64_t time, uint16_t count) {
 
   aggregationTime = time;
   aggregationThreshold = count;
+}
+
+void InterruptManager::getCoalescing(uint64_t &time, uint16_t &count) {
+  time = aggregationTime;
+  count = aggregationThreshold;
 }
 
 void InterruptManager::getStatList(std::vector<Stat> &, std::string) noexcept {}

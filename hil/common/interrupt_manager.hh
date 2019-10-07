@@ -62,7 +62,9 @@ class InterruptManager : public Object {
   void postInterrupt(uint16_t, bool);
 
   void enableCoalescing(bool, uint16_t);
+  bool isEnabled(uint16_t);
   void configureCoalescing(uint64_t, uint16_t);
+  void getCoalescing(uint64_t &, uint16_t &);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

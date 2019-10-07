@@ -15,7 +15,10 @@
 namespace SimpleSSD::HIL::NVMe {
 
 Subsystem::Subsystem(ObjectData &o)
-    : AbstractSubsystem(o), controllerID(0), allocatedLogicalPages(0) {
+    : AbstractSubsystem(o),
+      controllerID(0),
+      feature(o),
+      allocatedLogicalPages(0) {
   // TODO: Get total physical page count from configuration
   // auto page = readConfigUint(Section::FTL, FTL::Config::Key::Page);
   // auto block = readConfigUint(Section::FTL, FTL::Config::Key::Page);
@@ -174,6 +177,10 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
     switch ((AdminCommand)opcode) {
       case AdminCommand::Identify:
         return new Identify(object, this, cdata);
+      case AdminCommand::SetFeatures:
+        return new SetFeature(object, this, cdata);
+      case AdminCommand::GetFeatures:
+        return new GetFeature(object, this, cdata);
       default:
         return nullptr;
     }
@@ -379,6 +386,8 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, allocatedLogicalPages);
 
+  feature.createCheckpoint(out);
+
   uint64_t size = controllerList.size();
   BACKUP_SCALAR(out, size);
 
@@ -431,6 +440,8 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, logicalPageSize);
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, allocatedLogicalPages);
+
+  feature.restoreCheckpoint(in);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
