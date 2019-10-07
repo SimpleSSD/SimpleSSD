@@ -181,7 +181,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::CreateIOSQ:
         return new CreateSQ(object, this, cdata);
       case AdminCommand::GetLogPage:
-        return nullptr;
+        return new GetLogPage(object, this, cdata);
       case AdminCommand::DeleteIOCQ:
         return new DeleteCQ(object, this, cdata);
       case AdminCommand::CreateIOCQ:
