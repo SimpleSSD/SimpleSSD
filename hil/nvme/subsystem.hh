@@ -17,6 +17,7 @@
 #include "hil/nvme/def.hh"
 #include "hil/nvme/namespace.hh"
 #include "hil/nvme/command/feature.hh"
+#include "hil/nvme/command/log_page.hh"
 #include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
 
@@ -40,6 +41,7 @@ class Subsystem : public AbstractSubsystem {
   std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
   Feature feature;
+  LogPage logPage;
 
   unordered_map_queue ongoingCommands;
 
@@ -73,6 +75,7 @@ class Subsystem : public AbstractSubsystem {
   uint64_t getTotalPages() const;
   uint64_t getAllocatedPages() const;
   Feature *getFeature();
+  LogPage *getLogPage();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

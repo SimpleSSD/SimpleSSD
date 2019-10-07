@@ -18,6 +18,7 @@ Subsystem::Subsystem(ObjectData &o)
     : AbstractSubsystem(o),
       controllerID(0),
       feature(o),
+      logPage(o),
       allocatedLogicalPages(0) {
   // TODO: Get total physical page count from configuration
   // auto page = readConfigUint(Section::FTL, FTL::Config::Key::Page);
@@ -409,6 +410,10 @@ Feature *Subsystem::getFeature() {
   return &feature;
 }
 
+LogPage *Subsystem::getLogPage() {
+  return &logPage;
+}
+
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Subsystem::getStatValues(std::vector<double> &) noexcept {}
@@ -422,6 +427,7 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, allocatedLogicalPages);
 
   feature.createCheckpoint(out);
+  logPage.createCheckpoint(out);
 
   uint64_t size = controllerList.size();
   BACKUP_SCALAR(out, size);
@@ -476,6 +482,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, allocatedLogicalPages);
 
   feature.restoreCheckpoint(in);
+  logPage.restoreCheckpoint(in);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
