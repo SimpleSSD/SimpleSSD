@@ -344,7 +344,7 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
       "SQ %-4d | CREATE | Size %u | CQ %u | Priority %u | Set ID %u", id, size,
       cqid, pri, setid);
 
-  return true;
+  return 0;
 }
 
 uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
@@ -371,7 +371,7 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
 
   debugprint_ctrl("CQ %-4d | CREATE | Size %u | IV %u", id, size, iv);
 
-  return true;
+  return 0;
 }
 
 uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
