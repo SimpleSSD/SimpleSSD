@@ -42,6 +42,7 @@ class Subsystem : public AbstractSubsystem {
 
   Feature feature;
   LogPage logPage;
+  HealthInfo health;
 
   unordered_map_queue ongoingCommands;
 
@@ -76,6 +77,7 @@ class Subsystem : public AbstractSubsystem {
   uint64_t getAllocatedPages() const;
   Feature *getFeature();
   LogPage *getLogPage();
+  HealthInfo *getHealth(uint32_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

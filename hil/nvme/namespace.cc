@@ -94,6 +94,10 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
   inited = true;
 }
 
+HealthInfo *Namespace::getHealth() {
+  return &health;
+}
+
 const std::set<ControllerID> &Namespace::getAttachment() const {
   return attachList;
 }

@@ -414,6 +414,21 @@ LogPage *Subsystem::getLogPage() {
   return &logPage;
 }
 
+HealthInfo *Subsystem::getHealth(uint32_t nsid) {
+  if (nsid == NSID_NONE || nsid == NSID_ALL) {
+    return &health;
+  }
+  else {
+    auto ns = namespaceList.find(nsid);
+
+    if (ns != namespaceList.end()) {
+      return ns->second->getHealth();
+    }
+  }
+
+  return nullptr;
+}
+
 void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Subsystem::getStatValues(std::vector<double> &) noexcept {}
@@ -428,6 +443,8 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
 
   feature.createCheckpoint(out);
   logPage.createCheckpoint(out);
+
+  BACKUP_BLOB(out, health.data, 0x200);
 
   uint64_t size = controllerList.size();
   BACKUP_SCALAR(out, size);
@@ -483,6 +500,8 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
   feature.restoreCheckpoint(in);
   logPage.restoreCheckpoint(in);
+
+  RESTORE_BLOB(in, health.data, 0x200);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
