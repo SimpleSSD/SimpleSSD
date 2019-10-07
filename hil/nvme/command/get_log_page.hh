@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2019 CAMELab
  *
- * Author: Donghyun Gouk <kukdh1@gmail.com>
+ * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
 #pragma once
