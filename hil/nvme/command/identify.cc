@@ -23,6 +23,10 @@ Identify::~Identify() {
   if (buffer) {
     free(buffer);
   }
+
+  // We must delete event
+  destroyEvent(dmaInitEvent);
+  destroyEvent(dmaCompleteEvent);
 }
 
 void Identify::makeNamespaceStructure(uint32_t nsid, bool force) {
