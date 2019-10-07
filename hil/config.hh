@@ -38,6 +38,7 @@ class Config : public BaseConfig {
     NVMeWRRMedium,
     NVMeMaxNamespace,
     NVMeDefaultNamespace,
+    NVMeAttachDefaultNamespaces,
   };
 
   struct Disk {
@@ -73,6 +74,7 @@ class Config : public BaseConfig {
   uint16_t wrrMedium;
   uint32_t maxNamespace;
   uint32_t defaultNamespace;
+  bool attachDefaultNamespaces;
 
   std::vector<Disk> diskList;
   std::vector<Namespace> namespaceList;
@@ -97,7 +99,9 @@ class Config : public BaseConfig {
   void update() override;
 
   uint64_t readUint(uint32_t) override;
+  bool readBoolean(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
+  bool writeBoolean(uint32_t, bool) override;
 
   std::vector<Disk> &getDiskList();
   std::vector<Namespace> &getNamespaceList();

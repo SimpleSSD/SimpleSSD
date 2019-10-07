@@ -30,6 +30,7 @@ const char NAME_WRR_HIGH[] = "WRRHigh";
 const char NAME_WRR_MEDIUM[] = "WRRMedium";
 const char NAME_MAX_NAMESPACE[] = "MaxNamespace";
 const char NAME_DEFAULT_NAMESPACE[] = "DefaultNamespace";
+const char NAME_ATTACH_DEFAULT_NAMESPACES[] = "AttachDefaultNamespaces";
 const char NAME_LBA_SIZE[] = "LBASize";
 const char NAME_CAPACITY[] = "Capacity";
 
@@ -112,6 +113,8 @@ void Config::loadNVMe(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_MAX_NAMESPACE, uint32_t, maxNamespace);
     LOAD_NAME_UINT_TYPE(node, NAME_DEFAULT_NAMESPACE, uint32_t,
                         defaultNamespace);
+    LOAD_NAME_BOOLEAN(node, NAME_ATTACH_DEFAULT_NAMESPACES,
+                      attachDefaultNamespaces);
 
     if (strcmp(node.attribute("name").value(), "namespace") == 0 &&
         isSection(node)) {
@@ -168,6 +171,8 @@ void Config::storeNVMe(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_WRR_MEDIUM, wrrMedium);
   STORE_NAME_UINT(section, NAME_MAX_NAMESPACE, maxNamespace);
   STORE_NAME_UINT(section, NAME_DEFAULT_NAMESPACE, defaultNamespace);
+  STORE_NAME_BOOLEAN(section, NAME_ATTACH_DEFAULT_NAMESPACES,
+                     attachDefaultNamespaces);
 
   for (auto &ns : namespaceList) {
     STORE_SECTION(section, "namespace", node);
@@ -373,6 +378,15 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
+bool Config::readBoolean(uint32_t idx) {
+  switch (idx) {
+    case Key::NVMeAttachDefaultNamespaces:
+      return attachDefaultNamespaces;
+  }
+
+  return false;
+}
+
 bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
@@ -421,6 +435,21 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case Key::NVMeDefaultNamespace:
       defaultNamespace = value;
+      break;
+    default:
+      ret = false;
+      break;
+  }
+
+  return ret;
+}
+
+bool Config::writeBoolean(uint32_t idx, bool value) {
+  bool ret = true;
+
+  switch (idx) {
+    case Key::NVMeAttachDefaultNamespaces:
+      attachDefaultNamespaces = value;
       break;
     default:
       ret = false;

@@ -257,6 +257,14 @@
        -->
       <config name="DefaultNamespace">1</config>
       <!--
+        <bool> Attach default namespaces to first controller
+
+        Specify true if you want to attach all default namespaces to first NVMe
+        controller (which has controller ID 0). If false, you need to attach by
+        Namespace Attachment admin command.
+       -->
+      <config name="AttachDefaultNamespaces">true</config>
+      <!--
         Per-namespace configuration
 
         You may want to add disk section per namespace.
