@@ -530,10 +530,11 @@ uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid,
   return 0;
 }
 
-uint8_t Subsystem::createNamespace(NamespaceInformation *info) {
-  uint32_t nsid = NSID_LOWEST;
+uint8_t Subsystem::createNamespace(NamespaceInformation *info, uint32_t &nsid) {
   uint32_t max = (uint32_t)readConfigUint(Section::HostInterface,
                                           Config::Key::NVMeMaxNamespace);
+
+  nsid = NSID_LOWEST;
 
   // Check format
   if (UNLIKELY(info->lbaFormatIndex >= nLBAFormat)) {
@@ -564,10 +565,26 @@ uint8_t Subsystem::createNamespace(NamespaceInformation *info) {
 }
 
 uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
+  if (nsid == NSID_ALL) {
+    allocatedLogicalPages = 0;
+
+    for (auto &iter : namespaceList) {
+      debugprint(Log::DebugID::HIL_NVMe, "NS %-4d | DELETE", iter.first);
+
+      delete iter.second;
+    }
+
+    namespaceList.clear();
+    attachmentTable.clear();
+  }
+  else {
   bool ret = _destroyNamespace(nsid);
 
   if (UNLIKELY(!ret)) {
     return 4u;  // Namespace not exist
+  }
+
+    // TODO: Notify to attached controller
   }
 
   return 0;
