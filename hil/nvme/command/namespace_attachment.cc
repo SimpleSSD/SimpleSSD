@@ -15,9 +15,10 @@ NamespaceAttachment::NamespaceAttachment(ObjectData &o, Subsystem *s,
                                          ControllerData *c)
     : Command(o, s, c), buffer(nullptr) {
   dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::GetLogPage::dmaInitEvent");
-  dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
-                                 "HIL::NVMe::GetLogPage::dmaCompleteEvent");
+                             "HIL::NVMe::NamespaceAttachment::dmaInitEvent");
+  dmaCompleteEvent =
+      createEvent([this](uint64_t) { dmaComplete(); },
+                  "HIL::NVMe::NamespaceAttachment::dmaCompleteEvent");
 }
 
 NamespaceAttachment::~NamespaceAttachment() {
