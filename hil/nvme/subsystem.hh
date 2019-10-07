@@ -41,6 +41,11 @@ class Subsystem : public AbstractSubsystem {
   HealthInfo health;
 
   unordered_map_queue ongoingCommands;
+
+  Event eventAEN;
+  ControllerID aenTo;
+  uint32_t aenData;
+
   unordered_map_queue aenCommands;
 
   uint32_t logicalPageSize;
@@ -51,30 +56,8 @@ class Subsystem : public AbstractSubsystem {
   bool _destroyNamespace(uint32_t);
 
   Command *makeCommand(ControllerData *, SQContext *);
-
-  template <
-      class Type,
-      std::enable_if_t<std::conjunction_v<
-                           std::is_enum<Type>,
-                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
-                       Type> = Type()>
-  void invokeAEN(AsyncEventType aet, Type aei, LogPageID lid) {
-    if (UNLIKELY(aenCommands.size() == 0)) {
-      return;
-    }
-
-    // Get first AEN command
-    auto command = (AsyncEventRequest *)aenCommands.front();
-    auto cqc = command->getResult();
-
-    // Fill entry
-    cqc->getData()->dword0 = (uint8_t)aet;
-    cqc->getData()->dword0 = (uint16_t)aei << 8;
-    cqc->getData()->dword0 = (uint32_t)lid << 16;
-
-    // Complete
-    complete(command, true);
-  }
+  void invokeAEN();
+  void scheduleAEN(ControllerID, AsyncEventType, uint8_t, LogPageID);
 
  public:
   Subsystem(ObjectData &);

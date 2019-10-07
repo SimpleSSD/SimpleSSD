@@ -39,6 +39,9 @@ Subsystem::Subsystem(ObjectData &o)
     // Not possible though... (128bit?)
     panic("Too many physical page counts.");
   }
+
+  eventAEN = createEvent([this](uint64_t) { invokeAEN(); },
+                         "HIL::NVMe::Subsystem::eventAEN");
 }
 
 Subsystem::~Subsystem() {
@@ -223,9 +226,47 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
   }
 }
 
+void Subsystem::invokeAEN() {
+  // Get first AEN command
+  AsyncEventRequest *command = nullptr;
+
+  for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
+    uint16_t ctrlid = iter.getKey() >> 32;
+
+    if (ctrlid == aenTo) {
+      command = (AsyncEventRequest *)iter.getValue();
+
+      break;
+    }
+  }
+
+  auto cqc = command->getResult();
+
+  // Fill entry
+  cqc->getData()->dword0 = aenData;
+
+  // Complete
+  complete(command, true);
+}
+
+void Subsystem::scheduleAEN(ControllerID ctrlid, AsyncEventType aet,
+                            uint8_t aei, LogPageID lid) {
+  if (UNLIKELY(aenCommands.size() == 0)) {
+    return;
+  }
+
+  // Make entry
+  aenTo = ctrlid;
+  aenData = (uint8_t)aet;
+  aenData = (uint16_t)aei << 8;
+  aenData = (uint32_t)lid << 16;
+
+  // Schedule
+  schedule(eventAEN, getTick());
+}
+
 void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   // For performance optimization, use ControllerData instead of ControllerID
-
   for (uint64_t i = 0; i < limit; i++) {
     auto sqc = cdata.arbitrator->dispatch();
 
@@ -578,11 +619,11 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
     attachmentTable.clear();
   }
   else {
-  bool ret = _destroyNamespace(nsid);
+    bool ret = _destroyNamespace(nsid);
 
-  if (UNLIKELY(!ret)) {
-    return 4u;  // Namespace not exist
-  }
+    if (UNLIKELY(!ret)) {
+      return 4u;  // Namespace not exist
+    }
 
     // TODO: Notify to attached controller
   }
@@ -598,6 +639,8 @@ void Subsystem::resetStatValues() noexcept {}
 
 void Subsystem::createCheckpoint(std::ostream &out) noexcept {
   BACKUP_SCALAR(out, controllerID);
+  BACKUP_SCALAR(out, aenTo);
+  BACKUP_SCALAR(out, aenData);
   BACKUP_SCALAR(out, logicalPageSize);
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, allocatedLogicalPages);
@@ -665,6 +708,8 @@ void Subsystem::createCheckpoint(std::ostream &out) noexcept {
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, controllerID);
+  RESTORE_SCALAR(in, aenTo);
+  RESTORE_SCALAR(in, aenData);
   RESTORE_SCALAR(in, logicalPageSize);
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, allocatedLogicalPages);
