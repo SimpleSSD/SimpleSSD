@@ -29,7 +29,7 @@ void DeleteSQ::setRequest(SQContext *req) {
   sqc = req;
   auto entry = sqc->getData();
 
-  bool immediate = false;
+  bool immediate = true;
 
   // Get parameters
   uint16_t id = entry->dword10 & 0xFFFF;
@@ -41,11 +41,14 @@ void DeleteSQ::setRequest(SQContext *req) {
 
   auto ret = data.arbitrator->deleteIOSQ(id, eventErased);
 
-  if (ret != 0) {
-    immediate = true;
-
-    cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                    (CommandSpecificStatusCode)ret);
+  switch (ret) {
+    case 0:
+      immediate = false;
+      break;
+    case 1:
+      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                      CommandSpecificStatusCode::Invalid_QueueIdentifier);
+      break;
   }
 
   if (immediate) {

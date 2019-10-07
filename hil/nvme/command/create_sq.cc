@@ -30,7 +30,7 @@ void CreateSQ::setRequest(SQContext *req) {
   sqc = req;
   auto entry = sqc->getData();
 
-  bool immediate = false;
+  bool immediate = true;
 
   // Get parameters
   uint16_t id = entry->dword10 & 0xFFFF;
@@ -48,8 +48,6 @@ void CreateSQ::setRequest(SQContext *req) {
   uint32_t maxEntries = (data.controller->getCapabilities() & 0xFFFF) + 1;
 
   if (size > maxEntries) {
-    immediate = true;
-
     cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
                     CommandSpecificStatusCode::Invalid_QueueSize);
   }
@@ -57,11 +55,18 @@ void CreateSQ::setRequest(SQContext *req) {
     auto ret = data.arbitrator->createIOSQ(entry->dptr1, id, size, cqid,
                                            priority, pc, setid, eventCreated);
 
-    if (ret != 0) {
-      immediate = true;
-
-      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                      (CommandSpecificStatusCode)ret);
+    switch (ret) {
+      case 0:
+        immediate = false;
+        break;
+      case 1:
+        cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                        CommandSpecificStatusCode::Invalid_QueueIdentifier);
+        break;
+      case 2:
+        cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                        CommandSpecificStatusCode::Invalid_CompletionQueue);
+        break;
     }
   }
 

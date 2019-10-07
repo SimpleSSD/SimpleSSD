@@ -30,9 +30,15 @@ void DeleteCQ::setRequest(SQContext *req) {
 
   auto ret = data.arbitrator->deleteIOCQ(id);
 
-  if (ret != 0) {
-    cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                    (CommandSpecificStatusCode)ret);
+  switch (ret) {
+    case 1:
+      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                      CommandSpecificStatusCode::Invalid_QueueIdentifier);
+      break;
+    case 3:
+      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                      CommandSpecificStatusCode::Invalid_QueueDeletion);
+      break;
   }
 
   data.subsystem->complete(this);

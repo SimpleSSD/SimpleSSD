@@ -318,12 +318,12 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
                                uint16_t setid, Event eid) {
   uint64_t sqEntrySize, cqEntrySize;
 
-  if (UNLIKELY(cqList[cqid])) {
-    return (uint8_t)CommandSpecificStatusCode::Invalid_CompletionQueue;
+  if (UNLIKELY(!cqList[cqid])) {
+    return 2u;
   }
 
   if (UNLIKELY(sqList[id])) {
-    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+    return 1u;
   }
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
@@ -352,7 +352,7 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
   uint64_t sqEntrySize, cqEntrySize;
 
   if (UNLIKELY(cqList[id])) {
-    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+    return 1u;
   }
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
@@ -380,7 +380,7 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
   panic_if(id == 0, "Cannot delete admin SQ.");
 
   if (UNLIKELY(!sq || abortSQList.find(id) != abortSQList.end())) {
-    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+    return 1u;
   }
 
   // Abort all commands submitted from current sq
@@ -432,13 +432,13 @@ uint8_t Arbitrator::deleteIOCQ(uint16_t id) {
   panic_if(id == 0, "Cannot delete admin CQ.");
 
   if (UNLIKELY(!cq)) {
-    return (uint8_t)CommandSpecificStatusCode::Invalid_QueueIdentifier;
+    return 1u;
   }
 
   // Check corresponding SQ exists
   for (uint16_t i = 0; i < sqSize; i++) {
     if (sqList[i] && sqList[i]->getCQID() == id) {
-      return (uint8_t)CommandSpecificStatusCode::Invalid_QueueDeletion;
+      return 3u;
     }
   }
 
