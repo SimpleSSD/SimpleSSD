@@ -132,7 +132,7 @@ void Identify::makeNamespaceList(uint32_t nsid, bool force) {
       auto attachList = data.subsystem->getAttachment(ctrlID);
       auto nslist = attachList->equal_range(ctrlID);
 
-      for (auto &iter = nslist.first; iter != nslist.second; iter++) {
+      for (auto &iter = nslist.first; iter != nslist.second; ++iter) {
         ((uint32_t *)buffer)[idx++] = *iter;
       }
     }
