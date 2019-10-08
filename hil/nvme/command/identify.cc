@@ -36,10 +36,11 @@ void Identify::makeNamespaceStructure(uint32_t nsid, bool force) {
     // We support Namespace Management, so return common namespace info,
     // especially LBA format information.
 
+    // Number of LBA Formats
+    buffer[25] = nLBAFormat - 1;  // 0's based
+
     // LBA Formats
-    for (uint32_t i = 0; i < nLBAFormat; i++) {
-      memcpy(buffer + 128 + i * 4, lbaFormat + i, 4);
-    }
+    memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
   }
   else {
     auto attachList = data.subsystem->getAttachment(ctrlID);
@@ -99,9 +100,7 @@ void Identify::makeNamespaceStructure(uint32_t nsid, bool force) {
       memcpy(buffer + 56, &info->sizeInByteH, 8);
 
       // LBA Formats
-      for (uint32_t i = 0; i < nLBAFormat; i++) {
-        memcpy(buffer + 128 + i * 4, lbaFormat + i, 4);
-      }
+      memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
     }
     else {
       // Namespace not attached
