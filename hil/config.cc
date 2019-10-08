@@ -192,8 +192,8 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    LOAD_NAME_TIME(section, NAME_WORK_INTERVAL, workInterval);
-    LOAD_NAME_UINT(section, NAME_FIFO_SIZE, requestQueueSize);
+    LOAD_NAME_TIME(node, NAME_WORK_INTERVAL, workInterval);
+    LOAD_NAME_UINT(node, NAME_FIFO_SIZE, requestQueueSize);
 
     if (strcmp(name, "interface") == 0 && isSection(node)) {
       loadInterface(node);
