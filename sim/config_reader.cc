@@ -106,6 +106,9 @@ void ConfigReader::save(const char *path) noexcept {
   STORE_SECTION(config, memConfig.getSectionName(), section)
   memConfig.storeTo(section);
 
+  STORE_SECTION(config, hilConfig.getSectionName(), section)
+  hilConfig.storeTo(section);
+
   auto result =
       file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
 
