@@ -233,7 +233,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case NVMCommand::Read:
         return new Read(object, this, cdata);
       case NVMCommand::Compare:
-        return nullptr;
+        return new Compare(object, this, cdata);
       case NVMCommand::DatasetManagement:
         return nullptr;
       default:

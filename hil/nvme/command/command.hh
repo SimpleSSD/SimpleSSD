@@ -26,6 +26,7 @@
 #include "hil/nvme/command/set_feature.hh"
 
 // NVM commands
+#include "hil/nvme/command/compare.hh"
 #include "hil/nvme/command/flush.hh"
 #include "hil/nvme/command/read.hh"
 #include "hil/nvme/command/write.hh"
