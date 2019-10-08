@@ -182,7 +182,7 @@ void Config::storeNVMe(pugi::xml_node &section) {
 }
 
 void Config::storeNamespace(pugi::xml_node &section, Namespace *ns) {
-  section.attribute("nsid").set_value(ns->nsid);
+  section.append_attribute("nsid").set_value(ns->nsid);
 
   STORE_NAME_UINT(section, NAME_LBA_SIZE, ns->lbaSize);
   STORE_NAME_UINT(section, NAME_CAPACITY, ns->capacity);
