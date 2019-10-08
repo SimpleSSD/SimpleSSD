@@ -66,7 +66,7 @@ uint16_t Queue::getSize() {
   return size;
 }
 
-void Queue::setBase(DMAInterface *p, uint64_t s) {
+void Queue::setBase(PRPEngine *p, uint64_t s) {
   if (base) {
     delete base;
   }
@@ -87,14 +87,25 @@ void Queue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, tail);
   BACKUP_SCALAR(out, size);
   BACKUP_SCALAR(out, stride);
+
+  base->createCheckpoint(out);
 }
 
-void Queue::restoreCheckpoint(std::istream &in) noexcept {
+void Queue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
+                              uint64_t mps) noexcept {
   RESTORE_SCALAR(in, id);
   RESTORE_SCALAR(in, head);
   RESTORE_SCALAR(in, tail);
   RESTORE_SCALAR(in, size);
   RESTORE_SCALAR(in, stride);
+
+  base = new PRPEngine(object, dma, mps);
+  base->restoreCheckpoint(in);
+}
+
+void Queue::restoreCheckpoint(std::istream &) noexcept {
+  panic("You must use Queue::restoreCheckpoint(std::istream &, DMAInterface *, "
+        "uint64_t).");
 }
 
 CQueue::CQueue(ObjectData &o)
@@ -154,8 +165,9 @@ void CQueue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, iv);
 }
 
-void CQueue::restoreCheckpoint(std::istream &in) noexcept {
-  Queue::restoreCheckpoint(in);
+void CQueue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
+                               uint64_t mps) noexcept {
+  Queue::restoreCheckpoint(in, dma, mps);
 
   RESTORE_SCALAR(in, ien);
   RESTORE_SCALAR(in, phase);
@@ -202,8 +214,9 @@ void SQueue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, priority);
 }
 
-void SQueue::restoreCheckpoint(std::istream &in) noexcept {
-  Queue::restoreCheckpoint(in);
+void SQueue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
+                               uint64_t mps) noexcept {
+  Queue::restoreCheckpoint(in, dma, mps);
 
   RESTORE_SCALAR(in, cqID);
   RESTORE_SCALAR(in, priority);

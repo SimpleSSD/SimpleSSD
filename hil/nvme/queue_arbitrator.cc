@@ -922,7 +922,8 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
     if (tmp) {
       cqList[i] = new CQueue(object);
-      cqList[i]->restoreCheckpoint(in);
+      cqList[i]->restoreCheckpoint(in, controller->dma,
+                                   controller->memoryPageSize);
     }
   }
 
@@ -931,7 +932,8 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
     if (tmp) {
       sqList[i] = new SQueue(object);
-      sqList[i]->restoreCheckpoint(in);
+      sqList[i]->restoreCheckpoint(in, controller->dma,
+                                   controller->memoryPageSize);
     }
   }
 

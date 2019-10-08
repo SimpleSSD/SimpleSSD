@@ -82,7 +82,7 @@ class Queue : public Object {
   uint16_t size;
   uint64_t stride;
 
-  DMAInterface *base;
+  PRPEngine *base;
 
  public:
   Queue(ObjectData &);
@@ -94,14 +94,16 @@ class Queue : public Object {
   uint16_t getHead();
   uint16_t getTail();
   uint16_t getSize();
-  void setBase(DMAInterface *, uint64_t);
+  void setBase(PRPEngine *, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
   virtual void createCheckpoint(std::ostream &) const noexcept;
-  virtual void restoreCheckpoint(std::istream &) noexcept;
+  virtual void restoreCheckpoint(std::istream &, DMAInterface *,
+                                 uint64_t) noexcept;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class CQueue : public Queue {
@@ -121,7 +123,8 @@ class CQueue : public Queue {
   uint16_t getInterruptVector();
 
   void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  void restoreCheckpoint(std::istream &, DMAInterface *,
+                         uint64_t) noexcept override;
 };
 
 class SQueue : public Queue {
@@ -139,7 +142,8 @@ class SQueue : public Queue {
   QueuePriority getPriority();
 
   void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  void restoreCheckpoint(std::istream &, DMAInterface *,
+                         uint64_t) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe
