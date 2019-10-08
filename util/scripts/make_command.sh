@@ -73,7 +73,7 @@ class ${CLASS_NAME} : public Command {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
@@ -109,7 +109,7 @@ void ${CLASS_NAME}::getStatValues(std::vector<double> &) noexcept {}
 
 void ${CLASS_NAME}::resetStatValues() noexcept {}
 
-void ${CLASS_NAME}::createCheckpoint(std::ostream &out) noexcept {
+void ${CLASS_NAME}::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

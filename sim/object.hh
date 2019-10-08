@@ -179,7 +179,7 @@ class Object {
   virtual void resetStatValues() noexcept = 0;
 
   /* Checkpoint API */
-  virtual void createCheckpoint(std::ostream &) noexcept = 0;
+  virtual void createCheckpoint(std::ostream &) const noexcept = 0;
   virtual void restoreCheckpoint(std::istream &) noexcept = 0;
 };
 
