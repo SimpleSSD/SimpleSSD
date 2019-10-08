@@ -419,6 +419,7 @@ void Controller::handleControllerConfig(uint32_t update) {
     // Enable changed
     if (registers.cc.en) {
       if (adminQueueCreated == 2) {
+        registers.cs.shst = 0;
         registers.cs.rdy = 1;
 
         controllerData.arbitrator->enable(true);
