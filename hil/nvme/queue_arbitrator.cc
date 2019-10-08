@@ -835,7 +835,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  // Store list by poping all entries
+  // Store list
   auto size = requestQueue.size();
   BACKUP_SCALAR(out, size);
 

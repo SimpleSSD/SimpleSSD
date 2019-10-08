@@ -39,7 +39,6 @@ class InterruptManager : public Object {
   Interface *pInterface;
   ControllerID controllerID;
 
-  bool interruptCoalescing;
   uint16_t aggregationThreshold;  // NVMe 8bit, AHCI 8bit
   uint64_t aggregationTime;  // NVMe 8bit * 100us unit, AHCI 16bit * 1ms unit
 

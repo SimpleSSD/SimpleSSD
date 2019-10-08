@@ -22,7 +22,6 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i, ControllerID id)
     : Object(o),
       pInterface(i),
       controllerID(id),
-      interruptCoalescing(false),
       aggregationThreshold(0),
       aggregationTime(0),
       coalesceMap([](const void *a, const void *b) -> bool {
@@ -160,7 +159,6 @@ void InterruptManager::getStatValues(std::vector<double> &) noexcept {}
 void InterruptManager::resetStatValues() noexcept {}
 
 void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, interruptCoalescing);
   BACKUP_SCALAR(out, aggregationThreshold);
   BACKUP_SCALAR(out, aggregationTime);
 
@@ -180,7 +178,6 @@ void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, interruptCoalescing);
   RESTORE_SCALAR(in, aggregationThreshold);
   RESTORE_SCALAR(in, aggregationTime);
 

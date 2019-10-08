@@ -134,8 +134,8 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, info.lbaFormatIndex);
   BACKUP_SCALAR(out, info.dataProtectionSettings);
   BACKUP_SCALAR(out, info.namespaceSharingCapabilities);
-  BACKUP_SCALAR(out, info.nvmSetIdentifier);
   BACKUP_SCALAR(out, info.anaGroupIdentifier);
+  BACKUP_SCALAR(out, info.nvmSetIdentifier);
   BACKUP_SCALAR(out, info.lbaSize);
   BACKUP_SCALAR(out, info.namespaceRange.first);
   BACKUP_SCALAR(out, info.namespaceRange.second);
@@ -186,8 +186,8 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, info.lbaFormatIndex);
   RESTORE_SCALAR(in, info.dataProtectionSettings);
   RESTORE_SCALAR(in, info.namespaceSharingCapabilities);
-  RESTORE_SCALAR(in, info.nvmSetIdentifier);
   RESTORE_SCALAR(in, info.anaGroupIdentifier);
+  RESTORE_SCALAR(in, info.nvmSetIdentifier);
   RESTORE_SCALAR(in, info.lbaSize);
 
   uint64_t val1, val2;

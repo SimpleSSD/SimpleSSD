@@ -36,6 +36,7 @@ void Feature::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, wan);
   BACKUP_SCALAR(out, aec.data);
   BACKUP_BLOB(out, overThresholdList.data(), 18);
+  BACKUP_BLOB(out, underThresholdList.data(), 18);
 }
 
 void Feature::restoreCheckpoint(std::istream &in) noexcept {
@@ -46,6 +47,7 @@ void Feature::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, wan);
   RESTORE_SCALAR(in, aec.data);
   RESTORE_BLOB(in, overThresholdList.data(), 18)
+  RESTORE_BLOB(in, underThresholdList.data(), 18)
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
