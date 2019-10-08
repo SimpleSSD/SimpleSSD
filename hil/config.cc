@@ -203,7 +203,7 @@ void Config::loadFrom(pugi::xml_node &section) {
 
       loadDisk(node, &diskList.back());
     }
-    else if (strcmp(name, "name") == 0 && isSection(node)) {
+    else if (strcmp(name, "nvme") == 0 && isSection(node)) {
       loadNVMe(node);
     }
   }
