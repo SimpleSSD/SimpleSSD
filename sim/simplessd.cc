@@ -226,12 +226,10 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   file.close();
 }
 
-void SimpleSSD::restoreCheckpoint(Engine *e, ConfigReader *c) noexcept {
-  // First, create all objects
-  init(e, c);
+void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
+  std::string cpt_file(cpt_dir);
 
-  auto cpt_file =
-      c->readString(Section::Simulation, Config::Key::CheckpointFile);
+  joinPath(cpt_file, SIMPLESSD_CHECKPOINT_NAME);
 
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);

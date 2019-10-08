@@ -62,7 +62,7 @@ class SimpleSSD {
   void resetStatValues() noexcept;
 
   void createCheckpoint(std::string) const noexcept;
-  void restoreCheckpoint(Engine *, ConfigReader *) noexcept;
+  void restoreCheckpoint(std::string) noexcept;
 };
 
 }  // namespace SimpleSSD
