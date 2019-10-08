@@ -29,7 +29,6 @@ class Config : public BaseConfig {
     OutputFile,
     ErrorFile,
     DebugFile,
-    CheckpointFile,
     Controller,
   };
 
@@ -45,7 +44,6 @@ class Config : public BaseConfig {
   std::string outputFile;
   std::string errorFile;
   std::string debugFile;
-  std::string checkpointFile;
   Mode mode;
 
  public:

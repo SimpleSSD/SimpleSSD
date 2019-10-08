@@ -207,8 +207,6 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   }
 
   // Checkpointing current configuration
-  object.config->writeString(Section::Simulation, Config::Key::CheckpointFile,
-                             cpt_file);
   object.config->save(cpt_config);
 
   // Checkpointing this
