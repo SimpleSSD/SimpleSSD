@@ -21,8 +21,6 @@ Compare::Compare(ObjectData &o, Subsystem *s, ControllerData *c)
                              "HIL::NVMe::Compare::dmaInitEvent");
   dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
                                  "HIL::NVMe::Compare::dmaCompleteEvent");
-  readHostDoneEvent = createEvent([this](uint64_t) { readHostDone(); },
-                                  "HIL::NVMe::Compare::readDoneEvent");
   readNVMDoneEvent = createEvent([this](uint64_t) { readNVMDone(); },
                                  "HIL::NVMe::Compare::readDoneEvent");
 }
@@ -37,7 +35,6 @@ Compare::~Compare() {
 
   destroyEvent(dmaInitEvent);
   destroyEvent(dmaCompleteEvent);
-  destroyEvent(readHostDoneEvent);
   destroyEvent(readNVMDoneEvent);
 }
 

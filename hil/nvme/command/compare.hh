@@ -17,7 +17,6 @@ namespace SimpleSSD::HIL::NVMe {
 class Compare : public Command {
  private:
   Event dmaInitEvent;
-  Event readHostDoneEvent;
   Event dmaCompleteEvent;
   Event readNVMDoneEvent;
 
@@ -38,7 +37,6 @@ class Compare : public Command {
   uint64_t beginAt;
 
   void dmaInitDone();
-  void readHostDone();
   void dmaComplete();
   void readNVMDone();
   void compare();
