@@ -85,6 +85,7 @@ class Queue : public Object {
   DMAInterface *base;
 
  public:
+  Queue(ObjectData &);
   Queue(ObjectData &, uint16_t, uint16_t);
   ~Queue();
 
@@ -110,6 +111,7 @@ class CQueue : public Queue {
   uint16_t iv;
 
  public:
+  CQueue(ObjectData &);
   CQueue(ObjectData &, uint16_t, uint16_t, uint16_t, bool);
 
   void setData(CQEntry *, Event);
@@ -128,6 +130,7 @@ class SQueue : public Queue {
   QueuePriority priority;
 
  public:
+  SQueue(ObjectData &);
   SQueue(ObjectData &, uint16_t, uint16_t, uint16_t, QueuePriority);
 
   uint16_t getCQID();

@@ -17,6 +17,15 @@ CQEntry::CQEntry() {
   memset(data, 0, 16);
 }
 
+Queue::Queue(ObjectData &o)
+    : Object(o),
+      id(0xFFFF),
+      head(0),
+      tail(0),
+      size(0),
+      stride(0),
+      base(nullptr) {}
+
 Queue::Queue(ObjectData &o, uint16_t qid, uint16_t length)
     : Object(o),
       id(qid),
@@ -88,6 +97,9 @@ void Queue::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, stride);
 }
 
+CQueue::CQueue(ObjectData &o)
+    : Queue(o), ien(false), phase(false), iv(0xFFFF) {}
+
 CQueue::CQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t iv, bool en)
     : Queue(o, qid, size), ien(en), phase(true), iv(iv) {}
 
@@ -149,6 +161,9 @@ void CQueue::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, phase);
   RESTORE_SCALAR(in, iv);
 }
+
+SQueue::SQueue(ObjectData &o)
+    : Queue(o), cqID(0xFFFF), priority(QueuePriority::Low) {}
 
 SQueue::SQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t cqid,
                QueuePriority pri)

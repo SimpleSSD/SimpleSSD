@@ -915,18 +915,14 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, running);
 
   // Restore queue
-  // As we are using exactly same configuration, cqSize and sqSize will exactly
-  // same with restore version.
   bool tmp;
 
   for (uint16_t i = 0; i < cqSize; i++) {
     RESTORE_SCALAR(in, tmp);
 
     if (tmp) {
+      cqList[i] = new CQueue(object);
       cqList[i]->restoreCheckpoint(in);
-    }
-    else {
-      cqList[i] = nullptr;
     }
   }
 
@@ -934,10 +930,8 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp);
 
     if (tmp) {
+      sqList[i] = new SQueue(object);
       sqList[i]->restoreCheckpoint(in);
-    }
-    else {
-      sqList[i] = nullptr;
     }
   }
 
