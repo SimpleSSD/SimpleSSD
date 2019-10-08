@@ -99,9 +99,9 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
       [this](uint64_t) {
         adminQueueCreated++;
 
-        if (adminQueueCreated == 2 && registers.cc.en &&
-            registers.cs.rdy == 0) {
+        if (adminQueueCreated == 2 && registers.cc.en && !registers.cs.rdy) {
           registers.cs.rdy = 1;
+          registers.cs.shst = 0;
 
           controllerData.arbitrator->enable(true);
         }
@@ -428,10 +428,12 @@ void Controller::handleControllerConfig(uint32_t update) {
     // Enable changed
     if (registers.cc.en) {
       if (adminQueueCreated == 2) {
-        registers.cs.shst = 0;
         registers.cs.rdy = 1;
+        registers.cs.shst = 0;
 
         controllerData.arbitrator->enable(true);
+
+        adminQueueCreated = 0;
       }
     }
     else {
