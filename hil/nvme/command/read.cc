@@ -95,7 +95,7 @@ void Read::setRequest(SQContext *req) {
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(slpn < range.first || slpn + nlp > range.first + range.second)) {
+  if (UNLIKELY(slpn + nlp > range.second)) {
     cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                     GenericCommandStatusCode::Invalid_Field);
 
@@ -103,6 +103,8 @@ void Read::setRequest(SQContext *req) {
 
     return;
   }
+
+  slpn += info->namespaceRange.first;
 
   ns->second->read(nlb * info->lbaSize);
 
