@@ -53,7 +53,7 @@ void PRPEngine::getPRPListFromPRP_readDone(uint64_t now) {
     listPRPSize = getSizeFromPRP(listPRP);
 
     if (listPRP == 0) {
-      panic("prp_list: Invalid PRP in PRP List");
+      panic("Invalid PRP in PRP List");
     }
 
     prpContext.handledSize += listPRPSize;
