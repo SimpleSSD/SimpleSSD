@@ -905,7 +905,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
     command->restoreCheckpoint(in);
 
     // Push to queue
-    aenCommands.push_back(uid, sqc);
+    aenCommands.push_back(uid, command);
   }
 }
 
