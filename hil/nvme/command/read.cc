@@ -8,6 +8,7 @@
 #include "hil/nvme/command/read.hh"
 
 #include "hil/nvme/command/internal.hh"
+#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -117,6 +118,13 @@ void Read::setRequest(SQContext *req) {
   beginAt = getTick();
 
   createDMAEngine(size - skipFront - skipEnd, dmaInitEvent);
+
+  // Handle disk image
+  auto disk = ns->second->getDisk();
+
+  if (disk) {
+    disk->read(slba, nlb, buffer + skipFront);
+  }
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}

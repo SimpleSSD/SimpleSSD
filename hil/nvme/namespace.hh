@@ -112,7 +112,9 @@ class Namespace : public Object {
   void format();
   void read(uint64_t);
   void write(uint64_t);
+
   ConvertFunction &getConvertFunction();
+  Disk *getDisk();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

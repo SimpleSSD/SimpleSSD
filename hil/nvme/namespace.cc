@@ -155,6 +155,10 @@ ConvertFunction &Namespace::getConvertFunction() {
   return convert;
 }
 
+Disk *Namespace::getDisk() {
+  return disk;
+}
+
 void Namespace::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Namespace::getStatValues(std::vector<double> &) noexcept {}

@@ -8,6 +8,7 @@
 #include "hil/nvme/command/write.hh"
 
 #include "hil/nvme/command/internal.hh"
+#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -48,6 +49,16 @@ void Write::writeDone() {
 }
 
 void Write::dmaComplete() {
+  auto nslist = data.subsystem->getNamespaceList();
+  auto ns = nslist.find(sqc->getData()->namespaceID);
+
+  // Handle disk image
+  auto disk = ns->second->getDisk();
+
+  if (disk) {
+    disk->write(_slba, _nlb, buffer + skipFront);
+  }
+
   auto pHIL = data.subsystem->getHIL();
 
   std::visit(
