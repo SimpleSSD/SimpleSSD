@@ -39,7 +39,7 @@ void Write::dmaInitDone() {
 void Write::writeDone() {
   auto now = getTick();
 
-  debugprint_command("NVM     | WRITE | NSID %u | %" PRIx64 "h + %" PRIx64
+  debugprint_command("NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64
                      "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                      sqc->getData()->namespaceID, _slba, _nlb, beginAt, now,
                      now - beginAt);
@@ -72,7 +72,7 @@ void Write::setRequest(SQContext *req) {
   // uint16_t dspec = entry->dword13 >> 16;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command("NVM     | WRITE | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
+  debugprint_command("NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
                      nsid, slba, nlb);
 
   // Make response

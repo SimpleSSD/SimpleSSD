@@ -49,7 +49,7 @@ void Read::readDone() {
 void Read::dmaComplete() {
   auto now = getTick();
 
-  debugprint_command("NVM     | READ | NSID %u | %" PRIx64 "h + %" PRIx64
+  debugprint_command("NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64
                      "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                      sqc->getData()->namespaceID, _slba, _nlb, beginAt, now,
                      now - beginAt);
@@ -69,7 +69,7 @@ void Read::setRequest(SQContext *req) {
   // bool lr = entry->dword12 & 0x80000000;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command("NVM     | READ | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
+  debugprint_command("NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
                      nsid, slba, nlb);
 
   // Make response

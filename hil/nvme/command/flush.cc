@@ -24,7 +24,7 @@ Flush::~Flush() {
 void Flush::flushDone() {
   auto now = getTick();
 
-  debugprint_command("NVM     | FLUSH | NSID %u | %" PRIu64 " - %" PRIu64
+  debugprint_command("NVM     | Flush | NSID %u | %" PRIu64 " - %" PRIu64
                      " (%" PRIu64 ")",
                      sqc->getData()->namespaceID, beginAt, now, now - beginAt);
 
@@ -38,7 +38,7 @@ void Flush::setRequest(SQContext *req) {
   // Get parameters
   uint32_t nsid = entry->namespaceID;
 
-  debugprint_command("NVM     | FLUSH | NSID %u", nsid);
+  debugprint_command("NVM     | Flush | NSID %u", nsid);
 
   // Make response
   createResponse();
