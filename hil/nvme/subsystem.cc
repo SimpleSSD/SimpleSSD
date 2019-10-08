@@ -411,6 +411,7 @@ void Subsystem::init() {
       else {
         // Always zeroCount > 0 if we are here!
         nsSize = reservedSize / zeroCount / ns.lbaSize;
+        ns.capacity = nsSize * ns.lbaSize;
       }
 
       // Other fields will be filled in createNamespace function
