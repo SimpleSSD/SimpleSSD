@@ -16,15 +16,6 @@
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/log.hh"
-#include "util/algorithm.hh"
-
-#ifndef __FILENAME__
-#define __FILENAME__ __FILE__
-#endif
-
-#ifdef _MSC_VER
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-#endif
 
 namespace SimpleSSD {
 
