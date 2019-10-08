@@ -147,7 +147,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
   panic_if(!ret.second, "Duplicated namespace ID %u", nsid);
 
   debugprint(Log::DebugID::HIL_NVMe,
-             "NS %-4d | CREATE | LBA size %" PRIu32 " | Capacity %" PRIu64,
+             "NS %-5d | CREATE | LBA size %" PRIu32 " | Capacity %" PRIu64,
              nsid, info->lbaSize, info->size);
 
   return true;
@@ -176,7 +176,7 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
 
     allocatedLogicalPages -= info->namespaceRange.second;
 
-    debugprint(Log::DebugID::HIL_NVMe, "NS %-4d | DELETE", nsid);
+    debugprint(Log::DebugID::HIL_NVMe, "NS %-5d | DELETE", nsid);
 
     delete iter->second;
     namespaceList.erase(iter);
@@ -652,7 +652,7 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
     allocatedLogicalPages = 0;
 
     for (auto &iter : namespaceList) {
-      debugprint(Log::DebugID::HIL_NVMe, "NS %-4d | DELETE", iter.first);
+      debugprint(Log::DebugID::HIL_NVMe, "NS %-5d | DELETE", iter.first);
 
       delete iter.second;
     }
