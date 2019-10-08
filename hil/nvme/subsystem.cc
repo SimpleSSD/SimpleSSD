@@ -229,9 +229,9 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case NVMCommand::Flush:
         return nullptr;
       case NVMCommand::Write:
-        return nullptr;
+        return new Write(object, this, cdata);
       case NVMCommand::Read:
-        return nullptr;
+        return new Read(object, this, cdata);
       case NVMCommand::Compare:
         return nullptr;
       case NVMCommand::DatasetManagement:

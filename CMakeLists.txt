@@ -155,6 +155,8 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/namespace_management.cc
   hil/nvme/command/namespace_attachment.cc
   hil/nvme/command/format_nvm.cc
+  hil/nvme/command/write.cc
+  hil/nvme/command/read.cc
 )
 set(SRC_SIM
   sim/base_config.cc
