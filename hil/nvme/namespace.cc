@@ -148,17 +148,21 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   if (exist) {
     uint8_t type;
 
-    if constexpr (std::is_same_v<decltype(*disk), Disk>) {
-      type = 1;
+    if (dynamic_cast<MemDisk *>(disk)) {
+      type = 3;
       BACKUP_SCALAR(out, type);
     }
-    else if constexpr (std::is_same_v<decltype(*disk), CoWDisk>) {
+    else if (dynamic_cast<CoWDisk *>(disk)) {
       type = 2;
       BACKUP_SCALAR(out, type);
     }
-    else if constexpr (std::is_same_v<decltype(*disk), MemDisk>) {
-      type = 3;
+    else if (dynamic_cast<Disk *>(disk)) {
+      type = 1;
       BACKUP_SCALAR(out, type);
+    }
+    else {
+      // Actually, we cannot be here!
+      abort();
     }
 
     disk->createCheckpoint(out);
