@@ -608,14 +608,28 @@ void Arbitrator::finishShutdown() {
 
   dispatchedQueue.clear();
 
-  for (auto iter = requestQueue.begin(); iter != requestQueue.end();
-       ++iter) {
+  for (auto iter = requestQueue.begin(); iter != requestQueue.end(); ++iter) {
     auto sqc = (SQContext *)iter.getValue();
 
     delete sqc;
   }
 
   requestQueue.clear();
+
+  // Remove all queues (including admin queues)
+  for (uint16_t i = 0; i < sqSize; i++) {
+    if (sqList[i]) {
+      delete sqList[i];
+      sqList[i] = nullptr;
+    }
+  }
+
+  for (uint16_t i = 0; i < cqSize; i++) {
+    if (cqList[i]) {
+      delete cqList[i];
+      cqList[i] = nullptr;
+    }
+  }
 
   shutdownReserved = false;
 }
