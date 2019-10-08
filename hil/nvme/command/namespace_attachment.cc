@@ -47,7 +47,7 @@ void NamespaceAttachment::dmaComplete() {
   uint16_t count = *(uint16_t *)buffer;
   std::vector<uint16_t> list;
 
-  list.reserve(count);
+  list.resize(count);
 
   for (uint16_t i = 1; i <= count; i++) {
     list.at(i - 1) = *(uint16_t *)(buffer + i * 2);
