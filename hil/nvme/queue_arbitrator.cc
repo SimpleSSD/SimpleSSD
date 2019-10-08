@@ -726,72 +726,94 @@ bool Arbitrator::checkQueue(uint16_t qid) {
 }
 
 bool Arbitrator::collectRoundRobin() {
-  bool ret = false;
+  uint16_t count = 0;
+  uint16_t oldcount = 0;
 
-  for (uint16_t i = 0; i < sqSize; i++) {
-    ret |= checkQueue(i);
+  while (count <= internalQueueSize) {
+    for (uint16_t i = 0; i < sqSize; i++) {
+      count = checkQueue(i) ? count + 1 : count;
+    }
+
+    if (count == oldcount) {
+      break;
+    }
+
+    oldcount = count;
   }
 
-  return ret;
+  return count != 0;
 }
 
 bool Arbitrator::collectWeightedRoundRobin() {
-  bool ret = false;
   uint16_t count;
+  uint16_t reqcount = 0;
+  uint16_t oldcount = 0;
 
-  // Check urgent queues
-  for (uint16_t i = 0; i < sqSize; i++) {
-    if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Urgent) {
-      ret |= checkQueue(i);
+  while (true) {
+    // Check urgent queues
+    for (uint16_t i = 0; i < sqSize; i++) {
+      if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Urgent) {
+        reqcount = checkQueue(i) ? reqcount + 1 : reqcount;
+      }
     }
-  }
 
-  // Check high-priority queues
-  count = 0;
+    // Check high-priority queues
+    count = 0;
 
-  for (uint16_t i = 0; i < sqSize; i++) {
-    if (sqList[i] && sqList[i]->getPriority() == QueuePriority::High) {
-      if (ret |= checkQueue(i)) {
-        count++;
+    for (uint16_t i = 0; i < sqSize; i++) {
+      if (sqList[i] && sqList[i]->getPriority() == QueuePriority::High) {
+        if (checkQueue(i)) {
+          count++;
 
-        if (count > param.hpw) {  // Zero-based value
-          break;
+          if (count > param.hpw) {  // Zero-based value
+            break;
+          }
         }
       }
     }
-  }
 
-  // Check medium-priority queues
-  count = 0;
+    reqcount += count;
 
-  for (uint16_t i = 0; i < sqSize; i++) {
-    if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Medium) {
-      if (ret |= checkQueue(i)) {
-        count++;
+    // Check medium-priority queues
+    count = 0;
 
-        if (count > param.mpw) {  // Zero-based value
-          break;
+    for (uint16_t i = 0; i < sqSize; i++) {
+      if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Medium) {
+        if (checkQueue(i)) {
+          count++;
+
+          if (count > param.mpw) {  // Zero-based value
+            break;
+          }
         }
       }
     }
-  }
 
-  // Check low-priority queues
-  count = 0;
+    reqcount += count;
 
-  for (uint16_t i = 0; i < sqSize; i++) {
-    if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Low) {
-      if (ret |= checkQueue(i)) {
-        count++;
+    // Check low-priority queues
+    count = 0;
 
-        if (count > param.lpw) {  // Zero-based value
-          break;
+    for (uint16_t i = 0; i < sqSize; i++) {
+      if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Low) {
+        if (checkQueue(i)) {
+          count++;
+
+          if (count > param.lpw) {  // Zero-based value
+            break;
+          }
         }
       }
     }
+
+    if (count == oldcount) {
+      break;
+    }
+
+    oldcount = count;
   }
 
-  return ret;
+  return count != 0;
 }
 
 void Arbitrator::getStatList(std::vector<Stat> &, std::string) noexcept {}
