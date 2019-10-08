@@ -105,6 +105,8 @@ class Namespace : public Object {
 
   const std::set<ControllerID> &getAttachment() const;
 
+  void format();
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

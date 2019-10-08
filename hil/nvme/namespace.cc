@@ -114,6 +114,16 @@ const std::set<ControllerID> &Namespace::getAttachment() const {
   return attachList;
 }
 
+void Namespace::format() {
+  // When format, re-create disk
+  if (disk) {
+    delete disk;
+    disk = new MemDisk(object);
+
+    disk->open("", info.size * info.lbaSize, info.lbaSize);
+  }
+}
+
 void Namespace::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Namespace::getStatValues(std::vector<double> &) noexcept {}

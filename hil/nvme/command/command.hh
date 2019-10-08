@@ -22,5 +22,6 @@
 #include "hil/nvme/command/namespace_attachment.hh"
 #include "hil/nvme/command/namespace_management.hh"
 #include "hil/nvme/command/set_feature.hh"
+#include "hil/nvme/command/format_nvm.hh"
 
 #endif

@@ -218,7 +218,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::NamespaceAttachment:
         return new NamespaceAttachment(object, this, cdata);
       case AdminCommand::FormatNVM:
-        return nullptr;
+        return new FormatNVM(object, this, cdata);
       default:
         return nullptr;
     }
@@ -701,6 +701,35 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
 
   scheduleAEN(AsyncEventType::Notice,
               (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
+
+  return 0;
+}
+
+uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
+                          Event eid) {
+  // Update namespace structure
+  auto ns = namespaceList.find(nsid);
+
+  if (UNLIKELY(ns == namespaceList.end())) {
+    return 1u;  // No such namespace
+  }
+
+  auto info = ns->second->getInfo();
+  info->lbaFormatIndex = lbaf;
+  info->lbaSize = lbaSize[lbaf];
+  info->size = info->namespaceRange.second * logicalPageSize / info->lbaSize;
+  info->capacity = info->size;
+  info->utilization = 0;  // Formatted
+
+  ns->second->format();
+
+  // Do format
+  std::visit(
+      [info, ses, eid](auto &&hil) {
+        hil->formatPages(info->namespaceRange.first,
+                         info->namespaceRange.second, ses, eid);
+      },
+      pHIL);
 
   return 0;
 }
