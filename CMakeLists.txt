@@ -159,6 +159,7 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/write.cc
   hil/nvme/command/read.cc
   hil/nvme/command/compare.cc
+  hil/nvme/command/dataset_management.cc
 )
 set(SRC_SIM
   sim/base_config.cc
