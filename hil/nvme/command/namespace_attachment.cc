@@ -69,11 +69,11 @@ void NamespaceAttachment::dmaComplete() {
     for (auto &iter : list) {
       if (sel == 0) {
         // Attach
-        ret = data.subsystem->attachController(iter, nsid);
+        ret = data.subsystem->attachNamespace(iter, nsid);
       }
       else {
         // Detach
-        ret = data.subsystem->detachController(iter, nsid);
+        ret = data.subsystem->detachNamespace(iter, nsid);
       }
 
       if (ret == 1) {
@@ -112,10 +112,10 @@ void NamespaceAttachment::dmaComplete() {
     if (LIKELY(ret == 0)) {
       for (auto &iter : list) {
         if (sel == 0) {
-          data.subsystem->attachController(iter, nsid, false);
+          data.subsystem->attachNamespace(iter, nsid, false);
         }
         else {
-          data.subsystem->detachController(iter, nsid, false);
+          data.subsystem->detachNamespace(iter, nsid, false);
         }
       }
     }

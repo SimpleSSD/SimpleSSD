@@ -81,8 +81,8 @@ class Subsystem : public AbstractSubsystem {
   uint64_t getAllocatedPages() const;
   HealthInfo *getHealth(uint32_t);
 
-  uint8_t attachController(ControllerID, uint32_t, bool = true);
-  uint8_t detachController(ControllerID, uint32_t, bool = true);
+  uint8_t attachNamespace(ControllerID, uint32_t, bool = true);
+  uint8_t detachNamespace(ControllerID, uint32_t, bool = true);
   uint8_t createNamespace(NamespaceInformation *, uint32_t &);
   uint8_t destroyNamespace(uint32_t);
 

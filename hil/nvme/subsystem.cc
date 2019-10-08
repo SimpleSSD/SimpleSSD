@@ -519,8 +519,8 @@ HealthInfo *Subsystem::getHealth(uint32_t nsid) {
   return nullptr;
 }
 
-uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid,
-                                    bool dry) {
+uint8_t Subsystem::attachNamespace(ControllerID ctrlid, uint32_t nsid,
+                                   bool dry) {
   auto ctrl = controllerList.find(ctrlid);
 
   if (UNLIKELY(ctrl == controllerList.end())) {
@@ -565,8 +565,8 @@ uint8_t Subsystem::attachController(ControllerID ctrlid, uint32_t nsid,
   return 0;
 }
 
-uint8_t Subsystem::detachController(ControllerID ctrlid, uint32_t nsid,
-                                    bool dry) {
+uint8_t Subsystem::detachNamespace(ControllerID ctrlid, uint32_t nsid,
+                                   bool dry) {
   auto ctrl = controllerList.find(ctrlid);
 
   if (UNLIKELY(ctrl == controllerList.end())) {
