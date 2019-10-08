@@ -135,6 +135,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
   allocatedLogicalPages += requestedLogicalPages;
 
   // Fill Information
+  info->lpnSize = logicalPageSize;
   info->sizeInByteL = requestedLogicalPages * logicalPageSize;
   info->sizeInByteH = 0;
 

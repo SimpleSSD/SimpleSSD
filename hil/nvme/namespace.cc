@@ -23,7 +23,10 @@ NamespaceInformation::NamespaceInformation()
       namespaceSharingCapabilities(0),
       anaGroupIdentifier(0),
       nvmSetIdentifier(0),
+      readBytes(0),
+      writeBytes(0),
       lbaSize(0),
+      lpnSize(0),
       namespaceRange(0, 0) {}
 
 HealthInfo::HealthInfo() {
@@ -31,11 +34,10 @@ HealthInfo::HealthInfo() {
 }
 
 Namespace::Namespace(ObjectData &o, Subsystem *s)
-    : Object(o), subsystem(s), inited(false), disk(nullptr), convert(nullptr) {}
+    : Object(o), subsystem(s), inited(false), disk(nullptr) {}
 
 Namespace::~Namespace() {
   delete disk;
-  delete convert;
 }
 
 uint32_t Namespace::getNSID() {
@@ -81,8 +83,9 @@ NamespaceInformation *Namespace::getInfo() {
 void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
                         Config::Disk *_disk) {
   nsid = _nsid;
-
   info = *_info;
+
+  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 
   if (_disk) {
     if (_disk->path.length() == 0) {
@@ -122,6 +125,34 @@ void Namespace::format() {
 
     disk->open("", info.size * info.lbaSize, info.lbaSize);
   }
+
+  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
+}
+
+void Namespace::read(uint64_t bytesize) {
+  health.readCommandL++;
+
+  if (UNLIKELY(health.readCommandL == 0)) {
+    health.readCommandH++;
+  }
+
+  info.readBytes += bytesize;
+  health.readL = info.readBytes / 1000 / 512;
+}
+
+void Namespace::write(uint64_t bytesize) {
+  health.writeCommandL++;
+
+  if (UNLIKELY(health.writeCommandL == 0)) {
+    health.writeCommandH++;
+  }
+
+  info.writeBytes += bytesize;
+  health.writeL = info.writeBytes / 1000 / 512;
+}
+
+ConvertFunction &Namespace::getConvertFunction() {
+  return convert;
 }
 
 void Namespace::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -146,7 +177,10 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, info.namespaceSharingCapabilities);
   BACKUP_SCALAR(out, info.anaGroupIdentifier);
   BACKUP_SCALAR(out, info.nvmSetIdentifier);
+  BACKUP_SCALAR(out, info.readBytes);
+  BACKUP_SCALAR(out, info.writeBytes);
   BACKUP_SCALAR(out, info.lbaSize);
+  BACKUP_SCALAR(out, info.lpnSize);
   BACKUP_SCALAR(out, info.namespaceRange.first);
   BACKUP_SCALAR(out, info.namespaceRange.second);
 
@@ -177,13 +211,6 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
 
     disk->createCheckpoint(out);
   }
-
-  exist = convert != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (convert) {
-    convert->createCheckpoint(out);
-  }
 }
 
 void Namespace::restoreCheckpoint(std::istream &in) noexcept {
@@ -202,7 +229,10 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, info.namespaceSharingCapabilities);
   RESTORE_SCALAR(in, info.anaGroupIdentifier);
   RESTORE_SCALAR(in, info.nvmSetIdentifier);
+  RESTORE_SCALAR(in, info.readBytes);
+  RESTORE_SCALAR(in, info.writeBytes);
   RESTORE_SCALAR(in, info.lbaSize);
+  RESTORE_SCALAR(in, info.lpnSize);
 
   uint64_t val1, val2;
   RESTORE_SCALAR(in, val1);
@@ -236,11 +266,7 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
     disk->restoreCheckpoint(in);
   }
 
-  RESTORE_SCALAR(in, exist);
-
-  if (convert) {
-    convert->restoreCheckpoint(in);
-  }
+  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

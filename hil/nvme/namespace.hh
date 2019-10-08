@@ -40,7 +40,10 @@ class NamespaceInformation {
   uint32_t anaGroupIdentifier;           //!< ANAGRPID
   uint16_t nvmSetIdentifier;             //!< NVMSETID
 
+  uint64_t readBytes;
+  uint64_t writeBytes;
   uint32_t lbaSize;
+  uint64_t lpnSize;
   LPNRange namespaceRange;
 
   NamespaceInformation();
@@ -80,7 +83,8 @@ class Namespace : public Object {
   std::set<ControllerID> attachList;
 
   Disk *disk;
-  Convert *convert;
+
+  ConvertFunction convert;
 
  public:
   Namespace(ObjectData &, Subsystem *);
@@ -106,6 +110,9 @@ class Namespace : public Object {
   const std::set<ControllerID> &getAttachment() const;
 
   void format();
+  void read(uint64_t);
+  void write(uint64_t);
+  ConvertFunction &getConvertFunction();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
