@@ -301,6 +301,23 @@ void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
   schedule(eventAEN, getTick());
 }
 
+void Subsystem::shutdownCompleted(ControllerID ctrlid) {
+  // We need remove aenCommands of current controller
+  for (auto iter = aenCommands.begin(); iter != aenCommands.end();) {
+    auto command = (AsyncEventRequest *)iter.getValue();
+
+    if ((command->getUniqueID() >> 32) == ctrlid) {
+      // Remove this
+      iter = aenCommands.erase(iter);
+
+      delete command;
+    }
+    else {
+      ++iter;
+    }
+  }
+}
+
 void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   // For performance optimization, use ControllerData instead of ControllerID
   for (uint64_t i = 0; i < limit; i++) {

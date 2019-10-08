@@ -182,6 +182,8 @@ class Arbitrator : public Object {
   }
 
   void collect(uint64_t);
+  bool checkShutdown();
+  void finishShutdown();
 
  public:
   Arbitrator(ObjectData &, ControllerData *);

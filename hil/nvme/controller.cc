@@ -126,6 +126,8 @@ void Controller::notifySubsystem(uint64_t limit) {
 void Controller::shutdownComplete() {
   registers.cs.rdy = 0;   // RDY = 0
   registers.cs.shst = 2;  // Shutdown processing complete
+
+  ((Subsystem *)subsystem)->shutdownCompleted(controllerID);
 }
 
 ControllerData *Controller::getControllerData() {

@@ -368,6 +368,7 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
 
 uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
   auto sq = sqList[id];
+  bool aborted = false;
 
   panic_if(id == 0, "Cannot delete admin SQ.");
 
@@ -382,6 +383,8 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
     panic_if(!entry, "Corrupted request queue.");
 
     if (entry->getSQID() == id) {
+      aborted = true;
+
       // Abort command
       abortCommand(entry, StatusType::GenericCommandStatus,
                    GenericCommandStatusCode::Abort_SQDeletion);
@@ -396,6 +399,11 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
 
   // Push current event to wait all aborted commands to complete
   abortSQList.emplace(std::make_pair(id, eid));
+
+  if (!aborted) {
+    // We don't have aborted commands
+    abort_SQDone();
+  }
 
   return 0;
 }
@@ -479,13 +487,6 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
 
   // Write entry to CQ
   cq->setData(cqe->getData(), eventCompDone);
-
-  if (UNLIKELY(shutdownReserved && dispatchedQueue.size() == 0)) {
-    // All pending requests are finished
-    controller->controller->shutdownComplete();
-
-    shutdownReserved = false;
-  }
 }
 
 void Arbitrator::completion_done() {
@@ -506,6 +507,11 @@ void Arbitrator::completion_done() {
   // Pending abort events?
   abort_SQDone();
   abort_CommandDone(id);
+
+  // Shutdown?
+  if (UNLIKELY(shutdownReserved && checkShutdown())) {
+    finishShutdown();
+  }
 }
 
 void Arbitrator::abort_SQDone() {
@@ -568,6 +574,52 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
   }
 }
 
+bool Arbitrator::checkShutdown() {
+  bool done = true;
+
+  if (dispatchedQueue.size() > 0) {
+    // Only AEN can be in dispatched queue
+    for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
+         ++iter) {
+      auto sqc = (SQContext *)iter.getValue();
+
+      if (sqc->sqID != 0 || sqc->entry.dword0.opcode !=
+                                (uint8_t)AdminCommand::AsyncEventRequest) {
+        // Currently dispatched request is not AEN
+        done = false;
+      }
+    }
+  }
+
+  return done;
+}
+
+void Arbitrator::finishShutdown() {
+  // All pending requests are finished
+  controller->controller->shutdownComplete();
+
+  // Free requests
+  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
+       ++iter) {
+    auto sqc = (SQContext *)iter.getValue();
+
+    delete sqc;
+  }
+
+  dispatchedQueue.clear();
+
+  for (auto iter = requestQueue.begin(); iter != requestQueue.end();
+       ++iter) {
+    auto sqc = (SQContext *)iter.getValue();
+
+    delete sqc;
+  }
+
+  requestQueue.clear();
+
+  shutdownReserved = false;
+}
+
 void Arbitrator::collect(uint64_t now) {
   bool handled = false;
 
@@ -583,6 +635,12 @@ void Arbitrator::collect(uint64_t now) {
 
     // Clear ALL!!
     requestQueue.clear();
+
+    // No pending requests && no pending completions
+    if (checkShutdown() && !isScheduled(eventCompDone)) {
+      // We can shutdown now
+      finishShutdown();
+    }
 
     return;
   }

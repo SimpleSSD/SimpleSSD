@@ -68,6 +68,7 @@ class Subsystem : public AbstractSubsystem {
   Subsystem(ObjectData &);
   virtual ~Subsystem();
 
+  void shutdownCompleted(ControllerID);
   void triggerDispatch(ControllerData &, uint64_t);
   void complete(Command *, bool = false);
 
