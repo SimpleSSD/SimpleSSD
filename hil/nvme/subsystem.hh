@@ -42,11 +42,18 @@ class Subsystem : public AbstractSubsystem {
 
   unordered_map_queue ongoingCommands;
 
+  // Asynchronous Event Request
   Event eventAEN;
   std::vector<ControllerID> aenTo;
   uint32_t aenData;
 
   unordered_map_queue aenCommands;
+
+  void invokeAEN();
+
+  // scheduleAEN function not works correctly
+  // (aenTo and aenData should be maintained in queue)
+  void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
 
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
@@ -56,8 +63,6 @@ class Subsystem : public AbstractSubsystem {
   bool _destroyNamespace(uint32_t);
 
   Command *makeCommand(ControllerData *, SQContext *);
-  void invokeAEN();
-  void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
 
  public:
   Subsystem(ObjectData &);

@@ -558,8 +558,6 @@ uint8_t Subsystem::attachNamespace(ControllerID ctrlid, uint32_t nsid,
   iter.first->second.emplace(nsid);
 
   // For attach, send newly attached namespace ID to the log
-  // scheduleAEN function not works correctly (aenTo and aenData should be
-  // maintained in queue)
   aenTo.push_back(ctrlid);
   ctrl->second->controller->getLogPage()->cnl.appendList(nsid);
 
