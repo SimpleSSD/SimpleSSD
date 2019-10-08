@@ -40,14 +40,14 @@ namespace SimpleSSD {
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
         isKey(node)) {                                                         \
-      bool flag = false;                                                       \
-      auto str = (node).child_value();                                         \
-      auto def = out;                                                          \
+      bool _flag = false;                                                      \
+      auto _str = (node).child_value();                                        \
+      auto _def = out;                                                         \
                                                                                \
-      out = convertInt(str, &flag);                                            \
+      out = convertInt(_str, &_flag);                                          \
                                                                                \
-      if (!flag) {                                                             \
-        out = def;                                                             \
+      if (!_flag) {                                                            \
+        out = _def;                                                            \
       }                                                                        \
     }                                                                          \
   }
@@ -56,14 +56,14 @@ namespace SimpleSSD {
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
         isKey(node)) {                                                         \
-      bool flag = false;                                                       \
-      auto str = (node).child_value();                                         \
-      auto def = out;                                                          \
+      bool _flag = false;                                                      \
+      auto _str = (node).child_value();                                        \
+      auto _def = out;                                                         \
                                                                                \
-      out = (type)convertUint(str, &flag);                                     \
+      out = (type)convertUint(_str, &_flag);                                   \
                                                                                \
-      if (!flag) {                                                             \
-        out = def;                                                             \
+      if (!_flag) {                                                            \
+        out = _def;                                                            \
       }                                                                        \
     }                                                                          \
   }
@@ -75,14 +75,14 @@ namespace SimpleSSD {
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
         isKey(node)) {                                                         \
-      bool flag = false;                                                       \
-      auto str = (node).child_value();                                         \
-      auto def = out;                                                          \
+      bool _flag = false;                                                      \
+      auto _str = (node).child_value();                                        \
+      auto _def = out;                                                         \
                                                                                \
-      out = convertTime(str, &flag);                                           \
+      out = convertTime(_str, &_flag);                                         \
                                                                                \
-      if (!flag) {                                                             \
-        out = def;                                                             \
+      if (!_flag) {                                                            \
+        out = _def;                                                            \
       }                                                                        \
     }                                                                          \
   }
@@ -103,11 +103,11 @@ namespace SimpleSSD {
 
 #define STORE_NAME(section, attr, type, in)                                    \
   {                                                                            \
-    auto child = (section).append_child(CONFIG_KEY_NAME);                      \
+    auto _child = (section).append_child(CONFIG_KEY_NAME);                     \
                                                                                \
-    if (child) {                                                               \
-      child.append_attribute(CONFIG_ATTRIBUTE).set_value(attr);                \
-      child.text().set((type)in);                                              \
+    if (_child) {                                                              \
+      _child.append_attribute(CONFIG_ATTRIBUTE).set_value(attr);               \
+      _child.text().set((type)in);                                             \
     }                                                                          \
   }
 

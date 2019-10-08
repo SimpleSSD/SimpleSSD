@@ -39,9 +39,9 @@ namespace SimpleSSD {
 
 #define RESTORE_SCALAR(is, value)                                              \
   {                                                                            \
-    uint32_t length = sizeof(value);                                           \
+    uint32_t _length = sizeof(value);                                          \
                                                                                \
-    if (!read_checkpoint(is, length, (void *)&value)) {                        \
+    if (!read_checkpoint(is, _length, (void *)&value)) {                       \
       std::cerr << __FILENAME__ << ":" << __LINE__ << ": "                     \
                 << __PRETTY_FUNCTION__ << std::endl;                           \
                                                                                \
