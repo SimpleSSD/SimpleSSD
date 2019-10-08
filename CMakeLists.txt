@@ -40,7 +40,7 @@ endif ()
 
 # Get git version info
 find_package(Git)
-if (GIT_FOUND)
+if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
   execute_process(COMMAND sh -c "git diff --quiet --exit-code || echo +"
     OUTPUT_VARIABLE GIT_CODE_MODIFIED
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -66,9 +66,13 @@ if (GIT_FOUND)
   endif ()
 
   set(VERSION_STRING "${GIT_TAG}-${GIT_REV}${GIT_CODE_MODIFIED}")
+
+  message("Using version string: ${VERSION_STRING}")
 else ()
   set(VERSION_STRING "2.1-unknown")
   set(GIT_TAG "2.1")
+
+  message(WARNING "Git not found, using version string: ${VERSION_STRING}")
 endif ()
 
 # Add subproject
