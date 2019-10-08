@@ -84,7 +84,7 @@ void NamespaceManagement::setRequest(SQContext *req) {
   uint32_t nsid = entry->namespaceID;
   uint8_t sel = entry->dword10 & 0x0F;
 
-  debugprint_command("ADMIN   | Namespace Attachment | Sel %u | NSID %u", sel,
+  debugprint_command("ADMIN   | Namespace Management | Sel %u | NSID %u", sel,
                      nsid);
 
   // Make response

@@ -44,6 +44,7 @@ void GetLogPage::setRequest(SQContext *req) {
   bool immediate = false;
 
   // Get parameters
+  uint32_t nsid = entry->namespaceID;
   uint16_t numdl = entry->dword10 >> 16;
   // bool rae = (entry->dword10 & 0x00008000) != 0;
   // uint8_t lsp = (entry->dword10 >> 8) & 0x0F;
@@ -57,8 +58,9 @@ void GetLogPage::setRequest(SQContext *req) {
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
   size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
 
-  debugprint_command("ADMIN   | Get Log Page | Log %d | Size %d | UUID %u", lid,
-                     size, uuid);
+  debugprint_command(
+      "ADMIN   | Get Log Page | Log %d | Size %d | NSID %u | UUID %u", lid,
+      size, nsid, uuid);
 
   // Make response
   createResponse();
@@ -68,7 +70,7 @@ void GetLogPage::setRequest(SQContext *req) {
 
   switch ((LogPageID)lid) {
     case LogPageID::SMARTInformation: {
-      auto health = data.subsystem->getHealth(entry->namespaceID);
+      auto health = data.subsystem->getHealth(nsid);
 
       if (LIKELY(health && offset <= 0x1FC)) {
         size = MIN(size, 0x200 - offset);  // At least 4 bytes

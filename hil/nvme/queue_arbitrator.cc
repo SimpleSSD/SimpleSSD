@@ -222,7 +222,8 @@ dispatch_again:
 
     if (UNLIKELY(!ret)) {
       // Command ID duplication
-      abortCommand(entry, GenericCommandStatusCode::CommandIDConflict);
+      abortCommand(entry, StatusType::CommandSpecificStatus,
+                   GenericCommandStatusCode::CommandIDConflict);
 
       delete entry;
 
@@ -382,7 +383,8 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
 
     if (entry->getSQID() == id) {
       // Abort command
-      abortCommand(entry, GenericCommandStatusCode::Abort_SQDeletion);
+      abortCommand(entry, StatusType::GenericCommandStatus,
+                   GenericCommandStatusCode::Abort_SQDeletion);
 
       iter = requestQueue.erase(iter);
       delete entry;
@@ -432,7 +434,8 @@ uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid) {
 
   if (iter) {
     // We have command and will aborted
-    abortCommand(iter, GenericCommandStatusCode::Abort_Requested);
+    abortCommand(iter, StatusType::GenericCommandStatus,
+                 GenericCommandStatusCode::Abort_Requested);
 
     requestQueue.erase(id);
     delete iter;
@@ -565,24 +568,6 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
   }
 }
 
-void Arbitrator::abortCommand(SQContext *sqe, GenericCommandStatusCode sc) {
-  auto cqe = new CQContext();
-
-  cqe->update(sqe);
-  cqe->makeStatus(false, false, StatusType::GenericCommandStatus, sc);
-
-  complete(cqe, true);
-}
-
-void Arbitrator::abortCommand(SQContext *sqe, CommandSpecificStatusCode sc) {
-  auto cqe = new CQContext();
-
-  cqe->update(sqe);
-  cqe->makeStatus(false, false, StatusType::CommandSpecificStatus, sc);
-
-  complete(cqe, true);
-}
-
 void Arbitrator::collect(uint64_t now) {
   bool handled = false;
 
@@ -638,7 +623,8 @@ void Arbitrator::collect_done() {
 
   if (UNLIKELY(!ret)) {
     // Command ID duplication
-    abortCommand(sqe, GenericCommandStatusCode::CommandIDConflict);
+    abortCommand(sqe, StatusType::GenericCommandStatus,
+                 GenericCommandStatusCode::CommandIDConflict);
 
     delete sqe;
   }

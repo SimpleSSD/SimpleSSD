@@ -160,8 +160,27 @@ class Arbitrator : public Object {
   bool collectRoundRobin();
   bool collectWeightedRoundRobin();
 
-  void abortCommand(SQContext *, GenericCommandStatusCode);
-  void abortCommand(SQContext *, CommandSpecificStatusCode);
+  template <
+      class Type,
+      std::enable_if_t<std::conjunction_v<
+                           std::is_enum<Type>,
+                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
+                       Type> = Type()>
+  void abortCommand(SQContext *sqe, StatusType sct, Type sc) {
+    auto cqe = new CQContext();
+
+    cqe->update(sqe);
+    cqe->makeStatus(false, false, sct, sc);
+
+    debugprint(
+        Log::DebugID::HIL_NVMe,
+        "CTRL %-3u | SQ %2u:%-5u | Aborted | Status Type %u | Status Code %u",
+        controllerID, sqe->getSQID(), sqe->entry.dword0.commandID, (uint8_t)sct,
+        (uint8_t)sc);
+
+    complete(cqe, true);
+  }
+
   void collect(uint64_t);
 
  public:

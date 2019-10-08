@@ -265,9 +265,17 @@ void Subsystem::invokeAEN() {
   // For all commands
   for (auto &iter : commandList) {
     auto cqc = iter->getResult();
+    auto uid = iter->getUniqueID();
 
     // Fill entry
     cqc->getData()->dword0 = aenData;
+
+    debugprint(Log::DebugID::HIL_NVMe,
+               "CTRL %-3u | SQ %2u:%-5u | Asynchronous Event | Type %u | Info "
+               "%u | Log %u",
+               (uint16_t)(uid >> 32), (uint16_t)(uid >> 16), (uint16_t)uid,
+               aenData & 0x07, (uint8_t)(aenData >> 8),
+               (uint8_t)(aenData >> 16));
 
     // Complete
     complete(iter, true);
