@@ -124,10 +124,19 @@ void Controller::notifySubsystem(uint64_t limit) {
 }
 
 void Controller::shutdownComplete() {
+  ((Subsystem *)subsystem)->shutdownCompleted(controllerID);
+
+  // Reset all registers
+  registers.interruptMaskSet = 0;
+  registers.interruptMaskClear = 0;
+  registers.controllerConfiguration = 0;
+  registers.controllerStatus = 0;
+  registers.subsystemReset = 0;
+  registers.adminQueueAttributes = 0;
+  registers.adminCQueueBaseAddress = 0;
+  registers.adminSQueueBaseAddress = 0;
   registers.cs.rdy = 0;   // RDY = 0
   registers.cs.shst = 2;  // Shutdown processing complete
-
-  ((Subsystem *)subsystem)->shutdownCompleted(controllerID);
 }
 
 ControllerData *Controller::getControllerData() {
