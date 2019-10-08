@@ -839,7 +839,10 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
     auto iter = attachmentTable.emplace(id, std::set<uint32_t>());
 
-    panic_if(!iter.second, "Invalid controller ID while recover.");
+    if (!iter.second) {
+      // Remove current mapping
+      iter.first->second.clear();
+    }
 
     RESTORE_SCALAR(in, length);
 
