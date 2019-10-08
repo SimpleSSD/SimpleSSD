@@ -81,7 +81,7 @@ void CreateSQ::getStatValues(std::vector<double> &) noexcept {}
 
 void CreateSQ::resetStatValues() noexcept {}
 
-void CreateSQ::createCheckpoint(std::ostream &out) noexcept {
+void CreateSQ::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

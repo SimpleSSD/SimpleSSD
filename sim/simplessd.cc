@@ -39,7 +39,7 @@ SimpleSSD::~SimpleSSD() {
  * \param[in,out] prefix First path string
  * \param[in]     path   Second path string
  */
-void SimpleSSD::joinPath(std::string &prefix, std::string path) noexcept {
+void SimpleSSD::joinPath(std::string &prefix, std::string path) const noexcept {
   if (prefix.back() != '/' && prefix.back() != '\\') {
     prefix.push_back('/');
   }
@@ -190,7 +190,7 @@ void SimpleSSD::getStatValues(std::vector<double> &) noexcept {}
 
 void SimpleSSD::resetStatValues() noexcept {}
 
-void SimpleSSD::createCheckpoint(std::string cpt_dir) noexcept {
+void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   std::string cpt_file(cpt_dir);
   std::string cpt_config(cpt_dir);
 

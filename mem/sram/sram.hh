@@ -32,7 +32,7 @@ class SRAM : public AbstractSRAM {
   void read(uint64_t, uint64_t, Event) override;
   void write(uint64_t, uint64_t, Event) override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 

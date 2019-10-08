@@ -800,7 +800,7 @@ void Arbitrator::getStatValues(std::vector<double> &) noexcept {}
 
 void Arbitrator::resetStatValues() noexcept {}
 
-void Arbitrator::createCheckpoint(std::ostream &out) noexcept {
+void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, period);
   BACKUP_SCALAR(out, internalQueueSize);
   BACKUP_SCALAR(out, lastInvokedAt);

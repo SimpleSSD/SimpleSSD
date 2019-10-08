@@ -65,7 +65,7 @@ class PRPEngine : public DMAEngine {
   void read(uint64_t, uint64_t, uint8_t *, Event) override;
   void write(uint64_t, uint64_t, uint8_t *, Event) override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
@@ -129,7 +129,7 @@ class SGLEngine : public DMAEngine {
   void read(uint64_t, uint64_t, uint8_t *, Event) override;
   void write(uint64_t, uint64_t, uint8_t *, Event) override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 

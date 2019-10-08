@@ -10,7 +10,7 @@
 #ifndef __SIMPLESSD_UTIL_SCHEDULER_HH__
 #define __SIMPLESSD_UTIL_SCHEDULER_HH__
 
-#include <queue>
+#include <list>
 
 #include "sim/object.hh"
 
@@ -32,19 +32,19 @@ class Scheduler : public Object {
   Event eventReadDone;
   Event eventWriteDone;
 
-  std::queue<Type> readQueue;
-  std::queue<Type> readPendingQueue;
-  std::queue<Type> writeQueue;
-  std::queue<Type> writePendingQueue;
+  std::list<Type> readQueue;
+  std::list<Type> readPendingQueue;
+  std::list<Type> writeQueue;
+  std::list<Type> writePendingQueue;
 
   void submitRead() {
     auto data = std::move(readQueue.front());
 
-    readQueue.pop();
+    readQueue.pop_front();
     readPending = true;
 
     auto delay = preSubmitRead(data);
-    readPendingQueue.emplace(data);
+    readPendingQueue.emplace_back(data);
 
     schedule(eventReadDone, delay);
   }
@@ -52,7 +52,7 @@ class Scheduler : public Object {
   void readDone() {
     auto data = std::move(readPendingQueue.front());
 
-    readPendingQueue.pop();
+    readPendingQueue.pop_front();
     postReadDone(data);
 
     if (readQueue.size() > 0) {
@@ -66,11 +66,11 @@ class Scheduler : public Object {
   void submitWrite() {
     auto data = std::move(writeQueue.front());
 
-    writeQueue.pop();
+    writeQueue.pop_front();
     writePending = true;
 
     auto delay = preSubmitWrite(data);
-    writePendingQueue.emplace(data);
+    writePendingQueue.emplace_back(data);
 
     schedule(eventWriteDone, delay);
   }
@@ -78,7 +78,7 @@ class Scheduler : public Object {
   void writeDone() {
     auto data = std::move(writePendingQueue.front());
 
-    writePendingQueue.pop();
+    writePendingQueue.pop_front();
     postWriteDone(data);
 
     if (writeQueue.size() > 0) {
@@ -122,7 +122,7 @@ class Scheduler : public Object {
   virtual ~Scheduler() {}
 
   void read(Type data) {
-    readQueue.emplace(data);
+    readQueue.emplace_back(data);
 
     if (!readPending) {
       submitRead();
@@ -130,7 +130,7 @@ class Scheduler : public Object {
   }
 
   void write(Type data) {
-    writeQueue.emplace(data);
+    writeQueue.emplace_back(data);
 
     if (!writePending) {
       submitWrite();
@@ -141,52 +141,36 @@ class Scheduler : public Object {
   void getStatValues(std::vector<double> &) noexcept override {}
   void resetStatValues() noexcept override {}
 
-  void createCheckpoint(std::ostream &out) noexcept override {
+  void createCheckpoint(std::ostream &out) const noexcept override {
     BACKUP_SCALAR(out, readPending);
     BACKUP_SCALAR(out, writePending);
 
     uint64_t size = readQueue.size();
     BACKUP_SCALAR(out, size);
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = readQueue.front();
-
-      backupItem(out, item);
-
-      readQueue.pop();
+    for (auto &iter : readQueue) {
+      backupItem(out, iter);
     }
 
     size = readPendingQueue.size();
     BACKUP_SCALAR(out, size);
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = readPendingQueue.front();
-
-      backupItem(out, item);
-
-      readPendingQueue.pop();
+    for (auto &iter : readPendingQueue) {
+      backupItem(out, iter);
     }
 
     size = writeQueue.size();
     BACKUP_SCALAR(out, size);
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = writeQueue.front();
-
-      backupItem(out, item);
-
-      writeQueue.pop();
+    for (auto &iter : writeQueue) {
+      backupItem(out, iter);
     }
 
     size = writePendingQueue.size();
     BACKUP_SCALAR(out, size);
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = writePendingQueue.front();
-
-      backupItem(out, item);
-
-      writePendingQueue.pop();
+    for (auto &iter : writePendingQueue) {
+      backupItem(out, iter);
     }
   }
 
@@ -200,7 +184,7 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      readQueue.push(item);
+      readQueue.emplace_back(item);
     }
 
     RESTORE_SCALAR(in, size);
@@ -208,7 +192,7 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      readPendingQueue.push(item);
+      readPendingQueue.emplace_back(item);
     }
 
     RESTORE_SCALAR(in, size);
@@ -216,7 +200,7 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      writeQueue.push(item);
+      writeQueue.emplace_back(item);
     }
 
     RESTORE_SCALAR(in, size);
@@ -224,7 +208,7 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      writePendingQueue.push(item);
+      writePendingQueue.emplace_back(item);
     }
   }
 };

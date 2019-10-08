@@ -161,7 +161,7 @@ void NamespaceAttachment::getStatValues(std::vector<double> &) noexcept {}
 
 void NamespaceAttachment::resetStatValues() noexcept {}
 
-void NamespaceAttachment::createCheckpoint(std::ostream &out) noexcept {
+void NamespaceAttachment::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   Command::createCheckpoint(out);

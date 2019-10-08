@@ -159,7 +159,7 @@ void InterruptManager::getStatValues(std::vector<double> &) noexcept {}
 
 void InterruptManager::resetStatValues() noexcept {}
 
-void InterruptManager::createCheckpoint(std::ostream &out) noexcept {
+void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, interruptCoalescing);
   BACKUP_SCALAR(out, aggregationThreshold);
   BACKUP_SCALAR(out, aggregationTime);

@@ -93,7 +93,7 @@ HIL_TEMPLATE
 void HIL<LPN, T>::resetStatValues() noexcept {}
 
 HIL_TEMPLATE
-void HIL<LPN, T>::createCheckpoint(std::ostream &) noexcept {}
+void HIL<LPN, T>::createCheckpoint(std::ostream &) const noexcept {}
 
 HIL_TEMPLATE
 void HIL<LPN, T>::restoreCheckpoint(std::istream &) noexcept {}

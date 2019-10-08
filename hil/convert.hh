@@ -65,8 +65,8 @@ class Convert : public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint(std::ostream &out) noexcept override;
-  void restoreCheckpoint(std::istream &in) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL

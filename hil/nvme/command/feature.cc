@@ -29,7 +29,7 @@ void Feature::getStatValues(std::vector<double> &) noexcept {}
 
 void Feature::resetStatValues() noexcept {}
 
-void Feature::createCheckpoint(std::ostream &out) noexcept {
+void Feature::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, pm.data);
   BACKUP_SCALAR(out, er.data);
   BACKUP_SCALAR(out, noq.data);

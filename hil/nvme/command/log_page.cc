@@ -62,7 +62,7 @@ void ChangedNamespaceList::getStatValues(std::vector<double> &) noexcept {}
 
 void ChangedNamespaceList::resetStatValues() noexcept {}
 
-void ChangedNamespaceList::createCheckpoint(std::ostream &out) noexcept {
+void ChangedNamespaceList::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, overflowed);
 
   uint64_t size = list.size();
@@ -96,7 +96,7 @@ void LogPage::getStatValues(std::vector<double> &) noexcept {}
 
 void LogPage::resetStatValues() noexcept {}
 
-void LogPage::createCheckpoint(std::ostream &out) noexcept {
+void LogPage::createCheckpoint(std::ostream &out) const noexcept {
   cnl.createCheckpoint(out);
 }
 

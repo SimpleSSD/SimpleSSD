@@ -127,7 +127,7 @@ void GetFeature::getStatValues(std::vector<double> &) noexcept {}
 
 void GetFeature::resetStatValues() noexcept {}
 
-void GetFeature::createCheckpoint(std::ostream &out) noexcept {
+void GetFeature::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

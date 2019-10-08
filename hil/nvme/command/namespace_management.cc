@@ -122,7 +122,7 @@ void NamespaceManagement::getStatValues(std::vector<double> &) noexcept {}
 
 void NamespaceManagement::resetStatValues() noexcept {}
 
-void NamespaceManagement::createCheckpoint(std::ostream &out) noexcept {
+void NamespaceManagement::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   Command::createCheckpoint(out);

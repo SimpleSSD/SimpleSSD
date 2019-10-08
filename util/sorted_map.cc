@@ -18,10 +18,6 @@ unordered_map_queue::Entry::Entry() : prev(nullptr), next(nullptr) {}
 unordered_map_queue::iterator::iterator(Entry *h, Entry *t, Entry *c)
     : head(h), tail(t), cur(c) {}
 
-void *unordered_map_queue::iterator::operator*() {
-  return getValue();
-}
-
 unordered_map_queue::iterator &unordered_map_queue::iterator::operator++() {
   if (cur != nullptr && cur != tail) {
     cur = cur->next;
@@ -62,7 +58,56 @@ void *unordered_map_queue::iterator::getValue() {
   return nullptr;
 }
 
-unordered_map_queue::unordered_map_queue() : length(0) {
+unordered_map_queue::const_iterator::const_iterator(const Entry *h,
+                                                    const Entry *t,
+                                                    const Entry *c)
+    : head(h), tail(t), cur((Entry *)c) {}
+
+unordered_map_queue::const_iterator
+unordered_map_queue::const_iterator::operator++() {
+  if (cur != nullptr && cur != tail) {
+    cur = cur->next;
+  }
+
+  return *this;
+}
+
+unordered_map_queue::const_iterator
+unordered_map_queue::const_iterator::operator--() {
+  if (cur != nullptr && cur != head->next) {
+    cur = cur->prev;
+  }
+
+  return *this;
+}
+
+bool unordered_map_queue::const_iterator::operator==(
+    const const_iterator &rhs) {
+  return cur == rhs.cur;
+}
+
+bool unordered_map_queue::const_iterator::operator!=(
+    const const_iterator &rhs) {
+  return cur != rhs.cur;
+}
+
+uint64_t unordered_map_queue::const_iterator::getKey() const {
+  if (cur != head && cur != tail && cur != nullptr) {
+    return cur->key;
+  }
+
+  return 0;
+}
+
+const void *unordered_map_queue::const_iterator::getValue() const {
+  if (cur != head && cur != tail && cur != nullptr) {
+    return cur->value;
+  }
+
+  return nullptr;
+}
+
+unordered_map_queue::unordered_map_queue() {
   listHead.next = &listTail;
   listTail.prev = &listHead;
 }
@@ -116,30 +161,26 @@ unordered_map_queue::Entry *unordered_map_queue::insertList(
 }
 
 uint64_t unordered_map_queue::size() noexcept {
-  return length;
+  return map.size();
 }
 
 void unordered_map_queue::pop_front() noexcept {
-  if (LIKELY(length > 0)) {
+  if (LIKELY(map.size() > 0)) {
     // Remove first entry from map
     eraseMap(listHead.next->key);
 
     // Remove first entry from list
     eraseList(listHead.next);
-
-    length--;
   }
 }
 
 void unordered_map_queue::pop_back() noexcept {
-  if (LIKELY(length > 0)) {
+  if (LIKELY(map.size() > 0)) {
     // Remove last entry from map
     eraseMap(listTail.prev->key);
 
     // Remove first entry from list
     eraseList(listTail.prev);
-
-    length--;
   }
 }
 
@@ -151,8 +192,6 @@ bool unordered_map_queue::push_front(uint64_t key, void *value) noexcept {
     // Insert item to map
     entry->key = key;
     insertMap(key, entry);
-
-    length++;
 
     return true;
   }
@@ -168,8 +207,6 @@ bool unordered_map_queue::push_back(uint64_t key, void *value) noexcept {
     // Insert item to map
     entry->key = key;
     insertMap(key, entry);
-
-    length++;
 
     return true;
   }
@@ -199,7 +236,7 @@ void unordered_map_queue::erase(uint64_t key) noexcept {
 }
 
 void *unordered_map_queue::front() noexcept {
-  if (LIKELY(length > 0)) {
+  if (LIKELY(map.size() > 0)) {
     return listHead.next->value;
   }
 
@@ -207,7 +244,7 @@ void *unordered_map_queue::front() noexcept {
 }
 
 void *unordered_map_queue::back() noexcept {
-  if (LIKELY(length > 0)) {
+  if (LIKELY(map.size() > 0)) {
     return listTail.prev->value;
   }
 
@@ -233,6 +270,19 @@ unordered_map_queue::iterator unordered_map_queue::begin() noexcept {
 
 unordered_map_queue::iterator unordered_map_queue::end() noexcept {
   return iterator(&listHead, &listTail, &listTail);
+}
+
+unordered_map_queue::const_iterator unordered_map_queue::begin() const
+    noexcept {
+  return const_iterator(&listHead, &listTail, listHead.next);
+}
+
+unordered_map_queue::const_iterator unordered_map_queue::end() const noexcept {
+  return const_iterator(&listHead, &listTail, &listTail);
+}
+
+uint64_t unordered_map_queue::size() const noexcept {
+  return map.size();
 }
 
 unordered_map_queue::iterator unordered_map_queue::erase(iterator &i) noexcept {

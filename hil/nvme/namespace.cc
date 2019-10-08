@@ -120,7 +120,7 @@ void Namespace::getStatValues(std::vector<double> &) noexcept {}
 
 void Namespace::resetStatValues() noexcept {}
 
-void Namespace::createCheckpoint(std::ostream &out) noexcept {
+void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   BACKUP_SCALAR(out, inited);

@@ -48,7 +48,7 @@ class Disk : public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
@@ -65,7 +65,7 @@ class CoWDisk : public Disk {
   uint16_t read(uint64_t, uint16_t, uint8_t *) noexcept override;
   uint16_t write(uint64_t, uint16_t, uint8_t *) noexcept override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 

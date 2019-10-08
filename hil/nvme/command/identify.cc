@@ -740,7 +740,7 @@ void Identify::getStatValues(std::vector<double> &) noexcept {}
 
 void Identify::resetStatValues() noexcept {}
 
-void Identify::createCheckpoint(std::ostream &out) noexcept {
+void Identify::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   Command::createCheckpoint(out);

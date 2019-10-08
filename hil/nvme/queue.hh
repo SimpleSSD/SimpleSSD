@@ -99,7 +99,7 @@ class Queue : public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  virtual void createCheckpoint(std::ostream &) noexcept;
+  virtual void createCheckpoint(std::ostream &) const noexcept;
   virtual void restoreCheckpoint(std::istream &) noexcept;
 };
 
@@ -118,7 +118,7 @@ class CQueue : public Queue {
   bool interruptEnabled();
   uint16_t getInterruptVector();
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
@@ -135,7 +135,7 @@ class SQueue : public Queue {
   void getData(SQEntry *, Event);
   QueuePriority getPriority();
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 

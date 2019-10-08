@@ -101,7 +101,7 @@ void SimpleDRAM::write(uint64_t, uint64_t length, Event eid) {
   schedule(eid, beginAt + latency);
 }
 
-void SimpleDRAM::createCheckpoint(std::ostream &out) noexcept {
+void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractDRAM::createCheckpoint(out);
 
   BACKUP_SCALAR(out, pageFetchLatency);

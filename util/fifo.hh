@@ -73,7 +73,7 @@ class FIFO : public DMAInterface, public Object {
 
     Queue(uint64_t);
 
-    void backup(std::ostream &) noexcept;
+    void backup(std::ostream &) const noexcept;
     void restore(std::istream &) noexcept;
   };
 
@@ -123,7 +123,7 @@ class FIFO : public DMAInterface, public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  void createCheckpoint(std::ostream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 

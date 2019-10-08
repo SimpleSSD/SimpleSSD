@@ -164,7 +164,7 @@ void AbstractDRAM::resetStatValues() noexcept {
   writeStat.clear();
 }
 
-void AbstractDRAM::createCheckpoint(std::ostream &out) noexcept {
+void AbstractDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, readStat);
   BACKUP_SCALAR(out, writeStat);
   BACKUP_SCALAR(out, totalEnergy);

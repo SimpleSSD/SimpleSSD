@@ -64,7 +64,7 @@ void Abort::getStatValues(std::vector<double> &) noexcept {}
 
 void Abort::resetStatValues() noexcept {}
 
-void Abort::createCheckpoint(std::ostream &out) noexcept {
+void Abort::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

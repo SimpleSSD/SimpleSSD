@@ -38,7 +38,7 @@ class SimpleSSD {
   std::ostream *errfile;
   std::ostream *debugfile;
 
-  void joinPath(std::string &, std::string) noexcept;
+  void joinPath(std::string &, std::string) const noexcept;
   std::ostream *openStream(std::string &, std::string &) noexcept;
 
  public:
@@ -61,7 +61,7 @@ class SimpleSSD {
   void getStatValues(std::vector<double> &) noexcept;
   void resetStatValues() noexcept;
 
-  void createCheckpoint(std::string) noexcept;
+  void createCheckpoint(std::string) const noexcept;
   void restoreCheckpoint(Engine *, ConfigReader *) noexcept;
 };
 

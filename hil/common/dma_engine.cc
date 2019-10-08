@@ -35,7 +35,7 @@ void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
 
 void DMAEngine::resetStatValues() noexcept {}
 
-void DMAEngine::createCheckpoint(std::ostream &out) noexcept {
+void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dmaContext);
 }
 

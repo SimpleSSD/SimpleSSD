@@ -711,7 +711,7 @@ void Subsystem::getStatValues(std::vector<double> &) noexcept {}
 
 void Subsystem::resetStatValues() noexcept {}
 
-void Subsystem::createCheckpoint(std::ostream &out) noexcept {
+void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, controllerID);
   BACKUP_SCALAR(out, aenData);
   BACKUP_SCALAR(out, logicalPageSize);

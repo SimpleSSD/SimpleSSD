@@ -41,7 +41,7 @@ ReadEntry::ReadEntry(uint64_t a, uint64_t i, uint64_t d, uint64_t l)
 FIFO::Queue::Queue(uint64_t c)
     : capacity(c), usage(0), insertPending(false), transferPending(false) {}
 
-void FIFO::Queue::backup(std::ostream &out) noexcept {
+void FIFO::Queue::backup(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, capacity);
   BACKUP_SCALAR(out, usage);
   BACKUP_SCALAR(out, insertPending);
@@ -493,7 +493,7 @@ void FIFO::getStatValues(std::vector<double> &) noexcept {}
 
 void FIFO::resetStatValues() noexcept {}
 
-void FIFO::createCheckpoint(std::ostream &out) noexcept {
+void FIFO::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, param.rqSize);
   BACKUP_SCALAR(out, param.wqSize);
   BACKUP_SCALAR(out, param.transferUnit);

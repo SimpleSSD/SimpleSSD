@@ -65,7 +65,7 @@ void AbstractSRAM::resetStatValues() noexcept {
   writeStat.clear();
 }
 
-void AbstractSRAM::createCheckpoint(std::ostream &out) noexcept {
+void AbstractSRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, readStat);
   BACKUP_SCALAR(out, writeStat);
 }

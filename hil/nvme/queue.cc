@@ -72,7 +72,7 @@ void Queue::getStatValues(std::vector<double> &) noexcept {}
 
 void Queue::resetStatValues() noexcept {}
 
-void Queue::createCheckpoint(std::ostream &out) noexcept {
+void Queue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, id);
   BACKUP_SCALAR(out, head);
   BACKUP_SCALAR(out, tail);
@@ -134,7 +134,7 @@ uint16_t CQueue::getInterruptVector() {
   return iv;
 }
 
-void CQueue::createCheckpoint(std::ostream &out) noexcept {
+void CQueue::createCheckpoint(std::ostream &out) const noexcept {
   Queue::createCheckpoint(out);
 
   BACKUP_SCALAR(out, ien);
@@ -180,7 +180,7 @@ QueuePriority SQueue::getPriority() {
   return priority;
 }
 
-void SQueue::createCheckpoint(std::ostream &out) noexcept {
+void SQueue::createCheckpoint(std::ostream &out) const noexcept {
   Queue::createCheckpoint(out);
 
   BACKUP_SCALAR(out, cqID);

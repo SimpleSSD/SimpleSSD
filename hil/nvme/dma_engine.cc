@@ -276,7 +276,7 @@ void PRPEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   }
 }
 
-void PRPEngine::createCheckpoint(std::ostream &out) noexcept {
+void PRPEngine::createCheckpoint(std::ostream &out) const noexcept {
   DMAEngine::createCheckpoint(out);
 
   BACKUP_SCALAR(out, inited);
@@ -536,7 +536,7 @@ void SGLEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   }
 }
 
-void SGLEngine::createCheckpoint(std::ostream &out) noexcept {
+void SGLEngine::createCheckpoint(std::ostream &out) const noexcept {
   DMAEngine::createCheckpoint(out);
 
   BACKUP_SCALAR(out, inited);

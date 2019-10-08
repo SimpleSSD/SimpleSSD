@@ -62,7 +62,7 @@ void DeleteSQ::getStatValues(std::vector<double> &) noexcept {}
 
 void DeleteSQ::resetStatValues() noexcept {}
 
-void DeleteSQ::createCheckpoint(std::ostream &out) noexcept {
+void DeleteSQ::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

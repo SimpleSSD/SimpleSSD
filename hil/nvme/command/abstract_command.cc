@@ -79,7 +79,7 @@ void Command::getStatValues(std::vector<double> &) noexcept {}
 
 void Command::resetStatValues() noexcept {}
 
-void Command::createCheckpoint(std::ostream &out) noexcept {
+void Command::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   // Backup only Command Unique ID

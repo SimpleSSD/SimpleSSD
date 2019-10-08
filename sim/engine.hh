@@ -63,7 +63,7 @@ class Engine {
    *
    * Store all event ID, scheduled time and name.
    */
-  virtual void createCheckpoint(std::ostream &) = 0;
+  virtual void createCheckpoint(std::ostream &) const = 0;
 
   /**
    * \brief Restore from checkpoint

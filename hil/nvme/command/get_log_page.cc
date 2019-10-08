@@ -113,7 +113,7 @@ void GetLogPage::getStatValues(std::vector<double> &) noexcept {}
 
 void GetLogPage::resetStatValues() noexcept {}
 
-void GetLogPage::createCheckpoint(std::ostream &out) noexcept {
+void GetLogPage::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   Command::createCheckpoint(out);

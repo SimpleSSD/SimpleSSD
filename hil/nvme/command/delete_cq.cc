@@ -50,7 +50,7 @@ void DeleteCQ::getStatValues(std::vector<double> &) noexcept {}
 
 void DeleteCQ::resetStatValues() noexcept {}
 
-void DeleteCQ::createCheckpoint(std::ostream &out) noexcept {
+void DeleteCQ::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 }
 

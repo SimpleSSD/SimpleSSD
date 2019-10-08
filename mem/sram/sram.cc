@@ -83,7 +83,7 @@ void SRAM::write(uint64_t address, uint64_t length, Event eid) {
   scheduler.write(req);
 }
 
-void SRAM::createCheckpoint(std::ostream &out) noexcept {
+void SRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractSRAM::createCheckpoint(out);
 
   scheduler.createCheckpoint(out);

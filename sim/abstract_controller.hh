@@ -45,7 +45,7 @@ class AbstractController : public Object {
   virtual uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept = 0;
   virtual uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept = 0;
 
-  void createCheckpoint(std::ostream &out) noexcept override {
+  void createCheckpoint(std::ostream &out) const noexcept override {
     BACKUP_SCALAR(out, controllerID);
   }
 

@@ -77,7 +77,7 @@ void Convert::getStatValues(std::vector<double> &) noexcept {}
 
 void Convert::resetStatValues() noexcept {}
 
-void Convert::createCheckpoint(std::ostream &out) noexcept {
+void Convert::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, lpnOrder);
   BACKUP_SCALAR(out, lbaOrder);
   BACKUP_SCALAR(out, shift);

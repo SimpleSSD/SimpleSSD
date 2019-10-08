@@ -448,7 +448,7 @@ void Controller::getStatValues(std::vector<double> &) noexcept {}
 
 void Controller::resetStatValues() noexcept {}
 
-void Controller::createCheckpoint(std::ostream &out) noexcept {
+void Controller::createCheckpoint(std::ostream &out) const noexcept {
   AbstractController::createCheckpoint(out);
 
   controllerData.interruptManager->createCheckpoint(out);

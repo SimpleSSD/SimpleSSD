@@ -147,7 +147,7 @@ void Disk::getStatValues(std::vector<double> &) noexcept {}
 
 void Disk::resetStatValues() noexcept {}
 
-void Disk::createCheckpoint(std::ostream &out) noexcept {
+void Disk::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, diskSize);
   BACKUP_SCALAR(out, sectorSize);
 
@@ -227,7 +227,7 @@ uint16_t CoWDisk::write(uint64_t slba, uint16_t nlblk,
   return write;
 }
 
-void CoWDisk::createCheckpoint(std::ostream &out) noexcept {
+void CoWDisk::createCheckpoint(std::ostream &out) const noexcept {
   Disk::createCheckpoint(out);
 
   uint64_t size = table.size();

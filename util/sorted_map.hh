@@ -49,7 +49,6 @@ class unordered_map_queue {
     iterator(Entry *, Entry *, Entry *);
 
    public:
-    void *operator*();
     iterator &operator++();
     iterator &operator--();
     bool operator==(const iterator &rhs);
@@ -59,9 +58,27 @@ class unordered_map_queue {
     void *getValue();
   };
 
- protected:
-  uint64_t length;  // Same with map.size()
+  class const_iterator {
+   private:
+    friend unordered_map_queue;
 
+    const Entry *head;
+    const Entry *tail;
+    Entry *cur;  // Not const because I have to incr/decr pointer
+
+    const_iterator(const Entry *, const Entry *, const Entry *);
+
+   public:
+    const_iterator operator++();
+    const_iterator operator--();
+    bool operator==(const const_iterator &rhs);
+    bool operator!=(const const_iterator &rhs);
+
+    uint64_t getKey() const;
+    const void *getValue() const;
+  };
+
+ protected:
   std::unordered_map<uint64_t, Entry *> map;
 
   Entry listHead;
@@ -90,6 +107,10 @@ class unordered_map_queue {
   iterator begin() noexcept;
   iterator end() noexcept;
   iterator erase(iterator &) noexcept;
+
+  uint64_t size() const noexcept;
+  const_iterator begin() const noexcept;
+  const_iterator end() const noexcept;
 };
 
 /**
