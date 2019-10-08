@@ -227,7 +227,7 @@ Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
   else {
     switch ((NVMCommand)opcode) {
       case NVMCommand::Flush:
-        return nullptr;
+        return new Flush(object, this, cdata);
       case NVMCommand::Write:
         return new Write(object, this, cdata);
       case NVMCommand::Read:
