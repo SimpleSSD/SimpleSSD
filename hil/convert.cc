@@ -23,17 +23,17 @@ Convert::Convert(ObjectData &o, uint64_t lpn, uint64_t lba)
 ConvertFunction Convert::getConvertion() {
   if (shift > 0) {
     // LBASize < LPNSize
-    return [shift = this->shift, mask = this->mask](
+    return [shift = this->shift, mask = this->mask, order = lbaOrder](
                uint64_t slba, uint64_t nlb, uint64_t &slpn, uint64_t &nlp,
                uint32_t *skipFirst, uint32_t *skipLast) {
       slpn = slba >> shift;
       nlp = ((slba + nlb - 1) >> shift) + 1 - slpn;
 
       if (skipFirst) {
-        *skipFirst = slba & mask;
+        *skipFirst = (slba & mask) << order;
       }
       if (skipLast) {
-        *skipLast = ((slpn + nlp) << 3) - slpn - nlb;
+        *skipLast = (((slpn + nlp) << shift) - slba - nlb) << order;
       }
     };
   }
