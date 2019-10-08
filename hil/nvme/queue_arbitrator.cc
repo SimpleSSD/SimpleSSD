@@ -467,7 +467,7 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
     panic_if(!sqe->completed, "Corresponding submission entry not completed.");
 
     // Remove SQContext
-    dispatchedQueue.erase(sqe->commandID);
+    dispatchedQueue.erase(sqe->getID());
     delete sqe;
   }
 
