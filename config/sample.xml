@@ -1,3 +1,10 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  Copyright (C) 2019 CAMELab
+
+  Author: Donghyun Gouk <kukdh1@camelab.org>
+ -->
+
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
   SimpleSSD configuration file.
