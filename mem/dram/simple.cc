@@ -20,11 +20,8 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
           [this](Request *r) -> uint64_t { return preSubmitRead(r); },
           [this](Request *r) -> uint64_t { return preSubmitWrite(r); },
           [this](Request *r) { postDone(r); },
-          [this](Request *r) { postDone(r); },
-          [this](std::ostream &o, Request *r) { Request::backup(o, r); },
-          [this](std::istream &i) -> Request * {
-            return Request::restore(i);
-          }) {
+          [this](Request *r) { postDone(r); }, Request::backup,
+          Request::restore) {
   pageFetchLatency = pTiming->tRP + pTiming->tRAS;
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;

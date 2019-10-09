@@ -16,11 +16,8 @@ SRAM::SRAM(ObjectData &o)
           [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) { postDone(r); },
-          [this](Request *r) { postDone(r); },
-          [this](std::ostream &o, Request *r) { Request::backup(o, r); },
-          [this](std::istream &i) -> Request * {
-            return Request::restore(i);
-          }) {
+          [this](Request *r) { postDone(r); }, Request::backup,
+          Request::restore) {
   // Convert cycle to ps
   pStructure->latency =
       (uint64_t)(pStructure->latency * 1000000000000.f /
