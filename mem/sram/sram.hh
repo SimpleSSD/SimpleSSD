@@ -22,9 +22,6 @@ class SRAM : public AbstractSRAM {
   uint64_t preSubmit(Request *);
   void postDone(Request *);
 
-  void backupItem(std::ostream &, Request *);
-  Request *restoreItem(std::istream &);
-
  public:
   SRAM(ObjectData &);
   ~SRAM();

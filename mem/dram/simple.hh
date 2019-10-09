@@ -11,15 +11,22 @@
 #define __SIMPLESSD_MEM_DRAM_SIMPLE__
 
 #include "mem/dram/abstract_dram.hh"
+#include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM {
 
 class SimpleDRAM : public AbstractDRAM {
  private:
+  Scheduler<Request *> scheduler;
+
   uint64_t pageFetchLatency;
   double interfaceBandwidth;
 
   Event autoRefresh;
+
+  uint64_t preSubmitRead(Request *);
+  uint64_t preSubmitWrite(Request *);
+  void postDone(Request *);
 
  public:
   SimpleDRAM(ObjectData &);

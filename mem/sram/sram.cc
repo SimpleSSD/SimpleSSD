@@ -17,8 +17,10 @@ SRAM::SRAM(ObjectData &o)
           [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) { postDone(r); },
           [this](Request *r) { postDone(r); },
-          [this](std::ostream &o, Request *r) { backupItem(o, r); },
-          [this](std::istream &i) -> Request * { return restoreItem(i); }) {
+          [this](std::ostream &o, Request *r) { Request::backup(o, r); },
+          [this](std::istream &i) -> Request * {
+            return Request::restore(i);
+          }) {
   // Convert cycle to ps
   pStructure->latency =
       (uint64_t)(pStructure->latency * 1000000000000.f /
@@ -37,22 +39,6 @@ void SRAM::postDone(Request *req) {
   schedule(req->eid, getTick());
 
   delete req;
-}
-
-void backupItem(std::ostream &out, Request *item) {
-  BACKUP_SCALAR(out, item->offset);
-  BACKUP_SCALAR(out, item->length);
-  BACKUP_SCALAR(out, item->beginAt);
-}
-
-Request *restoreItem(std::istream &in) {
-  auto item = new Request();
-
-  RESTORE_SCALAR(in, item->offset);
-  RESTORE_SCALAR(in, item->length);
-  RESTORE_SCALAR(in, item->beginAt);
-
-  return item;
 }
 
 void SRAM::read(uint64_t address, uint64_t length, Event eid) {

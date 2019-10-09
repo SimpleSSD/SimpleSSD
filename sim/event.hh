@@ -49,6 +49,22 @@ class Request {
 
   Request &operator=(const Request &) = delete;
   Request &operator=(Request &&) = default;
+
+  static void backup(std::ostream &out, Request *item) {
+    BACKUP_SCALAR(out, item->offset);
+    BACKUP_SCALAR(out, item->length);
+    BACKUP_SCALAR(out, item->beginAt);
+  }
+
+  static Request *restore(std::istream &in) {
+    auto item = new Request();
+
+    RESTORE_SCALAR(in, item->offset);
+    RESTORE_SCALAR(in, item->length);
+    RESTORE_SCALAR(in, item->beginAt);
+
+    return item;
+  }
 };
 
 class RequestWithData : public Request {
