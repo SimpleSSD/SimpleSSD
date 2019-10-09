@@ -96,7 +96,6 @@ uint64_t PRPEngine::getSizeFromPRP(uint64_t prp) {
 
 void PRPEngine::getPRPListFromPRP(uint64_t prp, Event eid) {
   dmaContext.eid = eid;
-  prpContext.handledSize = 0;
   prpContext.bufferSize = getSizeFromPRP(prp);
   prpContext.buffer = (uint8_t *)malloc(prpContext.bufferSize);
 
@@ -156,6 +155,8 @@ void PRPEngine::init(uint64_t prp1, uint64_t prp2, uint64_t sizeLimit,
       immediate = false;
 
       // PRP1 is PRP pointer, PRP2 is PRP list
+      prpContext.handledSize = prp1Size;
+
       prpList.push_back(PRP(prp1, prp1Size));
       getPRPListFromPRP(prp2, eid);
 
