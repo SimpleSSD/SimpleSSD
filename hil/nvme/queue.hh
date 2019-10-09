@@ -100,7 +100,7 @@ class Queue : public Object {
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
-  virtual void createCheckpoint(std::ostream &) const noexcept;
+  virtual void createCheckpoint(std::ostream &) const noexcept override;
   virtual void restoreCheckpoint(std::istream &, DMAInterface *,
                                  uint64_t) noexcept;
   void restoreCheckpoint(std::istream &) noexcept override;
