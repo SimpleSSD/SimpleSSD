@@ -18,16 +18,16 @@ namespace SimpleSSD {
 /**
  * \brief map + list
  *
- * Use C Style (no template)
- *
  * Insert item in queue.
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
+template <class Key, class T,
+          std::enable_if_t<std::is_pointer_v<T>> * = nullptr>
 class map_list {
  public:
-  using key_type = uint64_t;
-  using mapped_type = void *;
+  using key_type = Key;
+  using mapped_type = T;
   using size_type = uint64_t;
 
  protected:
@@ -151,24 +151,24 @@ class map_list {
 /**
  * \brief map + map
  *
- * Use C Style (no template)
- *
  * Insert item in list (w/ provided compare function, O(n)).
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
-class map_map : public map_list {
+template <class Key, class T,
+          std::enable_if_t<std::is_pointer_v<T>> * = nullptr>
+class map_map : public map_list<Key, T> {
  public:
-  // using key_type = typename map_list::key_type;
-  // using mapped_type = typename map_list::mapped_type;
-  // using size_type = typename map_list::size_type;
+  using key_type = typename map_list<Key, T>::key_type;
+  using mapped_type = typename map_list<Key, T>::mapped_type;
+  using size_type = typename map_list<Key, T>::size_type;
 
   //! Return true if a < b (a should go first)
   using Compare = std::function<bool(const void *, const void *)>;
 
  protected:
-  // using list_item = typename map_queue::list_item;
-  // using iterator = typename map_queue::iterator;
+  using list_item = typename map_list<Key, T>::list_item;
+  using iterator = typename map_list<Key, T>::iterator;
 
   Compare func;
 
@@ -190,5 +190,7 @@ class map_map : public map_list {
 };
 
 }  // namespace SimpleSSD
+
+#include "util/sorted_map.cc"
 
 #endif

@@ -5,23 +5,31 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "util/sorted_map.hh"
+#ifndef SORTED_MAP_TEMPLATE
+#define SORTED_MAP_TEMPLATE                                                    \
+  template <class Key, class T, std::enable_if_t<std::is_pointer_v<T>> *U>
 
-#include <iostream>
+#include "util/sorted_map.hh"
 
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
-map_list::list_item::list_item() : prev(nullptr), next(nullptr) {}
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::list_item::list_item() : prev(nullptr), next(nullptr) {}
 
-map_list::list_item::list_item(value_type &&value)
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::list_item::list_item(value_type &&value)
     : prev(nullptr), next(nullptr), field(value) {}
 
-map_list::iterator::iterator(list_item *h, list_item *t, list_item *c)
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::iterator::iterator(list_item *h, list_item *t,
+                                        list_item *c)
     : head(h), tail(t), cur(c) {}
 
-map_list::iterator &map_list::iterator::operator++() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator &
+map_list<Key, T, U>::iterator::operator++() {
   if (cur != nullptr && cur != tail) {
     cur = cur->next;
   }
@@ -29,7 +37,9 @@ map_list::iterator &map_list::iterator::operator++() {
   return *this;
 }
 
-map_list::iterator &map_list::iterator::operator--() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator &
+map_list<Key, T, U>::iterator::operator--() {
   if (cur != nullptr && cur != head->next) {
     cur = cur->prev;
   }
@@ -37,15 +47,19 @@ map_list::iterator &map_list::iterator::operator--() {
   return *this;
 }
 
-bool map_list::iterator::operator==(const iterator &rhs) {
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T, U>::iterator::operator==(const iterator &rhs) {
   return cur == rhs.cur;
 }
 
-bool map_list::iterator::operator!=(const iterator &rhs) {
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T, U>::iterator::operator!=(const iterator &rhs) {
   return cur != rhs.cur;
 }
 
-map_list::iterator::reference map_list::iterator::operator*() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator::reference
+    map_list<Key, T, U>::iterator::operator*() {
   if (cur != head && cur != tail && cur != nullptr) {
     return cur->field;
   }
@@ -53,7 +67,9 @@ map_list::iterator::reference map_list::iterator::operator*() {
   return ((list_item *)tail)->field;
 }
 
-map_list::iterator::pointer map_list::iterator::operator->() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator::pointer
+    map_list<Key, T, U>::iterator::operator->() {
   if (cur != head && cur != tail && cur != nullptr) {
     return &cur->field;
   }
@@ -61,11 +77,15 @@ map_list::iterator::pointer map_list::iterator::operator->() {
   return nullptr;
 }
 
-map_list::const_iterator::const_iterator(const list_item *h, const list_item *t,
-                                         const list_item *c)
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::const_iterator::const_iterator(const list_item *h,
+                                                    const list_item *t,
+                                                    const list_item *c)
     : head(h), tail(t), cur((list_item *)c) {}
 
-map_list::const_iterator &map_list::const_iterator::operator++() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator &
+map_list<Key, T, U>::const_iterator::operator++() {
   if (cur != nullptr && cur != tail) {
     cur = cur->next;
   }
@@ -73,7 +93,9 @@ map_list::const_iterator &map_list::const_iterator::operator++() {
   return *this;
 }
 
-map_list::const_iterator &map_list::const_iterator::operator--() {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator &
+map_list<Key, T, U>::const_iterator::operator--() {
   if (cur != nullptr && cur != head->next) {
     cur = cur->prev;
   }
@@ -81,16 +103,21 @@ map_list::const_iterator &map_list::const_iterator::operator--() {
   return *this;
 }
 
-bool map_list::const_iterator::operator==(const const_iterator &rhs) const {
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T, U>::const_iterator::operator==(
+    const const_iterator &rhs) const {
   return cur == rhs.cur;
 }
 
-bool map_list::const_iterator::operator!=(const const_iterator &rhs) const {
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T, U>::const_iterator::operator!=(
+    const const_iterator &rhs) const {
   return cur != rhs.cur;
 }
 
-map_list::const_iterator::reference map_list::const_iterator::operator*()
-    const {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator::reference
+    map_list<Key, T, U>::const_iterator::operator*() const {
   if (cur != head && cur != tail && cur != nullptr) {
     return cur->field;
   }
@@ -98,7 +125,9 @@ map_list::const_iterator::reference map_list::const_iterator::operator*()
   return tail->field;
 }
 
-map_list::const_iterator::pointer map_list::const_iterator::operator->() const {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator::pointer
+    map_list<Key, T, U>::const_iterator::operator->() const {
   if (cur != head && cur != tail && cur != nullptr) {
     return &cur->field;
   }
@@ -106,16 +135,19 @@ map_list::const_iterator::pointer map_list::const_iterator::operator->() const {
   return nullptr;
 }
 
-map_list::map_list() {
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::map_list() {
   listHead.next = &listTail;
   listTail.prev = &listHead;
 }
 
-map_list::~map_list() {
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::~map_list() {
   clear();
 }
 
-void map_list::eraseMap(const key_type &key) noexcept {
+SORTED_MAP_TEMPLATE
+void map_list<Key, T, U>::eraseMap(const key_type &key) noexcept {
   auto iter = map.find(key);
 
   if (UNLIKELY(iter != map.end())) {
@@ -123,13 +155,16 @@ void map_list::eraseMap(const key_type &key) noexcept {
   }
 }
 
-bool map_list::insertMap(const key_type &key, list_item *value) noexcept {
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T, U>::insertMap(const key_type &key,
+                                    list_item *value) noexcept {
   auto result = map.emplace(std::make_pair(key, value));
 
   return result.second;
 }
 
-void map_list::eraseList(list_item *entry) noexcept {
+SORTED_MAP_TEMPLATE
+void map_list<Key, T, U>::eraseList(list_item *entry) noexcept {
   if (entry != &listHead && entry != &listTail) {
     entry->prev->next = entry->next;
     entry->next->prev = entry->prev;
@@ -138,8 +173,9 @@ void map_list::eraseList(list_item *entry) noexcept {
   }
 }
 
-map_list::list_item *map_list::insertList(list_item *prev,
-                                          value_type &&value) noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::list_item *map_list<Key, T, U>::insertList(
+    list_item *prev, value_type &&value) noexcept {
   list_item *entry = new list_item(std::move(value));
 
   entry->prev = prev;
@@ -150,24 +186,31 @@ map_list::list_item *map_list::insertList(list_item *prev,
   return entry;
 }
 
-map_list::iterator map_list::make_iterator(list_item *entry) noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::make_iterator(
+    list_item *entry) noexcept {
   return iterator(&listHead, &listTail, entry);
 }
 
-map_list::const_iterator map_list::make_iterator(const list_item *entry) const
-    noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::make_iterator(
+    const list_item *entry) const noexcept {
   return const_iterator(&listHead, &listTail, entry);
 }
 
-map_list::size_type map_list::size() noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::size_type map_list<Key, T, U>::size() noexcept {
   return map.size();
 }
 
-map_list::size_type map_list::size() const noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::size_type map_list<Key, T, U>::size() const
+    noexcept {
   return map.size();
 }
 
-void map_list::pop_front() noexcept {
+SORTED_MAP_TEMPLATE
+void map_list<Key, T, U>::pop_front() noexcept {
   if (LIKELY(map.size() > 0)) {
     // Remove first entry from map
     eraseMap(listHead.next->field.first);
@@ -177,7 +220,8 @@ void map_list::pop_front() noexcept {
   }
 }
 
-void map_list::pop_back() noexcept {
+SORTED_MAP_TEMPLATE
+void map_list<Key, T, U>::pop_back() noexcept {
   if (LIKELY(map.size() > 0)) {
     // Remove last entry from map
     eraseMap(listTail.prev->field.first);
@@ -187,8 +231,9 @@ void map_list::pop_back() noexcept {
   }
 }
 
-std::pair<map_list::iterator, bool> map_list::push_front(
-    key_type &&key, mapped_type &&value) noexcept {
+SORTED_MAP_TEMPLATE
+std::pair<typename map_list<Key, T, U>::iterator, bool>
+map_list<Key, T, U>::push_front(key_type &&key, mapped_type &&value) noexcept {
   if (LIKELY(map.count(key) == 0)) {
     // Insert item to list
     auto entry = insertList(&listHead, std::make_pair(key, value));
@@ -202,8 +247,9 @@ std::pair<map_list::iterator, bool> map_list::push_front(
   return std::make_pair(end(), false);
 }
 
-std::pair<map_list::iterator, bool> map_list::push_back(
-    key_type &&key, mapped_type &&value) noexcept {
+SORTED_MAP_TEMPLATE
+std::pair<typename map_list<Key, T, U>::iterator, bool>
+map_list<Key, T, U>::push_back(key_type &&key, mapped_type &&value) noexcept {
   if (LIKELY(map.count(key) == 0)) {
     // Insert item to list
     auto entry = insertList(listTail.prev, std::make_pair(key, value));
@@ -217,7 +263,9 @@ std::pair<map_list::iterator, bool> map_list::push_back(
   return std::make_pair(end(), false);
 }
 
-map_list::iterator map_list::find(const key_type &key) noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::find(
+    const key_type &key) noexcept {
   auto iter = map.find(key);
 
   if (iter != map.end()) {
@@ -227,7 +275,9 @@ map_list::iterator map_list::find(const key_type &key) noexcept {
   return end();
 }
 
-map_list::const_iterator map_list::find(const key_type &key) const noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::find(
+    const key_type &key) const noexcept {
   auto iter = map.find(key);
 
   if (iter != map.end()) {
@@ -237,7 +287,9 @@ map_list::const_iterator map_list::find(const key_type &key) const noexcept {
   return end();
 }
 
-map_list::iterator map_list::erase(iterator iter) noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::erase(
+    iterator iter) noexcept {
   list_item *next = iter.cur->next;
 
   eraseMap(iter.cur->field.first);
@@ -246,7 +298,9 @@ map_list::iterator map_list::erase(iterator iter) noexcept {
   return make_iterator(next);
 }
 
-map_list::iterator map_list::erase(const_iterator iter) noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::erase(
+    const_iterator iter) noexcept {
   list_item *next = iter.cur->next;
 
   eraseMap(iter.cur->field.first);
@@ -255,7 +309,9 @@ map_list::iterator map_list::erase(const_iterator iter) noexcept {
   return make_iterator(next);
 }
 
-map_list::value_type &map_list::front() noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::value_type &
+map_list<Key, T, U>::front() noexcept {
   if (LIKELY(map.size() > 0)) {
     return listHead.next->field;
   }
@@ -263,7 +319,9 @@ map_list::value_type &map_list::front() noexcept {
   return listTail.field;
 }
 
-const map_list::value_type &map_list::front() const noexcept {
+SORTED_MAP_TEMPLATE
+const typename map_list<Key, T, U>::value_type &map_list<Key, T, U>::front()
+    const noexcept {
   if (LIKELY(map.size() > 0)) {
     return listHead.next->field;
   }
@@ -271,7 +329,8 @@ const map_list::value_type &map_list::front() const noexcept {
   return listTail.field;
 }
 
-map_list::value_type &map_list::back() noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::value_type &map_list<Key, T, U>::back() noexcept {
   if (LIKELY(map.size() > 0)) {
     return listTail.prev->field;
   }
@@ -279,7 +338,9 @@ map_list::value_type &map_list::back() noexcept {
   return listTail.field;
 }
 
-const map_list::value_type &map_list::back() const noexcept {
+SORTED_MAP_TEMPLATE
+const typename map_list<Key, T, U>::value_type &map_list<Key, T, U>::back()
+    const noexcept {
   if (LIKELY(map.size() > 0)) {
     return listTail.prev->field;
   }
@@ -287,7 +348,8 @@ const map_list::value_type &map_list::back() const noexcept {
   return listTail.field;
 }
 
-void map_list::clear() noexcept {
+SORTED_MAP_TEMPLATE
+void map_list<Key, T, U>::clear() noexcept {
   // Free all objects
   for (auto &iter : map) {
     delete iter.second;
@@ -300,35 +362,44 @@ void map_list::clear() noexcept {
   listTail.prev = &listHead;
 }
 
-map_list::iterator map_list::begin() noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::begin() noexcept {
   return make_iterator(listHead.next);
 }
 
-map_list::iterator map_list::end() noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::iterator map_list<Key, T, U>::end() noexcept {
   return make_iterator(&listTail);
 }
 
-map_list::const_iterator map_list::begin() const noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::begin() const
+    noexcept {
   return make_iterator(listHead.next);
 }
 
-map_list::const_iterator map_list::end() const noexcept {
+SORTED_MAP_TEMPLATE
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::end() const
+    noexcept {
   return make_iterator(&listTail);
 }
 
-map_map::map_map(Compare c) : map_list(), func(c) {}
+SORTED_MAP_TEMPLATE
+map_map<Key, T, U>::map_map(Compare c) : map_list<Key, T>(), func(c) {}
 
-map_map::~map_map() {}
+SORTED_MAP_TEMPLATE
+map_map<Key, T, U>::~map_map() {}
 
-std::pair<map_map::iterator, bool> map_map::insert(
-    key_type &&key, mapped_type &&value) noexcept {
-  if (LIKELY(map.count(key) == 0)) {
+SORTED_MAP_TEMPLATE
+std::pair<typename map_map<Key, T, U>::iterator, bool>
+map_map<Key, T, U>::insert(key_type &&key, mapped_type &&value) noexcept {
+  if (LIKELY(this->map.count(key) == 0)) {
     // Find where to insert
-    list_item *prev = &listHead;
+    list_item *prev = &this->listHead;
 
-    while (prev != &listTail) {
+    while (prev != &this->listTail) {
       // prev->next->value is nullptr when prev->next is &listTail
-      if (prev->next == &listTail || func(value, prev->next->field.second)) {
+      if (prev->next == &this->listTail || func(value, prev->next->field.second)) {
         break;
       }
 
@@ -344,7 +415,9 @@ std::pair<map_map::iterator, bool> map_map::insert(
     return std::make_pair(make_iterator(entry), true);
   }
 
-  return std::make_pair(end(), false);
+  return std::make_pair(this->end(), false);
 }
 
 }  // namespace SimpleSSD
+
+#endif
