@@ -11,12 +11,12 @@
 #define __SIMPLESSD_UTIL_SORTED_MAP_HH__
 
 #include <functional>
-#include <unordered_map>
+#include <map>
 
 namespace SimpleSSD {
 
 /**
- * \brief unordered_map + queue
+ * \brief map + list
  *
  * Use C Style (no template)
  *
@@ -24,7 +24,7 @@ namespace SimpleSSD {
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
-class unordered_map_queue {
+class map_list {
  protected:
   class Entry {
    public:
@@ -40,7 +40,7 @@ class unordered_map_queue {
  public:
   class iterator {
    private:
-    friend unordered_map_queue;
+    friend map_list;
 
     const Entry *head;
     const Entry *tail;
@@ -60,7 +60,7 @@ class unordered_map_queue {
 
   class const_iterator {
    private:
-    friend unordered_map_queue;
+    friend map_list;
 
     const Entry *head;
     const Entry *tail;
@@ -79,7 +79,7 @@ class unordered_map_queue {
   };
 
  protected:
-  std::unordered_map<uint64_t, Entry *> map;
+  std::map<uint64_t, Entry *> map;
 
   Entry listHead;
   Entry listTail;
@@ -90,8 +90,8 @@ class unordered_map_queue {
   Entry *insertList(Entry *, void *) noexcept;
 
  public:
-  unordered_map_queue();
-  ~unordered_map_queue();
+  map_list();
+  ~map_list();
 
   uint64_t size() noexcept;
   void pop_front() noexcept;
@@ -106,7 +106,7 @@ class unordered_map_queue {
 
   iterator begin() noexcept;
   iterator end() noexcept;
-  iterator erase(iterator &) noexcept;
+  iterator erase(iterator) noexcept;
 
   uint64_t size() const noexcept;
   const_iterator begin() const noexcept;
@@ -114,7 +114,7 @@ class unordered_map_queue {
 };
 
 /**
- * \brief unordered_map + list
+ * \brief map + map
  *
  * Use C Style (no template)
  *
@@ -122,7 +122,7 @@ class unordered_map_queue {
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
-class unordered_map_list : public unordered_map_queue {
+class map_map : public map_list {
  public:
   //! Return true if a < b (a should go first)
   using Compare = std::function<bool(const void *, const void *)>;
@@ -133,8 +133,8 @@ class unordered_map_list : public unordered_map_queue {
   void moveList(Entry *, Entry *) noexcept;
 
  public:
-  unordered_map_list(Compare);
-  ~unordered_map_list();
+  map_map(Compare);
+  ~map_map();
 
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;
