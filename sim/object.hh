@@ -19,7 +19,7 @@
 
 namespace SimpleSSD {
 
-#ifndef NO_LOG_MACRO
+#if !defined(NO_LOG_MACRO) && !defined(DISABLE_LOG)
 
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
@@ -55,6 +55,14 @@ namespace SimpleSSD {
              __PRETTY_FUNCTION__, ##__VA_ARGS__);                              \
   }
 
+#endif
+
+#ifdef DISABLE_LOG
+#define panic_if(cond, format, ...)
+#define panic(format, ...)
+#define warn_if(cond, format, ...)
+#define warn(format, ...)
+#define info(format, ...)
 #endif
 
 using ObjectData = struct _ObjectData {
