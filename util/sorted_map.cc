@@ -137,13 +137,6 @@ void unordered_map_queue::eraseList(Entry *entry) noexcept {
 
     free(entry);
   }
-#if DEBUG_SORTED_MAP
-  else {
-    std::cerr << "Non-removable Entry specified." << std::endl;
-
-    abort();
-  }
-#endif
 }
 
 unordered_map_queue::Entry *unordered_map_queue::insertList(

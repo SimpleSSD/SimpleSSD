@@ -128,7 +128,7 @@ class unordered_map_list : public unordered_map_queue {
   using Compare = std::function<bool(const void *, const void *)>;
 
  protected:
-  Compare &func;
+  Compare func;
 
   void moveList(Entry *, Entry *) noexcept;
 
