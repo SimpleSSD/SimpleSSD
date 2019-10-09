@@ -10,109 +10,123 @@
 #ifndef __SIMPLESSD_CPU_CPU__
 #define __SIMPLESSD_CPU_CPU__
 
-#include <cinttypes>
-#include <queue>
-#include <unordered_map>
-#include <vector>
+#include <map>
 
-#include "cpu/def.hh"
-#include "lib/mcpat/mcpat.h"
+#include "sim/config_reader.hh"
+#include "sim/engine.hh"
 #include "sim/object.hh"
+#include "util/sorted_map.hh"
 
 namespace SimpleSSD::CPU {
 
-typedef struct _InstStat {
-  // Instruction count
-  uint64_t branch;
-  uint64_t load;
-  uint64_t store;
-  uint64_t arithmetic;
-  uint64_t floatingPoint;
-  uint64_t otherInsts;
+enum class CPUGroup {
+  HostInterface,          //!< Assign event to HIL core
+  InternalCache,          //!< Assign event to ICL core
+  FlashTranslationLayer,  //!< Assign event to FTL core
+  Any,                    //!< Assign event to most-idle core
+};
 
-  // Total times in ps to execute this insturcion group
-  uint64_t latency;
-
-  _InstStat();
-  _InstStat(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
-            uint64_t);
-  _InstStat &operator+=(const _InstStat &);
-  uint64_t sum();
-} InstStat;
-
-typedef struct _JobEntry {
-  Event eid;
-  InstStat *inst;
-  uint64_t submitAt;
-  uint64_t delay;
-
-  _JobEntry(Event, InstStat *);
-} JobEntry;
-
-class CPU : public Object {
+/**
+ * \brief CPU object declaration
+ *
+ * This object manages event scheduling and firmware execution latency.
+ */
+class CPU {
  private:
-  struct CoreStat {
-    InstStat instStat;
-    uint64_t busy;
+  struct EventData {
+    EventFunction func;
+    std::string name;
 
-    CoreStat();
+    EventData() {}
+    EventData(EventFunction &f, std::string &s) : func(f), name(s) {}
+    EventData(const EventData &) = delete;
+    EventData(EventData &&) noexcept = default;
+
+    EventData &operator=(const EventData &) = delete;
+    EventData &operator=(EventData &&) noexcept = default;
   };
 
-  class Core {
-   private:
-    Engine *engine;
-    bool busy;
+  Engine *engine;        //!< Simulation engine
+  ConfigReader *config;  //!< Config reader
+  Log *log;              //!< Log engine
 
-    Event jobEvent;
-    std::queue<JobEntry> jobs;
+  uint16_t hilCore;
+  uint16_t iclCore;
+  uint16_t ftlCore;
 
-    CoreStat stat;
+  std::map<uint64_t, Event> *coreList;
+  std::map<Event, EventData> eventList;
 
-    void handleJob();
-    void jobDone();
-
-   public:
-    Core(Engine *);
-    ~Core();
-
-    void submitJob(JobEntry, uint64_t = 0);
-
-    void addStat(InstStat &);
-
-    bool isBusy();
-    uint64_t getJobListSize();
-    CoreStat &getStat();
-  };
-
-  uint64_t lastResetStat;
-
-  uint64_t clockSpeed;
-  uint64_t clockPeriod;
-
-  // Cores
-  std::vector<Core> hilCore;
-  std::vector<Core> iclCore;
-  std::vector<Core> ftlCore;
-
-  // CPIs
-  std::unordered_map<Namespace, std::unordered_map<Function, InstStat>> cpi;
-
-  uint32_t leastBusyCPU(std::vector<Core> &);
-  void calculatePower(Power &);
+  void dispatch();
 
  public:
-  CPU(ObjectData &);
+  CPU(Engine *, ConfigReader *);
   ~CPU();
 
-  void execute(Namespace, Function, Event, uint64_t = 0);
-  uint64_t applyLatency(Namespace, Function);
+  /**
+   * \brief Get current simulation tick
+   *
+   * \return Simulation tick in pico-seconds
+   */
+  uint64_t getTick() noexcept;
 
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
+  /**
+   * \brief Create event
+   *
+   * Create event. You must create all events in the constructor of object. If
+   * not, you must care checkpointing on your own.
+   *
+   * \param[in] func  Callback function when event is triggered
+   * \param[in] name  Description of the event
+   * \return Event ID
+   */
+  Event createEvent(EventFunction func, std::string name) noexcept;
 
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  /**
+   * \brief Schedule event
+   *
+   * If event was previously scheduled, the event will be called twice.
+   * NOT RESCHEDULE THE EVENT.
+   *
+   * As we cannot use void* context because of checkpointing, it become hard to
+   * exchange data between event. You may create data queue for these purpose.
+   *
+   * \param[in] group CPU group to execute event (and add-up instruction stats)
+   * \param[in] eid   Event ID to schedule
+   * \param[in] delay Delay in pico-second
+   */
+  void schedule(CPUGroup group, Event eid, uint64_t delay) noexcept;
+
+  /**
+   * \brief Deschedule event
+   *
+   * Deschedule event.
+   *
+   * \param[in] eid Event ID to deschedule
+   * \param[in] all Deschedule all scheduled events.
+   */
+  void deschedule(Event eid, bool all = false) noexcept;
+
+  /**
+   * \brief Check event is scheduled
+   *
+   * \param[in] eid Event ID to check
+   */
+  bool isScheduled(Event eid) noexcept;
+
+  /**
+   * \brief Destroy event
+   *
+   * \param[in] eid Event ID to destroy
+   */
+  void destroyEvent(Event eid) noexcept;
+
+  void getStatList(std::vector<Object::Stat> &, std::string) noexcept;
+  void getStatValues(std::vector<double> &) noexcept;
+  void resetStatValues() noexcept;
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 }  // namespace SimpleSSD::CPU

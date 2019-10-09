@@ -12,9 +12,9 @@
 
 #include <vector>
 
+#include "cpu/cpu.hh"
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
-#include "sim/engine.hh"
 #include "sim/log.hh"
 
 namespace SimpleSSD {
@@ -66,13 +66,13 @@ namespace SimpleSSD {
 #endif
 
 using ObjectData = struct _ObjectData {
-  Engine *engine;
+  CPU::CPU *cpu;
   ConfigReader *config;
   Log *log;
 
-  _ObjectData() : engine(nullptr), config(nullptr), log(nullptr) {}
-  _ObjectData(Engine *e, ConfigReader *c, Log *l)
-      : engine(e), config(c), log(l) {}
+  _ObjectData() : cpu(nullptr), config(nullptr), log(nullptr) {}
+  _ObjectData(CPU::CPU *e, ConfigReader *c, Log *l)
+      : cpu(e), config(c), log(l) {}
 };
 
 /**
@@ -91,19 +91,19 @@ class Object {
  protected:
   ObjectData object;
 
-  /* Helper APIs for Engine */
-  inline uint64_t getTick() noexcept { return object.engine->getTick(); }
+  /* Helper APIs for CPU */
+  inline uint64_t getTick() noexcept { return object.cpu->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
-    return object.engine->createEvent(ef, s);
+    return object.cpu->createEvent(ef, s);
   }
-  inline void schedule(Event e, uint64_t t) noexcept {
-    object.engine->schedule(e, t);
+  inline void schedule(CPU::CPUGroup g, Event e, uint64_t d) noexcept {
+    object.cpu->schedule(g, e, d);
   }
-  inline void deschedule(Event e) noexcept { object.engine->deschedule(e); }
+  inline void deschedule(Event e) noexcept { object.cpu->deschedule(e); }
   inline bool isScheduled(Event e) noexcept {
-    return object.engine->isScheduled(e);
+    return object.cpu->isScheduled(e);
   }
-  inline void destroyEvent(Event e) noexcept { object.engine->destroyEvent(e); }
+  inline void destroyEvent(Event e) noexcept { object.cpu->destroyEvent(e); }
 
   /* Helper APIs for Config */
   inline int64_t readConfigInt(Section s, uint32_t k) noexcept {
