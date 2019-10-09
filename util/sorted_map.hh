@@ -25,91 +25,126 @@ namespace SimpleSSD {
  * Erase item by key, front or back.
  */
 class map_list {
+ public:
+  using key_type = uint64_t;
+  using mapped_type = void *;
+  using size_type = uint64_t;
+
  protected:
-  class Entry {
+  using value_type = std::pair<const key_type, mapped_type>;
+
+  class list_item {
    public:
-    Entry *prev;
-    Entry *next;
+    list_item *prev;
+    list_item *next;
 
-    uint64_t key;
-    void *value;
+    value_type field;
 
-    Entry();
+    list_item();
+    list_item(value_type &&);
   };
 
  public:
   class iterator {
+   public:
+    using difference_type = int64_t;
+    using value_type = std::pair<const key_type, mapped_type>;
+    using pointer = value_type *;
+    using reference = value_type &;
+    using iterator_category = std::bidirectional_iterator_tag;
+
    private:
     friend map_list;
 
-    const Entry *head;
-    const Entry *tail;
-    Entry *cur;
+    const list_item *head;
+    const list_item *tail;
+    list_item *cur;
 
-    iterator(Entry *, Entry *, Entry *);
+    iterator(list_item *, list_item *, list_item *);
 
    public:
     iterator &operator++();
     iterator &operator--();
+
     bool operator==(const iterator &rhs);
     bool operator!=(const iterator &rhs);
 
-    uint64_t getKey();
-    void *getValue();
+    reference operator*();
+    pointer operator->();
   };
 
   class const_iterator {
+   public:
+    using difference_type = int64_t;
+    using value_type = const std::pair<const key_type, mapped_type>;
+    using pointer = value_type *;
+    using reference = value_type &;
+    using iterator_category = std::bidirectional_iterator_tag;
+
    private:
     friend map_list;
 
-    const Entry *head;
-    const Entry *tail;
-    Entry *cur;  // Not const because I have to incr/decr pointer
+    const list_item *head;
+    const list_item *tail;
+    list_item *cur;
 
-    const_iterator(const Entry *, const Entry *, const Entry *);
+    const_iterator(const list_item *, const list_item *, const list_item *);
 
-   public:
-    const_iterator operator++();
-    const_iterator operator--();
-    bool operator==(const const_iterator &rhs);
-    bool operator!=(const const_iterator &rhs);
+   private:
+    const_iterator &operator++();
+    const_iterator &operator--();
+    bool operator==(const const_iterator &rhs) const;
+    bool operator!=(const const_iterator &rhs) const;
 
-    uint64_t getKey() const;
-    const void *getValue() const;
+    reference operator*() const;
+    pointer operator->() const;
   };
 
  protected:
-  std::map<uint64_t, Entry *> map;
+  std::map<key_type, list_item *> map;
 
-  Entry listHead;
-  Entry listTail;
+  list_item listHead;
+  list_item listTail;
 
-  void eraseMap(uint64_t) noexcept;
-  bool insertMap(uint64_t, Entry *) noexcept;
-  void eraseList(Entry *) noexcept;
-  Entry *insertList(Entry *, void *) noexcept;
+  void eraseMap(const key_type &) noexcept;
+  bool insertMap(const key_type &, list_item *) noexcept;
+  void eraseList(list_item *) noexcept;
+  list_item *insertList(list_item *, value_type &&) noexcept;
+
+  iterator make_iterator(list_item *) noexcept;
+  const_iterator make_iterator(const list_item *) const noexcept;
 
  public:
   map_list();
   ~map_list();
 
-  uint64_t size() noexcept;
+  size_type size() noexcept;
+  size_type size() const noexcept;
+
   void pop_front() noexcept;
   void pop_back() noexcept;
-  bool push_front(uint64_t, void *) noexcept;
-  bool push_back(uint64_t, void *) noexcept;
-  void *find(uint64_t) noexcept;
-  void erase(uint64_t) noexcept;
-  void *front() noexcept;
-  void *back() noexcept;
+
+  std::pair<iterator, bool> push_front(key_type &&, mapped_type &&) noexcept;
+  std::pair<iterator, bool> push_back(key_type &&, mapped_type &&) noexcept;
+
+  iterator find(const key_type &) noexcept;
+  const_iterator find(const key_type &) const noexcept;
+
+  iterator erase(iterator) noexcept;
+  iterator erase(const_iterator) noexcept;
+
+  value_type &front() noexcept;
+  const value_type &front() const noexcept;
+
+  value_type &back() noexcept;
+  const value_type &back() const noexcept;
+
   void clear() noexcept;
 
   iterator begin() noexcept;
-  iterator end() noexcept;
-  iterator erase(iterator) noexcept;
-
-  uint64_t size() const noexcept;
   const_iterator begin() const noexcept;
+
+  iterator end() noexcept;
   const_iterator end() const noexcept;
 };
 
@@ -124,13 +159,20 @@ class map_list {
  */
 class map_map : public map_list {
  public:
+  // using key_type = typename map_list::key_type;
+  // using mapped_type = typename map_list::mapped_type;
+  // using size_type = typename map_list::size_type;
+
   //! Return true if a < b (a should go first)
   using Compare = std::function<bool(const void *, const void *)>;
 
  protected:
+  // using list_item = typename map_queue::list_item;
+  // using iterator = typename map_queue::iterator;
+
   Compare func;
 
-  void moveList(Entry *, Entry *) noexcept;
+  void moveList(list_item *, list_item *) noexcept;
 
  public:
   map_map(Compare);
@@ -138,10 +180,13 @@ class map_map : public map_list {
 
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;
-  bool push_front(uint64_t, void *) noexcept = delete;
-  bool push_back(uint64_t, void *) noexcept = delete;
 
-  bool insert(uint64_t, void *) noexcept;
+  std::pair<iterator, bool> push_front(key_type &&,
+                                       mapped_type &&) noexcept = delete;
+  std::pair<iterator, bool> push_back(key_type &&,
+                                      mapped_type &&) noexcept = delete;
+
+  std::pair<iterator, bool> insert(key_type &&, mapped_type &&) noexcept;
 };
 
 }  // namespace SimpleSSD
