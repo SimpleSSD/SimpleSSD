@@ -481,12 +481,13 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
     dispatchedQueue.erase(sqe->getID());
     delete sqe;
   }
-
   // Insert to completion queue
   completionQueue.push_back(cqe);
 
-  // Write entry to CQ
-  cq->setData(cqe->getData(), eventCompDone);
+  if (completionQueue.size() == 1) {
+    // Write entry to CQ
+    cq->setData(cqe->getData(), eventCompDone);
+  }
 }
 
 void Arbitrator::completion_done() {
@@ -503,6 +504,16 @@ void Arbitrator::completion_done() {
 
   // Remove CQContext
   delete cqe;
+
+  if (completionQueue.size() > 0) {
+    cqe = completionQueue.front();
+    cq = cqList[cqe->getCQID()];
+
+    // Write entry to CQ
+    cq->setData(cqe->getData(), eventCompDone);
+
+    return;
+  }
 
   // Pending abort events?
   abort_SQDone();
