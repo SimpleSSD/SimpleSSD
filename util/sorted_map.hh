@@ -41,10 +41,12 @@ class map_list {
     value_type field;
 
     list_item();
+    list_item(const list_item &) = delete;
+    list_item(list_item &&rhs) noexcept = delete;
     list_item(value_type &&);
 
     list_item &operator=(const list_item &) = delete;
-    list_item &operator=(list_item &&) noexcept = default;
+    list_item &operator=(list_item &&rhs) = delete;
   };
 
  public:
@@ -106,8 +108,8 @@ class map_list {
  protected:
   std::map<key_type, list_item *> map;
 
-  list_item listHead;
-  list_item listTail;
+  list_item *listHead;
+  list_item *listTail;
 
   void eraseMap(const key_type &) noexcept;
   bool insertMap(const key_type &, list_item *) noexcept;
@@ -175,7 +177,7 @@ class map_map : public map_list<Key, T> {
   using iterator = typename map_list<Key, T>::iterator;
 
   //! Return true if a < b (a should go first)
-  using Compare = std::function<bool(const void *, const void *)>;
+  using Compare = std::function<bool(const mapped_type, const mapped_type)>;
 
  protected:
   using list_item = typename map_list<Key, T>::list_item;
@@ -187,11 +189,11 @@ class map_map : public map_list<Key, T> {
  public:
   map_map(Compare);
   map_map(const map_map &) = delete;
-  map_map(map_map &&) noexcept = default;
+  map_map(map_map &&) noexcept;
   ~map_map();
 
   map_map &operator=(const map_map &) = delete;
-  map_map &operator=(map_map &&) = default;
+  map_map &operator=(map_map &&);
 
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;

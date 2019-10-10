@@ -24,9 +24,8 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i, ControllerID id)
       controllerID(id),
       aggregationThreshold(0),
       aggregationTime(0),
-      coalesceMap([](const void *a, const void *b) -> bool {
-        return ((CoalesceData *)a)->nextDeadline <
-               ((CoalesceData *)b)->nextDeadline;
+      coalesceMap([](const CoalesceData *a, const CoalesceData *b) -> bool {
+        return a->nextDeadline < b->nextDeadline;
       }) {
   eventTimer = createEvent([this](uint64_t t) { timerHandler(t); },
                            "HIL::InterruptManager::eventTimer");
