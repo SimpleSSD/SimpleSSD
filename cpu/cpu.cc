@@ -465,6 +465,94 @@ void CPU::resetStatValues() noexcept {
   }
 }
 
-// TODO: Add checkpointing API
+void CPU::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, lastResetStat);
+  BACKUP_SCALAR(out, clockSpeed);
+  BACKUP_SCALAR(out, clockPeriod);
+  BACKUP_SCALAR(out, useDedicatedCore);
+  BACKUP_SCALAR(out, hilCore);
+  BACKUP_SCALAR(out, iclCore);
+  BACKUP_SCALAR(out, ftlCore);
+
+  uint64_t size = eventList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : eventList) {
+    BACKUP_SCALAR(out, iter.first);
+  }
+
+  size = coreList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : coreList) {
+    size = iter.eventQueue.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &event : iter.eventQueue) {
+      BACKUP_SCALAR(out, event.first);
+      BACKUP_SCALAR(out, event.second.eid);
+      BACKUP_SCALAR(out, event.second.group);
+    }
+  }
+}
+
+void CPU::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, lastResetStat);
+  RESTORE_SCALAR(in, clockSpeed);
+  RESTORE_SCALAR(in, clockPeriod);
+  RESTORE_SCALAR(in, useDedicatedCore);
+  RESTORE_SCALAR(in, hilCore);
+  RESTORE_SCALAR(in, iclCore);
+  RESTORE_SCALAR(in, ftlCore);
+
+  uint64_t size;
+  Event eid;
+
+  RESTORE_SCALAR(in, size);
+
+  if (UNLIKELY(size != eventList.size())) {
+    panic_log("Event count mismatch while restore CPU.");
+  }
+
+  // We must have exactly same event list
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, eid);
+
+    if (UNLIKELY(eventList.count(eid) == 0)) {
+      panic_log("Event id mismatch while restore CPU.");
+    }
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  if (UNLIKELY(size != coreList.size())) {
+    panic_log("Total core count mismatch while restore CPU.");
+  }
+
+  uint64_t list;
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto &core = coreList.at(i);
+
+    RESTORE_SCALAR(in, list);
+
+    for (uint64_t j = 0; j < list; j++) {
+      uint64_t tick;
+      Core::Job job;
+
+      RESTORE_SCALAR(in, tick);
+      RESTORE_SCALAR(in, job.eid);
+      RESTORE_SCALAR(in, job.group);
+
+      auto event = eventList.find(job.eid);
+
+      if (UNLIKELY(event == eventList.end())) {
+        panic_log("Event not found while restore CPU.");
+      }
+
+      job.data = &event->second;
+    }
+  }
+}
 
 }  // namespace SimpleSSD::CPU

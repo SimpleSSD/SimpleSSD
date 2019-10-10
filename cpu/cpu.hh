@@ -23,10 +23,11 @@ namespace SimpleSSD::CPU {
 class CPU;
 
 enum class CPUGroup {
-  HostInterface,          //!< Assign event to HIL core
-  InternalCache,          //!< Assign event to ICL core
-  FlashTranslationLayer,  //!< Assign event to FTL core
-  Any,                    //!< Assign event to most-idle core
+  None,                   //!< Only for events, not function
+  HostInterface,          //!< Assign function to HIL core
+  InternalCache,          //!< Assign function to ICL core
+  FlashTranslationLayer,  //!< Assign function to FTL core
+  Any,                    //!< Assign function to most-idle core
 };
 
 class Function {
@@ -93,10 +94,22 @@ class CPU {
 
   class Core {
    public:
+    class Job {
+     public:
+      Event eid;
+      EventData *data;
+      CPUGroup group;
+
+      Job() : eid(InvalidEventID), data(nullptr), group(CPUGroup::None) {}
+      Job(const Job &) = delete;
+
+      Job &operator=(const Job &) = delete;
+    };
+
     EventStat eventStat;
     Function instructionStat;
 
-    std::map<uint64_t, Event> eventQueue;
+    std::map<uint64_t, Job> eventQueue;
   };
 
   Engine *engine;        //!< Simulation engine
@@ -118,6 +131,14 @@ class CPU {
 
   void dispatch();
   void CPU::calculatePower(Power &);
+
+  inline void panic_log(const char *format, ...) noexcept {
+    va_list args;
+
+    va_start(args, format);
+    log->print(Log::LogID::Panic, format, args);
+    va_end(args);
+  }
 
  public:
   CPU(ObjectData &, Engine *);
@@ -143,7 +164,7 @@ class CPU {
   Event createEvent(EventFunction func, std::string name) noexcept;
 
   /**
-   * \brief Schedule event
+   * \brief Schedule function
    *
    * If event was previously scheduled, the event will be called twice.
    * NOT RESCHEDULE THE EVENT.
