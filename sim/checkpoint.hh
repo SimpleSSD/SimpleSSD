@@ -37,6 +37,10 @@ namespace SimpleSSD {
 #define BACKUP_BLOB(os, data, length)                                          \
   { write_checkpoint(os, length, (void *)data); }
 
+#define BACKUP_EVENT(os, eid) BACKUP_SCALAR(os, eid)
+
+#define BACKUP_DMATAG(os, tag) BACKUP_SCALAR(os, tag)
+
 #define RESTORE_SCALAR(is, value)                                              \
   {                                                                            \
     uint32_t _length = sizeof(value);                                          \
@@ -59,6 +63,18 @@ namespace SimpleSSD {
                                                                                \
       abort();                                                                 \
     }                                                                          \
+  }
+
+#define RESTORE_EVENT(is, value)                                               \
+  {                                                                            \
+    RESTORE_SCALAR(is, value);                                                 \
+    value = object.cpu->restoreEventID(value);                                 \
+  }
+
+#define RESTORE_DMATAG(dmaengine, is, value)                                   \
+  {                                                                            \
+    RESTORE_SCALAR(is, value);                                                 \
+    value = (dmaengine)->restoreDMATag(value);                                 \
   }
 
 inline bool write_checkpoint(std::ostream &os, uint32_t length, void *ptr) {
