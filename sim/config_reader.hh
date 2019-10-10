@@ -49,7 +49,7 @@ class ConfigReader {
   ~ConfigReader();
 
   ConfigReader &operator=(const ConfigReader &) = delete;
-  ConfigReader &operator=(ConfigReader &&) noexcept = default;
+  ConfigReader &operator=(ConfigReader &&) = default;
 
   void load(const char *) noexcept;
   void load(std::string &) noexcept;

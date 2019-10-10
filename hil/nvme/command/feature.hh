@@ -122,7 +122,7 @@ class Feature : public Object {
   Feature(Feature &&) noexcept = default;
 
   Feature &operator=(const Feature &) = delete;
-  Feature &operator=(Feature &&) noexcept = default;
+  Feature &operator=(Feature &&) = default;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

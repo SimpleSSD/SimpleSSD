@@ -93,7 +93,7 @@ class Namespace : public Object {
   ~Namespace();
 
   Namespace &operator=(const Namespace &) = delete;
-  Namespace &operator=(Namespace &&) noexcept = default;
+  Namespace &operator=(Namespace &&) = default;
 
   uint32_t getNSID();
 

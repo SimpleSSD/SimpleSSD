@@ -38,7 +38,7 @@ class AbstractController : public Object {
   virtual ~AbstractController() {}
 
   AbstractController &operator=(const AbstractController &) = delete;
-  AbstractController &operator=(AbstractController &&) noexcept = default;
+  AbstractController &operator=(AbstractController &&) = default;
 
   ControllerID getControllerID() { return controllerID; }
 

@@ -114,7 +114,7 @@ class FIFO : public DMAInterface, public Object {
   ~FIFO();
 
   FIFO &operator=(const FIFO &) = delete;
-  FIFO &operator=(FIFO &&) noexcept = default;
+  FIFO &operator=(FIFO &&) = default;
 
   void read(uint64_t, uint64_t, uint8_t *, Event) override;
   void write(uint64_t, uint64_t, uint8_t *, Event) override;

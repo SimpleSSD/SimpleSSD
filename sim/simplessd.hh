@@ -48,7 +48,7 @@ class SimpleSSD {
   ~SimpleSSD();
 
   SimpleSSD &operator=(const SimpleSSD &) = delete;
-  SimpleSSD &operator=(SimpleSSD &&) noexcept = default;
+  SimpleSSD &operator=(SimpleSSD &&) = default;
 
   bool init(Engine *, ConfigReader *) noexcept;
   void deinit() noexcept;

@@ -57,7 +57,7 @@ class Convert : public Object {
   Convert(Convert &&) noexcept = default;
 
   Convert &operator=(const Convert &) = delete;
-  Convert &operator=(Convert &&) noexcept = default;
+  Convert &operator=(Convert &&) = default;
 
   ConvertFunction getConvertion();
 

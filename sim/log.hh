@@ -60,7 +60,7 @@ class Log {
   ~Log();
 
   Log &operator=(const Log &) = delete;
-  Log &operator=(Log &&) noexcept = default;
+  Log &operator=(Log &&) = default;
 
   void init(Engine *, std::ostream *, std::ostream *, std::ostream *) noexcept;
   void deinit() noexcept;

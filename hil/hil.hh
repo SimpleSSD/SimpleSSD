@@ -54,7 +54,7 @@ class HIL : public Object {
   ~HIL();
 
   HIL &operator=(const HIL &) = delete;
-  HIL &operator=(HIL &&) noexcept = default;
+  HIL &operator=(HIL &&) = default;
 
   /**
    * \brief Read logical pages

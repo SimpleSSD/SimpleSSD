@@ -51,7 +51,7 @@ class AbstractSubsystem : public Object {
   virtual ~AbstractSubsystem() {}
 
   AbstractSubsystem &operator=(const AbstractSubsystem &) = delete;
-  AbstractSubsystem &operator=(AbstractSubsystem &&) noexcept = default;
+  AbstractSubsystem &operator=(AbstractSubsystem &&) = default;
 
   virtual void init() = 0;
 

@@ -80,7 +80,7 @@ class CPU {
     EventData(EventData &&) noexcept = default;
 
     EventData &operator=(const EventData &) = delete;
-    EventData &operator=(EventData &&) noexcept = default;
+    EventData &operator=(EventData &&) = default;
   };
 
   class EventStat {

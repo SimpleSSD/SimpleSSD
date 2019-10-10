@@ -45,7 +45,7 @@ class DMAEngine : public DMAInterface, public Object {
   virtual ~DMAEngine();
 
   DMAEngine &operator=(const DMAEngine &) = delete;
-  DMAEngine &operator=(DMAEngine &&) noexcept = default;
+  DMAEngine &operator=(DMAEngine &&) = default;
 
   virtual void init(uint64_t, uint64_t, uint64_t, Event) = 0;
 
