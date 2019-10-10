@@ -18,7 +18,7 @@ namespace SimpleSSD {
 
 template <class Type,
           std::enable_if_t<std::is_pointer_v<Type>, Type> * = nullptr>
-class Scheduler : public Object {
+class SingleScheduler : public Object {
  public:
   using preFunction = std::function<uint64_t(Type)>;
   using postFunction = std::function<void(Type)>;
@@ -26,114 +26,65 @@ class Scheduler : public Object {
   using restoreFunction = std::function<Type(std::istream &)>;
 
  private:
-  bool readPending;
-  bool writePending;
+  bool pending;
 
-  Event eventReadDone;
-  Event eventWriteDone;
+  Event eventDone;
 
-  std::list<Type> readQueue;
-  std::list<Type> readPendingQueue;
-  std::list<Type> writeQueue;
-  std::list<Type> writePendingQueue;
+  std::list<Type> queue;
+  std::list<Type> pendingQueue;
 
-  void submitRead() {
-    auto data = std::move(readQueue.front());
+  void submit() {
+    auto data = std::move(queue.front());
 
-    readQueue.pop_front();
-    readPending = true;
+    queue.pop_front();
+    pending = true;
 
-    auto delay = preSubmitRead(data);
-    readPendingQueue.emplace_back(data);
+    auto delay = preSubmit(data);
+    pendingQueue.emplace_back(data);
 
-    schedule(eventReadDone, delay);
+    schedule(eventDone, delay);
   }
 
-  void readDone() {
-    auto data = std::move(readPendingQueue.front());
+  void done() {
+    auto data = std::move(pendingQueue.front());
 
-    readPendingQueue.pop_front();
-    postReadDone(data);
+    pendingQueue.pop_front();
+    postDone(data);
 
-    if (readQueue.size() > 0) {
-      submitRead();
+    if (queue.size() > 0) {
+      submit();
     }
     else {
-      readPending = false;
+      pending = false;
     }
   }
 
-  void submitWrite() {
-    auto data = std::move(writeQueue.front());
-
-    writeQueue.pop_front();
-    writePending = true;
-
-    auto delay = preSubmitWrite(data);
-    writePendingQueue.emplace_back(data);
-
-    schedule(eventWriteDone, delay);
-  }
-
-  void writeDone() {
-    auto data = std::move(writePendingQueue.front());
-
-    writePendingQueue.pop_front();
-    postWriteDone(data);
-
-    if (writeQueue.size() > 0) {
-      submitWrite();
-    }
-    else {
-      writePending = false;
-    }
-  }
-
-  preFunction preSubmitRead;
-  preFunction preSubmitWrite;
-  postFunction postReadDone;
-  postFunction postWriteDone;
+  preFunction preSubmit;
+  postFunction postDone;
 
   backupFunction backupItem;
   restoreFunction restoreItem;
 
  public:
-  Scheduler(ObjectData &o, std::string prefix, preFunction pr, preFunction pw,
-            postFunction por, postFunction pow, backupFunction b,
-            restoreFunction r)
+  SingleScheduler(ObjectData &o, std::string prefix, preFunction p,
+                  postFunction po, backupFunction b, restoreFunction r)
       : Object(o),
-        readPending(false),
-        writePending(false),
-        eventReadDone(InvalidEventID),
-        eventWriteDone(InvalidEventID),
-        preSubmitRead(pr),
-        preSubmitWrite(pw),
-        postReadDone(por),
-        postWriteDone(pow),
+        pending(false),
+        eventDone(InvalidEventID),
+        preSubmit(p),
+        postDone(po),
         backupItem(b),
         restoreItem(r) {
     // Create events
-    eventReadDone = createEvent([this](uint64_t) { readDone(); },
-                                prefix + "::eventReadDone");
-    eventWriteDone = createEvent([this](uint64_t) { writeDone(); },
-                                 prefix + "::eventWriteDone");
+    eventDone =
+        createEvent([this](uint64_t) { done(); }, prefix + "::eventDone");
   }
 
-  virtual ~Scheduler() {}
+  void enqueue(Type data) {
+    queue.emplace_back(data);
 
-  void read(Type data) {
-    readQueue.emplace_back(data);
-
-    if (!readPending) {
-      submitRead();
-    }
-  }
-
-  void write(Type data) {
-    writeQueue.emplace_back(data);
-
-    if (!writePending) {
-      submitWrite();
+    if (!pending) {
+      submit();
     }
   }
 
@@ -142,41 +93,25 @@ class Scheduler : public Object {
   void resetStatValues() noexcept override {}
 
   void createCheckpoint(std::ostream &out) const noexcept override {
-    BACKUP_SCALAR(out, readPending);
-    BACKUP_SCALAR(out, writePending);
+    BACKUP_SCALAR(out, pending);
 
-    uint64_t size = readQueue.size();
+    uint64_t size = queue.size();
     BACKUP_SCALAR(out, size);
 
-    for (auto &iter : readQueue) {
+    for (auto &iter : queue) {
       backupItem(out, iter);
     }
 
-    size = readPendingQueue.size();
+    size = pendingQueue.size();
     BACKUP_SCALAR(out, size);
 
-    for (auto &iter : readPendingQueue) {
-      backupItem(out, iter);
-    }
-
-    size = writeQueue.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : writeQueue) {
-      backupItem(out, iter);
-    }
-
-    size = writePendingQueue.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : writePendingQueue) {
+    for (auto &iter : pendingQueue) {
       backupItem(out, iter);
     }
   }
 
   void restoreCheckpoint(std::istream &in) noexcept override {
-    RESTORE_SCALAR(in, readPending);
-    RESTORE_SCALAR(in, writePending);
+    RESTORE_SCALAR(in, pending);
 
     uint64_t size;
     RESTORE_SCALAR(in, size);
@@ -184,7 +119,7 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      readQueue.emplace_back(item);
+      queue.emplace_back(item);
     }
 
     RESTORE_SCALAR(in, size);
@@ -192,24 +127,47 @@ class Scheduler : public Object {
     for (uint64_t i = 0; i < size; i++) {
       auto item = restoreItem(in);
 
-      readPendingQueue.emplace_back(item);
+      pendingQueue.emplace_back(item);
     }
+  }
+};
 
-    RESTORE_SCALAR(in, size);
+template <class Type,
+          std::enable_if_t<std::is_pointer_v<Type>, Type> * = nullptr>
+class Scheduler : public Object {
+ public:
+  using preFunction = typename SingleScheduler<Type>::preFunction;
+  using postFunction = typename SingleScheduler<Type>::postFunction;
+  using backupFunction = typename SingleScheduler<Type>::backupFunction;
+  using restoreFunction = typename SingleScheduler<Type>::restoreFunction;
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = restoreItem(in);
+ private:
+  SingleScheduler<Type> readScheduler;
+  SingleScheduler<Type> writeScheduler;
 
-      writeQueue.emplace_back(item);
-    }
+ public:
+  Scheduler(ObjectData &o, std::string prefix, preFunction pr, preFunction pw,
+            postFunction por, postFunction pow, backupFunction b,
+            restoreFunction r)
+      : Object(o),
+        readScheduler(o, prefix + "::readScheduer", pr, por, b, r),
+        writeScheduler(o, prefix + "::writeScheduler", pw, pow, b, r) {}
 
-    RESTORE_SCALAR(in, size);
+  void read(Type data) { readScheduler.enqueue(data); }
+  void write(Type data) { writeScheduler.enqueue(data); }
 
-    for (uint64_t i = 0; i < size; i++) {
-      auto item = restoreItem(in);
+  void getStatList(std::vector<Stat> &, std::string) noexcept override {}
+  void getStatValues(std::vector<double> &) noexcept override {}
+  void resetStatValues() noexcept override {}
 
-      writePendingQueue.emplace_back(item);
-    }
+  void createCheckpoint(std::ostream &out) const noexcept override {
+    readScheduler.createCheckpoint(out);
+    writeScheduler.createCheckpoint(out);
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept override {
+    readScheduler.restoreCheckpoint(in);
+    writeScheduler.restoreCheckpoint(in);
   }
 };
 
