@@ -16,6 +16,7 @@
 #include "lib/mcpat/mcpat.h"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
+#include "util/sorted_map.hh"
 
 namespace SimpleSSD {
 
@@ -104,20 +105,24 @@ class CPU {
    public:
     class Job {
      public:
-      Event eid;
+      uint64_t tick;
       EventData *data;
 
-      Job() : eid(InvalidEventID), data(nullptr) {}
+      Job() : tick(0), data(nullptr) {}
+      Job(uint64_t t, EventData *d) : tick(t), data(d) {}
     };
+
+    uint64_t busyUntil;
 
     EventStat eventStat;
     Function instructionStat;
 
-    std::map<uint64_t, Job> eventQueue;
+    map_map<Event, Job *> eventQueue;
 
-    uint64_t busyUntil;
-
-    Core() : busyUntil(0) {}
+    Core()
+        : busyUntil(0), eventQueue([](const Job *a, const Job *b) -> bool {
+            return a->tick < b->tick;
+          }) {}
   };
 
   Engine *engine;        //!< Simulation engine
@@ -147,6 +152,7 @@ class CPU {
   void interrupt(Event, uint64_t);
 
   inline void panic_log(const char *format, ...) noexcept;
+  inline void warn_log(const char *format, ...) noexcept;
 
  public:
   CPU(Engine *, ConfigReader *, Log *);
@@ -162,8 +168,7 @@ class CPU {
   /**
    * \brief Create event
    *
-   * Create event. You must create all events in the constructor of object. If
-   * not, you must care checkpointing on your own.
+   * Create event. You must create all events in the constructor of object.
    *
    * \param[in] func  Callback function when event is triggered
    * \param[in] name  Description of the event
@@ -174,8 +179,8 @@ class CPU {
   /**
    * \brief Schedule function
    *
-   * If event was previously scheduled, the event will be called twice.
-   * NOT RESCHEDULE THE EVENT.
+   * If event was previously scheduled, the event will be rescheduled to later
+   * one.
    *
    * As we cannot use void* context because of checkpointing, it become hard to
    * exchange data between event. You may create data queue for these purpose.
@@ -191,6 +196,9 @@ class CPU {
    *
    * This is short-hand schedule function when we just need to call event
    * immediately. It does not affects CPU statistic object.
+   *
+   * Use this function when calling function is not related to firmware
+   * execution - not important or hardware event.
    *
    * \param[in] eid   Event ID to schedule
    * \param[in] delay Ticks to delay

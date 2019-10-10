@@ -86,6 +86,14 @@ inline void CPU::panic_log(const char *format, ...) noexcept {
   va_end(args);
 }
 
+inline void CPU::warn_log(const char *format, ...) noexcept {
+  va_list args;
+
+  va_start(args, format);
+  log->print(Log::LogID::Warn, format, args);
+  va_end(args);
+}
+
 void CPU::updateSchedule() {
   uint64_t scheduleAt = std::numeric_limits<uint64_t>::max();
 
@@ -436,26 +444,24 @@ void CPU::dispatch(uint64_t now) {
 
   // Find event to dispatch
   for (auto &core : coreList) {
-    if (core.eventQueue.size() > 0) {
-      auto event = core.eventQueue.begin();
+    auto event = core.eventQueue.begin();
 
-      if (event->first <= now) {
-        event->second.data->func(now);
+    if (event != core.eventQueue.end() && event->second->tick <= now) {
+      event->second->data->func(now);
 
-        // Erase this
-        core.eventQueue.erase(event);
+      delete event->second;
+      core.eventQueue.erase(event);
 
-        event = core.eventQueue.begin();
+      event = core.eventQueue.begin();
 
-        if (event == core.eventQueue.end()) {
-          continue;
-        }
+      if (event == core.eventQueue.end()) {
+        continue;
       }
+    }
 
-      // Find next event
-      if (next > event->first) {
-        next = event->first;
-      }
+    // Find next event
+    if (next > event->first) {
+      next = event->first;
     }
   }
 
@@ -537,16 +543,13 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
     panic_log("Unexpected null-pointer while schedule.");
   }
 
-  Core::Job job;
-
-  job.eid = eid;
-  job.data = &event->second;
+  Core::Job *job = new Core::Job(0, &event->second);
 
   if (UNLIKELY(group == CPUGroup::None)) {
+    job->tick = curTick + func.cycles;
+
     // This is hardware event - DMA or ignored function event
     core->eventStat.handledEvent++;
-
-    core->eventQueue.emplace(std::make_pair(curTick + func.cycles, job));
   }
   else {
     // Maybe core has running job
@@ -559,7 +562,22 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
     core->eventStat.busy += busy;
     core->eventStat.handledFunction++;
 
-    core->eventQueue.emplace(std::make_pair(core->busyUntil, job));
+    job->tick = core->busyUntil;
+  }
+
+  auto ret = core->eventQueue.insert(eid, job);
+
+  if (UNLIKELY(!ret.second)) {
+    auto iter = core->eventQueue.find(eid);
+
+    warn_log("Event ID %" PRIu64 " (%s) rescheduled from %" PRIu64
+             " to %" PRIu64,
+             eid, event->second.name.c_str(), iter->second->tick, job->tick);
+
+    // Re-insert because of sorting
+    delete iter->second;
+    core->eventQueue.erase(iter);
+    core->eventQueue.insert(eid, job);
   }
 }
 
@@ -573,28 +591,28 @@ void CPU::schedule(Event eid, uint64_t delay) noexcept {
 
 void CPU::deschedule(Event eid) noexcept {
   for (auto &core : coreList) {
-    for (auto iter = core.eventQueue.begin(); iter != core.eventQueue.end();) {
-      if (iter->second.eid == eid) {
-        iter = core.eventQueue.erase(iter);
-      }
-      else {
-        ++iter;
-      }
+    auto iter = core.eventQueue.find(eid);
+
+    if (iter != core.eventQueue.end()) {
+      delete iter->second;
+      core.eventQueue.erase(iter);
+
+      return;
     }
   }
 }
 
 bool CPU::isScheduled(Event eid) noexcept {
   for (auto &core : coreList) {
-    for (auto iter = core.eventQueue.begin(); iter != core.eventQueue.end();) {
-      if (iter->second.eid == eid) {
+    for (auto &iter : core.eventQueue) {
+      if (iter.first == eid) {
         return true;
       }
     }
   }
 
   return false;
-}  // namespace SimpleSSD::CPU
+}
 
 void CPU::destroyEvent(Event) noexcept {
   panic_log("Not allowed to destroy event");
@@ -710,7 +728,7 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
 
     for (auto &event : iter.eventQueue) {
       BACKUP_SCALAR(out, event.first);
-      BACKUP_SCALAR(out, event.second.eid);
+      BACKUP_SCALAR(out, event.second->tick);
     }
   }
 }
@@ -757,21 +775,21 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, list);
 
     for (uint64_t j = 0; j < list; j++) {
-      uint64_t tick;
-      Core::Job job;
+      Event eid;
+      auto job = new Core::Job();
 
-      RESTORE_SCALAR(in, tick);
-      RESTORE_SCALAR(in, job.eid);
+      RESTORE_SCALAR(in, eid);
+      RESTORE_SCALAR(in, job->tick);
 
-      auto event = eventList.find(job.eid);
+      auto event = eventList.find(eid);
 
       if (UNLIKELY(event == eventList.end())) {
         panic_log("Event not found while restore CPU.");
       }
 
-      job.data = &event->second;
+      job->data = &event->second;
 
-      core.eventQueue.emplace(std::make_pair(tick, job));
+      core.eventQueue.insert(eid, job);
     }
   }
 }
