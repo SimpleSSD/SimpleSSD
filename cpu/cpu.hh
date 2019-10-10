@@ -114,6 +114,10 @@ class CPU {
     Function instructionStat;
 
     std::map<uint64_t, Job> eventQueue;
+
+    uint64_t busyUntil;
+
+    Core() : busyUntil(0) {}
   };
 
   Engine *engine;        //!< Simulation engine

@@ -413,6 +413,22 @@ void CPU::calculatePower(Power &power) {
   mcpat.getPower(power);
 }
 
+CPU::Core *CPU::getIdleCoreInRange(uint16_t begin, uint16_t end) {
+  Core *ret = nullptr;
+  uint64_t minBusy = std::numeric_limits<uint64_t>::max();
+
+  for (uint16_t i = begin; i < end; i++) {
+    auto *core = &coreList.at(i);
+
+    if (minBusy > core->busyUntil) {
+      minBusy = core->busyUntil;
+      ret = core;
+    }
+  }
+
+  return ret;
+}
+
 void CPU::dispatch(uint64_t now) {
   uint64_t next = std::numeric_limits<uint64_t>::max();
 
@@ -523,11 +539,23 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
   job.data = &event->second;
 
   if (UNLIKELY(group == CPUGroup::None)) {
+    // This is hardware event - DMA or ignored function event
+    core->eventStat.handledEvent++;
+
     core->eventQueue.emplace(std::make_pair(curTick + func.cycles, job));
   }
   else {
-    core->eventQueue.emplace(
-        std::make_pair(curTick + func.cycles * clockPeriod, job));
+    // Maybe core has running job
+    uint64_t beginAt = MAX(curTick, core->busyUntil);
+
+    // Current job runs after previous job
+    uint64_t busy = func.cycles * clockPeriod;
+
+    core->busyUntil = beginAt + busy;
+    core->eventStat.busy += busy;
+    core->eventStat.handledFunction++;
+
+    core->eventQueue.emplace(std::make_pair(core->busyUntil, job));
   }
 }
 
