@@ -329,7 +329,10 @@ SGLEngine::Chunk::Chunk(uint64_t a, uint32_t l, bool i)
 SGLEngine::SGLInitContext::SGLInitContext() : bufferSize(0), buffer(nullptr) {}
 
 SGLEngine::SGLEngine(ObjectData &o, DMAInterface *i)
-    : DMAEngine(o, i), inited(false), totalSize(0) {}
+    : DMAEngine(o, i), inited(false), totalSize(0) {
+  readSGL = createEvent([this](uint64_t) { parseSGLSegment_readDone(); },
+                        "HIL::NVMe::SGLEngine::readSGL");
+}
 
 SGLEngine::~SGLEngine() {}
 
