@@ -766,4 +766,8 @@ Event CPU::restoreEventID(Event old) noexcept {
   return iter->second;
 }
 
+void CPU::clearOldEventList() noexcept {
+  oldEventList.clear();
+}
+
 }  // namespace SimpleSSD::CPU
