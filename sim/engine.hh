@@ -24,15 +24,20 @@ namespace SimpleSSD {
  */
 class Engine {
  public:
-  Engine(EventFunction) {}
+  Engine() {}
   virtual ~Engine() {}
 
   /**
-   * \brief Schedule event object
+   * \brief Set event function
+   */
+  virtual void setFunction(EventFunction) = 0;
+
+  /**
+   * \brief Schedule event function
    *
    * Schedule event at provided tick. Reschedule if event is already scheduled.
    */
-  virtual void schedule(Event, uint64_t) = 0;
+  virtual void schedule(uint64_t) = 0;
 };
 
 }  // namespace SimpleSSD

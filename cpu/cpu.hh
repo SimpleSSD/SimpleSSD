@@ -98,9 +98,8 @@ class CPU {
      public:
       Event eid;
       EventData *data;
-      CPUGroup group;
 
-      Job() : eid(InvalidEventID), data(nullptr), group(CPUGroup::None) {}
+      Job() : eid(InvalidEventID), data(nullptr) {}
       Job(const Job &) = delete;
 
       Job &operator=(const Job &) = delete;
@@ -126,11 +125,16 @@ class CPU {
   uint16_t iclCore;
   uint16_t ftlCore;
 
+  uint64_t curTick;
+
   std::vector<Core> coreList;
   std::map<Event, EventData> eventList;
 
-  void dispatch();
-  void CPU::calculatePower(Power &);
+  void updateSchedule();
+  void calculatePower(Power &);
+  Core *getIdleCoreInRange(uint16_t, uint16_t);
+
+  void dispatch(uint64_t);
 
   inline void panic_log(const char *format, ...) noexcept {
     va_list args;
@@ -194,9 +198,8 @@ class CPU {
    * Deschedule event.
    *
    * \param[in] eid Event ID to deschedule
-   * \param[in] all Deschedule all scheduled events.
    */
-  void deschedule(Event eid, bool all = false) noexcept;
+  void deschedule(Event eid) noexcept;
 
   /**
    * \brief Check event is scheduled
