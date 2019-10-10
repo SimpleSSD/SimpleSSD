@@ -476,11 +476,20 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
   job.eid = eid;
   job.data = &event->second;
 
-  core->eventQueue.emplace(
-      std::make_pair(curTick + func.cycles * clockPeriod, job));
+  if (UNLIKELY(group == CPUGroup::None)) {
+    core->eventQueue.emplace(std::make_pair(curTick + func.cycles, job));
+  }
+  else {
+    core->eventQueue.emplace(
+        std::make_pair(curTick + func.cycles * clockPeriod, job));
+  }
 }
 
-void CPU::schedule(Event eid) noexcept {
+void CPU::schedule(Event eid, uint64_t delay) noexcept {
+  Function func;
+
+  func.cycles = delay;
+
   schedule(CPUGroup::None, eid, Function());
 }
 

@@ -192,8 +192,9 @@ class CPU {
    * immediately. It does not affects CPU statistic object.
    *
    * \param[in] eid   Event ID to schedule
+   * \param[in] delay Ticks to delay
    */
-  void schedule(Event eid) noexcept;
+  void schedule(Event eid, uint64_t delay = 0) noexcept;
 
   /**
    * \brief Deschedule event

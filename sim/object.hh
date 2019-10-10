@@ -94,7 +94,9 @@ class Object {
                        const CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, f);
   }
-  inline void schedule(Event e) noexcept { object.cpu->schedule(e); }
+  inline void schedule(Event e, uint64_t d = 0) noexcept {
+    object.cpu->schedule(e, d);
+  }
   inline void deschedule(Event e) noexcept { object.cpu->deschedule(e); }
   inline bool isScheduled(Event e) noexcept {
     return object.cpu->isScheduled(e);
