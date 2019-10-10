@@ -10,14 +10,16 @@
 #ifndef __SIMPLESSD_CPU_CPU__
 #define __SIMPLESSD_CPU_CPU__
 
+#include <cstdarg>
 #include <map>
 
 #include "lib/mcpat/mcpat.h"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
-#include "sim/log.hh"
 
 namespace SimpleSSD {
+
+class Log;
 
 struct Stat {
   std::string name;
@@ -140,13 +142,7 @@ class CPU {
   void dispatch(uint64_t);
   void interrupt(Event, uint64_t);
 
-  inline void panic_log(const char *format, ...) noexcept {
-    va_list args;
-
-    va_start(args, format);
-    log->print(Log::LogID::Panic, format, args);
-    va_end(args);
-  }
+  inline void panic_log(const char *format, ...) noexcept;
 
  public:
   CPU(Engine *, ConfigReader *, Log *);

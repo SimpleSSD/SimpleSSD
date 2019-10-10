@@ -48,14 +48,14 @@ Log::~Log() {
  * Initialize log system by provided file stream.
  * All std::ofstream objects should be opened.
  *
- * \param[in]  e         Pointer to simulation engine
+ * \param[in]  cpu       Pointer to CPU object
  * \param[in]  outfile   std::ofstream object for output file
  * \param[in]  errfile   std::ofstream object for error file
  * \param[in]  debugfile std::ofstream object for debug log file
  */
-void Log::init(Engine *e, std::ostream *outfile, std::ostream *errfile,
+void Log::init(CPU::CPU *c, std::ostream *outfile, std::ostream *errfile,
                std::ostream *debugfile) noexcept {
-  engine = e;
+  cpu = c;
 
   if (UNLIKELY(outfile == nullptr || errfile == nullptr ||
                debugfile == nullptr)) {
@@ -134,7 +134,7 @@ void Log::print(LogID id, const char *format, va_list args) noexcept {
   }
 
   if (LIKELY(err->good())) {
-    *stream << engine->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
+    *stream << cpu->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
 
     print(stream, format, args);
 
@@ -159,7 +159,7 @@ void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
   }
 
   if (LIKELY(debug->good())) {
-    *debug << engine->getTick() << ": " << idPrefix[(uint32_t)id] << ": ";
+    *debug << cpu->getTick() << ": " << idPrefix[(uint32_t)id] << ": ";
 
     print(debug, format, args);
 

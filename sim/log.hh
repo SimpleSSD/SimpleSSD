@@ -14,6 +14,8 @@
 #include <cstdarg>
 #include <fstream>
 
+#include "cpu/cpu.hh"
+
 namespace SimpleSSD {
 
 class Engine;
@@ -43,8 +45,8 @@ class Log {
   };
 
  private:
-  Engine *engine;  //!< Simulation engine
-  bool inited;     //!< Flag whether this object is initialized
+  CPU::CPU *cpu;  //!< Simulation engine
+  bool inited;    //!< Flag whether this object is initialized
 
   std::ostream *out;    //!< File for info
   std::ostream *err;    //!< File for warn/panic
@@ -62,7 +64,8 @@ class Log {
   Log &operator=(const Log &) = delete;
   Log &operator=(Log &&) = default;
 
-  void init(Engine *, std::ostream *, std::ostream *, std::ostream *) noexcept;
+  void init(CPU::CPU *, std::ostream *, std::ostream *,
+            std::ostream *) noexcept;
   void deinit() noexcept;
 
   void print(LogID, const char *, va_list) noexcept;

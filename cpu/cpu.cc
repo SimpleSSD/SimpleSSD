@@ -7,6 +7,8 @@
 
 #include "cpu/cpu.hh"
 
+#include "sim/log.hh"
+
 namespace SimpleSSD::CPU {
 
 Function::Function()
@@ -75,6 +77,14 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
 }
 
 CPU::~CPU() {}
+
+inline void CPU::panic_log(const char *format, ...) noexcept {
+  va_list args;
+
+  va_start(args, format);
+  log->print(Log::LogID::Panic, format, args);
+  va_end(args);
+}
 
 void CPU::updateSchedule() {
   uint64_t scheduleAt = std::numeric_limits<uint64_t>::max();
