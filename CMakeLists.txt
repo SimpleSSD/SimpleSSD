@@ -115,6 +115,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Specify source files
 set(SRC_CPU
   cpu/config.cc
+  cpu/cpu.cc
 )
 set(SRC_MEM
   mem/config.cc
