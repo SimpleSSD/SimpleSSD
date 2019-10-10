@@ -30,7 +30,7 @@ class SimpleSSD {
   bool inited;  //!< Flag whether this object is initialized
 
   ObjectData object;
-  Log log;               //!< Log system
+  Log log;  //!< Log system
 
   AbstractSubsystem *subsystem;  //!< NVM Subsystem
 
@@ -57,7 +57,7 @@ class SimpleSSD {
   AbstractController *getController(ControllerID = 0);
   ObjectData &getObject();
 
-  void getStatList(std::vector<Object::Stat> &, std::string) noexcept;
+  void getStatList(std::vector<Stat> &, std::string) noexcept;
   void getStatValues(std::vector<double> &) noexcept;
   void resetStatValues() noexcept;
 

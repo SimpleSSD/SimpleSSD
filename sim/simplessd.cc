@@ -104,7 +104,7 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
  * \return Initialization result.
  */
 bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
-  object.engine = e;
+  object.cpu = new CPU::CPU(e, c, &log);
   object.config = c;
   object.log = &log;
 
@@ -183,12 +183,21 @@ ObjectData &SimpleSSD::getObject() {
   return object;
 }
 
-void SimpleSSD::getStatList(std::vector<Object::Stat> &, std::string) noexcept {
+void SimpleSSD::getStatList(std::vector<Stat> &list,
+                            std::string prefix) noexcept {
+  subsystem->getStatList(list, prefix);
+  object.cpu->getStatList(list, prefix + ".cpu");
 }
 
-void SimpleSSD::getStatValues(std::vector<double> &) noexcept {}
+void SimpleSSD::getStatValues(std::vector<double> &values) noexcept {
+  subsystem->getStatValues(values);
+  object.cpu->getStatValues(values);
+}
 
-void SimpleSSD::resetStatValues() noexcept {}
+void SimpleSSD::resetStatValues() noexcept {
+  subsystem->resetStatValues();
+  object.cpu->resetStatValues();
+}
 
 void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   std::string cpt_file(cpt_dir);
@@ -219,7 +228,7 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   // Checkpoint chain begins here
   subsystem->createCheckpoint(file);
 
-  object.engine->createCheckpoint(file);
+  object.cpu->createCheckpoint(file);
 
   file.close();
 }
@@ -258,7 +267,7 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
   // Restore chain begins here
   subsystem->restoreCheckpoint(file);
 
-  object.engine->restoreCheckpoint(file);
+  object.cpu->restoreCheckpoint(file);
 
   file.close();
 }
