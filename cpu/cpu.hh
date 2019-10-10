@@ -12,6 +12,7 @@
 
 #include <map>
 
+#include "lib/mcpat/mcpat.h"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
 #include "sim/object.hh"
@@ -19,11 +20,39 @@
 
 namespace SimpleSSD::CPU {
 
+class CPU;
+
 enum class CPUGroup {
   HostInterface,          //!< Assign event to HIL core
   InternalCache,          //!< Assign event to ICL core
   FlashTranslationLayer,  //!< Assign event to FTL core
   Any,                    //!< Assign event to most-idle core
+};
+
+class Function {
+ private:
+  friend CPU;
+
+  // Instruction count
+  uint64_t branch;
+  uint64_t load;
+  uint64_t store;
+  uint64_t arithmetic;
+  uint64_t floatingPoint;
+  uint64_t otherInsts;
+
+  // Cycle consumed
+  uint64_t cycles;
+
+ public:
+  Function();
+  Function(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+           uint64_t);
+
+  Function &operator+=(const Function &);
+
+  uint64_t sum();
+  void clear();
 };
 
 /**
@@ -33,7 +62,8 @@ enum class CPUGroup {
  */
 class CPU {
  private:
-  struct EventData {
+  class EventData {
+   public:
     EventFunction func;
     std::string name;
 
@@ -46,21 +76,51 @@ class CPU {
     EventData &operator=(EventData &&) noexcept = default;
   };
 
+  class EventStat {
+   public:
+    uint64_t handledFunction;
+    uint64_t handledEvent;
+    uint64_t busy;
+
+    EventStat() : handledFunction(0), handledEvent(0), busy(0) {}
+
+    void clear() {
+      handledFunction = 0;
+      handledEvent = 0;
+      busy = 0;
+    }
+  };
+
+  class Core {
+   public:
+    EventStat eventStat;
+    Function instructionStat;
+
+    std::map<uint64_t, Event> eventQueue;
+  };
+
   Engine *engine;        //!< Simulation engine
   ConfigReader *config;  //!< Config reader
   Log *log;              //!< Log engine
 
+  uint64_t lastResetStat;
+
+  uint64_t clockSpeed;
+  uint64_t clockPeriod;
+
+  bool useDedicatedCore;
   uint16_t hilCore;
   uint16_t iclCore;
   uint16_t ftlCore;
 
-  std::map<uint64_t, Event> *coreList;
+  std::vector<Core> coreList;
   std::map<Event, EventData> eventList;
 
   void dispatch();
+  void CPU::calculatePower(Power &);
 
  public:
-  CPU(Engine *, ConfigReader *);
+  CPU(ObjectData &, Engine *);
   ~CPU();
 
   /**
@@ -93,9 +153,19 @@ class CPU {
    *
    * \param[in] group CPU group to execute event (and add-up instruction stats)
    * \param[in] eid   Event ID to schedule
-   * \param[in] delay Delay in pico-second
+   * \param[in] func  Instruction and cycle info
    */
-  void schedule(CPUGroup group, Event eid, uint64_t delay) noexcept;
+  void schedule(CPUGroup group, Event eid, const Function &func) noexcept;
+
+  /**
+   * \brief Schedule event
+   *
+   * This is short-hand schedule function when we just need to call event
+   * immediately. It does not affects CPU statistic object.
+   *
+   * \param[in] eid   Event ID to schedule
+   */
+  void schedule(Event eid) noexcept;
 
   /**
    * \brief Deschedule event

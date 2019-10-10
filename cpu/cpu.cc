@@ -7,152 +7,67 @@
 
 #include "cpu/cpu.hh"
 
-#include <limits>
-
 namespace SimpleSSD::CPU {
 
-InstStat::_InstStat()
+Function::Function()
     : branch(0),
       load(0),
       store(0),
       arithmetic(0),
       floatingPoint(0),
       otherInsts(0),
-      latency(0) {}
+      cycles(0) {}
 
-InstStat::_InstStat(uint64_t b, uint64_t l, uint64_t s, uint64_t a, uint64_t f,
-                    uint64_t o, uint64_t c)
+Function::Function(uint64_t b, uint64_t l, uint64_t s, uint64_t a, uint64_t f,
+                   uint64_t o, uint64_t c)
     : branch(b),
       load(l),
       store(s),
       arithmetic(a),
       floatingPoint(f),
-      otherInsts(o) {
-  latency = sum();
-  latency *= c;
-}
+      otherInsts(o),
+      cycles(c) {}
 
-InstStat &InstStat::operator+=(const InstStat &rhs) {
+Function &Function::operator+=(const Function &rhs) {
   this->branch += rhs.branch;
   this->load += rhs.load;
   this->store += rhs.store;
   this->arithmetic += rhs.arithmetic;
   this->floatingPoint += rhs.floatingPoint;
   this->otherInsts += rhs.otherInsts;
-  // Do not add up totalcycles
+  this->cycles += rhs.cycles;
 
   return *this;
 }
 
-uint64_t InstStat::sum() {
+uint64_t Function::sum() {
   return branch + load + store + arithmetic + floatingPoint + otherInsts;
 }
 
-JobEntry::_JobEntry(Event e, InstStat *i) : eid(e), inst(i) {}
-
-CPU::CoreStat::CoreStat() : busy(0) {}
-
-CPU::Core::Core(Engine *e) : engine(e), busy(false) {
-  jobEvent = engine->createEvent([this](uint64_t) { jobDone(); },
-                                 "CPU::Core::jobEvent");
+void Function::clear() {
+  branch = 0;
+  load = 0;
+  store = 0;
+  arithmetic = 0;
+  floatingPoint = 0;
+  otherInsts = 0;
+  cycles = 0;
 }
 
-CPU::Core::~Core() {}
-
-bool CPU::CPU::Core::isBusy() {
-  return busy;
-}
-
-uint64_t CPU::CPU::Core::getJobListSize() {
-  return jobs.size();
-}
-
-CPU::CoreStat &CPU::Core::getStat() {
-  return stat;
-}
-
-void CPU::Core::submitJob(JobEntry job, uint64_t delay) {
-  job.delay = delay;
-  job.submitAt = engine->getTick();
-  jobs.push(job);
-
-  if (!busy) {
-    handleJob();
-  }
-}
-
-void CPU::Core::handleJob() {
-  auto &iter = jobs.front();
-  uint64_t now = engine->getTick();
-  uint64_t diff = now - iter.submitAt;
-  uint64_t finishedAt;
-
-  if (diff >= iter.delay) {
-    finishedAt = now + iter.inst->latency;
-  }
-  else {
-    finishedAt = now + iter.inst->latency + iter.delay - diff;
-  }
-
-  busy = true;
-
-  engine->schedule(jobEvent, finishedAt);
-}
-
-void CPU::Core::jobDone() {
-  auto &iter = jobs.front();
-
-  engine->schedule(iter.eid, engine->getTick());
-
-  stat.busy += iter.inst->latency;
-  stat.instStat += *iter.inst;
-
-  jobs.pop();
-  busy = false;
-
-  if (jobs.size() > 0) {
-    handleJob();
-  }
-}
-
-void CPU::Core::addStat(InstStat &inst) {
-  stat.busy += inst.latency;
-  stat.instStat += inst;
-}
-
-CPU::CPU(ObjectData &o) : Object(o), lastResetStat(0) {
-  clockSpeed = readConfigUint(Section::CPU, Config::Key::Clock);
+CPU::CPU(ObjectData &o, Engine *e)
+    : engine(e), config(o.config), log(o.log), lastResetStat(0) {
+  clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
   clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
 
-  hilCore.resize(readConfigUint(Section::CPU, Config::Key::HILCore));
-  iclCore.resize(readConfigUint(Section::CPU, Config::Key::ICLCore));
-  ftlCore.resize(readConfigUint(Section::CPU, Config::Key::FTLCore));
+  useDedicatedCore =
+      config->readBoolean(Section::CPU, Config::Key::UseDedicatedCore);
+  hilCore = config->readUint(Section::CPU, Config::Key::HILCore);
+  iclCore = config->readUint(Section::CPU, Config::Key::ICLCore);
+  ftlCore = config->readUint(Section::CPU, Config::Key::FTLCore);
 
-  // Initialize CPU table
-  cpi.insert({Namespace::FTL, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::FTL__PAGE_MAPPING, std::unordered_map<Function, InstStat>()});
-  cpi.insert({Namespace::ICL, std::unordered_map<Function, InstStat>()});
-  cpi.insert({Namespace::ICL__GENERIC_CACHE,
-              std::unordered_map<Function, InstStat>()});
-  cpi.insert({Namespace::HIL, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::NVME__CONTROLLER, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::NVME__PRPLIST, std::unordered_map<Function, InstStat>()});
-  cpi.insert({Namespace::NVME__SGL, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::NVME__SUBSYSTEM, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::NVME__NAMESPACE, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::NVME__OCSSD, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::UFS__DEVICE, std::unordered_map<Function, InstStat>()});
-  cpi.insert(
-      {Namespace::SATA__DEVICE, std::unordered_map<Function, InstStat>()});
+  uint16_t totalCore = hilCore + iclCore + ftlCore;
 
-  // Insert item (Use cpu/generator/generate.py to generate this code)
+  coreList.resize(totalCore);
 }
 
 CPU::~CPU() {}
@@ -161,7 +76,7 @@ void CPU::calculatePower(Power &power) {
   // Print stats before die
   ParseXML param;
   uint64_t simCycle = (getTick() - lastResetStat) / clockPeriod;
-  uint32_t totalCore = hilCore.size() + iclCore.size() + ftlCore.size();
+  uint32_t totalCore = hilCore + iclCore + ftlCore;
   uint32_t coreIdx = 0;
 
   param.initialize();
@@ -323,47 +238,18 @@ void CPU::calculatePower(Power &power) {
   // Core stat
   coreIdx = 0;
 
-  for (auto &core : hilCore) {
-    CoreStat &stat = core.getStat();
-
-    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
-    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
-    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
-    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
-    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
-    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
-    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
-
-    coreIdx++;
-  }
-
-  for (auto &core : iclCore) {
-    CoreStat &stat = core.getStat();
-
-    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
-    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
-    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
-    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
-    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
-    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
-    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
+  for (auto &core : coreList) {
+    param.sys.core[coreIdx].total_instructions = core.instructionStat.sum();
+    param.sys.core[coreIdx].int_instructions = core.instructionStat.arithmetic;
+    param.sys.core[coreIdx].fp_instructions =
+        core.instructionStat.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = core.instructionStat.branch;
+    param.sys.core[coreIdx].load_instructions = core.instructionStat.load;
+    param.sys.core[coreIdx].store_instructions = core.instructionStat.store;
+    param.sys.core[coreIdx].busy_cycles = core.eventStat.busy / clockPeriod;
 
     coreIdx++;
   }
-
-  for (auto &core : ftlCore) {
-    CoreStat &stat = core.getStat();
-
-    param.sys.core[coreIdx].total_instructions = stat.instStat.sum();
-    param.sys.core[coreIdx].int_instructions = stat.instStat.arithmetic;
-    param.sys.core[coreIdx].fp_instructions = stat.instStat.floatingPoint;
-    param.sys.core[coreIdx].branch_instructions = stat.instStat.branch;
-    param.sys.core[coreIdx].load_instructions = stat.instStat.load;
-    param.sys.core[coreIdx].store_instructions = stat.instStat.store;
-    param.sys.core[coreIdx].busy_cycles = stat.busy / clockPeriod;
-
-    coreIdx++;
-  };
 
   for (coreIdx = 0; coreIdx < totalCore; coreIdx++) {
     param.sys.core[coreIdx].total_cycles = simCycle;
@@ -495,326 +381,87 @@ void CPU::calculatePower(Power &power) {
   mcpat.getPower(power);
 }
 
-uint32_t CPU::leastBusyCPU(std::vector<Core> &list) {
-  uint32_t idx = list.size();
-  uint64_t busymin = std::numeric_limits<uint64_t>::max();
+void CPU::getStatList(std::vector<Object::Stat> &list,
+                      std::string prefix) noexcept {
+  Object::Stat temp;
+  std::string number;
+  std::string prefix2;
 
-  for (uint32_t i = 0; i < list.size(); i++) {
-    auto &core = list.at(i);
-    auto busy = core.getStat().busy;
-
-    if (!core.isBusy() && busy < busymin) {
-      busymin = busy;
-      idx = i;
-    }
-  }
-
-  if (idx == list.size()) {
-    uint64_t jobmin = std::numeric_limits<uint64_t>::max();
-
-    for (uint32_t i = 0; i < list.size(); i++) {
-      auto jobs = list.at(i).getJobListSize();
-
-      if (jobs <= jobmin) {
-        jobmin = jobs;
-        idx = i;
-      }
-    }
-  }
-
-  return idx;
-}
-
-void CPU::execute(Namespace ns, Function fct, Event eid, uint64_t delay) {
-  Core *pCore = nullptr;
-
-  // Find dedicated core
-  switch (ns) {
-    case Namespace::FTL:
-    case Namespace::FTL__PAGE_MAPPING:
-      if (ftlCore.size() > 0) {
-        pCore = &ftlCore.at(leastBusyCPU(ftlCore));
-      }
-
-      break;
-    case Namespace::ICL:
-    case Namespace::ICL__GENERIC_CACHE:
-      if (iclCore.size() > 0) {
-        pCore = &iclCore.at(leastBusyCPU(iclCore));
-      }
-
-      break;
-    case Namespace::HIL:
-    case Namespace::NVME__CONTROLLER:
-    case Namespace::NVME__PRPLIST:
-    case Namespace::NVME__SGL:
-    case Namespace::NVME__SUBSYSTEM:
-    case Namespace::NVME__NAMESPACE:
-    case Namespace::NVME__OCSSD:
-    case Namespace::UFS__DEVICE:
-    case Namespace::SATA__DEVICE:
-      if (hilCore.size() > 0) {
-        pCore = &hilCore.at(leastBusyCPU(hilCore));
-      }
-
-      break;
-    default:
-      panic("Undefined function namespace %u", ns);
-
-      break;
-  }
-
-  if (pCore) {
-    // Get CPI table
-    auto table = cpi.find(ns);
-
-    if (table == cpi.end()) {
-      panic("Namespace %u not defined in CPI table", ns);
-    }
-
-    // Get CPI
-    auto inst = table->second.find(fct);
-
-    if (inst == table->second.end()) {
-      panic("Namespace %u does not have function %u", ns, fct);
-    }
-
-    pCore->submitJob(JobEntry(eid, &inst->second), delay);
+  if (useDedicatedCore) {
+    prefix2 = ".hil";
   }
   else {
-    schedule(eid, getTick());
-  }
-}
-
-uint64_t CPU::applyLatency(Namespace ns, Function fct) {
-  Core *pCore = nullptr;
-
-  // Find dedicated core
-  switch (ns) {
-    case Namespace::FTL:
-    case Namespace::FTL__PAGE_MAPPING:
-      if (ftlCore.size() > 0) {
-        pCore = &ftlCore.at(leastBusyCPU(ftlCore));
-      }
-
-      break;
-    case Namespace::ICL:
-    case Namespace::ICL__GENERIC_CACHE:
-      if (iclCore.size() > 0) {
-        pCore = &iclCore.at(leastBusyCPU(iclCore));
-      }
-
-      break;
-    case Namespace::HIL:
-    case Namespace::NVME__CONTROLLER:
-    case Namespace::NVME__PRPLIST:
-    case Namespace::NVME__SGL:
-    case Namespace::NVME__SUBSYSTEM:
-    case Namespace::NVME__NAMESPACE:
-    case Namespace::NVME__OCSSD:
-    case Namespace::UFS__DEVICE:
-    case Namespace::SATA__DEVICE:
-      if (hilCore.size() > 0) {
-        pCore = &hilCore.at(leastBusyCPU(hilCore));
-      }
-
-      break;
-    default:
-      panic("Undefined function namespace %u", ns);
-
-      break;
+    prefix2 = ".core";
   }
 
-  if (pCore) {
-    // Get CPI table
-    auto table = cpi.find(ns);
+  for (uint32_t i = 0; i < hilCore + iclCore + ftlCore; i++) {
+    number = std::to_string(i);
 
-    if (table == cpi.end()) {
-      panic("Namespace %u not defined in CPI table", ns);
+    if (useDedicatedCore && i == hilCore) {
+      prefix2 = ".icl";
+    }
+    else if (useDedicatedCore && i == hilCore + iclCore) {
+      prefix2 = ".ftl";
     }
 
-    // Get CPI
-    auto inst = table->second.find(fct);
-
-    if (inst == table->second.end()) {
-      panic("Namespace %u does not have function %u", ns, fct);
-    }
-
-    pCore->addStat(inst->second);
-
-    return inst->second.latency;
-  }
-
-  return 0;
-}
-
-void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  Stat temp;
-  std::string number;
-
-  for (uint32_t i = 0; i < hilCore.size(); i++) {
-    number = std::to_string(i);
-
-    temp.name = prefix + ".hil" + number + ".busy";
-    temp.desc = "CPU for HIL core " + number + " busy ticks";
+    temp.name = prefix + prefix2 + number + ".busy";
+    temp.desc = "CPU core " + number + " busy ticks";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.branch";
-    temp.desc = "CPU for HIL core " + number + " executed branch instructions";
+    temp.name = prefix + prefix2 + number + ".handled_function";
+    temp.desc = "CPU core " + number + " total functions executed";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.load";
-    temp.desc = "CPU for HIL core " + number + " executed load instructions";
+    temp.name = prefix + prefix2 + number + ".handled_events";
+    temp.desc = "CPU core " + number + " total events executed";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.store";
-    temp.desc = "CPU for HIL core " + number + " executed store instructions";
+    temp.name = prefix + prefix2 + number + ".insts.branch";
+    temp.desc = "CPU core " + number + " executed branch instructions";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.arithmetic";
-    temp.desc =
-        "CPU for HIL core " + number + " executed arithmetic instructions";
+    temp.name = prefix + prefix2 + number + ".insts.load";
+    temp.desc = "CPU core " + number + " executed load instructions";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.fp";
-    temp.desc =
-        "CPU for HIL core " + number + " executed floating point instructions";
+    temp.name = prefix + prefix2 + number + ".insts.store";
+    temp.desc = "CPU core " + number + " executed store instructions";
     list.push_back(temp);
 
-    temp.name = prefix + ".hil" + number + ".insts.others";
-    temp.desc = "CPU for HIL core " + number + " executed other instructions";
-    list.push_back(temp);
-  }
-
-  for (uint32_t i = 0; i < iclCore.size(); i++) {
-    number = std::to_string(i);
-
-    temp.name = prefix + ".icl" + number + ".busy";
-    temp.desc = "CPU for ICL core " + number + " busy ticks";
+    temp.name = prefix + prefix2 + number + ".insts.arithmetic";
+    temp.desc = "CPU core " + number + " executed arithmetic instructions";
     list.push_back(temp);
 
-    temp.name = prefix + ".icl" + number + ".insts.branch";
-    temp.desc = "CPU for ICL core " + number + " executed branch instructions";
+    temp.name = prefix + prefix2 + number + ".insts.fp";
+    temp.desc = "CPU core " + number + " executed floating point instructions";
     list.push_back(temp);
 
-    temp.name = prefix + ".icl" + number + ".insts.load";
-    temp.desc = "CPU for ICL core " + number + " executed load instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".icl" + number + ".insts.store";
-    temp.desc = "CPU for ICL core " + number + " executed store instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".icl" + number + ".insts.arithmetic";
-    temp.desc =
-        "CPU for ICL core " + number + " executed arithmetic instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".icl" + number + ".insts.fp";
-    temp.desc =
-        "CPU for ICL core " + number + " executed floating point instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".icl" + number + ".insts.others";
-    temp.desc = "CPU for ICL core " + number + " executed other instructions";
-    list.push_back(temp);
-  }
-
-  for (uint32_t i = 0; i < ftlCore.size(); i++) {
-    number = std::to_string(i);
-
-    temp.name = prefix + ".ftl" + number + ".busy";
-    temp.desc = "CPU for FTL core " + number + " busy ticks";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.branch";
-    temp.desc = "CPU for FTL core " + number + " executed branch instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.load";
-    temp.desc = "CPU for FTL core " + number + " executed store instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.store";
-    temp.desc = "CPU for FTL core " + number + " executed load instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.arithmetic";
-    temp.desc =
-        "CPU for FTL core " + number + " executed arithmetic instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.fp";
-    temp.desc =
-        "CPU for FTL core " + number + " executed floating point instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + ".ftl" + number + ".insts.others";
-    temp.desc = "CPU for FTL core " + number + " executed other instructions";
+    temp.name = prefix + prefix2 + number + ".insts.others";
+    temp.desc = "CPU core " + number + " executed other instructions";
     list.push_back(temp);
   }
 }
 
 void CPU::getStatValues(std::vector<double> &values) noexcept {
-  for (auto &core : hilCore) {
-    auto &stat = core.getStat();
-
-    values.push_back(stat.busy);
-    values.push_back(stat.instStat.branch);
-    values.push_back(stat.instStat.load);
-    values.push_back(stat.instStat.store);
-    values.push_back(stat.instStat.arithmetic);
-    values.push_back(stat.instStat.floatingPoint);
-    values.push_back(stat.instStat.otherInsts);
-  }
-
-  for (auto &core : iclCore) {
-    auto &stat = core.getStat();
-
-    values.push_back(stat.busy);
-    values.push_back(stat.instStat.branch);
-    values.push_back(stat.instStat.load);
-    values.push_back(stat.instStat.store);
-    values.push_back(stat.instStat.arithmetic);
-    values.push_back(stat.instStat.floatingPoint);
-    values.push_back(stat.instStat.otherInsts);
-  }
-
-  for (auto &core : ftlCore) {
-    auto &stat = core.getStat();
-
-    values.push_back(stat.busy);
-    values.push_back(stat.instStat.branch);
-    values.push_back(stat.instStat.load);
-    values.push_back(stat.instStat.store);
-    values.push_back(stat.instStat.arithmetic);
-    values.push_back(stat.instStat.floatingPoint);
-    values.push_back(stat.instStat.otherInsts);
+  for (auto &core : coreList) {
+    values.push_back(core.eventStat.busy);
+    values.push_back(core.eventStat.handledFunction);
+    values.push_back(core.eventStat.handledEvent);
+    values.push_back(core.instructionStat.branch);
+    values.push_back(core.instructionStat.load);
+    values.push_back(core.instructionStat.store);
+    values.push_back(core.instructionStat.arithmetic);
+    values.push_back(core.instructionStat.floatingPoint);
+    values.push_back(core.instructionStat.otherInsts);
   }
 }
 
 void CPU::resetStatValues() noexcept {
   lastResetStat = getTick();
 
-  for (auto &core : hilCore) {
-    auto &stat = core.getStat();
-
-    stat.busy = 0;
-    stat.instStat = InstStat();
-  }
-
-  for (auto &core : iclCore) {
-    auto &stat = core.getStat();
-
-    stat.busy = 0;
-    stat.instStat = InstStat();
-  }
-
-  for (auto &core : ftlCore) {
-    auto &stat = core.getStat();
-
-    stat.busy = 0;
-    stat.instStat = InstStat();
+  for (auto &core : coreList) {
+    core.eventStat.clear();
+    core.instructionStat.clear();
   }
 }
 
