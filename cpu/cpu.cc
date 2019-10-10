@@ -483,6 +483,10 @@ uint64_t CPU::getTick() noexcept {
 Event CPU::createEvent(EventFunction func, std::string name) noexcept {
   Event eid = InvalidEventID + 1;
 
+  if (UNLIKELY(curTick != 0)) {
+    panic_log("All Event should be created in constructor (time = 0).");
+  }
+
   if (LIKELY(eventList.size() > 0)) {
     eid = eventList.rbegin()->first + 1;
   }
