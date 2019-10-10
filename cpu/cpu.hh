@@ -17,7 +17,14 @@
 #include "sim/engine.hh"
 #include "sim/log.hh"
 
-namespace SimpleSSD::CPU {
+namespace SimpleSSD {
+
+struct Stat {
+  std::string name;
+  std::string desc;
+};
+
+namespace CPU {
 
 class CPU;
 
@@ -27,11 +34,6 @@ enum class CPUGroup {
   InternalCache,          //!< Assign function to ICL core
   FlashTranslationLayer,  //!< Assign function to FTL core
   Any,                    //!< Assign function to most-idle core
-};
-
-struct Stat {
-  std::string name;
-  std::string desc;
 };
 
 class Function {
@@ -224,6 +226,8 @@ class CPU {
   void restoreCheckpoint(std::istream &) noexcept;
 };
 
-}  // namespace SimpleSSD::CPU
+}  // namespace CPU
+
+}  // namespace SimpleSSD
 
 #endif

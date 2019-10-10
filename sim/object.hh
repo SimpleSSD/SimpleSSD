@@ -90,9 +90,11 @@ class Object {
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return object.cpu->createEvent(ef, s);
   }
-  inline void schedule(CPU::CPUGroup g, Event e, uint64_t d) noexcept {
-    object.cpu->schedule(g, e, d);
+  inline void schedule(CPU::CPUGroup g, Event e,
+                       const CPU::Function &f) noexcept {
+    object.cpu->schedule(g, e, f);
   }
+  inline void schedule(Event e) noexcept { object.cpu->schedule(e); }
   inline void deschedule(Event e) noexcept { object.cpu->deschedule(e); }
   inline bool isScheduled(Event e) noexcept {
     return object.cpu->isScheduled(e);
