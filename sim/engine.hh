@@ -28,9 +28,15 @@ class Engine {
   virtual ~Engine() {}
 
   /**
-   * \brief Set event function
+   * \brief Set functions
+   *
+   * As CPU manages all events in SimpleSSD, we need method to invoke SimpleSSD
+   * event from outside of SimpleSSD - especially in DMA completion.
+   *
+   * Provide two function, one for CPU work event, another for DMA interrupt
+   * posting.
    */
-  virtual void setFunction(EventFunction) = 0;
+  virtual void setFunction(EventFunction, InterruptFunction) = 0;
 
   /**
    * \brief Schedule event function

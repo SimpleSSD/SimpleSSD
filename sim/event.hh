@@ -35,6 +35,13 @@ const Event InvalidEventID = 0;
  */
 using EventFunction = std::function<void(uint64_t)>;
 
+/**
+ * \brief Interrupt function definition
+ *
+ * See SimpleSSD::Engine::setFunction for more details.
+ */
+using InterruptFunction = std::function<void(Event, uint64_t)>;
+
 class Request {
  public:
   uint64_t offset;

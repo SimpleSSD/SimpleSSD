@@ -69,7 +69,9 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
 
   coreList.resize(totalCore);
 
-  engine->setFunction([this](uint64_t tick) { dispatch(tick); });
+  engine->setFunction(
+      [this](uint64_t tick) { dispatch(tick); },
+      [this](Event eid, uint64_t tick) { interrupt(eid, tick); });
 }
 
 CPU::~CPU() {}
@@ -402,6 +404,10 @@ void CPU::calculatePower(Power &power) {
 }
 
 void CPU::dispatch(uint64_t now) {
+  uint64_t next = std::numeric_limits<uint64_t>::max();
+
+  curTick = now;
+
   // Find event to dispatch
   for (auto &core : coreList) {
     if (core.eventQueue.size() > 0) {
@@ -409,8 +415,38 @@ void CPU::dispatch(uint64_t now) {
 
       if (event->first <= now) {
         event->second.data->func(now);
+
+        // Erase this
+        core.eventQueue.erase(event);
+
+        event = core.eventQueue.begin();
+
+        if (event == core.eventQueue.end()) {
+          continue;
+        }
+      }
+
+      // Find next event
+      if (next > event->first) {
+        next = event->first;
       }
     }
+  }
+
+  // Schedule next dispatch
+  if (UNLIKELY(next != std::numeric_limits<uint64_t>::max())) {
+    engine->schedule(next);
+  }
+}
+
+void CPU::interrupt(Event eid, uint64_t tick) {
+  // Engine invokes event!
+  curTick = tick;
+
+  auto iter = eventList.find(eid);
+
+  if (LIKELY(iter != eventList.end())) {
+    iter->second.func(tick);
   }
 }
 
