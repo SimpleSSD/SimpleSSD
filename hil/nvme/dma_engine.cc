@@ -86,7 +86,7 @@ void PRPEngine::getPRPListFromPRP_readDone(uint64_t now) {
     // Done
     inited = true;
 
-    schedule(dmaContext.eid, now);
+    schedule(dmaContext.eid);
   }
 }
 
@@ -170,7 +170,7 @@ void PRPEngine::init(uint64_t prp1, uint64_t prp2, uint64_t sizeLimit,
   if (immediate) {
     inited = true;
 
-    schedule(eid, getTick());
+    schedule(eid);
   }
 }
 
@@ -181,7 +181,7 @@ void PRPEngine::initQueue(uint64_t base, uint64_t size, bool cont, Event eid) {
     prpList.push_back(PRP(base, size));
 
     inited = true;
-    schedule(eid, getTick());
+    schedule(eid);
   }
   else {
     getPRPListFromPRP(base, eid);
@@ -404,7 +404,7 @@ void SGLEngine::parseSGLSegment_readDone(uint64_t now) {
   else {
     inited = true;
 
-    schedule(dmaContext.eid, now);
+    schedule(dmaContext.eid);
   }
 }
 
@@ -423,7 +423,7 @@ void SGLEngine::init(uint64_t prp1, uint64_t prp2, uint64_t, Event eid) {
     // This is entire buffer
     parseSGLDescriptor(desc);
 
-    schedule(eid, getTick());
+    schedule(eid);
   }
   else if (SGL_TYPE(desc.id) == TYPE_SEGMENT_DESCRIPTOR ||
            SGL_TYPE(desc.id) == TYPE_LAST_SEGMENT_DESCRIPTOR) {

@@ -162,7 +162,7 @@ void Arbitrator::enable(bool r) {
   run = r;
 
   if (run) {
-    schedule(work, getTick());
+    schedule(work);
   }
   else {
     deschedule(work);
@@ -560,7 +560,7 @@ void Arbitrator::abort_SQDone() {
       delete sqList[iter->first];
       sqList[iter->first] = nullptr;
 
-      schedule(iter->second, getTick());
+      schedule(iter->second);
 
       iter = abortSQList.erase(iter);
     }
@@ -579,7 +579,7 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
 
   if (iter != abortCommandList.end()) {
     // Aborted command finished
-    schedule(iter->second, getTick());
+    schedule(iter->second);
 
     abortCommandList.erase(iter);
   }
@@ -648,8 +648,6 @@ void Arbitrator::finishShutdown() {
 void Arbitrator::collect(uint64_t now) {
   bool handled = false;
 
-  lastInvokedAt = now;
-
   if (UNLIKELY(!run)) {
     return;
   }
@@ -686,9 +684,7 @@ void Arbitrator::collect(uint64_t now) {
   }
 
   // Schedule collect
-  lastInvokedAt += period;
-
-  schedule(work, lastInvokedAt);
+  schedule(work, period);
 
   if (!handled) {
     running = false;
@@ -836,7 +832,6 @@ void Arbitrator::resetStatValues() noexcept {}
 void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, period);
   BACKUP_SCALAR(out, internalQueueSize);
-  BACKUP_SCALAR(out, lastInvokedAt);
   BACKUP_SCALAR(out, cqSize);
   BACKUP_SCALAR(out, sqSize);
   BACKUP_SCALAR(out, mode);
@@ -938,7 +933,6 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, period);
   RESTORE_SCALAR(in, internalQueueSize);
-  RESTORE_SCALAR(in, lastInvokedAt);
   RESTORE_SCALAR(in, cqSize);
   RESTORE_SCALAR(in, sqSize);
   RESTORE_SCALAR(in, mode);

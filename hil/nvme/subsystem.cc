@@ -299,7 +299,7 @@ void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
   aenData = (uint32_t)lid << 16;
 
   // Schedule
-  schedule(eventAEN, getTick());
+  schedule(eventAEN);
 }
 
 void Subsystem::shutdownCompleted(ControllerID ctrlid) {

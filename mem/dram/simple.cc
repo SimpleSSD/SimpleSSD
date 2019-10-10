@@ -30,11 +30,11 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
       [this](uint64_t now) {
         dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
 
-        schedule(autoRefresh, now + REFRESH_PERIOD);
+        schedule(autoRefresh, REFRESH_PERIOD);
       },
       "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
 
-  schedule(autoRefresh, getTick() + REFRESH_PERIOD);
+  schedule(autoRefresh,  REFRESH_PERIOD);
 }
 
 SimpleDRAM::~SimpleDRAM() {
@@ -98,7 +98,7 @@ uint64_t SimpleDRAM::preSubmitWrite(Request *req) {
 void SimpleDRAM::postDone(Request *req) {
   updateStats(req->beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
 
-  schedule(req->eid, getTick());
+  schedule(req->eid);
 
   delete req;
 }

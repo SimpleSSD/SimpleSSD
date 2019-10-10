@@ -25,7 +25,7 @@ void DMAEngine::dmaDone(uint64_t tick) {
   dmaContext.counter--;
 
   if (dmaContext.counter == 0) {
-    schedule(dmaContext.eid, tick);
+    schedule(dmaContext.eid);
   }
 }
 

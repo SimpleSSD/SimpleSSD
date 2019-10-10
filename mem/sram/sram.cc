@@ -33,7 +33,7 @@ uint64_t SRAM::preSubmit(Request *req) {
 
 void SRAM::postDone(Request *req) {
   // Call handler
-  schedule(req->eid, getTick());
+  schedule(req->eid);
 
   delete req;
 }

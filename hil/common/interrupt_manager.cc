@@ -59,7 +59,7 @@ void InterruptManager::reschedule(CoalesceData *data) {
   if (LIKELY(coalesceMap.size() > 0)) {
     auto next = (CoalesceData *)coalesceMap.front();
 
-    schedule(eventTimer, next->nextDeadline);
+    schedule(eventTimer, next->nextDeadline - getTick());
   }
 }
 

@@ -218,16 +218,17 @@ void FIFO::insertWrite() {
   // Current item will be written to FIFO
   writeQueue.usage += size;
   iter->insertBeginAt = now;
-  iter->insertEndAt = now + param.latency(size);
+  iter->insertEndAt = param.latency(size);
 
   // When insertion done, call handler
   schedule(writeQueue.insertDone, iter->insertEndAt);
+  iter->insertEndAt += now;
 
   // Current item will be transferred after one transferUnit written to FIFO
   // If we alwritey scheduled, current item will be transffered after last one
   if (!isScheduled(writeQueue.beginTransfer)) {
     schedule(writeQueue.beginTransfer,
-             now + (smallerThanUnit ? param.latency(size) : unitLatency));
+             (smallerThanUnit ? param.latency(size) : unitLatency));
   }
 
   // Push current item to transferQueue
@@ -271,7 +272,7 @@ void FIFO::transferWriteDone() {
   else {  // upstream is faster than downstream
     // Should finish at insertedEndAt + upstreamLatency(transferUnit)
     // TODO: Applying unitLatency is not correct (more slower result)
-    schedule(writeQueue.submitCompletion, iter.insertEndAt + latency);
+    schedule(writeQueue.submitCompletion, iter.insertEndAt + latency - now);
   }
 }
 
@@ -282,7 +283,7 @@ void FIFO::transferWriteDoneNext() {
 
   // Call handler
   if (iter.last) {
-    schedule(iter.eid, now);
+    schedule(iter.eid);
   }
 
   // Transfer done
@@ -349,7 +350,7 @@ void FIFO::transferRead() {
 
   if (!isScheduled(readQueue.beginTransfer)) {
     schedule(readQueue.beginTransfer,
-             getTick() + (smallerThanUnit ? param.latency(size) : unitLatency));
+             (smallerThanUnit ? param.latency(size) : unitLatency));
   }
 
   // Push current item to transferQueue
@@ -396,12 +397,14 @@ void FIFO::insertRead() {
 
   // Begin insertion
   iter.insertBeginAt = now;
-  iter.insertEndAt = now + param.latency(calcSize(iter.size, unused));
+  iter.insertEndAt = param.latency(calcSize(iter.size, unused));
 
   // When insertion done, call handler
   if (!isScheduled(readQueue.insertDone)) {
     schedule(readQueue.insertDone, iter.insertEndAt);
   }
+
+  iter.insertEndAt += now;
 }
 
 void FIFO::insertReadDone() {
@@ -429,7 +432,7 @@ void FIFO::insertReadDoneMerge(std::list<ReadEntry>::iterator comp) {
   else {  // upstream is faster than downstream
     // Should finish at insertedEndAt + upstreamLatency(transferUnit)
     // TODO: Applying unitLatency is not correct (more slower result)
-    schedule(readQueue.submitCompletion, comp->dmaEndAt + comp->latency);
+    schedule(readQueue.submitCompletion, comp->dmaEndAt + comp->latency - now);
   }
 
   readCompletion.erase(comp);
@@ -442,7 +445,7 @@ void FIFO::insertReadDoneNext() {
 
   // Call handler
   if (iter.last) {
-    schedule(iter.eid, now);
+    schedule(iter.eid);
   }
 
   // Insert done
