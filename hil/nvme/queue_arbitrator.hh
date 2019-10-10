@@ -129,8 +129,8 @@ class Arbitrator : public Object {
   ArbitrationData param;
 
   // Internal queue (Indexed by commandID, sorted by insertion order)
-  unordered_map_queue requestQueue;
-  unordered_map_queue dispatchedQueue;
+  map_list<uint32_t, SQContext *> requestQueue;
+  map_list<uint32_t, SQContext *> dispatchedQueue;
   std::list<CQContext *> completionQueue;
 
   // Completion
@@ -180,7 +180,7 @@ class Arbitrator : public Object {
     complete(cqe, true);
   }
 
-  void collect(uint64_t);
+  void collect();
   bool checkShutdown();
   void finishShutdown();
 

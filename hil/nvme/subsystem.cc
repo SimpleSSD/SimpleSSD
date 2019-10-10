@@ -252,11 +252,11 @@ void Subsystem::invokeAEN() {
   for (uint64_t i = 0; i < size; i++) {
     auto ctrl = aenTo.at(i);
 
-    for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
-      uint16_t ctrlid = iter.getKey() >> 32;
+    for (auto &iter : aenCommands) {
+      uint16_t ctrlid = iter.first >> 32;
 
       if (ctrlid == ctrl) {
-        commandList.at(i) = (AsyncEventRequest *)iter.getValue();
+        commandList.at(i) = iter.second;
 
         break;
       }
@@ -305,7 +305,7 @@ void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
 void Subsystem::shutdownCompleted(ControllerID ctrlid) {
   // We need remove aenCommands of current controller
   for (auto iter = aenCommands.begin(); iter != aenCommands.end();) {
-    auto command = (AsyncEventRequest *)iter.getValue();
+    auto command = iter->second;
 
     if ((command->getUniqueID() >> 32) == ctrlid) {
       // Remove this
@@ -338,7 +338,8 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
 
       if (UNLIKELY(sqc->getData()->dword0.opcode ==
                    (uint8_t)AdminCommand::AsyncEventRequest)) {
-        aenCommands.push_back(command->getUniqueID(), command);
+        aenCommands.push_back(command->getUniqueID(),
+                              (AsyncEventRequest *)command);
       }
       else {
         ongoingCommands.push_back(command->getUniqueID(), command);
@@ -372,10 +373,12 @@ void Subsystem::complete(Command *command, bool aen) {
   delete command;
 
   if (UNLIKELY(aen)) {
-    aenCommands.erase(uid);
+    auto iter = aenCommands.find(uid);
+    aenCommands.erase(iter);
   }
   else {
-    ongoingCommands.erase(uid);
+    auto iter = ongoingCommands.find(uid);
+    ongoingCommands.erase(iter);
   }
 }
 
@@ -791,9 +794,8 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   size = ongoingCommands.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto iter = ongoingCommands.begin(); iter != ongoingCommands.end();
-       ++iter) {
-    auto entry = (Command *)iter.getValue();
+  for (auto &iter : ongoingCommands) {
+    auto entry = iter.second;
 
     uint64_t uid = entry->getUniqueID();
 
@@ -805,8 +807,8 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   size = aenCommands.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto iter = aenCommands.begin(); iter != aenCommands.end(); ++iter) {
-    auto entry = (Command *)iter.getValue();
+  for (auto &iter : aenCommands) {
+    auto entry = iter.second;
 
     uint64_t uid = entry->getUniqueID();
 
@@ -935,7 +937,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
     command->restoreCheckpoint(in);
 
     // Push to queue
-    aenCommands.push_back(uid, command);
+    aenCommands.push_back(uid, (AsyncEventRequest *)command);
   }
 }
 

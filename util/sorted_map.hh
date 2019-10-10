@@ -132,8 +132,10 @@ class map_list {
   void pop_front() noexcept;
   void pop_back() noexcept;
 
-  std::pair<iterator, bool> push_front(key_type &&, mapped_type &&) noexcept;
-  std::pair<iterator, bool> push_back(key_type &&, mapped_type &&) noexcept;
+  std::pair<iterator, bool> push_front(const key_type &,
+                                       const mapped_type &) noexcept;
+  std::pair<iterator, bool> push_back(const key_type &,
+                                      const mapped_type &) noexcept;
 
   iterator find(const key_type &) noexcept;
   const_iterator find(const key_type &) const noexcept;
@@ -194,10 +196,10 @@ class map_map : public map_list<Key, T> {
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;
 
-  std::pair<iterator, bool> push_front(key_type &&,
-                                       mapped_type &&) noexcept = delete;
-  std::pair<iterator, bool> push_back(key_type &&,
-                                      mapped_type &&) noexcept = delete;
+  std::pair<iterator, bool> push_front(const key_type &,
+                                       const mapped_type &) noexcept = delete;
+  std::pair<iterator, bool> push_back(const key_type &,
+                                      const mapped_type &) noexcept = delete;
 
   std::pair<iterator, bool> insert(const key_type &,
                                    const mapped_type &) noexcept;

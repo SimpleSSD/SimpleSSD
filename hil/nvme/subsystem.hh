@@ -40,14 +40,14 @@ class Subsystem : public AbstractSubsystem {
 
   HealthInfo health;
 
-  unordered_map_queue ongoingCommands;
+  map_list<uint64_t, Command *> ongoingCommands;
 
   // Asynchronous Event Request
   Event eventAEN;
   std::vector<ControllerID> aenTo;
   uint32_t aenData;
 
-  unordered_map_queue aenCommands;
+  map_list<uint64_t, AsyncEventRequest *> aenCommands;
 
   void invokeAEN();
 

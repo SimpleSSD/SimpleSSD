@@ -247,7 +247,8 @@ void map_list<Key, T, U>::pop_back() noexcept {
 
 SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T, U>::iterator, bool>
-map_list<Key, T, U>::push_front(key_type &&key, mapped_type &&value) noexcept {
+map_list<Key, T, U>::push_front(const key_type &key,
+                                const mapped_type &value) noexcept {
   if (LIKELY(map.count(key) == 0)) {
     // Insert item to list
     auto entry = insertList(&listHead, std::make_pair(key, value));
@@ -263,7 +264,8 @@ map_list<Key, T, U>::push_front(key_type &&key, mapped_type &&value) noexcept {
 
 SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T, U>::iterator, bool>
-map_list<Key, T, U>::push_back(key_type &&key, mapped_type &&value) noexcept {
+map_list<Key, T, U>::push_back(const key_type &key,
+                               const mapped_type &value) noexcept {
   if (LIKELY(map.count(key) == 0)) {
     // Insert item to list
     auto entry = insertList(listTail.prev, std::make_pair(key, value));

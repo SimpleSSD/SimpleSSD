@@ -128,7 +128,7 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
   sqList = (SQueue **)calloc(sqSize, sizeof(SQueue *));
 
   // Create events
-  work = createEvent([this](uint64_t t) { collect(t); },
+  work = createEvent([this](uint64_t) { collect(); },
                      "HIL::NVMe::Arbitrator::work");
   eventCompDone = createEvent([this](uint64_t) { completion_done(); },
                               "HIL::NVMe::Arbitrator::eventCompDone");
@@ -213,14 +213,14 @@ void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
 SQContext *Arbitrator::dispatch() {
 dispatch_again:
   if (LIKELY(requestQueue.size() > 0)) {
-    auto entry = (SQContext *)requestQueue.front();
+    auto entry = requestQueue.front().second;
 
     entry->dispatched = true;
 
     auto ret = dispatchedQueue.push_back(entry->getID(), entry);
     requestQueue.pop_front();
 
-    if (UNLIKELY(!ret)) {
+    if (UNLIKELY(!ret.second)) {
       // Command ID duplication
       abortCommand(entry, StatusType::CommandSpecificStatus,
                    GenericCommandStatusCode::CommandIDConflict);
@@ -378,7 +378,7 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
 
   // Abort all commands submitted from current sq
   for (auto iter = requestQueue.begin(); iter != requestQueue.end();) {
-    auto entry = (SQContext *)iter.getValue();
+    auto entry = iter->second;
 
     panic_if(!entry, "Corrupted request queue.");
 
@@ -390,6 +390,7 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
                    GenericCommandStatusCode::Abort_SQDeletion);
 
       iter = requestQueue.erase(iter);
+
       delete entry;
     }
     else {
@@ -438,24 +439,25 @@ uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid) {
   uint32_t id = ((uint32_t)sqid << 16) | cid;
 
   // Find command
-  auto iter = (SQContext *)requestQueue.find(id);
+  auto iter = requestQueue.find(id);
 
-  if (iter) {
+  if (iter != requestQueue.end()) {
     // We have command and will aborted
-    abortCommand(iter, StatusType::GenericCommandStatus,
+    abortCommand(iter->second, StatusType::GenericCommandStatus,
                  GenericCommandStatusCode::Abort_Requested);
 
-    requestQueue.erase(id);
-    delete iter;
+    requestQueue.erase(iter);
+
+    delete iter->second;
 
     abortCommandList.emplace(std::make_pair(id, eid));
 
     return 0u;
   }
   else {
-    iter = (SQContext *)dispatchedQueue.find(id);
+    iter = dispatchedQueue.find(id);
 
-    if (!iter) {
+    if (iter == dispatchedQueue.end()) {
       // No such command found (may be completed?)
       return 1u;
     }
@@ -472,14 +474,17 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
 
   // Find corresponding SQContext
   if (UNLIKELY(!ignore)) {
-    auto sqe = (SQContext *)dispatchedQueue.find(cqe->getID());
+    auto iter = dispatchedQueue.find(cqe->getID());
 
-    panic_if(!sqe, "Failed to find corresponding submission entry.");
-    panic_if(!sqe->completed, "Corresponding submission entry not completed.");
+    panic_if(iter == dispatchedQueue.end() || !iter->second,
+             "Failed to find corresponding submission entry.");
+    panic_if(!iter->second->completed,
+             "Corresponding submission entry not completed.");
 
     // Remove SQContext
-    dispatchedQueue.erase(sqe->getID());
-    delete sqe;
+    dispatchedQueue.erase(iter);
+
+    delete iter->second;
   }
   // Insert to completion queue
   completionQueue.push_back(cqe);
@@ -533,20 +538,14 @@ void Arbitrator::abort_SQDone() {
   std::map<uint16_t, uint32_t> countList;
 
   // Check pending queue
-  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
-       ++iter) {
-    auto id = ((SQContext *)iter.getValue())->getSQID();
-
-    auto count = countList.emplace(std::make_pair(id, 0));
+  for (auto &iter : dispatchedQueue) {
+    auto count = countList.emplace(std::make_pair(iter.second->sqID, 0));
     count.first->second++;
   }
 
   // Check completion queue
-  for (auto iter = completionQueue.begin(); iter != completionQueue.end();
-       ++iter) {
-    auto id = (*iter)->getSQID();
-
-    auto count = countList.emplace(std::make_pair(id, 0));
+  for (auto &iter : completionQueue) {
+    auto count = countList.emplace(std::make_pair(iter->getSQID(), 0));
     count.first->second++;
   }
 
@@ -590,12 +589,10 @@ bool Arbitrator::checkShutdown() {
 
   if (dispatchedQueue.size() > 0) {
     // Only AEN can be in dispatched queue
-    for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
-         ++iter) {
-      auto sqc = (SQContext *)iter.getValue();
-
-      if (sqc->sqID != 0 || sqc->entry.dword0.opcode !=
-                                (uint8_t)AdminCommand::AsyncEventRequest) {
+    for (auto &iter : dispatchedQueue) {
+      if (iter.second->sqID != 0 ||
+          iter.second->entry.dword0.opcode !=
+              (uint8_t)AdminCommand::AsyncEventRequest) {
         // Currently dispatched request is not AEN
         done = false;
       }
@@ -610,19 +607,14 @@ void Arbitrator::finishShutdown() {
   controller->controller->shutdownComplete();
 
   // Free requests
-  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
-       ++iter) {
-    auto sqc = (SQContext *)iter.getValue();
-
-    delete sqc;
+  for (auto &iter : dispatchedQueue) {
+    delete iter.second;
   }
 
   dispatchedQueue.clear();
 
-  for (auto iter = requestQueue.begin(); iter != requestQueue.end(); ++iter) {
-    auto sqc = (SQContext *)iter.getValue();
-
-    delete sqc;
+  for (auto &iter : requestQueue) {
+    delete iter.second;
   }
 
   requestQueue.clear();
@@ -645,7 +637,7 @@ void Arbitrator::finishShutdown() {
   shutdownReserved = false;
 }
 
-void Arbitrator::collect(uint64_t now) {
+void Arbitrator::collect() {
   bool handled = false;
 
   if (UNLIKELY(!run)) {
@@ -700,7 +692,7 @@ void Arbitrator::collect_done() {
 
   collectQueue.pop_front();
 
-  if (UNLIKELY(!ret)) {
+  if (UNLIKELY(!ret.second)) {
     // Command ID duplication
     abortCommand(sqe, StatusType::GenericCommandStatus,
                  GenericCommandStatusCode::CommandIDConflict);
@@ -867,34 +859,29 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   auto size = requestQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto iter = requestQueue.begin(); iter != requestQueue.end(); ++iter) {
-    auto entry = (SQContext *)iter.getValue();
-
-    BACKUP_BLOB(out, entry->entry.data, 64);
-    BACKUP_SCALAR(out, entry->commandID);
-    BACKUP_SCALAR(out, entry->sqID);
-    BACKUP_SCALAR(out, entry->cqID);
-    BACKUP_SCALAR(out, entry->sqHead);
-    BACKUP_SCALAR(out, entry->useSGL);
-    BACKUP_SCALAR(out, entry->dispatched);
-    BACKUP_SCALAR(out, entry->completed);
+  for (auto &iter : requestQueue) {
+    BACKUP_BLOB(out, iter.second->entry.data, 64);
+    BACKUP_SCALAR(out, iter.second->commandID);
+    BACKUP_SCALAR(out, iter.second->sqID);
+    BACKUP_SCALAR(out, iter.second->cqID);
+    BACKUP_SCALAR(out, iter.second->sqHead);
+    BACKUP_SCALAR(out, iter.second->useSGL);
+    BACKUP_SCALAR(out, iter.second->dispatched);
+    BACKUP_SCALAR(out, iter.second->completed);
   }
 
   size = dispatchedQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto iter = dispatchedQueue.begin(); iter != dispatchedQueue.end();
-       ++iter) {
-    auto entry = (SQContext *)iter.getValue();
-
-    BACKUP_BLOB(out, entry->entry.data, 64);
-    BACKUP_SCALAR(out, entry->commandID);
-    BACKUP_SCALAR(out, entry->sqID);
-    BACKUP_SCALAR(out, entry->cqID);
-    BACKUP_SCALAR(out, entry->sqHead);
-    BACKUP_SCALAR(out, entry->useSGL);
-    BACKUP_SCALAR(out, entry->dispatched);
-    BACKUP_SCALAR(out, entry->completed);
+  for (auto &iter : dispatchedQueue) {
+    BACKUP_BLOB(out, iter.second->entry.data, 64);
+    BACKUP_SCALAR(out, iter.second->commandID);
+    BACKUP_SCALAR(out, iter.second->sqID);
+    BACKUP_SCALAR(out, iter.second->cqID);
+    BACKUP_SCALAR(out, iter.second->sqHead);
+    BACKUP_SCALAR(out, iter.second->useSGL);
+    BACKUP_SCALAR(out, iter.second->dispatched);
+    BACKUP_SCALAR(out, iter.second->completed);
   }
 
   size = completionQueue.size();
@@ -1048,7 +1035,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
 SQContext *Arbitrator::getRecoveredRequest(uint32_t id) {
   // Query from dispatchedQueue
-  return (SQContext *)dispatchedQueue.find(id);
+  return dispatchedQueue.find(id)->second;
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
