@@ -37,14 +37,13 @@ PRPEngine::PRPInitContext::PRPInitContext()
 
 PRPEngine::PRPEngine(ObjectData &o, DMAInterface *i, uint64_t p)
     : DMAEngine(o, i), inited(false), totalSize(0), pageSize(p) {
-  readPRPList =
-      createEvent([this](uint64_t t) { getPRPListFromPRP_readDone(t); },
-                  "HIL::NVMe::PRPEngine::readPRPList");
+  readPRPList = createEvent([this](uint64_t) { getPRPListFromPRP_readDone(); },
+                            "HIL::NVMe::PRPEngine::readPRPList");
 }
 
 PRPEngine::~PRPEngine() {}
 
-void PRPEngine::getPRPListFromPRP_readDone(uint64_t now) {
+void PRPEngine::getPRPListFromPRP_readDone() {
   uint64_t listPRP;
   uint64_t listPRPSize;
 
@@ -228,7 +227,7 @@ void PRPEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
   if (dmaContext.counter == 0) {
     dmaContext.counter = 1;
 
-    dmaDone(getTick());
+    dmaDone();
   }
 }
 
@@ -273,7 +272,7 @@ void PRPEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   if (dmaContext.counter == 0) {
     dmaContext.counter = 1;
 
-    dmaDone(getTick());
+    dmaDone();
   }
 }
 
@@ -369,7 +368,7 @@ void SGLEngine::parseSGLSegment(uint64_t address, uint32_t length, Event eid) {
   pInterface->read(address, length, sglContext.buffer, readSGL);
 }
 
-void SGLEngine::parseSGLSegment_readDone(uint64_t now) {
+void SGLEngine::parseSGLSegment_readDone() {
   SGLDescriptor desc;
   bool next = false;
 
@@ -483,7 +482,7 @@ void SGLEngine::read(uint64_t offset, uint64_t length, uint8_t *buffer,
   if (dmaContext.counter == 0) {
     dmaContext.counter = 1;
 
-    dmaDone(getTick());
+    dmaDone();
   }
 }
 
@@ -536,7 +535,7 @@ void SGLEngine::write(uint64_t offset, uint64_t length, uint8_t *buffer,
   if (dmaContext.counter == 0) {
     dmaContext.counter = 1;
 
-    dmaDone(getTick());
+    dmaDone();
   }
 }
 

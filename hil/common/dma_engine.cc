@@ -15,13 +15,13 @@ DMAEngine::DMAContext::DMAContext(Event e) : counter(0), eid(e) {}
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
     : Object(o), pInterface(i) {
-  dmaHandler = createEvent([this](uint64_t t) { dmaDone(t); },
+  dmaHandler = createEvent([this](uint64_t) { dmaDone(); },
                            "HIL::DMAEngine::dmaHandler");
 }
 
 DMAEngine::~DMAEngine() {}
 
-void DMAEngine::dmaDone(uint64_t tick) {
+void DMAEngine::dmaDone() {
   dmaContext.counter--;
 
   if (dmaContext.counter == 0) {

@@ -36,7 +36,7 @@ class DMAEngine : public DMAInterface, public Object {
   Event dmaHandler;
   DMAContext dmaContext;
 
-  void dmaDone(uint64_t);
+  void dmaDone();
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);

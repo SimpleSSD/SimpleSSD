@@ -53,7 +53,7 @@ class PRPEngine : public DMAEngine {
 
   uint64_t getSizeFromPRP(uint64_t);
   void getPRPListFromPRP(uint64_t, Event);
-  void getPRPListFromPRP_readDone(uint64_t);
+  void getPRPListFromPRP_readDone();
 
  public:
   PRPEngine(ObjectData &, DMAInterface *, uint64_t);
@@ -118,7 +118,7 @@ class SGLEngine : public DMAEngine {
 
   void parseSGLDescriptor(SGLDescriptor &);
   void parseSGLSegment(uint64_t, uint32_t, Event);
-  void parseSGLSegment_readDone(uint64_t);
+  void parseSGLSegment_readDone();
 
  public:
   SGLEngine(ObjectData &, DMAInterface *);

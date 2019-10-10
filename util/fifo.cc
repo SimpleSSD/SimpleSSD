@@ -279,7 +279,6 @@ void FIFO::transferWriteDone() {
 void FIFO::transferWriteDoneNext() {
   auto &iter = writeQueue.transferQueue.front();
   bool unused;
-  uint64_t now = getTick();
 
   // Call handler
   if (iter.last) {
@@ -441,7 +440,6 @@ void FIFO::insertReadDoneMerge(std::list<ReadEntry>::iterator comp) {
 void FIFO::insertReadDoneNext() {
   auto &iter = readQueue.transferQueue.front();
   bool unused;
-  uint64_t now = getTick();
 
   // Call handler
   if (iter.last) {

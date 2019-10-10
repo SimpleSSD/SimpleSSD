@@ -121,7 +121,7 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   debugfile = openStream(prefix, debugpath);
 
   // Initialize log system
-  log.init(e, outfile, errfile, debugfile);
+  log.init(object.cpu, outfile, errfile, debugfile);
 
   // Initialize objects
   switch (mode) {
