@@ -142,8 +142,22 @@ map_list<Key, T, U>::map_list() {
 }
 
 SORTED_MAP_TEMPLATE
+map_list<Key, T, U>::map_list(map_list &&rhs) noexcept {
+  *this = std::move(rhs);
+}
+
+SORTED_MAP_TEMPLATE
 map_list<Key, T, U>::~map_list() {
   clear();
+}
+
+SORTED_MAP_TEMPLATE
+map_list<Key, T, U> &map_list<Key, T, U>::operator=(map_list &&rhs) {
+  if (this != &rhs) {
+    map = std::move(rhs.map);
+    listHead = std::move(rhs.listHead);
+    listTail = std::move(rhs.listTail);
+  }
 }
 
 SORTED_MAP_TEMPLATE
@@ -392,14 +406,16 @@ map_map<Key, T, U>::~map_map() {}
 
 SORTED_MAP_TEMPLATE
 std::pair<typename map_map<Key, T, U>::iterator, bool>
-map_map<Key, T, U>::insert(key_type &&key, mapped_type &&value) noexcept {
+map_map<Key, T, U>::insert(const key_type &key,
+                           const mapped_type &value) noexcept {
   if (LIKELY(this->map.count(key) == 0)) {
     // Find where to insert
     list_item *prev = &this->listHead;
 
     while (prev != &this->listTail) {
       // prev->next->value is nullptr when prev->next is &listTail
-      if (prev->next == &this->listTail || func(value, prev->next->field.second)) {
+      if (prev->next == &this->listTail ||
+          func(value, prev->next->field.second)) {
         break;
       }
 
@@ -407,12 +423,12 @@ map_map<Key, T, U>::insert(key_type &&key, mapped_type &&value) noexcept {
     }
 
     // Insert item to list
-    auto entry = insertList(prev, std::make_pair(key, value));
+    auto entry = this->insertList(prev, std::make_pair(key, value));
 
     // Insert item to map
-    insertMap(key, entry);
+    this->insertMap(key, entry);
 
-    return std::make_pair(make_iterator(entry), true);
+    return std::make_pair(this->make_iterator(entry), true);
   }
 
   return std::make_pair(this->end(), false);

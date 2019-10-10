@@ -42,6 +42,9 @@ class map_list {
 
     list_item();
     list_item(value_type &&);
+
+    list_item &operator=(const list_item &) = delete;
+    list_item &operator=(list_item &&) noexcept = default;
   };
 
  public:
@@ -90,7 +93,7 @@ class map_list {
 
     const_iterator(const list_item *, const list_item *, const list_item *);
 
-   private:
+   public:
     const_iterator &operator++();
     const_iterator &operator--();
     bool operator==(const const_iterator &rhs) const;
@@ -116,7 +119,12 @@ class map_list {
 
  public:
   map_list();
+  map_list(const map_list &) = delete;
+  map_list(map_list &&) noexcept;
   ~map_list();
+
+  map_list &operator=(const map_list &) = delete;
+  map_list &operator=(map_list &&);
 
   size_type size() noexcept;
   size_type size() const noexcept;
@@ -162,13 +170,13 @@ class map_map : public map_list<Key, T> {
   using key_type = typename map_list<Key, T>::key_type;
   using mapped_type = typename map_list<Key, T>::mapped_type;
   using size_type = typename map_list<Key, T>::size_type;
+  using iterator = typename map_list<Key, T>::iterator;
 
   //! Return true if a < b (a should go first)
   using Compare = std::function<bool(const void *, const void *)>;
 
  protected:
   using list_item = typename map_list<Key, T>::list_item;
-  using iterator = typename map_list<Key, T>::iterator;
 
   Compare func;
 
@@ -176,7 +184,12 @@ class map_map : public map_list<Key, T> {
 
  public:
   map_map(Compare);
+  map_map(const map_map &) = delete;
+  map_map(map_map &&) noexcept = default;
   ~map_map();
+
+  map_map &operator=(const map_map &) = delete;
+  map_map &operator=(map_map &&) = default;
 
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;
@@ -186,7 +199,8 @@ class map_map : public map_list<Key, T> {
   std::pair<iterator, bool> push_back(key_type &&,
                                       mapped_type &&) noexcept = delete;
 
-  std::pair<iterator, bool> insert(key_type &&, mapped_type &&) noexcept;
+  std::pair<iterator, bool> insert(const key_type &,
+                                   const mapped_type &) noexcept;
 };
 
 }  // namespace SimpleSSD

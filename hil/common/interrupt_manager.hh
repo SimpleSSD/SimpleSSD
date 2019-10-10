@@ -29,7 +29,6 @@ class InterruptManager : public Object {
   class CoalesceData {
    public:
     bool pending;
-    uint16_t iv;
     uint16_t currentRequestCount;
     uint64_t nextDeadline;
 
@@ -42,12 +41,12 @@ class InterruptManager : public Object {
   uint16_t aggregationThreshold;  // NVMe 8bit, AHCI 8bit
   uint64_t aggregationTime;  // NVMe 8bit * 100us unit, AHCI 16bit * 1ms unit
 
-  unordered_map_list coalesceMap;
+  map_map<uint16_t, CoalesceData *> coalesceMap;
 
   Event eventTimer;
 
   void timerHandler(uint64_t);
-  void reschedule(CoalesceData *);
+  void reschedule(map_map<uint16_t, CoalesceData *>::iterator);
 
  public:
   InterruptManager(ObjectData &, Interface *, ControllerID);
@@ -56,7 +55,7 @@ class InterruptManager : public Object {
   ~InterruptManager();
 
   InterruptManager &operator=(const InterruptManager &) = delete;
-  InterruptManager &operator=(InterruptManager &&) noexcept = default;
+  InterruptManager &operator=(InterruptManager &&) = default;
 
   void postInterrupt(uint16_t, bool);
 
