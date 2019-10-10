@@ -11,7 +11,7 @@
 #define __SIMPLESSD_CPU_CPU__
 
 #include <cstdarg>
-#include <map>
+#include <unordered_map>
 
 #include "lib/mcpat/mcpat.h"
 #include "sim/config_reader.hh"
@@ -72,20 +72,6 @@ class Function {
  */
 class CPU {
  private:
-  class EventData {
-   public:
-    EventFunction func;
-    std::string name;
-
-    EventData() {}
-    EventData(EventFunction &f, std::string &s) : func(f), name(s) {}
-    EventData(const EventData &) = delete;
-    EventData(EventData &&) noexcept = default;
-
-    EventData &operator=(const EventData &) = delete;
-    EventData &operator=(EventData &&) = default;
-  };
-
   class EventStat {
    public:
     uint64_t handledFunction;
@@ -103,26 +89,14 @@ class CPU {
 
   class Core {
    public:
-    class Job {
-     public:
-      uint64_t tick;
-      EventData *data;
-
-      Job() : tick(0), data(nullptr) {}
-      Job(uint64_t t, EventData *d) : tick(t), data(d) {}
-    };
-
     uint64_t busyUntil;
 
     EventStat eventStat;
     Function instructionStat;
 
-    map_map<Event, Job *> eventQueue;
+    std::list<Event> eventQueue;
 
-    Core()
-        : busyUntil(0), eventQueue([](const Job *a, const Job *b) -> bool {
-            return a->tick < b->tick;
-          }) {}
+    Core() : busyUntil(0) {}
   };
 
   Engine *engine;        //!< Simulation engine
@@ -142,9 +116,10 @@ class CPU {
   uint64_t curTick;
 
   std::vector<Core> coreList;
-  std::map<Event, EventData> eventList;
+  std::vector<Event> eventList;
 
-  void updateSchedule();
+  std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
+
   void calculatePower(Power &);
   Core *getIdleCoreInRange(uint16_t, uint16_t);
 
@@ -174,7 +149,8 @@ class CPU {
    * \param[in] name  Description of the event
    * \return Event ID
    */
-  Event createEvent(EventFunction func, std::string name) noexcept;
+  Event createEvent(const EventFunction &func,
+                    const std::string &name) noexcept;
 
   /**
    * \brief Schedule function
@@ -234,9 +210,33 @@ class CPU {
 
   void createCheckpoint(std::ostream &) const noexcept;
   void restoreCheckpoint(std::istream &) noexcept;
+
+  Event restoreEventID(Event) noexcept;
+  void clearOldEventList() noexcept;
 };
 
 }  // namespace CPU
+
+class EventData {
+ private:
+  friend CPU::CPU;
+
+  EventFunction func;
+  std::string name;
+
+  uint64_t scheduledAt;
+
+ public:
+  EventData(const EventFunction &f, const std::string &s)
+      : func(std::move(f)),
+        name(std::move(s)),
+        scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+  EventData(const EventData &) = delete;
+  EventData(EventData &&) noexcept = delete;
+
+  EventData &operator=(const EventData &) = delete;
+  EventData &operator=(EventData &&) = delete;
+};
 
 }  // namespace SimpleSSD
 

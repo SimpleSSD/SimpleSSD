@@ -17,14 +17,16 @@
 
 namespace SimpleSSD {
 
+class EventData;
+
 /**
  * \brief Event ID definition
  *
  * Unique ID of events in SimpleSSD. Event ID 0 is invalid.
  */
-using Event = uint64_t;
+using Event = EventData *;
 
-const Event InvalidEventID = 0;
+const Event InvalidEventID = nullptr;
 
 /**
  * \brief Event function definition
