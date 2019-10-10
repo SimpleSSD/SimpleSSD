@@ -54,8 +54,8 @@ void Function::clear() {
   cycles = 0;
 }
 
-CPU::CPU(ObjectData &o, Engine *e)
-    : engine(e), config(o.config), log(o.log), lastResetStat(0), curTick(0) {
+CPU::CPU(Engine *e, ConfigReader *c, Log *l)
+    : engine(e), config(c), log(l), lastResetStat(0), curTick(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
   clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
 
@@ -513,11 +513,11 @@ void CPU::destroyEvent(Event) noexcept {
   panic_log("Not allowed to destroy event");
 }
 
-void CPU::getStatList(std::vector<Object::Stat> &list,
-                      std::string prefix) noexcept {
-  Object::Stat temp;
+void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  Stat temp;
   std::string number;
   std::string prefix2;
+  uint32_t totalCore = hilCore + iclCore + ftlCore;
 
   if (useDedicatedCore) {
     prefix2 = ".hil";
@@ -526,7 +526,7 @@ void CPU::getStatList(std::vector<Object::Stat> &list,
     prefix2 = ".core";
   }
 
-  for (uint32_t i = 0; i < hilCore + iclCore + ftlCore; i++) {
+  for (uint32_t i = 0; i < totalCore; i++) {
     number = std::to_string(i);
 
     if (useDedicatedCore && i == hilCore) {
@@ -683,6 +683,8 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
       }
 
       job.data = &event->second;
+
+      core.eventQueue.emplace(std::make_pair(tick, job));
     }
   }
 }

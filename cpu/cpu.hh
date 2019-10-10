@@ -15,8 +15,7 @@
 #include "lib/mcpat/mcpat.h"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
-#include "sim/object.hh"
-#include "util/sorted_map.hh"
+#include "sim/log.hh"
 
 namespace SimpleSSD::CPU {
 
@@ -28,6 +27,11 @@ enum class CPUGroup {
   InternalCache,          //!< Assign function to ICL core
   FlashTranslationLayer,  //!< Assign function to FTL core
   Any,                    //!< Assign function to most-idle core
+};
+
+struct Stat {
+  std::string name;
+  std::string desc;
 };
 
 class Function {
@@ -100,9 +104,6 @@ class CPU {
       EventData *data;
 
       Job() : eid(InvalidEventID), data(nullptr) {}
-      Job(const Job &) = delete;
-
-      Job &operator=(const Job &) = delete;
     };
 
     EventStat eventStat;
@@ -145,7 +146,7 @@ class CPU {
   }
 
  public:
-  CPU(ObjectData &, Engine *);
+  CPU(Engine *, ConfigReader *, Log *);
   ~CPU();
 
   /**
@@ -215,7 +216,7 @@ class CPU {
    */
   void destroyEvent(Event eid) noexcept;
 
-  void getStatList(std::vector<Object::Stat> &, std::string) noexcept;
+  void getStatList(std::vector<Stat> &, std::string) noexcept;
   void getStatValues(std::vector<double> &) noexcept;
   void resetStatValues() noexcept;
 

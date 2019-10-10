@@ -82,12 +82,6 @@ using ObjectData = struct _ObjectData {
  * API for accessing config, engine and log system.
  */
 class Object {
- public:
-  struct Stat {
-    std::string name;
-    std::string desc;
-  };
-
  protected:
   ObjectData object;
 
