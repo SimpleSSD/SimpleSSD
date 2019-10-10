@@ -10,7 +10,7 @@
 #ifndef __SIMPLESSD_UTIL_SCHEDULER_HH__
 #define __SIMPLESSD_UTIL_SCHEDULER_HH__
 
-#include <list>
+#include <deque>
 
 #include "sim/object.hh"
 
@@ -30,8 +30,8 @@ class SingleScheduler : public Object {
 
   Event eventDone;
 
-  std::list<Type> queue;
-  std::list<Type> pendingQueue;
+  std::deque<Type> queue;
+  std::deque<Type> pendingQueue;
 
   void submit() {
     auto data = std::move(queue.front());
