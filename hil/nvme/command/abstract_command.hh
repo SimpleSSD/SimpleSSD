@@ -60,10 +60,13 @@ class Command : public Object {
   std::unordered_map<uint64_t, CommandTag> tagList;
 
   CommandTag createTag(ControllerData *, SQContext *);
-  CommandTag createIOTag(ControllerData *, SQContext *);
-  CommandTag createCompareTag(ControllerData *, SQContext *);
+  IOCommandData *createIOTag(ControllerData *, SQContext *);
+  CompareCommandData *createCompareTag(ControllerData *, SQContext *);
 
   CommandTag findTag(uint64_t);
+  IOCommandData *findIOTag(uint64_t);
+  CompareCommandData *findCompareTag(uint64_t);
+
   void destroyTag(CommandTag);
   void addTagToList(CommandTag);
 
@@ -73,7 +76,7 @@ class Command : public Object {
   Command(Command &&) noexcept = delete;
 
   virtual void setRequest(ControllerData *, SQContext *) = 0;
-  virtual void completeRequest(CommandTag) = 0;
+  virtual void completeRequest(CommandTag);
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

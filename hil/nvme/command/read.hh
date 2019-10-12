@@ -20,28 +20,15 @@ class Read : public Command {
   Event readDoneEvent;
   Event dmaCompleteEvent;
 
-  uint64_t size;
-  uint8_t *buffer;
-
-  uint64_t slpn;
-  uint64_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
-
-  uint64_t _slba;
-  uint16_t _nlb;
-
-  uint64_t beginAt;
-
-  void dmaInitDone();
-  void readDone();
-  void dmaComplete();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
+  void readDone(uint64_t);
 
  public:
-  Read(ObjectData &, Subsystem *, ControllerData *);
-  ~Read();
+  Read(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

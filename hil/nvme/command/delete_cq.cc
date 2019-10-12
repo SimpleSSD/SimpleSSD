@@ -11,37 +11,37 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-DeleteCQ::DeleteCQ(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {}
+DeleteCQ::DeleteCQ(ObjectData &o, Subsystem *s)
+    : Command(o, s) {}
 
 DeleteCQ::~DeleteCQ() {}
 
-void DeleteCQ::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void DeleteCQ::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint16_t id = entry->dword10 & 0xFFFF;
 
-  debugprint_command("ADMIN   | Delete I/O Completion Queue");
+  debugprint_command(tag, "ADMIN   | Delete I/O Completion Queue");
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
-  auto ret = data.arbitrator->deleteIOCQ(id);
+  auto ret = tag->arbitrator->deleteIOCQ(id);
 
   switch (ret) {
     case 1:
-      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+      tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
                       CommandSpecificStatusCode::Invalid_QueueIdentifier);
       break;
     case 3:
-      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+      tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
                       CommandSpecificStatusCode::Invalid_QueueDeletion);
       break;
   }
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
 void DeleteCQ::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -50,11 +50,4 @@ void DeleteCQ::getStatValues(std::vector<double> &) noexcept {}
 
 void DeleteCQ::resetStatValues() noexcept {}
 
-void DeleteCQ::createCheckpoint(std::ostream &out) const noexcept {
-  Command::createCheckpoint(out);
-}
-
-void DeleteCQ::restoreCheckpoint(std::istream &in) noexcept {
-  Command::restoreCheckpoint(in);
-}
 }  // namespace SimpleSSD::HIL::NVMe

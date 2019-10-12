@@ -20,32 +20,16 @@ class Compare : public Command {
   Event dmaCompleteEvent;
   Event readNVMDoneEvent;
 
-  uint8_t complete;
-
-  uint64_t size;
-  uint8_t *bufferHost;
-  uint8_t *bufferNVM;
-
-  uint64_t slpn;
-  uint64_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
-
-  uint64_t _slba;
-  uint16_t _nlb;
-
-  uint64_t beginAt;
-
-  void dmaInitDone();
-  void dmaComplete();
-  void readNVMDone();
-  void compare();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
+  void readNVMDone(uint64_t);
+  void compare(CompareCommandData *);
 
  public:
-  Compare(ObjectData &, Subsystem *, ControllerData *);
-  ~Compare();
+  Compare(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

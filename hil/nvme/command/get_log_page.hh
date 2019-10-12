@@ -19,17 +19,14 @@ class GetLogPage : public Command {
   Event dmaInitEvent;
   Event dmaCompleteEvent;
 
-  uint64_t size;
-  uint8_t *buffer;
-
-  void dmaInitDone();
-  void dmaComplete();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
 
  public:
-  GetLogPage(ObjectData &, Subsystem *, ControllerData *);
-  ~GetLogPage();
+  GetLogPage(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

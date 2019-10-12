@@ -11,39 +11,41 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-GetFeature::GetFeature(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {}
+GetFeature::GetFeature(ObjectData &o, Subsystem *s) : Command(o, s) {}
 
 GetFeature::~GetFeature() {}
 
-void GetFeature::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void GetFeature::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint16_t fid = entry->dword10 & 0x00FF;
   bool save = entry->dword10 & 0x80000000;
   uint8_t uuid = entry->dword14 & 0x7F;
 
-  debugprint_command("ADMIN   | Get Features | Feature %d | NSID %d | UUID %u",
+  debugprint_command(tag,
+                     "ADMIN   | Get Features | Feature %d | NSID %d | UUID %u",
                      fid, entry->namespaceID, uuid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   if (save) {
     // We does not support save - no power cycle in simulation
-    cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                    CommandSpecificStatusCode::FeatureIdentifierNotSaveable);
+    tag->cqc->makeStatus(
+        true, false, StatusType::CommandSpecificStatus,
+        CommandSpecificStatusCode::FeatureIdentifierNotSaveable);
   }
   else {
     switch ((FeatureID)fid) {
       case FeatureID::Arbitration:
-        cqc->getData()->dword0 = data.arbitrator->getArbitrationData()->data;
+        tag->cqc->getData()->dword0 =
+            tag->arbitrator->getArbitrationData()->data;
 
         break;
       case FeatureID::PowerManagement:
-        cqc->getData()->dword0 = data.controller->getFeature()->pm.data;
+        tag->cqc->getData()->dword0 = tag->controller->getFeature()->pm.data;
 
         break;
       case FeatureID::TemperatureThreshold: {
@@ -51,34 +53,34 @@ void GetFeature::setRequest(SQContext *req) {
         uint8_t idx = (entry->dword11 >> 16) & 0x0F;
 
         if (idx > 9 || sel > 1) {
-          cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                          GenericCommandStatusCode::Invalid_Field);
+          tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                               GenericCommandStatusCode::Invalid_Field);
         }
         else {
           if (sel == 0) {
-            cqc->getData()->dword0 =
-                data.controller->getFeature()->overThresholdList[idx];
+            tag->cqc->getData()->dword0 =
+                tag->controller->getFeature()->overThresholdList[idx];
           }
           else {
-            cqc->getData()->dword0 =
-                data.controller->getFeature()->underThresholdList[idx];
+            tag->cqc->getData()->dword0 =
+                tag->controller->getFeature()->underThresholdList[idx];
           }
         }
 
       } break;
       case FeatureID::ErrorRecovery:
-        cqc->getData()->dword0 = data.controller->getFeature()->er.data;
+        tag->cqc->getData()->dword0 = tag->controller->getFeature()->er.data;
 
         break;
       case FeatureID::VolatileWriteCache: {
-        auto pHIL = data.subsystem->getHIL();
+        auto pHIL = subsystem->getHIL();
 
-        std::visit([entry = cqc->getData()](
+        std::visit([entry = tag->cqc->getData()](
                        auto &&hil) { entry->dword0 = hil->getCache() ? 1 : 0; },
                    pHIL);
       } break;
       case FeatureID::NumberOfQueues:
-        cqc->getData()->dword0 = data.controller->getFeature()->noq.data;
+        tag->cqc->getData()->dword0 = tag->controller->getFeature()->noq.data;
 
         break;
       case FeatureID::InterruptCoalescing: {
@@ -86,39 +88,39 @@ void GetFeature::setRequest(SQContext *req) {
         uint64_t time;
         uint16_t count;
 
-        data.interrupt->getCoalescing(time, count);
+        tag->interrupt->getCoalescing(time, count);
 
         ic.time = (uint8_t)(time / 100'000'000ull);
         ic.thr = (uint8_t)(count - 1);
 
-        cqc->getData()->dword0 = ic.data;
+        tag->cqc->getData()->dword0 = ic.data;
       } break;
       case FeatureID::InterruptVectorConfiguration: {
         Feature::InterruptVectorConfiguration ivc;
 
         ivc.data = entry->dword11;
-        ivc.cd = data.interrupt->isEnabled(ivc.iv) == 0;
+        ivc.cd = tag->interrupt->isEnabled(ivc.iv) == 0;
 
-        cqc->getData()->dword0 = ivc.data;
+        tag->cqc->getData()->dword0 = ivc.data;
       } break;
       case FeatureID::WriteAtomicityNormal:
-        cqc->getData()->dword0 = data.controller->getFeature()->wan;
+        tag->cqc->getData()->dword0 = tag->controller->getFeature()->wan;
 
         break;
       case FeatureID::AsynchronousEventConfiguration:
-        cqc->getData()->dword0 = data.controller->getFeature()->aec.data;
+        tag->cqc->getData()->dword0 = tag->controller->getFeature()->aec.data;
 
         break;
       default:
-        cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                        GenericCommandStatusCode::Invalid_Field);
+        tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
 
         break;
     }
   }
 
   // We can finish immediately
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
 void GetFeature::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -126,13 +128,5 @@ void GetFeature::getStatList(std::vector<Stat> &, std::string) noexcept {}
 void GetFeature::getStatValues(std::vector<double> &) noexcept {}
 
 void GetFeature::resetStatValues() noexcept {}
-
-void GetFeature::createCheckpoint(std::ostream &out) const noexcept {
-  Command::createCheckpoint(out);
-}
-
-void GetFeature::restoreCheckpoint(std::istream &in) noexcept {
-  Command::restoreCheckpoint(in);
-}
 
 }  // namespace SimpleSSD::HIL::NVMe

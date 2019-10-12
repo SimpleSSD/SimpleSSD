@@ -11,21 +11,23 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-FormatNVM::FormatNVM(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {
-  eventFormatDone = createEvent([this](uint64_t) { formatDone(); },
-                                "HIL::NVMe::FormatNVM::eventFormatDone");
+FormatNVM::FormatNVM(ObjectData &o, Subsystem *s) : Command(o, s) {
+  eventFormatDone =
+      createEvent([this](uint64_t, uint64_t gcid) { formatDone(gcid); },
+                  "HIL::NVMe::FormatNVM::eventFormatDone");
 }
 
 FormatNVM::~FormatNVM() {}
 
-void FormatNVM::formatDone() {
-  data.subsystem->complete(this);
+void FormatNVM::formatDone(uint64_t gcid) {
+  auto tag = findTag(gcid);
+
+  subsystem->complete(tag);
 }
 
-void FormatNVM::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void FormatNVM::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = req->getData();
 
   bool immediate = true;
 
@@ -37,36 +39,38 @@ void FormatNVM::setRequest(SQContext *req) {
   bool mset = entry->dword10 & 0x10;
   uint8_t lbaf = entry->dword10 & 0x0F;
 
-  debugprint_command("ADMIN   | Format NVM | SES %u | NSID %u", ses, nsid);
+  debugprint_command(tag, "ADMIN   | Format NVM | SES %u | NSID %u", ses, nsid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   if ((ses != 0x00 && ses != 0x01) || (pil || mset || pi != 0x00)) {
-    cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+    tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
   }
   else if (lbaf >= nLBAFormat) {
-    cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                    CommandSpecificStatusCode::Invalid_Format);
+    tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::Invalid_Format);
   }
   else {
-    auto ret =
-        data.subsystem->format(nsid, (FormatOption)ses, lbaf, eventFormatDone);
+    auto ret = subsystem->format(nsid, (FormatOption)ses, lbaf, eventFormatDone,
+                                 tag->getGCID());
 
     switch (ret) {
       case 0:
         immediate = false;
+
         break;
       case 1:
-        cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                        GenericCommandStatusCode::Invalid_Field);
+        tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
+
         break;
     }
   }
 
   if (immediate) {
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
   }
 }
 
@@ -78,10 +82,14 @@ void FormatNVM::resetStatValues() noexcept {}
 
 void FormatNVM::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
+
+  BACKUP_EVENT(out, eventFormatDone);
 }
 
 void FormatNVM::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventFormatDone);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -18,13 +18,12 @@ class DeleteSQ : public Command {
  private:
   Event eventErased;
 
-  void eraseDone();
+  void eraseDone(uint64_t);
 
  public:
-  DeleteSQ(ObjectData &, Subsystem *, ControllerData *);
-  ~DeleteSQ();
+  DeleteSQ(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

@@ -16,17 +16,14 @@ namespace SimpleSSD::HIL::NVMe {
 
 class GetFeature : public Command {
  public:
-  GetFeature(ObjectData &, Subsystem *, ControllerData *);
+  GetFeature(ObjectData &, Subsystem *);
   ~GetFeature();
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

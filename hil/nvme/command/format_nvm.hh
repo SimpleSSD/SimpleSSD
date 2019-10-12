@@ -18,13 +18,12 @@ class FormatNVM : public Command {
  private:
   Event eventFormatDone;
 
-  void formatDone();
+  void formatDone(uint64_t);
 
  public:
-  FormatNVM(ObjectData &, Subsystem *, ControllerData *);
-  ~FormatNVM();
+  FormatNVM(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

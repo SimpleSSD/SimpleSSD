@@ -18,13 +18,13 @@ class CreateSQ : public Command {
  private:
   Event eventCreated;
 
-  void createDone();
+  void createDone(uint64_t);
 
  public:
-  CreateSQ(ObjectData &, Subsystem *, ControllerData *);
+  CreateSQ(ObjectData &, Subsystem *);
   ~CreateSQ();
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

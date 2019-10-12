@@ -18,15 +18,12 @@ class Flush : public Command {
  private:
   Event flushDoneEvent;
 
-  uint64_t beginAt;
-
-  void flushDone();
+  void flushDone(uint64_t);
 
  public:
-  Flush(ObjectData &, Subsystem *, ControllerData *);
-  ~Flush();
+  Flush(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

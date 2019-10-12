@@ -20,28 +20,15 @@ class Write : public Command {
   Event writeDoneEvent;
   Event dmaCompleteEvent;
 
-  uint64_t size;
-  uint8_t *buffer;
-
-  uint64_t slpn;
-  uint64_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
-
-  uint64_t _slba;
-  uint16_t _nlb;
-
-  uint64_t beginAt;
-
-  void dmaInitDone();
-  void writeDone();
-  void dmaComplete();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
+  void writeDone(uint64_t);
 
  public:
-  Write(ObjectData &, Subsystem *, ControllerData *);
-  ~Write();
+  Write(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

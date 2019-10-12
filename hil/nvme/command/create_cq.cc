@@ -11,24 +11,21 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-CreateCQ::CreateCQ(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {
-  eventCreated = createEvent([this](uint64_t) { createDone(); },
-                             "HIL::NVMe::CreateCQ::eventCreated");
+CreateCQ::CreateCQ(ObjectData &o, Subsystem *s) : Command(o, s) {
+  eventCreated =
+      createEvent([this](uint64_t, uint64_t gcid) { createDone(gcid); },
+                  "HIL::NVMe::CreateCQ::eventCreated");
 }
 
-CreateCQ::~CreateCQ() {
-  // We must delete event
-  destroyEvent(eventCreated);
+void CreateCQ::createDone(uint64_t gcid) {
+  auto tag = findTag(gcid);
+
+  subsystem->complete(tag);
 }
 
-void CreateCQ::createDone() {
-  data.subsystem->complete(this);
-}
-
-void CreateCQ::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void CreateCQ::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = req->getData();
 
   bool immediate = true;
 
@@ -39,19 +36,19 @@ void CreateCQ::setRequest(SQContext *req) {
   bool ien = entry->dword11 & 0x02;
   bool pc = entry->dword11 & 0x01;
 
-  debugprint_command("ADMIN   | Create I/O Completion Queue");
+  debugprint_command(tag, "ADMIN   | Create I/O Completion Queue");
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
-  uint32_t maxEntries = (data.controller->getCapabilities() & 0xFFFF) + 1;
+  uint32_t maxEntries = (tag->controller->getCapabilities() & 0xFFFF) + 1;
 
   if (size > maxEntries) {
-    cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                    CommandSpecificStatusCode::Invalid_QueueSize);
+    tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::Invalid_QueueSize);
   }
   else {
-    auto ret = data.arbitrator->createIOCQ(entry->dptr1, id, size, iv, ien, pc,
+    auto ret = tag->arbitrator->createIOCQ(entry->dptr1, id, size, iv, ien, pc,
                                            eventCreated);
 
     switch (ret) {
@@ -59,14 +56,16 @@ void CreateCQ::setRequest(SQContext *req) {
         immediate = false;
         break;
       case 1:
-        cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                        CommandSpecificStatusCode::Invalid_QueueIdentifier);
+        tag->cqc->makeStatus(
+            true, false, StatusType::CommandSpecificStatus,
+            CommandSpecificStatusCode::Invalid_QueueIdentifier);
+
         break;
     }
   }
 
   if (immediate) {
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
   }
 }
 
@@ -78,10 +77,14 @@ void CreateCQ::resetStatValues() noexcept {}
 
 void CreateCQ::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
+
+  BACKUP_EVENT(out, eventCreated);
 }
 
 void CreateCQ::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventCreated);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

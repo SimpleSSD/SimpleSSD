@@ -12,55 +12,56 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-Read::Read(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c), size(0), buffer(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::Read::dmaInitEvent");
-  dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
-                                 "HIL::NVMe::Read::dmaCompleteEvent");
-  readDoneEvent = createEvent([this](uint64_t) { readDone(); },
-                              "HIL::NVMe::Read::readDoneEvent");
+Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
+  dmaInitEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
+                  "HIL::NVMe::Read::dmaInitEvent");
+  dmaCompleteEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
+                  "HIL::NVMe::Read::dmaCompleteEvent");
+  readDoneEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { readDone(gcid); },
+                  "HIL::NVMe::Read::readDoneEvent");
 }
 
-Read::~Read() {
-  if (buffer) {
-    free(buffer);
-  }
+void Read::dmaInitDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
 
-  destroyEvent(dmaInitEvent);
-  destroyEvent(dmaCompleteEvent);
-  destroyEvent(readDoneEvent);
-}
-
-void Read::dmaInitDone() {
-  auto pHIL = data.subsystem->getHIL();
+  auto pHIL = subsystem->getHIL();
 
   std::visit(
-      [this](auto &&hil) {
-        hil->readPages(slpn, nlp, buffer + skipFront, readDoneEvent);
+      [this, tag, gcid](auto &&hil) {
+        hil->readPages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
+                       readDoneEvent, gcid);
       },
       pHIL);
 }
 
-void Read::readDone() {
-  dmaEngine->write(0, size - skipFront - skipEnd, buffer + skipFront,
-                   dmaCompleteEvent);
+void Read::readDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+
+  tag->dmaEngine->write(tag->dmaTag, 0,
+                        tag->size - tag->skipFront - tag->skipEnd,
+                        tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
 }
 
-void Read::dmaComplete() {
+void Read::dmaComplete(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+
   auto now = getTick();
 
-  debugprint_command("NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64
+  debugprint_command(tag,
+                     "NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64
                      "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                     sqc->getData()->namespaceID, _slba, _nlb, beginAt, now,
-                     now - beginAt);
+                     tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
+                     tag->beginAt, now, now - tag->beginAt);
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
-void Read::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void Read::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createIOTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
@@ -70,61 +71,71 @@ void Read::setRequest(SQContext *req) {
   // bool lr = entry->dword12 & 0x80000000;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command("NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
+  debugprint_command(tag,
+                     "NVM     | Read | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
                      nsid, slba, nlb);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   // Check namespace
-  auto nslist = data.subsystem->getNamespaceList();
+  auto nslist = subsystem->getNamespaceList();
   auto ns = nslist.find(nsid);
 
   if (UNLIKELY(ns == nslist.end())) {
-    cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
 
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
 
     return;
   }
 
   // Convert unit
-  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
+  ns->second->getConvertFunction()(slba, nlb, tag->slpn, tag->nlp,
+                                   &tag->skipFront, &tag->skipEnd);
 
   // Check range
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(slpn + nlp > range.second)) {
-    cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+  if (UNLIKELY(tag->slpn + tag->nlp > range.second)) {
+    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
 
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
 
     return;
   }
 
-  slpn += info->namespaceRange.first;
+  tag->slpn += info->namespaceRange.first;
 
   ns->second->read(nlb * info->lbaSize);
 
   // Make buffer
-  size = nlp * info->lpnSize;
-  buffer = (uint8_t *)calloc(size, 1);
+  tag->size = tag->nlp * info->lpnSize;
+  tag->buffer = (uint8_t *)calloc(tag->size, 1);
 
-  _slba = slba;
-  _nlb = nlb;
-  beginAt = getTick();
+  tag->_slba = slba;
+  tag->_nlb = nlb;
+  tag->beginAt = getTick();
 
-  createDMAEngine(size - skipFront - skipEnd, dmaInitEvent);
+  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
 
   // Handle disk image
   auto disk = ns->second->getDisk();
 
   if (disk) {
-    disk->read(slba, nlb, buffer + skipFront);
+    disk->read(slba, nlb, tag->buffer + tag->skipFront);
   }
+}
+
+void Read::completeRequest(CommandTag tag) {
+  if (((IOCommandData *)tag)->buffer) {
+    free(((IOCommandData *)tag)->buffer);
+  }
+
+  destroyTag(tag);
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -134,48 +145,19 @@ void Read::getStatValues(std::vector<double> &) noexcept {}
 void Read::resetStatValues() noexcept {}
 
 void Read::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   Command::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, slpn);
-  BACKUP_SCALAR(out, nlp);
-  BACKUP_SCALAR(out, skipFront);
-  BACKUP_SCALAR(out, skipEnd);
-  BACKUP_SCALAR(out, size);
-  BACKUP_SCALAR(out, _slba);
-  BACKUP_SCALAR(out, _nlb);
-  BACKUP_SCALAR(out, beginAt);
-
-  exist = buffer != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, buffer, size);
-  }
+  BACKUP_EVENT(out, dmaInitEvent);
+  BACKUP_EVENT(out, readDoneEvent);
+  BACKUP_EVENT(out, dmaCompleteEvent);
 }
 
 void Read::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, slpn);
-  RESTORE_SCALAR(in, nlp);
-  RESTORE_SCALAR(in, skipFront);
-  RESTORE_SCALAR(in, skipEnd);
-  RESTORE_SCALAR(in, size);
-  RESTORE_SCALAR(in, _slba);
-  RESTORE_SCALAR(in, _nlb);
-  RESTORE_SCALAR(in, beginAt);
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    buffer = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, buffer, size);
-  }
+  RESTORE_EVENT(in, dmaInitEvent);
+  RESTORE_EVENT(in, readDoneEvent);
+  RESTORE_EVENT(in, dmaCompleteEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

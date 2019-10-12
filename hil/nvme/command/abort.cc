@@ -11,23 +11,20 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-Abort::Abort(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {
-  eventAbort = createEvent([this](uint64_t) { abortDone(); },
+Abort::Abort(ObjectData &o, Subsystem *s) : Command(o, s) {
+  eventAbort = createEvent([this](uint64_t, uint64_t gcid) { abortDone(gcid); },
                            "HIL::NVMe::Abort::eventAbort");
 }
 
-Abort::~Abort() {
-  destroyEvent(eventAbort);
+void Abort::abortDone(uint64_t gcid) {
+  auto tag = findTag(gcid);
+
+  subsystem->complete(tag);
 }
 
-void Abort::abortDone() {
-  data.subsystem->complete(this);
-}
-
-void Abort::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void Abort::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = tag->sqc->getData();
 
   bool immediate = true;
 
@@ -35,12 +32,12 @@ void Abort::setRequest(SQContext *req) {
   uint16_t sqid = entry->dword10 & 0xFFFF;
   uint16_t cid = ((entry->dword10 & 0xFFFF0000) >> 16);
 
-  debugprint_command("ADMIN   | Abort");
+  debugprint_command(tag, "ADMIN   | Abort");
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
-  auto ret = data.arbitrator->abortCommand(sqid, cid, eventAbort);
+  auto ret = tag->arbitrator->abortCommand(sqid, cid, eventAbort);
 
   switch (ret) {
     case 0:
@@ -49,12 +46,13 @@ void Abort::setRequest(SQContext *req) {
     case 1:
     case 2:
       // Not aborted
-      cqc->getData()->dword0 = 1;
+      tag->cqc->getData()->dword0 = 1;
+
       break;
   }
 
   if (immediate) {
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
   }
 }
 
@@ -66,10 +64,14 @@ void Abort::resetStatValues() noexcept {}
 
 void Abort::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
+
+  BACKUP_EVENT(out, eventAbort);
 }
 
 void Abort::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventAbort);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

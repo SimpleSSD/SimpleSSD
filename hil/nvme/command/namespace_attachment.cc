@@ -11,31 +11,26 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-NamespaceAttachment::NamespaceAttachment(ObjectData &o, Subsystem *s,
-                                         ControllerData *c)
-    : Command(o, s, c), buffer(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::NamespaceAttachment::dmaInitEvent");
+NamespaceAttachment::NamespaceAttachment(ObjectData &o, Subsystem *s)
+    : Command(o, s) {
+  dmaInitEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
+                  "HIL::NVMe::NamespaceAttachment::dmaInitEvent");
   dmaCompleteEvent =
-      createEvent([this](uint64_t) { dmaComplete(); },
+      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
                   "HIL::NVMe::NamespaceAttachment::dmaCompleteEvent");
 }
 
-NamespaceAttachment::~NamespaceAttachment() {
-  if (buffer) {
-    free(buffer);
-  }
+void NamespaceAttachment::dmaInitDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
 
-  destroyEvent(dmaInitEvent);
-  destroyEvent(dmaCompleteEvent);
+  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer, dmaCompleteEvent,
+                       gcid);
 }
 
-void NamespaceAttachment::dmaInitDone() {
-  dmaEngine->read(0, size, buffer, dmaCompleteEvent);
-}
-
-void NamespaceAttachment::dmaComplete() {
-  auto entry = sqc->getData();
+void NamespaceAttachment::dmaComplete(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+  auto entry = tag->sqc->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
@@ -44,13 +39,13 @@ void NamespaceAttachment::dmaComplete() {
   // Read controller list
   bool bad = false;
 
-  uint16_t count = *(uint16_t *)buffer;
+  uint16_t count = *(uint16_t *)tag->buffer;
   std::vector<uint16_t> list;
 
   list.resize(count);
 
   for (uint16_t i = 1; i <= count; i++) {
-    list.at(i - 1) = *(uint16_t *)(buffer + i * 2);
+    list.at(i - 1) = *(uint16_t *)(tag->buffer + i * 2);
 
     if (i > 1 && list.at(i - 2) >= list.at(i - 1)) {
       bad = true;
@@ -59,8 +54,8 @@ void NamespaceAttachment::dmaComplete() {
   }
 
   if (UNLIKELY(bad)) {
-    cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                    CommandSpecificStatusCode::Invalid_ControllerList);
+    tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::Invalid_ControllerList);
   }
   else {
     uint8_t ret = 0;
@@ -69,40 +64,41 @@ void NamespaceAttachment::dmaComplete() {
     for (auto &iter : list) {
       if (sel == 0) {
         // Attach
-        ret = data.subsystem->attachNamespace(iter, nsid);
+        ret = subsystem->attachNamespace(iter, nsid);
       }
       else {
         // Detach
-        ret = data.subsystem->detachNamespace(iter, nsid);
+        ret = subsystem->detachNamespace(iter, nsid);
       }
 
       if (ret == 1) {
-        cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                        CommandSpecificStatusCode::Invalid_ControllerList);
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::Invalid_ControllerList);
 
         break;
       }
       else if (ret == 2) {
-        cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                        GenericCommandStatusCode::Invalid_Field);
+        tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
 
         break;
       }
       else if (ret == 3) {
-        cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                        CommandSpecificStatusCode::NamespaceAlreadyAttached);
+        tag->cqc->makeStatus(
+            false, false, StatusType::CommandSpecificStatus,
+            CommandSpecificStatusCode::NamespaceAlreadyAttached);
 
         break;
       }
       else if (ret == 4) {
-        cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                        CommandSpecificStatusCode::NamespaceIsPrivate);
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::NamespaceIsPrivate);
 
         break;
       }
       else if (ret == 5) {
-        cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                        CommandSpecificStatusCode::NamespaceNotAttached);
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::NamespaceNotAttached);
 
         break;
       }
@@ -112,46 +108,54 @@ void NamespaceAttachment::dmaComplete() {
     if (LIKELY(ret == 0)) {
       for (auto &iter : list) {
         if (sel == 0) {
-          data.subsystem->attachNamespace(iter, nsid, false);
+          subsystem->attachNamespace(iter, nsid, false);
         }
         else {
-          data.subsystem->detachNamespace(iter, nsid, false);
+          subsystem->detachNamespace(iter, nsid, false);
         }
       }
     }
   }
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
-void NamespaceAttachment::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void NamespaceAttachment::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createIOTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
   uint8_t sel = entry->dword10 & 0x0F;
 
-  debugprint_command("ADMIN   | Namespace Attachment | Sel %u | NSID %u", sel,
-                     nsid);
+  debugprint_command(tag, "ADMIN   | Namespace Attachment | Sel %u | NSID %u",
+                     sel, nsid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   if (UNLIKELY(sel != 0 && sel != 1)) {
-    cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+    tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
 
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
 
     return;
   }
 
   // Make buffer
-  buffer = (uint8_t *)calloc(size, 1);
+  tag->buffer = (uint8_t *)calloc(4096, 1);
 
   // Make DMA engine
-  createDMAEngine(size, dmaInitEvent);
+  tag->createDMAEngine(4096, dmaInitEvent);
+}
+
+void NamespaceAttachment::completeRequest(CommandTag tag) {
+  if (((IOCommandData *)tag)->buffer) {
+    free(((IOCommandData *)tag)->buffer);
+  }
+
+  destroyTag(tag);
 }
 
 void NamespaceAttachment::getStatList(std::vector<Stat> &,
@@ -162,30 +166,17 @@ void NamespaceAttachment::getStatValues(std::vector<double> &) noexcept {}
 void NamespaceAttachment::resetStatValues() noexcept {}
 
 void NamespaceAttachment::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   Command::createCheckpoint(out);
 
-  exist = buffer != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, buffer, size);
-  }
+  BACKUP_EVENT(out, dmaInitEvent);
+  BACKUP_EVENT(out, dmaCompleteEvent);
 }
 
 void NamespaceAttachment::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    buffer = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, buffer, size);
-  }
+  RESTORE_EVENT(in, dmaInitEvent);
+  RESTORE_EVENT(in, dmaCompleteEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -11,65 +11,71 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-Flush::Flush(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {
-  flushDoneEvent = createEvent([this](uint64_t) { flushDone(); },
-                               "HIL::NVMe::Flush::readDoneEvent");
+Flush::Flush(ObjectData &o, Subsystem *s) : Command(o, s) {
+  flushDoneEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { flushDone(gcid); },
+                  "HIL::NVMe::Flush::readDoneEvent");
 }
 
 Flush::~Flush() {
   destroyEvent(flushDoneEvent);
 }
 
-void Flush::flushDone() {
+void Flush::flushDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
   auto now = getTick();
 
-  debugprint_command("NVM     | Flush | NSID %u | %" PRIu64 " - %" PRIu64
-                     " (%" PRIu64 ")",
-                     sqc->getData()->namespaceID, beginAt, now, now - beginAt);
+  debugprint_command(
+      tag,
+      "NVM     | Flush | NSID %u | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+      tag->sqc->getData()->namespaceID, tag->beginAt, now, now - tag->beginAt);
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
-void Flush::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void Flush::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createIOTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
 
-  debugprint_command("NVM     | Flush | NSID %u", nsid);
+  debugprint_command(tag, "NVM     | Flush | NSID %u", nsid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
+  tag->beginAt = getTick();
 
   if (nsid == NSID_ALL) {
-    auto last = data.subsystem->getTotalPages();
-    auto pHIL = data.subsystem->getHIL();
+    auto last = subsystem->getTotalPages();
+    auto pHIL = subsystem->getHIL();
 
     std::visit(
-        [this, last](auto &&hil) { hil->flushCache(0, last, flushDoneEvent); },
+        [this, tag, last](auto &&hil) {
+          hil->flushCache(0, last, flushDoneEvent, tag->getGCID());
+        },
         pHIL);
   }
   else {
-    auto nslist = data.subsystem->getNamespaceList();
+    auto nslist = subsystem->getNamespaceList();
     auto ns = nslist.find(nsid);
 
     if (UNLIKELY(ns == nslist.end())) {
-      cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                      GenericCommandStatusCode::Invalid_Field);
+      tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                           GenericCommandStatusCode::Invalid_Field);
 
-      data.subsystem->complete(this);
+      subsystem->complete(tag);
 
       return;
     }
 
     auto range = ns->second->getInfo()->namespaceRange;
-    auto pHIL = data.subsystem->getHIL();
+    auto pHIL = subsystem->getHIL();
 
     std::visit(
-        [this, range](auto &&hil) {
-          hil->flushCache(range.first, range.second, flushDoneEvent);
+        [this, range, tag](auto &&hil) {
+          hil->flushCache(range.first, range.second, flushDoneEvent,
+                          tag->getGCID());
         },
         pHIL);
   }
@@ -84,13 +90,13 @@ void Flush::resetStatValues() noexcept {}
 void Flush::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, beginAt);
+  BACKUP_EVENT(out, flushDoneEvent);
 }
 
 void Flush::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, beginAt);
+  RESTORE_EVENT(in, flushDoneEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

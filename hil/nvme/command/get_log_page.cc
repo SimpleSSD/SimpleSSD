@@ -11,35 +11,32 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-GetLogPage::GetLogPage(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c), size(0), buffer(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::GetLogPage::dmaInitEvent");
-  dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
-                                 "HIL::NVMe::GetLogPage::dmaCompleteEvent");
+GetLogPage::GetLogPage(ObjectData &o, Subsystem *s) : Command(o, s) {
+  dmaInitEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
+                  "HIL::NVMe::GetLogPage::dmaInitEvent");
+  dmaCompleteEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
+                  "HIL::NVMe::GetLogPage::dmaCompleteEvent");
 }
 
-GetLogPage::~GetLogPage() {
-  if (buffer) {
-    free(buffer);
-  }
+void GetLogPage::dmaInitDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
 
-  destroyEvent(dmaInitEvent);
-  destroyEvent(dmaCompleteEvent);
-}
-
-void GetLogPage::dmaInitDone() {
   // Write buffer to host
-  dmaEngine->write(0, size, buffer, dmaCompleteEvent);
+  tag->dmaEngine->write(tag->dmaTag, 0, tag->size, tag->buffer,
+                        dmaCompleteEvent, gcid);
 }
 
-void GetLogPage::dmaComplete() {
-  data.subsystem->complete(this);
+void GetLogPage::dmaComplete(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+
+  subsystem->complete(tag);
 }
 
-void GetLogPage::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createIOTag(cdata, req);
+  auto entry = req->getData();
 
   bool immediate = false;
 
@@ -56,55 +53,64 @@ void GetLogPage::setRequest(SQContext *req) {
   uint8_t uuid = entry->dword14 & 0x7F;
 
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
-  size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
+  tag->size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
 
   debugprint_command(
-      "ADMIN   | Get Log Page | Log %d | Size %d | NSID %u | UUID %u", lid,
-      size, nsid, uuid);
+      tag, "ADMIN   | Get Log Page | Log %d | Size %d | NSID %u | UUID %u", lid,
+      tag->size, nsid, uuid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   // Make buffer
-  buffer = (uint8_t *)calloc(size, 1);
+  tag->buffer = (uint8_t *)calloc(tag->size, 1);
 
   switch ((LogPageID)lid) {
     case LogPageID::SMARTInformation: {
-      auto health = data.subsystem->getHealth(nsid);
+      auto health = subsystem->getHealth(nsid);
 
       if (LIKELY(health && offset <= 0x1FC)) {
-        size = MIN(size, 0x200 - offset);  // At least 4 bytes
+        tag->size = MIN(tag->size, 0x200 - offset);  // At least 4 bytes
 
-        memcpy(buffer, health->data + offset, size);
+        memcpy(tag->buffer, health->data + offset, tag->size);
       }
       else {
         immediate = true;
 
         // No such namespace
-        cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                        GenericCommandStatusCode::Invalid_Field);
+        tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
       }
     } break;
     case LogPageID::ChangedNamespaceList:
-      data.controller->getLogPage()->cnl.makeResponse(offset, size, buffer);
+      tag->controller->getLogPage()->cnl.makeResponse(offset, tag->size,
+                                                      tag->buffer);
 
       break;
     default:
       immediate = true;
 
-      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::Invalid_LogPage);
+      tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                           CommandSpecificStatusCode::Invalid_LogPage);
 
       break;
   }
 
   if (immediate) {
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
   }
   else {
     // Data is ready
-    createDMAEngine(size, dmaInitEvent);
+    tag->createDMAEngine(tag->size, dmaInitEvent);
   }
+}
+
+void GetLogPage::completeRequest(CommandTag tag) {
+  if (((IOCommandData *)tag)->buffer) {
+    free(((IOCommandData *)tag)->buffer);
+  }
+
+  destroyTag(tag);
 }
 
 void GetLogPage::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -114,18 +120,11 @@ void GetLogPage::getStatValues(std::vector<double> &) noexcept {}
 void GetLogPage::resetStatValues() noexcept {}
 
 void GetLogPage::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
 
   Command::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, size);
-
-  exist = buffer != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, buffer, size);
-  }
+  BACKUP_EVENT(out, dmaInitEvent);
+  BACKUP_EVENT(out, dmaCompleteEvent);
 }
 
 void GetLogPage::restoreCheckpoint(std::istream &in) noexcept {
@@ -133,15 +132,8 @@ void GetLogPage::restoreCheckpoint(std::istream &in) noexcept {
 
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, size);
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    buffer = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, buffer, size);
-  }
+  RESTORE_EVENT(in, dmaInitEvent);
+  RESTORE_EVENT(in, dmaCompleteEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

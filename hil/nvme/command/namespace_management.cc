@@ -11,108 +11,113 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-NamespaceManagement::NamespaceManagement(ObjectData &o, Subsystem *s,
-                                         ControllerData *c)
-    : Command(o, s, c), buffer(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::NamespaceManagement::dmaInitEvent");
+NamespaceManagement::NamespaceManagement(ObjectData &o, Subsystem *s)
+    : Command(o, s) {
+  dmaInitEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
+                  "HIL::NVMe::NamespaceManagement::dmaInitEvent");
   dmaCompleteEvent =
-      createEvent([this](uint64_t) { dmaComplete(); },
+      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
                   "HIL::NVMe::NamespaceManagement::dmaCompleteEvent");
 }
 
-NamespaceManagement::~NamespaceManagement() {
-  if (buffer) {
-    free(buffer);
-  }
+void NamespaceManagement::dmaComplete(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
 
-  destroyEvent(dmaInitEvent);
-  destroyEvent(dmaCompleteEvent);
-}
-
-void NamespaceManagement::dmaComplete() {
   // Make namespace information
   NamespaceInformation info;
 
-  info.size = *(uint64_t *)(buffer);
-  info.capacity = *(uint64_t *)(buffer + 8);
-  info.lbaFormatIndex = buffer[26];
-  info.dataProtectionSettings = buffer[29];
-  info.namespaceSharingCapabilities = buffer[30];
-  info.anaGroupIdentifier = *(uint32_t *)(buffer + 92);
-  info.nvmSetIdentifier = *(uint16_t *)(buffer + 100);
+  info.size = *(uint64_t *)(tag->buffer);
+  info.capacity = *(uint64_t *)(tag->buffer + 8);
+  info.lbaFormatIndex = tag->buffer[26];
+  info.dataProtectionSettings = tag->buffer[29];
+  info.namespaceSharingCapabilities = tag->buffer[30];
+  info.anaGroupIdentifier = *(uint32_t *)(tag->buffer + 92);
+  info.nvmSetIdentifier = *(uint16_t *)(tag->buffer + 100);
 
   // Execute
   uint32_t nsid = NSID_NONE;
-  auto ret = data.subsystem->createNamespace(&info, nsid);
+  auto ret = subsystem->createNamespace(&info, nsid);
 
   switch (ret) {
     case 0:
-      cqc->getData()->dword0 = nsid;
+      tag->cqc->getData()->dword0 = nsid;
 
       break;
     case 1:
-      cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::Invalid_Format);
+      tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                           CommandSpecificStatusCode::Invalid_Format);
 
       break;
     case 2:
-      cqc->makeStatus(
+      tag->cqc->makeStatus(
           false, false, StatusType::CommandSpecificStatus,
           CommandSpecificStatusCode::NamespaceIdentifierUnavailable);
 
       break;
     case 3:
-      cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::NamespaceInsufficientCapacity);
+      tag->cqc->makeStatus(
+          false, false, StatusType::CommandSpecificStatus,
+          CommandSpecificStatusCode::NamespaceInsufficientCapacity);
 
       break;
   }
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
-void NamespaceManagement::dmaInitDone() {
-  dmaEngine->read(0, size, buffer, dmaCompleteEvent);
+void NamespaceManagement::dmaInitDone(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+
+  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer, dmaCompleteEvent,
+                       gcid);
 }
 
-void NamespaceManagement::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createIOTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
   uint8_t sel = entry->dword10 & 0x0F;
 
-  debugprint_command("ADMIN   | Namespace Management | Sel %u | NSID %u", sel,
-                     nsid);
+  debugprint_command(tag, "ADMIN   | Namespace Management | Sel %u | NSID %u",
+                     sel, nsid);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   if (sel == 0) {
     // Make buffer
-    buffer = (uint8_t *)calloc(size, 1);
+    tag->buffer = (uint8_t *)calloc(4096, 1);
 
     // Make DMA engine
-    createDMAEngine(size, dmaInitEvent);
+    tag->createDMAEngine(4096, dmaInitEvent);
 
     return;
   }
   else if (sel == 1) {
-    auto ret = data.subsystem->destroyNamespace(nsid);
+    auto ret = subsystem->destroyNamespace(nsid);
 
     if (ret == 4) {
-      cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                      GenericCommandStatusCode::Invalid_Field);
+      tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                           GenericCommandStatusCode::Invalid_Field);
     }
   }
   else {
-    cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+    tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
   }
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
+}
+
+void NamespaceManagement::completeRequest(CommandTag tag) {
+  if (((IOCommandData *)tag)->buffer) {
+    free(((IOCommandData *)tag)->buffer);
+  }
+
+  destroyTag(tag);
 }
 
 void NamespaceManagement::getStatList(std::vector<Stat> &,
@@ -123,30 +128,17 @@ void NamespaceManagement::getStatValues(std::vector<double> &) noexcept {}
 void NamespaceManagement::resetStatValues() noexcept {}
 
 void NamespaceManagement::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   Command::createCheckpoint(out);
 
-  exist = buffer != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, buffer, size);
-  }
+  BACKUP_EVENT(out, dmaInitEvent);
+  BACKUP_EVENT(out, dmaCompleteEvent);
 }
 
 void NamespaceManagement::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    buffer = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, buffer, size);
-  }
+  RESTORE_EVENT(in, dmaInitEvent);
+  RESTORE_EVENT(in, dmaCompleteEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

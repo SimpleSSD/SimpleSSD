@@ -11,76 +11,70 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-Compare::Compare(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c),
-      complete(0),
-      size(0),
-      bufferHost(nullptr),
-      bufferNVM(nullptr) {
-  dmaInitEvent = createEvent([this](uint64_t) { dmaInitDone(); },
-                             "HIL::NVMe::Compare::dmaInitEvent");
-  dmaCompleteEvent = createEvent([this](uint64_t) { dmaComplete(); },
-                                 "HIL::NVMe::Compare::dmaCompleteEvent");
-  readNVMDoneEvent = createEvent([this](uint64_t) { readNVMDone(); },
-                                 "HIL::NVMe::Compare::readDoneEvent");
+Compare::Compare(ObjectData &o, Subsystem *s) : Command(o, s) {
+  dmaInitEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
+                  "HIL::NVMe::Compare::dmaInitEvent");
+  dmaCompleteEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
+                  "HIL::NVMe::Compare::dmaCompleteEvent");
+  readNVMDoneEvent =
+      createEvent([this](uint64_t, uint64_t gcid) { readNVMDone(gcid); },
+                  "HIL::NVMe::Compare::readDoneEvent");
 }
 
-Compare::~Compare() {
-  if (bufferHost) {
-    free(bufferHost);
-  }
-  if (bufferNVM) {
-    free(bufferNVM);
-  }
+void Compare::dmaInitDone(uint64_t gcid) {
+  auto tag = findCompareTag(gcid);
 
-  destroyEvent(dmaInitEvent);
-  destroyEvent(dmaCompleteEvent);
-  destroyEvent(readNVMDoneEvent);
+  tag->dmaEngine->read(tag->dmaTag, 0,
+                       tag->size - tag->skipFront - tag->skipEnd,
+                       tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
 }
 
-void Compare::dmaInitDone() {
-  dmaEngine->read(0, size - skipFront - skipEnd, bufferHost + skipFront,
-                  dmaCompleteEvent);
-}
+void Compare::dmaComplete(uint64_t gcid) {
+  auto tag = findCompareTag(gcid);
 
-void Compare::dmaComplete() {
-  complete |= 0x01;
+  tag->complete |= 0x01;
 
-  if (complete == 0x03) {
-    compare();
+  if (tag->complete == 0x03) {
+    compare(tag);
   }
 }
 
-void Compare::readNVMDone() {
-  complete |= 0x02;
+void Compare::readNVMDone(uint64_t gcid) {
+  auto tag = findCompareTag(gcid);
 
-  if (complete == 0x03) {
-    compare();
+  tag->complete |= 0x02;
+
+  if (tag->complete == 0x03) {
+    compare(tag);
   }
 }
 
-void Compare::compare() {
+void Compare::compare(CompareCommandData *tag) {
   auto now = getTick();
 
   // Compare contents
-  bool same = memcmp(bufferHost, bufferNVM, size) == 0;
+  bool same = memcmp(tag->buffer, tag->subBuffer, tag->size) == 0;
 
   if (!same) {
-    cqc->makeStatus(false, false, StatusType::MediaAndDataIntegrityErrors,
-                    MediaAndDataIntegrityErrorCode::CompareFailure);
+    tag->cqc->makeStatus(false, false, StatusType::MediaAndDataIntegrityErrors,
+                         MediaAndDataIntegrityErrorCode::CompareFailure);
   }
 
-  debugprint_command("NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64
+  debugprint_command(tag,
+                     "NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64
                      "h | %s | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                     sqc->getData()->namespaceID, _slba, _nlb,
-                     same ? "Success" : "Fail", beginAt, now, now - beginAt);
+                     tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
+                     same ? "Success" : "Fail", tag->beginAt, now,
+                     now - tag->beginAt);
 
-  data.subsystem->complete(this);
+  subsystem->complete(tag);
 }
 
-void Compare::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void Compare::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createCompareTag(cdata, req);
+  auto entry = req->getData();
 
   // Get parameters
   uint32_t nsid = entry->namespaceID;
@@ -90,63 +84,76 @@ void Compare::setRequest(SQContext *req) {
   // bool lr = entry->dword12 & 0x80000000;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command("NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64
-                     "h",
-                     nsid, slba, nlb);
+  debugprint_command(
+      tag, "NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64 "h", nsid,
+      slba, nlb);
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
   // Check namespace
-  auto nslist = data.subsystem->getNamespaceList();
+  auto nslist = subsystem->getNamespaceList();
   auto ns = nslist.find(nsid);
 
   if (UNLIKELY(ns == nslist.end())) {
-    cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
 
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
 
     return;
   }
 
   // Convert unit
-  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
+  ns->second->getConvertFunction()(slba, nlb, tag->slpn, tag->nlp,
+                                   &tag->skipFront, &tag->skipEnd);
 
   // Check range
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(slpn + nlp > range.second)) {
-    cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                    GenericCommandStatusCode::Invalid_Field);
+  if (UNLIKELY(tag->slpn + tag->nlp > range.second)) {
+    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_Field);
 
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
 
     return;
   }
 
-  slpn += info->namespaceRange.first;
+  tag->slpn += info->namespaceRange.first;
 
   // Make buffer
-  size = nlp * info->lpnSize;
-  bufferHost = (uint8_t *)calloc(size, 1);
-  bufferNVM = (uint8_t *)calloc(size, 1);
+  tag->size = tag->nlp * info->lpnSize;
+  tag->buffer = (uint8_t *)calloc(tag->size, 1);
+  tag->subBuffer = (uint8_t *)calloc(tag->size, 1);
 
-  _slba = slba;
-  _nlb = nlb;
-  beginAt = getTick();
+  tag->_slba = slba;
+  tag->_nlb = nlb;
+  tag->beginAt = getTick();
 
-  createDMAEngine(size - skipFront - skipEnd, dmaInitEvent);
+  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
 
   // Read
-  auto pHIL = data.subsystem->getHIL();
+  auto pHIL = subsystem->getHIL();
 
   std::visit(
-      [this](auto &&hil) {
-        hil->readPages(slpn, nlp, bufferNVM + skipFront, readNVMDoneEvent);
+      [this, tag](auto &&hil) {
+        hil->readPages(tag->slpn, tag->nlp, tag->subBuffer + tag->skipFront,
+                       readNVMDoneEvent);
       },
       pHIL);
+}
+
+void Compare::completeRequest(CommandTag tag) {
+  if (((CompareCommandData *)tag)->buffer) {
+    free(((CompareCommandData *)tag)->buffer);
+  }
+  if (((CompareCommandData *)tag)->subBuffer) {
+    free(((CompareCommandData *)tag)->subBuffer);
+  }
+
+  destroyTag(tag);
 }
 
 void Compare::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -156,65 +163,19 @@ void Compare::getStatValues(std::vector<double> &) noexcept {}
 void Compare::resetStatValues() noexcept {}
 
 void Compare::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   Command::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, complete);
-  BACKUP_SCALAR(out, slpn);
-  BACKUP_SCALAR(out, nlp);
-  BACKUP_SCALAR(out, skipFront);
-  BACKUP_SCALAR(out, skipEnd);
-  BACKUP_SCALAR(out, size);
-  BACKUP_SCALAR(out, _slba);
-  BACKUP_SCALAR(out, _nlb);
-  BACKUP_SCALAR(out, beginAt);
-
-  exist = bufferHost != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, bufferHost, size);
-  }
-
-  exist = bufferNVM != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, bufferNVM, size);
-  }
+  BACKUP_EVENT(out, dmaInitEvent);
+  BACKUP_EVENT(out, dmaCompleteEvent);
+  BACKUP_EVENT(out, readNVMDoneEvent);
 }
 
 void Compare::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   Command::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, complete);
-  RESTORE_SCALAR(in, slpn);
-  RESTORE_SCALAR(in, nlp);
-  RESTORE_SCALAR(in, skipFront);
-  RESTORE_SCALAR(in, skipEnd);
-  RESTORE_SCALAR(in, size);
-  RESTORE_SCALAR(in, _slba);
-  RESTORE_SCALAR(in, _nlb);
-  RESTORE_SCALAR(in, beginAt);
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    bufferHost = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, bufferHost, size);
-  }
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    bufferNVM = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, bufferNVM, size);
-  }
+  RESTORE_EVENT(in, dmaInitEvent);
+  RESTORE_EVENT(in, dmaCompleteEvent);
+  RESTORE_EVENT(in, readNVMDoneEvent);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

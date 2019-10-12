@@ -21,22 +21,19 @@ class Identify : public Command {
   Event dmaInitEvent;
   Event dmaCompleteEvent;
 
-  const uint64_t size = 4096;
-  uint8_t *buffer;
+  void makeNamespaceStructure(IOCommandData *, uint32_t, bool = false);
+  void makeNamespaceList(IOCommandData *, uint32_t, bool = false);
+  void makeControllerStructure(IOCommandData *);
+  void makeControllerList(IOCommandData *, ControllerID, uint32_t = NSID_ALL);
 
-  void makeNamespaceStructure(uint32_t, bool = false);
-  void makeNamespaceList(uint32_t, bool = false);
-  void makeControllerStructure();
-  void makeControllerList(ControllerID, uint32_t = NSID_ALL);
-
-  void dmaInitDone();
-  void dmaComplete();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
 
  public:
-  Identify(ObjectData &, Subsystem *, ControllerData *);
-  ~Identify();
+  Identify(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

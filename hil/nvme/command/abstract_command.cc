@@ -24,7 +24,7 @@ CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
-CommandTag Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
+IOCommandData *Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
   auto ret = new IOCommandData(object, this, cdata);
 
   ret->sqc = sqc;
@@ -34,7 +34,8 @@ CommandTag Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
-CommandTag Command::createCompareTag(ControllerData *cdata, SQContext *sqc) {
+CompareCommandData *Command::createCompareTag(ControllerData *cdata,
+                                              SQContext *sqc) {
   auto ret = new CompareCommandData(object, this, cdata);
 
   ret->sqc = sqc;
@@ -51,6 +52,14 @@ CommandTag Command::findTag(uint64_t gcid) {
            "No such command is passed to this command handler.");
 
   return iter->second;
+}
+
+IOCommandData *Command::findIOTag(uint64_t gcid) {
+  return (IOCommandData *)findTag(gcid);
+}
+
+CompareCommandData *Command::findCompareTag(uint64_t gcid) {
+  return (CompareCommandData *)findTag(gcid);
 }
 
 void Command::destroyTag(CommandTag tag) {
@@ -70,6 +79,10 @@ void Command::addTagToList(CommandTag tag) {
 
   // 64bit command unique ID is unique across the SSD
   tagList.emplace(std::make_pair(key, tag));
+}
+
+void Command::completeRequest(CommandTag tag) {
+  destroyTag(tag);
 }
 
 void Command::createCheckpoint(std::ostream &out) const noexcept {

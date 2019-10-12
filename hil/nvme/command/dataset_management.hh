@@ -31,22 +31,17 @@ class DatasetManagement : public Command {
   Event trimDoneEvent;
   Event dmaCompleteEvent;
 
-  uint64_t size;
-  uint8_t *buffer;
-
-  uint64_t beginAt;
-
   std::list<std::pair<uint64_t, uint64_t>> trimList;
 
-  void dmaInitDone();
-  void dmaComplete();
-  void trimDone();
+  void dmaInitDone(uint64_t);
+  void dmaComplete(uint64_t);
+  void trimDone(uint64_t);
 
  public:
-  DatasetManagement(ObjectData &, Subsystem *, ControllerData *);
-  ~DatasetManagement();
+  DatasetManagement(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

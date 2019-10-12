@@ -11,48 +11,50 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-DeleteSQ::DeleteSQ(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {
-  eventErased = createEvent([this](uint64_t) { eraseDone(); },
-                            "HIL::NVMe::DeleteSQ::eventErased");
+DeleteSQ::DeleteSQ(ObjectData &o, Subsystem *s) : Command(o, s) {
+  eventErased =
+      createEvent([this](uint64_t, uint64_t gcid) { eraseDone(gcid); },
+                  "HIL::NVMe::DeleteSQ::eventErased");
 }
 
 DeleteSQ::~DeleteSQ() {
   destroyEvent(eventErased);
 }
 
-void DeleteSQ::eraseDone() {
-  data.subsystem->complete(this);
+void DeleteSQ::eraseDone(uint64_t gcid) {
+  auto tag = findTag(gcid);
+
+  subsystem->complete(tag);
 }
 
-void DeleteSQ::setRequest(SQContext *req) {
-  sqc = req;
-  auto entry = sqc->getData();
+void DeleteSQ::setRequest(ControllerData *cdata, SQContext *req) {
+  auto tag = createTag(cdata, req);
+  auto entry = req->getData();
 
   bool immediate = true;
 
   // Get parameters
   uint16_t id = entry->dword10 & 0xFFFF;
 
-  debugprint_command("ADMIN   | Delete I/O Submission Queue");
+  debugprint_command(tag, "ADMIN   | Delete I/O Submission Queue");
 
   // Make response
-  createResponse();
+  tag->createResponse();
 
-  auto ret = data.arbitrator->deleteIOSQ(id, eventErased);
+  auto ret = tag->arbitrator->deleteIOSQ(id, eventErased);
 
   switch (ret) {
     case 0:
       immediate = false;
       break;
     case 1:
-      cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::Invalid_QueueIdentifier);
+      tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                           CommandSpecificStatusCode::Invalid_QueueIdentifier);
       break;
   }
 
   if (immediate) {
-    data.subsystem->complete(this);
+    subsystem->complete(tag);
   }
 }
 
@@ -64,10 +66,14 @@ void DeleteSQ::resetStatValues() noexcept {}
 
 void DeleteSQ::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
+
+  BACKUP_EVENT(out, eventErased);
 }
 
 void DeleteSQ::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventErased);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
