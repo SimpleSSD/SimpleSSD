@@ -14,7 +14,7 @@
 #include <variant>
 
 #include "hil/hil.hh"
-#include "hil/nvme/command/async_event_request.hh"
+#include "hil/nvme/command/command.hh"
 #include "hil/nvme/def.hh"
 #include "hil/nvme/namespace.hh"
 #include "hil/nvme/queue_arbitrator.hh"
@@ -40,29 +40,39 @@ class Subsystem : public AbstractSubsystem {
 
   HealthInfo health;
 
-  map_list<uint64_t, Command *> ongoingCommands;
-
-  // Asynchronous Event Request
-  Event eventAEN;
-  std::vector<ControllerID> aenTo;
-  uint32_t aenData;
-
-  map_list<uint64_t, AsyncEventRequest *> aenCommands;
-
-  void invokeAEN();
-
-  // scheduleAEN function not works correctly
-  // (aenTo and aenData should be maintained in queue)
-  void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
-
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
   uint64_t allocatedLogicalPages;
 
+  // Asynchronous Event Request
+  std::vector<ControllerID> aenTo;
+
+  // Admin Command objects
+  DeleteSQ *commandDeleteSQ;
+  CreateSQ *commandCreateSQ;
+  GetLogPage *commandGetLogPage;
+  DeleteCQ *commandDeleteCQ;
+  CreateCQ *commandCreateCQ;
+  Identify *commandIdentify;
+  Abort *commandAbort;
+  SetFeature *commandSetFeature;
+  GetFeature *commandGetFeature;
+  AsyncEventRequest *commandAsyncEventRequest;
+  NamespaceManagement *commandNamespaceManagement;
+  NamespaceAttachment *commandNamespaceAttachment;
+  FormatNVM *commandFormatNVM;
+
+  // NVM Command objects
+  Flush *commandFlush;
+  Write *commandWrite;
+  Read *commandRead;
+  Compare *commandCompare;
+  DatasetManagement *commandDatasetManagement;
+
   bool _createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
   bool _destroyNamespace(uint32_t);
 
-  Command *makeCommand(ControllerData *, SQContext *);
+  bool submitCommand(ControllerData *, SQContext *);
 
  public:
   Subsystem(ObjectData &);
@@ -70,7 +80,7 @@ class Subsystem : public AbstractSubsystem {
 
   void shutdownCompleted(ControllerID);
   void triggerDispatch(ControllerData &, uint64_t);
-  void complete(Command *, bool = false);
+  void complete(CommandTag);
 
   void init() override;
 
@@ -92,7 +102,9 @@ class Subsystem : public AbstractSubsystem {
   uint8_t createNamespace(NamespaceInformation *, uint32_t &);
   uint8_t destroyNamespace(uint32_t);
 
-  uint8_t format(uint32_t, FormatOption, uint8_t, Event);
+  uint8_t format(uint32_t, FormatOption, uint8_t, Event, uint64_t);
+
+  void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

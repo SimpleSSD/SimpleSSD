@@ -40,8 +40,26 @@ Subsystem::Subsystem(ObjectData &o)
     panic("Too many physical page counts.");
   }
 
-  eventAEN = createEvent([this](uint64_t) { invokeAEN(); },
-                         "HIL::NVMe::Subsystem::eventAEN");
+  // Create commands
+  commandDeleteSQ = new DeleteSQ(object, this);
+  commandCreateSQ = new CreateSQ(object, this);
+  commandGetLogPage = new GetLogPage(object, this);
+  commandDeleteCQ = new DeleteCQ(object, this);
+  commandCreateCQ = new CreateCQ(object, this);
+  commandIdentify = new Identify(object, this);
+  commandAbort = new Abort(object, this);
+  commandSetFeature = new SetFeature(object, this);
+  commandGetFeature = new GetFeature(object, this);
+  commandAsyncEventRequest = new AsyncEventRequest(object, this);
+  commandNamespaceManagement = new NamespaceManagement(object, this);
+  commandNamespaceAttachment = new NamespaceAttachment(object, this);
+  commandFormatNVM = new FormatNVM(object, this);
+
+  commandFlush = new Flush(object, this);
+  commandWrite = new Write(object, this);
+  commandRead = new Read(object, this);
+  commandCompare = new Compare(object, this);
+  commandDatasetManagement = new DatasetManagement(object, this);
 }
 
 Subsystem::~Subsystem() {
@@ -50,6 +68,34 @@ Subsystem::~Subsystem() {
   }
 
   std::visit([](auto &&hil) { delete hil; }, pHIL);
+
+  delete commandDeleteSQ;
+  delete commandCreateSQ;
+  delete commandGetLogPage;
+  delete commandDeleteCQ;
+  delete commandCreateCQ;
+  delete commandIdentify;
+  delete commandAbort;
+  delete commandSetFeature;
+  delete commandGetFeature;
+  delete commandAsyncEventRequest;
+  delete commandNamespaceManagement;
+  delete commandNamespaceAttachment;
+  delete commandFormatNVM;
+
+  delete commandFlush;
+  delete commandWrite;
+  delete commandRead;
+  delete commandCompare;
+  delete commandDatasetManagement;
+}
+
+void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
+  for (auto &iter : aenTo) {
+    commandAsyncEventRequest->invokeAEN(iter, aet, aei, lid);
+  }
+
+  aenTo.clear();
 }
 
 bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
@@ -188,135 +234,83 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
   return false;
 }
 
-Command *Subsystem::makeCommand(ControllerData *cdata, SQContext *sqc) {
+bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
   bool isAdmin = sqc->getSQID() == 0;
   uint8_t opcode = sqc->getData()->dword0.opcode;
 
   if (isAdmin) {
     switch ((AdminCommand)opcode) {
       case AdminCommand::DeleteIOSQ:
-        return new DeleteSQ(object, this, cdata);
+        commandDeleteSQ->setRequest(cdata, sqc);
+        break;
       case AdminCommand::CreateIOSQ:
-        return new CreateSQ(object, this, cdata);
+        commandCreateSQ->setRequest(cdata, sqc);
+        break;
       case AdminCommand::GetLogPage:
-        return new GetLogPage(object, this, cdata);
+        commandGetLogPage->setRequest(cdata, sqc);
+        break;
       case AdminCommand::DeleteIOCQ:
-        return new DeleteCQ(object, this, cdata);
+        commandDeleteCQ->setRequest(cdata, sqc);
+        break;
       case AdminCommand::CreateIOCQ:
-        return new CreateCQ(object, this, cdata);
+        commandCreateCQ->setRequest(cdata, sqc);
+        break;
       case AdminCommand::Identify:
-        return new Identify(object, this, cdata);
+        commandIdentify->setRequest(cdata, sqc);
+        break;
       case AdminCommand::Abort:
-        return new Abort(object, this, cdata);
+        commandAbort->setRequest(cdata, sqc);
+        break;
       case AdminCommand::SetFeatures:
-        return new SetFeature(object, this, cdata);
+        commandSetFeature->setRequest(cdata, sqc);
+        break;
       case AdminCommand::GetFeatures:
-        return new GetFeature(object, this, cdata);
+        commandGetFeature->setRequest(cdata, sqc);
+        break;
       case AdminCommand::AsyncEventRequest:
-        return new AsyncEventRequest(object, this, cdata);
+        commandAsyncEventRequest->setRequest(cdata, sqc);
+        break;
       case AdminCommand::NamespaceManagement:
-        return new NamespaceManagement(object, this, cdata);
+        commandNamespaceManagement->setRequest(cdata, sqc);
+        break;
       case AdminCommand::NamespaceAttachment:
-        return new NamespaceAttachment(object, this, cdata);
+        commandNamespaceAttachment->setRequest(cdata, sqc);
+        break;
       case AdminCommand::FormatNVM:
-        return new FormatNVM(object, this, cdata);
+        commandFormatNVM->setRequest(cdata, sqc);
+        break;
       default:
-        return nullptr;
+        return false;
     }
   }
   else {
     switch ((NVMCommand)opcode) {
       case NVMCommand::Flush:
-        return new Flush(object, this, cdata);
-      case NVMCommand::Write:
-        return new Write(object, this, cdata);
-      case NVMCommand::Read:
-        return new Read(object, this, cdata);
-      case NVMCommand::Compare:
-        return new Compare(object, this, cdata);
-      case NVMCommand::DatasetManagement:
-        return new DatasetManagement(object, this, cdata);
-      default:
-        return nullptr;
-    }
-  }
-}
-
-void Subsystem::invokeAEN() {
-  // Get first AEN command of each controller
-  uint64_t size = aenTo.size();
-
-  std::vector<AsyncEventRequest *> commandList(size, nullptr);
-
-  // O(n^2)
-  for (uint64_t i = 0; i < size; i++) {
-    auto ctrl = aenTo.at(i);
-
-    for (auto &iter : aenCommands) {
-      uint16_t ctrlid = iter.first >> 32;
-
-      if (ctrlid == ctrl) {
-        commandList.at(i) = iter.second;
-
+        commandFlush->setRequest(cdata, sqc);
         break;
-      }
+      case NVMCommand::Write:
+        commandWrite->setRequest(cdata, sqc);
+        break;
+      case NVMCommand::Read:
+        commandRead->setRequest(cdata, sqc);
+        break;
+      case NVMCommand::Compare:
+        commandCompare->setRequest(cdata, sqc);
+        break;
+      case NVMCommand::DatasetManagement:
+        commandDatasetManagement->setRequest(cdata, sqc);
+        break;
+      default:
+        return false;
     }
   }
 
-  // For all commands
-  for (auto &iter : commandList) {
-    auto cqc = iter->getResult();
-    auto uid = iter->getUniqueID();
-
-    // Fill entry
-    cqc->getData()->dword0 = aenData;
-
-    debugprint(Log::DebugID::HIL_NVMe,
-               "CTRL %-3u | SQ %2u:%-5u | Asynchronous Event | Type %u | Info "
-               "%u | Log %u",
-               (uint16_t)(uid >> 32), (uint16_t)(uid >> 16), (uint16_t)uid,
-               aenData & 0x07, (uint8_t)(aenData >> 8),
-               (uint8_t)(aenData >> 16));
-
-    // Complete
-    complete(iter, true);
-  }
-
-  aenTo.clear();
-}
-
-void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
-  if (UNLIKELY(aenCommands.size() == 0 || aenTo.size() == 0)) {
-    return;
-  }
-
-  // Sort
-  std::sort(aenTo.begin(), aenTo.end());
-
-  // Make entry
-  aenData = (uint8_t)aet;
-  aenData = (uint16_t)aei << 8;
-  aenData = (uint32_t)lid << 16;
-
-  // Schedule
-  schedule(eventAEN);
+  return true;
 }
 
 void Subsystem::shutdownCompleted(ControllerID ctrlid) {
   // We need remove aenCommands of current controller
-  for (auto iter = aenCommands.begin(); iter != aenCommands.end();) {
-    auto command = iter->second;
-
-    if ((command->getUniqueID() >> 32) == ctrlid) {
-      // Remove this
-      iter = aenCommands.erase(iter);
-
-      delete command;
-    }
-    else {
-      ++iter;
-    }
-  }
+  commandAsyncEventRequest->clearPendingRequests(ctrlid);
 }
 
 void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
@@ -329,27 +323,12 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
       break;
     }
 
-    // Find command
-    auto command = makeCommand(&cdata, sqc);
-
     // Do command handling
-    if (command) {
-      command->setRequest(sqc);
-
-      if (UNLIKELY(sqc->getData()->dword0.opcode ==
-                   (uint8_t)AdminCommand::AsyncEventRequest)) {
-        aenCommands.push_back(command->getUniqueID(),
-                              (AsyncEventRequest *)command);
-      }
-      else {
-        ongoingCommands.push_back(command->getUniqueID(), command);
-      }
-    }
-    else {
+    if (!submitCommand(&cdata, sqc)) {
       debugprint(Log::DebugID::HIL_NVMe_Command,
                  "CTRL %-3u | SQ %2u:%-5u | Unexpected OPCODE %u",
                  cdata.controller->getControllerID(), sqc->getSQID(),
-                 sqc->getID() & 0xFFFF, sqc->getData()->dword0.opcode);
+                 sqc->getCommandID(), sqc->getData()->dword0.opcode);
 
       auto cqc = new CQContext();
 
@@ -362,24 +341,15 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
   }
 }
 
-void Subsystem::complete(Command *command, bool aen) {
-  uint64_t uid = command->getUniqueID();
+void Subsystem::complete(CommandTag command) {
+  uint64_t uid = command->getGCID();
 
   // Complete
-  auto &data = command->getCommandData();
-  data.arbitrator->complete(command->getResult());
+  auto arbitrator = command->getArbitrator();
+  arbitrator->complete(command->getResponse());
 
   // Erase
-  delete command;
-
-  if (UNLIKELY(aen)) {
-    auto iter = aenCommands.find(uid);
-    aenCommands.erase(iter);
-  }
-  else {
-    auto iter = ongoingCommands.find(uid);
-    ongoingCommands.erase(iter);
-  }
+  command->getParent()->completeRequest(command);
 }
 
 void Subsystem::init() {
@@ -591,10 +561,6 @@ uint8_t Subsystem::attachNamespace(ControllerID ctrlid, uint32_t nsid,
   aenTo.push_back(ctrlid);
   ctrl->second->controller->getLogPage()->cnl.appendList(nsid);
 
-  scheduleAEN(AsyncEventType::Notice,
-              (uint8_t)NoticeCode::NamespaceAttributeChanged,
-              LogPageID::ChangedNamespaceList);
-
   return 0;
 }
 
@@ -635,9 +601,6 @@ uint8_t Subsystem::detachNamespace(ControllerID ctrlid, uint32_t nsid,
   }
 
   aenTo.push_back(ctrlid);
-
-  scheduleAEN(AsyncEventType::Notice,
-              (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
 
   return 0;
 }
@@ -703,14 +666,11 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
     }
   }
 
-  scheduleAEN(AsyncEventType::Notice,
-              (uint8_t)NoticeCode::NamespaceAttributeChanged, LogPageID::None);
-
   return 0;
 }
 
 uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
-                          Event eid) {
+                          Event eid, uint64_t gcid) {
   // Update namespace structure
   auto ns = namespaceList.find(nsid);
 
@@ -729,9 +689,9 @@ uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
 
   // Do format
   std::visit(
-      [info, ses, eid](auto &&hil) {
+      [info, ses, eid, gcid](auto &&hil) {
         hil->formatPages(info->namespaceRange.first,
-                         info->namespaceRange.second, ses, eid);
+                         info->namespaceRange.second, ses, eid, gcid);
       },
       pHIL);
 
@@ -746,21 +706,13 @@ void Subsystem::resetStatValues() noexcept {}
 
 void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, controllerID);
-  BACKUP_SCALAR(out, aenData);
   BACKUP_SCALAR(out, logicalPageSize);
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, allocatedLogicalPages);
 
-  uint64_t size = aenTo.size();
-  BACKUP_SCALAR(out, size);
-
-  if (size) {
-    BACKUP_BLOB(out, aenTo.data(), size * sizeof(ControllerID));
-  }
-
   BACKUP_BLOB(out, health.data, 0x200);
 
-  size = controllerList.size();
+  uint64_t size = controllerList.size();
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : controllerList) {
@@ -790,51 +742,17 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, set);
     }
   }
-
-  size = ongoingCommands.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : ongoingCommands) {
-    auto entry = iter.second;
-
-    uint64_t uid = entry->getUniqueID();
-
-    // Backup unique ID only -> we can reconstruct command
-    BACKUP_SCALAR(out, uid);
-    entry->createCheckpoint(out);
-  }
-
-  size = aenCommands.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : aenCommands) {
-    auto entry = iter.second;
-
-    uint64_t uid = entry->getUniqueID();
-
-    // Backup unique ID only -> we can reconstruct command
-    BACKUP_SCALAR(out, uid);
-    entry->createCheckpoint(out);
-  }
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, controllerID);
-  RESTORE_SCALAR(in, aenData);
   RESTORE_SCALAR(in, logicalPageSize);
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, allocatedLogicalPages);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  if (size) {
-    aenTo.resize(size);
-
-    RESTORE_BLOB(in, aenTo.data(), size * sizeof(ControllerID));
-  }
-
   RESTORE_BLOB(in, health.data, 0x200);
+
+  uint64_t size;
 
   RESTORE_SCALAR(in, size);
 
@@ -884,60 +802,6 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, nsid);
       iter.first->second.emplace(nsid);
     }
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t uid;
-
-    RESTORE_SCALAR(in, uid);
-
-    // Find controller data with controller ID
-    auto data = controllerList.find(uid >> 32);
-
-    panic_if(data == controllerList.end(),
-             "Unexpected controller ID while recover.");
-
-    // Get SQContext with SQ ID | Command ID
-    auto sqc = data->second->arbitrator->getRecoveredRequest((uint32_t)uid);
-
-    panic_if(!sqc, "Invalid request ID while recover.");
-
-    // Re-construct command object
-    auto command = makeCommand(data->second, sqc);
-
-    command->restoreCheckpoint(in);
-
-    // Push to queue
-    ongoingCommands.push_back(uid, command);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t uid;
-
-    RESTORE_SCALAR(in, uid);
-
-    // Find controller data with controller ID
-    auto data = controllerList.find(uid >> 32);
-
-    panic_if(data == controllerList.end(),
-             "Unexpected controller ID while recover.");
-
-    // Get SQContext with SQ ID | Command ID
-    auto sqc = data->second->arbitrator->getRecoveredRequest((uint32_t)uid);
-
-    panic_if(!sqc, "Invalid request ID while recover.");
-
-    // Re-construct command object
-    auto command = makeCommand(data->second, sqc);
-
-    command->restoreCheckpoint(in);
-
-    // Push to queue
-    aenCommands.push_back(uid, (AsyncEventRequest *)command);
   }
 }
 

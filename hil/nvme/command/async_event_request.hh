@@ -16,18 +16,16 @@ namespace SimpleSSD::HIL::NVMe {
 
 class AsyncEventRequest : public Command {
  public:
-  AsyncEventRequest(ObjectData &o, Subsystem *s, ControllerData *c)
-      : Command(o, s, c) {}
-  ~AsyncEventRequest() {}
+  AsyncEventRequest(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *req) override {
-    sqc = req;
+  void setRequest(ControllerData *, SQContext *) override;
 
-    // Asynchronous Event Request
-    debugprint_command("ADMIN   | Asynchronous Event Request");
+  void invokeAEN(ControllerID, AsyncEventType, uint8_t, LogPageID);
+  void clearPendingRequests(ControllerID);
 
-    createResponse();
-  }
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -38,6 +38,7 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
 
   // Read controller list
   bool bad = false;
+  uint8_t ret = 0;
 
   uint16_t count = *(uint16_t *)tag->buffer;
   std::vector<uint16_t> list;
@@ -58,8 +59,6 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
                          CommandSpecificStatusCode::Invalid_ControllerList);
   }
   else {
-    uint8_t ret = 0;
-
     // Dry-run to validate all
     for (auto &iter : list) {
       if (sel == 0) {
@@ -118,6 +117,19 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
   }
 
   subsystem->complete(tag);
+
+  if (ret == 0) {
+    if (sel == 0) {
+      subsystem->scheduleAEN(AsyncEventType::Notice,
+                             (uint8_t)NoticeCode::NamespaceAttributeChanged,
+                             LogPageID::ChangedNamespaceList);
+    }
+    else {
+      subsystem->scheduleAEN(AsyncEventType::Notice,
+                             (uint8_t)NoticeCode::NamespaceAttributeChanged,
+                             LogPageID::None);
+    }
+  }
 }
 
 void NamespaceAttachment::setRequest(ControllerData *cdata, SQContext *req) {

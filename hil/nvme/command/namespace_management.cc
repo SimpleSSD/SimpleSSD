@@ -77,6 +77,8 @@ void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
   auto tag = createIOTag(cdata, req);
   auto entry = req->getData();
 
+  bool sendAEN = false;
+
   // Get parameters
   uint32_t nsid = entry->namespaceID;
   uint8_t sel = entry->dword10 & 0x0F;
@@ -103,6 +105,9 @@ void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
       tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
                            GenericCommandStatusCode::Invalid_Field);
     }
+    else {
+      sendAEN = true;
+    }
   }
   else {
     tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
@@ -110,6 +115,13 @@ void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   subsystem->complete(tag);
+
+  // Send deleted event
+  if (UNLIKELY(sendAEN)) {
+    subsystem->scheduleAEN(AsyncEventType::Notice,
+                           (uint8_t)NoticeCode::NamespaceAttributeChanged,
+                           LogPageID::None);
+  }
 }
 
 void NamespaceManagement::completeRequest(CommandTag tag) {
