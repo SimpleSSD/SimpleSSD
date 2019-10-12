@@ -28,7 +28,7 @@ Queue::Queue(ObjectData &o, DMAEngine *d)
       dmaTag(InvalidDMATag) {}
 
 Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
-             uint16_t length, uint64_t stride)
+             uint16_t length, uint64_t stride, bool pc, Event eid)
     : Object(o),
       id(qid),
       head(0),
@@ -37,7 +37,14 @@ Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
       stride(stride),
       dmaEngine(d),
       dmaTag(InvalidDMATag) {
-  dmaTag = dmaEngine->initRaw(base, (uint32_t)(size * stride));
+  if (pc) {
+    dmaTag = dmaEngine->initRaw(base, (uint32_t)(size * stride));
+
+    schedule(eid);
+  }
+  else {
+    dmaTag = dmaEngine->initFromPRP(0, base, size * stride, eid);
+  }
 }
 
 Queue::~Queue() {}
@@ -95,8 +102,12 @@ CQueue::CQueue(ObjectData &o, DMAEngine *d)
     : Queue(o, d), ien(false), phase(false), iv(0xFFFF) {}
 
 CQueue::CQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
-               uint16_t length, uint64_t stride, uint16_t iv, bool en)
-    : Queue(o, d, qid, base, length, stride), ien(en), phase(true), iv(iv) {}
+               uint16_t length, uint64_t stride, bool pc, Event eid,
+               uint16_t iv, bool en)
+    : Queue(o, d, qid, base, length, stride, pc, eid),
+      ien(en),
+      phase(true),
+      iv(iv) {}
 
 void CQueue::setData(CQEntry *entry, Event eid) {
   if (entry) {
@@ -161,9 +172,11 @@ SQueue::SQueue(ObjectData &o, DMAEngine *d)
     : Queue(o, d), cqID(0xFFFF), priority(QueuePriority::Low) {}
 
 SQueue::SQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
-               uint16_t length, uint64_t stride, uint16_t cqid,
-               QueuePriority pri)
-    : Queue(o, d, qid, base, length, stride), cqID(cqid), priority(pri) {}
+               uint16_t length, uint64_t stride, bool pc, Event eid,
+               uint16_t cqid, QueuePriority pri)
+    : Queue(o, d, qid, base, length, stride, pc, eid),
+      cqID(cqid),
+      priority(pri) {}
 
 uint16_t SQueue::getCQID() {
   return cqID;

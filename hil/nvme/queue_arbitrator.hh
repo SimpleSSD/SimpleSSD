@@ -197,8 +197,8 @@ class Arbitrator : public Object {
   void ringSQ(uint16_t, uint16_t);
   void ringCQ(uint16_t, uint16_t);
   void reserveShutdown();
-  void createAdminSQ(uint64_t, uint16_t, Event);
-  void createAdminCQ(uint64_t, uint16_t, Event);
+  void createAdminSQ(uint64_t, uint16_t);
+  void createAdminCQ(uint64_t, uint16_t);
 
   // Command
   ArbitrationData *getArbitrationData();

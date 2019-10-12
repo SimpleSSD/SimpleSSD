@@ -241,34 +241,24 @@ void Arbitrator::reserveShutdown() {
   shutdownReserved = true;
 }
 
-void Arbitrator::createAdminCQ(uint64_t base, uint16_t size, Event eid) {
-  auto dmaEngine =
-      new PRPEngine(object, controller->dma, controller->memoryPageSize);
-
-  dmaEngine->initQueue(base, size * 16, true, eid);
-
+void Arbitrator::createAdminCQ(uint64_t base, uint16_t size) {
   if (cqList[0]) {
     delete cqList[0];
   }
 
-  cqList[0] = new CQueue(object, 0, size, 0, true);
-  cqList[0]->setBase(dmaEngine, 16);  // Always 16 bytes stride
+  cqList[0] = new CQueue(object, controller->dmaEngine, 0, base, size, 16, true,
+                         InvalidEventID, 0, true);
 
   debugprint_ctrl("CQ 0    | CREATE | Entry size %d", size);
 }
 
-void Arbitrator::createAdminSQ(uint64_t base, uint16_t size, Event eid) {
-  auto dmaEngine =
-      new PRPEngine(object, controller->dma, controller->memoryPageSize);
-
-  dmaEngine->initQueue(base, size * 64, true, eid);
-
+void Arbitrator::createAdminSQ(uint64_t base, uint16_t size) {
   if (sqList[0]) {
     delete sqList[0];
   }
 
-  sqList[0] = new SQueue(object, 0, size, 0, QueuePriority::Urgent);
-  sqList[0]->setBase(dmaEngine, 64);  // Always 64 bytes stride
+  sqList[0] = new SQueue(object, controller->dmaEngine, 0, base, size, 64, true,
+                         InvalidEventID, 0, QueuePriority::Urgent);
 
   debugprint_ctrl("SQ 0    | CREATE | Entry size %d", size);
 }
@@ -320,17 +310,12 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto sq = new SQueue(object, id, size, cqid, (QueuePriority)pri);
+  auto sq = new SQueue(object, controller->dmaEngine, id, base, size,
+                       sqEntrySize, pc, eid, cqid, (QueuePriority)pri);
 
   panic_if(!sq, "Failed to allocate completion queue.");
 
   sqList[id] = sq;
-
-  auto dma = new PRPEngine(object, controller->dma, controller->memoryPageSize);
-
-  dma->initQueue(base, size * sqEntrySize, pc, eid);
-
-  sq->setBase(dma, sqEntrySize);
 
   debugprint_ctrl(
       "SQ %-4d | CREATE | Size %u | CQ %u | Priority %u | Set ID %u", id, size,
@@ -349,17 +334,12 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto cq = new CQueue(object, id, size, iv, ien);
+  auto cq = new CQueue(object, controller->dmaEngine, id, base, size,
+                       sqEntrySize, pc, eid, iv, ien);
 
   panic_if(!cq, "Failed to allocate completion queue.");
 
   cqList[id] = cq;
-
-  auto dma = new PRPEngine(object, controller->dma, controller->memoryPageSize);
-
-  dma->initQueue(base, size * cqEntrySize, pc, eid);
-
-  cq->setBase(dma, cqEntrySize);
 
   debugprint_ctrl("CQ %-4d | CREATE | Size %u | IV %u", id, size, iv);
 
@@ -935,9 +915,8 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp);
 
     if (tmp) {
-      cqList[i] = new CQueue(object);
-      cqList[i]->restoreCheckpoint(in, controller->dma,
-                                   controller->memoryPageSize);
+      cqList[i] = new CQueue(object, controller->dmaEngine);
+      cqList[i]->restoreCheckpoint(in);
     }
   }
 
@@ -945,9 +924,8 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp);
 
     if (tmp) {
-      sqList[i] = new SQueue(object);
-      sqList[i]->restoreCheckpoint(in, controller->dma,
-                                   controller->memoryPageSize);
+      sqList[i] = new SQueue(object, controller->dmaEngine);
+      sqList[i]->restoreCheckpoint(in);
     }
   }
 

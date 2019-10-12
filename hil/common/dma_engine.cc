@@ -310,7 +310,11 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   ret->requestedSize = size;
 
   // Determine PRP1 and PRP2
-  if (ret->requestedSize <= pageSize) {
+  if (prp1 == 0) {
+    // This is non-continuous NVMe queue
+    mode = 3;
+  }
+  else if (ret->requestedSize <= pageSize) {
     if (ret->requestedSize <= prp1Size) {
       mode = 0;
     }
@@ -348,12 +352,13 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
 
       break;
     case 2:
-      immediate = false;
-
       // PRP1 is PRP pointer, PRP2 is PRP list
       ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
 
+      /* fallthrough */
+    case 3:
       // Prepare for read
+      immediate = false;
       ret->eid = eid;
       ret->handledSize = prp1Size;
 
