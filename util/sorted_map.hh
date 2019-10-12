@@ -11,7 +11,7 @@
 #define __SIMPLESSD_UTIL_SORTED_MAP_HH__
 
 #include <functional>
-#include <map>
+#include <unordered_map>
 
 namespace SimpleSSD {
 
@@ -106,7 +106,7 @@ class map_list {
   };
 
  protected:
-  std::map<key_type, list_item *> map;
+  std::unordered_map<key_type, list_item *> map;
 
   list_item *listHead;
   list_item *listTail;

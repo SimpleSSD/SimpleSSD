@@ -152,7 +152,7 @@ class Scheduler : public Object {
             postFunction por, postFunction pow, backupFunction b,
             restoreFunction r)
       : Object(o),
-        readScheduler(o, prefix + "::readScheduer", pr, por, b, r),
+        readScheduler(o, prefix + "::readScheduler", pr, por, b, r),
         writeScheduler(o, prefix + "::writeScheduler", pw, pow, b, r) {}
 
   void read(Type data) { readScheduler.enqueue(data); }
