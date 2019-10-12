@@ -117,7 +117,7 @@ void DMAEngine::dmaDone() {
   if (tag->counter == 0) {
     pendingTagList.pop_front();
 
-    schedule(tag->eid, tag->data);
+    schedule(tag->eid, 0ull, tag->data);
   }
 }
 
