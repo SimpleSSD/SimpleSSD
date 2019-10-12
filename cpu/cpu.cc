@@ -559,7 +559,7 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func,
   core->eventQueue.insert(iter, eid);
 }
 
-void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {
+void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
   Function func;
 
   func.cycles = delay;

@@ -63,8 +63,10 @@ class HIL : public Object {
    * \param[in]  length   # of logical pages to read
    * \param[out] buffer   Array for retrived data (length * logical page size)
    * \param[in]  eid      Completion event
+   * \param[in]  data     Data for event
    */
-  void readPages(LPN offset, LPN length, uint8_t *buffer, Event eid);
+  void readPages(LPN offset, LPN length, uint8_t *buffer, Event eid,
+                 uint64_t data = 0);
 
   /**
    * \brief Write logical pages
@@ -78,9 +80,11 @@ class HIL : public Object {
    * \param[in] buffer    Array for data to write (length * logical page size)
    * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
    * \param[in] eid       Completion event
+   * \param[in] data      Data for event
    */
   void writePages(LPN offset, LPN length, uint8_t *buffer,
-                  std::pair<uint32_t, uint32_t> unwritten, Event eid);
+                  std::pair<uint32_t, uint32_t> unwritten, Event eid,
+                  uint64_t data = 0);
 
   /**
    * \brief Flush cache
@@ -91,8 +95,9 @@ class HIL : public Object {
    * \param[in] offset  Offset in LPN to flush
    * \param[in] length  # of logical pages to flush
    * \param[in] eid     Completion event
+   * \param[in] data    Data for event
    */
-  void flushCache(LPN offset, LPN length, Event eid);
+  void flushCache(LPN offset, LPN length, Event eid, uint64_t data = 0);
 
   /**
    * \brief Trim logical pages
@@ -100,8 +105,9 @@ class HIL : public Object {
    * \param[in] offset  Offset in LPN to trim
    * \param[in] length  # of logical pages to trim
    * \param[in] eid     Completion event
+   * \param[in] data    Data for event
    */
-  void trimPages(LPN offset, LPN length, Event eid);
+  void trimPages(LPN offset, LPN length, Event eid, uint64_t data = 0);
 
   /**
    * \brief Format logical pages
@@ -113,8 +119,10 @@ class HIL : public Object {
    * \param[in] length  # of logical pages to format
    * \param[in] option  Format method to use
    * \param[in] eid     Completion event
+   * \param[in] data    Data for event
    */
-  void formatPages(LPN offset, LPN length, FormatOption option, Event eid);
+  void formatPages(LPN offset, LPN length, FormatOption option, Event eid,
+                   uint64_t data = 0);
 
   /**
    * \brief Get logical pages contains data

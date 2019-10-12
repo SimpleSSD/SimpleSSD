@@ -21,37 +21,40 @@ HIL<LPN, T>::~HIL() {}
 
 HIL_TEMPLATE
 void HIL<LPN, T>::readPages(LPN /* offset */, LPN /* length */,
-                            uint8_t * /* buffer */, Event eid) {
+                            uint8_t * /* buffer */, Event, uint64_t dataeid) {
   // TODO: bypass command to ICL
-  schedule(eid, 1000000);
+  schedule(eid, 1000000, data);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::writePages(LPN /* offset */, LPN /* length */,
                              uint8_t * /* buffer */,
                              std::pair<uint32_t, uint32_t> /* unwritten */,
-                             Event eid) {
+                             Event eid, uint64_t data) {
   // TODO: bypass command to ICL
-  schedule(eid, 1000000);
+  schedule(eid, 1000000, data);
 }
 
 HIL_TEMPLATE
-void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */, Event eid) {
+void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */, Event eid,
+                             uint64_t data) {
   // TODO: bypass command to ICL
-  schedule(eid, 1000000);
+  schedule(eid, 1000000, data);
 }
 
 HIL_TEMPLATE
-void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */, Event eid) {
+void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */, Event eid,
+                            uint64_t data) {
   // TODO: bypass command to ICL
-  schedule(eid, 1000000);
+  schedule(eid, 1000000, data);
 }
 
 HIL_TEMPLATE
 void HIL<LPN, T>::formatPages(LPN /* offset */, LPN /* length */,
-                              FormatOption /* option */, Event eid) {
+                              FormatOption /* option */, Event eid,
+                              uint64_t data) {
   // TODO: bypass command to ICL
-  schedule(eid, 1000000);
+  schedule(eid, 1000000, data);
 }
 
 HIL_TEMPLATE

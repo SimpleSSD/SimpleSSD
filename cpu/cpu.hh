@@ -179,10 +179,10 @@ class CPU {
    * execution - not important or hardware event.
    *
    * \param[in] eid   Event ID to schedule
-   * \param[in] data  Data to pass (this should be value, not pointer)
    * \param[in] delay Ticks to delay
+   * \param[in] data  Data to pass (this should be value, not pointer)
    */
-  void schedule(Event eid, uint64_t data = 0, uint64_t delay = 0) noexcept;
+  void schedule(Event eid, uint64_t delay = 0, uint64_t data = 0) noexcept;
 
   /**
    * \brief Deschedule event
