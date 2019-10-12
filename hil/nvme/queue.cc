@@ -17,29 +17,30 @@ CQEntry::CQEntry() {
   memset(data, 0, 16);
 }
 
-Queue::Queue(ObjectData &o)
+Queue::Queue(ObjectData &o, DMAEngine *d)
     : Object(o),
-      id(0xFFFF),
+      id(0),
       head(0),
       tail(0),
       size(0),
       stride(0),
-      base(nullptr) {}
+      dmaEngine(d),
+      dmaTag(InvalidDMATag) {}
 
-Queue::Queue(ObjectData &o, uint16_t qid, uint16_t length)
+Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
+             uint16_t length, uint64_t stride)
     : Object(o),
       id(qid),
       head(0),
       tail(0),
       size(length),
-      stride(0),
-      base(nullptr) {}
-
-Queue::~Queue() {
-  if (base) {
-    delete base;
-  }
+      stride(stride),
+      dmaEngine(d),
+      dmaTag(InvalidDMATag) {
+  dmaTag = dmaEngine->initRaw(base, (uint32_t)(size * stride));
 }
+
+Queue::~Queue() {}
 
 uint16_t Queue::getID() {
   return id;
@@ -66,15 +67,6 @@ uint16_t Queue::getSize() {
   return size;
 }
 
-void Queue::setBase(PRPEngine *p, uint64_t s) {
-  if (base) {
-    delete base;
-  }
-
-  base = p;
-  stride = s;
-}
-
 void Queue::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Queue::getStatValues(std::vector<double> &) noexcept {}
@@ -87,32 +79,24 @@ void Queue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, tail);
   BACKUP_SCALAR(out, size);
   BACKUP_SCALAR(out, stride);
-
-  base->createCheckpoint(out);
+  BACKUP_DMATAG(out, dmaTag);
 }
 
-void Queue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
-                              uint64_t mps) noexcept {
+void Queue::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, id);
   RESTORE_SCALAR(in, head);
   RESTORE_SCALAR(in, tail);
   RESTORE_SCALAR(in, size);
   RESTORE_SCALAR(in, stride);
-
-  base = new PRPEngine(object, dma, mps);
-  base->restoreCheckpoint(in);
+  RESTORE_DMATAG(dmaEngine, in, dmaTag);
 }
 
-void Queue::restoreCheckpoint(std::istream &) noexcept {
-  panic("You must use Queue::restoreCheckpoint(std::istream &, DMAInterface *, "
-        "uint64_t).");
-}
+CQueue::CQueue(ObjectData &o, DMAEngine *d)
+    : Queue(o, d), ien(false), phase(false), iv(0xFFFF) {}
 
-CQueue::CQueue(ObjectData &o)
-    : Queue(o), ien(false), phase(false), iv(0xFFFF) {}
-
-CQueue::CQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t iv, bool en)
-    : Queue(o, qid, size), ien(en), phase(true), iv(iv) {}
+CQueue::CQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
+               uint16_t length, uint64_t stride, uint16_t iv, bool en)
+    : Queue(o, d, qid, base, length, stride), ien(en), phase(true), iv(iv) {}
 
 void CQueue::setData(CQEntry *entry, Event eid) {
   if (entry) {
@@ -121,7 +105,7 @@ void CQueue::setData(CQEntry *entry, Event eid) {
     entry->dword3.status |= (phase ? 0x0001 : 0x0000);
 
     // Write entry
-    base->write(tail * stride, 0x10, entry->data, eid);
+    dmaEngine->write(dmaTag, tail * stride, 0x10, entry->data, eid);
 
     // Increase tail
     tail++;
@@ -165,21 +149,21 @@ void CQueue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, iv);
 }
 
-void CQueue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
-                               uint64_t mps) noexcept {
-  Queue::restoreCheckpoint(in, dma, mps);
+void CQueue::restoreCheckpoint(std::istream &in) noexcept {
+  Queue::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, ien);
   RESTORE_SCALAR(in, phase);
   RESTORE_SCALAR(in, iv);
 }
 
-SQueue::SQueue(ObjectData &o)
-    : Queue(o), cqID(0xFFFF), priority(QueuePriority::Low) {}
+SQueue::SQueue(ObjectData &o, DMAEngine *d)
+    : Queue(o, d), cqID(0xFFFF), priority(QueuePriority::Low) {}
 
-SQueue::SQueue(ObjectData &o, uint16_t qid, uint16_t size, uint16_t cqid,
+SQueue::SQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint64_t base,
+               uint16_t length, uint64_t stride, uint16_t cqid,
                QueuePriority pri)
-    : Queue(o, qid, size), cqID(cqid), priority(pri) {}
+    : Queue(o, d, qid, base, length, stride), cqID(cqid), priority(pri) {}
 
 uint16_t SQueue::getCQID() {
   return cqID;
@@ -192,7 +176,7 @@ void SQueue::setTail(uint16_t newTail) {
 void SQueue::getData(SQEntry *entry, Event eid) {
   if (entry && head != tail) {
     // Read entry
-    base->read(head * stride, 0x40, entry->data, eid);
+    dmaEngine->read(dmaTag, head * stride, 0x40, entry->data, eid);
 
     // Increase head
     head++;
@@ -214,9 +198,8 @@ void SQueue::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, priority);
 }
 
-void SQueue::restoreCheckpoint(std::istream &in, DMAInterface *dma,
-                               uint64_t mps) noexcept {
-  Queue::restoreCheckpoint(in, dma, mps);
+void SQueue::restoreCheckpoint(std::istream &in) noexcept {
+  Queue::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, cqID);
   RESTORE_SCALAR(in, priority);

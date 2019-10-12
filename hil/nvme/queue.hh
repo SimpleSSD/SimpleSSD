@@ -12,8 +12,8 @@
 
 #include <cinttypes>
 
+#include "hil/common/dma_engine.hh"
 #include "hil/nvme/def.hh"
-#include "hil/nvme/dma_engine.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -82,11 +82,12 @@ class Queue : public Object {
   uint16_t size;
   uint64_t stride;
 
-  PRPEngine *base;
+  DMAEngine *dmaEngine;
+  DMATag dmaTag;
 
  public:
-  Queue(ObjectData &);
-  Queue(ObjectData &, uint16_t, uint16_t);
+  Queue(ObjectData &, DMAEngine *);
+  Queue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t);
   ~Queue();
 
   uint16_t getID();
@@ -94,15 +95,12 @@ class Queue : public Object {
   uint16_t getHead();
   uint16_t getTail();
   uint16_t getSize();
-  void setBase(PRPEngine *, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
 
   virtual void createCheckpoint(std::ostream &) const noexcept override;
-  virtual void restoreCheckpoint(std::istream &, DMAInterface *,
-                                 uint64_t) noexcept;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
@@ -113,8 +111,9 @@ class CQueue : public Queue {
   uint16_t iv;
 
  public:
-  CQueue(ObjectData &);
-  CQueue(ObjectData &, uint16_t, uint16_t, uint16_t, bool);
+  CQueue(ObjectData &, DMAEngine *);
+  CQueue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t,
+         uint16_t, bool);
 
   void setData(CQEntry *, Event);
   uint16_t incHead();
@@ -123,8 +122,7 @@ class CQueue : public Queue {
   uint16_t getInterruptVector();
 
   void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &, DMAInterface *,
-                         uint64_t) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class SQueue : public Queue {
@@ -133,8 +131,9 @@ class SQueue : public Queue {
   QueuePriority priority;
 
  public:
-  SQueue(ObjectData &);
-  SQueue(ObjectData &, uint16_t, uint16_t, uint16_t, QueuePriority);
+  SQueue(ObjectData &, DMAEngine *);
+  SQueue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t,
+         uint16_t, QueuePriority);
 
   uint16_t getCQID();
   void setTail(uint16_t);
@@ -142,8 +141,7 @@ class SQueue : public Queue {
   QueuePriority getPriority();
 
   void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &, DMAInterface *,
-                         uint64_t) noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe
