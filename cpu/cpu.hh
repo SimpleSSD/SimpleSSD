@@ -164,8 +164,10 @@ class CPU {
    * \param[in] group CPU group to execute event (and add-up instruction stats)
    * \param[in] eid   Event ID to schedule
    * \param[in] func  Instruction and cycle info
+   * \param[in] data  Data to pass (this should be value, not pointer)
    */
-  void schedule(CPUGroup group, Event eid, const Function &func) noexcept;
+  void schedule(CPUGroup group, Event eid, const Function &func,
+                uint64_t data = 0) noexcept;
 
   /**
    * \brief Schedule event
@@ -177,9 +179,10 @@ class CPU {
    * execution - not important or hardware event.
    *
    * \param[in] eid   Event ID to schedule
+   * \param[in] data  Data to pass (this should be value, not pointer)
    * \param[in] delay Ticks to delay
    */
-  void schedule(Event eid, uint64_t delay = 0) noexcept;
+  void schedule(Event eid, uint64_t data = 0, uint64_t delay = 0) noexcept;
 
   /**
    * \brief Deschedule event
@@ -225,6 +228,7 @@ class EventData {
   std::string name;
 
   uint64_t scheduledAt;
+  uint64_t data;
 
  public:
   EventData(const EventFunction &f, const std::string &s)

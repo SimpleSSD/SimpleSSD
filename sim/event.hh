@@ -35,7 +35,7 @@ const Event InvalidEventID = nullptr;
  * First param is current tick, second param is user data passed in schedule
  * function.
  */
-using EventFunction = std::function<void(uint64_t)>;
+using EventFunction = std::function<void(uint64_t, uint64_t)>;
 
 /**
  * \brief Interrupt function definition

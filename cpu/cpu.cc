@@ -72,7 +72,7 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
   coreList.resize(totalCore);
 
   engine->setFunction(
-      [this](uint64_t tick) { dispatch(tick); },
+      [this](uint64_t tick, uint64_t) { dispatch(tick); },
       [this](Event eid, uint64_t tick) { interrupt(eid, tick); });
 }
 
@@ -436,7 +436,7 @@ void CPU::dispatch(uint64_t now) {
     auto event = core.eventQueue.begin();
 
     if (event != core.eventQueue.end() && (*event)->scheduledAt <= now) {
-      (*event)->func(now);
+      (*event)->func(now, (*event)->data);
 
       core.eventQueue.erase(event);
 
@@ -463,7 +463,7 @@ void CPU::interrupt(Event eid, uint64_t tick) {
   // Engine invokes event!
   curTick = tick;
 
-  eid->func(tick);
+  eid->func(tick, 0);
 }
 
 uint64_t CPU::getTick() noexcept {
@@ -483,7 +483,8 @@ Event CPU::createEvent(const EventFunction &func,
   return eid;
 }
 
-void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
+void CPU::schedule(CPUGroup group, Event eid, const Function &func,
+                   uint64_t data) noexcept {
   uint16_t begin = 0;
   uint16_t end = hilCore;
 
@@ -554,15 +555,16 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func) noexcept {
   }
 
   eid->scheduledAt = newTick;
+  eid->data = data;
   core->eventQueue.insert(iter, eid);
 }
 
-void CPU::schedule(Event eid, uint64_t delay) noexcept {
+void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {
   Function func;
 
   func.cycles = delay;
 
-  schedule(CPUGroup::None, eid, Function());
+  schedule(CPUGroup::None, eid, Function(), data);
 }
 
 void CPU::deschedule(Event eid) noexcept {
@@ -707,6 +709,7 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
     for (auto &event : iter.eventQueue) {
       BACKUP_SCALAR(out, event);
       BACKUP_SCALAR(out, event->scheduledAt);
+      BACKUP_SCALAR(out, event->data);
     }
   }
 }
@@ -757,6 +760,7 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
       eid = restoreEventID(eid);
 
       RESTORE_SCALAR(in, eid->scheduledAt);
+      RESTORE_SCALAR(in, eid->data);
 
       core.eventQueue.push_back(eid);
     }
