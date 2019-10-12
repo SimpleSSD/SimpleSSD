@@ -137,10 +137,12 @@ void IOCommandData::createDMAEngine(uint32_t size, Event eid) {
   auto entry = sqc->getData();
 
   if (sqc->isSGL()) {
-    dmaTag = dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid);
+    dmaTag = dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid,
+                                    getGCID());
   }
   else {
-    dmaTag = dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid);
+    dmaTag = dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid,
+                                    getGCID());
   }
 }
 
@@ -196,10 +198,9 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-CompareCommandData::CompareCommandData(ObjectData &o, Command *p, ControllerData *c)
-    : IOCommandData(o, p, c),
-      complete(0),
-      subBuffer(nullptr) {}
+CompareCommandData::CompareCommandData(ObjectData &o, Command *p,
+                                       ControllerData *c)
+    : IOCommandData(o, p, c), complete(0), subBuffer(nullptr) {}
 
 CompareCommandData::~CompareCommandData() {
   if (subBuffer) {

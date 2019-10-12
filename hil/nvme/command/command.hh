@@ -34,6 +34,10 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+#define FRIEND_LIST                                                            \
+  friend Abort;                                                                \
+  friend Compare;
+
 /**
  * \brief CommandData class
  *
@@ -44,8 +48,7 @@ class CommandData : public Object {
  protected:
   friend Command;
 
-  // List of friends - All commands can access this elements.
-  friend Abort;
+  FRIEND_LIST
 
   Command *parent;
 
@@ -83,8 +86,7 @@ class IOCommandData : public CommandData {
  protected:
   friend Command;
 
-  // List of friends - All commands can access this elements.
-  friend Flush;
+  FRIEND_LIST
 
   DMATag dmaTag;
 
@@ -116,8 +118,7 @@ class CompareCommandData : public IOCommandData {
  protected:
   friend Command;
 
-  // List of friends - All commands can access this elements.
-  friend Compare;
+  FRIEND_LIST
 
   uint8_t complete;
   uint8_t *subBuffer;
