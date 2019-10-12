@@ -32,4 +32,40 @@
 #include "hil/nvme/command/read.hh"
 #include "hil/nvme/command/write.hh"
 
+namespace SimpleSSD::HIL::NVMe {
+
+/**
+ * \brief CommandData class
+ *
+ * Stores everything about current command.
+ * You can find definition in abstract_command.cc file.
+ */
+class CommandData : public Object {
+ private:
+  friend Command;
+
+  Controller *controller;
+  Interface *interface;
+  Arbitrator *arbitrator;
+  InterruptManager *interrupt;
+  DMAEngine *dmaEngine;
+
+  SQContext *sqc;
+  CQContext *cqc;
+  DMATag dmaTag;
+
+  CommandData(ObjectData &o, ControllerData *);
+
+  void createResponse();
+  void createDMAEngine(uint32_t, Event);
+
+ public:
+  uint64_t getUniqueID();
+  CQContext *getResponse();
+
+  Arbitrator *getArbitrator();
+};
+
+}  // namespace SimpleSSD::HIL::NVMe
+
 #endif

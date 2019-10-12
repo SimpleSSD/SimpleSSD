@@ -12,30 +12,6 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-class CommandData : public Object {
- private:
-  friend Command;
-
-  Controller *controller;
-  Interface *interface;
-  Arbitrator *arbitrator;
-  InterruptManager *interrupt;
-  DMAEngine *dmaEngine;
-
-  SQContext *sqc;
-  CQContext *cqc;
-  DMATag dmaTag;
-
-  CommandData(ObjectData &o, ControllerData *);
-
-  void createResponse();
-  void createDMAEngine(uint32_t, Event);
-
- public:
-  uint64_t getUniqueID();
-  CQContext *getResponse();
-};
-
 void CommandData::createResponse() {
   panic_if(!sqc, "Request not submitted.");
 
@@ -74,6 +50,10 @@ uint64_t CommandData::getUniqueID() {
 
   // This ID is unique in subsystem
   return ((uint64_t)controller->getControllerID() << 32) | sqc->getID();
+}
+
+Arbitrator *CommandData::getArbitrator() {
+  return arbitrator;
 }
 
 CommandData::CommandData(ObjectData &o, ControllerData *c)
