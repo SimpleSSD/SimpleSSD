@@ -61,4 +61,11 @@ void AsyncEventRequest::clearPendingRequests(ControllerID ctrlid) {
   }
 }
 
+void AsyncEventRequest::getStatList(std::vector<Stat> &, std::string) noexcept {
+}
+
+void AsyncEventRequest::getStatValues(std::vector<double> &) noexcept {}
+
+void AsyncEventRequest::resetStatValues() noexcept {}
+
 }  // namespace SimpleSSD::HIL::NVMe
