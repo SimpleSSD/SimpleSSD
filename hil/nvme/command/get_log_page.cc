@@ -109,6 +109,9 @@ void GetLogPage::completeRequest(CommandTag tag) {
   if (((IOCommandData *)tag)->buffer) {
     free(((IOCommandData *)tag)->buffer);
   }
+  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
+    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
+  }
 
   destroyTag(tag);
 }

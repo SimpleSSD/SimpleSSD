@@ -152,6 +152,9 @@ void Compare::completeRequest(CommandTag tag) {
   if (((CompareCommandData *)tag)->subBuffer) {
     free(((CompareCommandData *)tag)->subBuffer);
   }
+  if (((CompareCommandData *)tag)->dmaTag != InvalidDMATag) {
+    tag->dmaEngine->deinit(((CompareCommandData *)tag)->dmaTag);
+  }
 
   destroyTag(tag);
 }

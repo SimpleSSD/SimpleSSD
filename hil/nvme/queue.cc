@@ -38,7 +38,11 @@ Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint16_t length,
       dmaEngine(d),
       dmaTag(InvalidDMATag) {}
 
-Queue::~Queue() {}
+Queue::~Queue() {
+  if (dmaTag != InvalidDMATag) {
+    dmaEngine->deinit(dmaTag);
+  }
+}
 
 void Queue::setDMAData(uint64_t base, bool pc, Event eid, uint64_t gcid) {
   if (pc) {
