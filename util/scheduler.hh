@@ -23,7 +23,7 @@ class SingleScheduler : public Object {
   using preFunction = std::function<uint64_t(Type)>;
   using postFunction = std::function<void(Type)>;
   using backupFunction = std::function<void(std::ostream &, Type)>;
-  using restoreFunction = std::function<Type(std::istream &)>;
+  using restoreFunction = std::function<Type(std::istream &, ObjectData &)>;
 
  private:
   bool pending;
@@ -93,6 +93,7 @@ class SingleScheduler : public Object {
   void resetStatValues() noexcept override {}
 
   void createCheckpoint(std::ostream &out) const noexcept override {
+    BACKUP_EVENT(out, eventDone);
     BACKUP_SCALAR(out, pending);
 
     uint64_t size = queue.size();
@@ -111,13 +112,14 @@ class SingleScheduler : public Object {
   }
 
   void restoreCheckpoint(std::istream &in) noexcept override {
+    RESTORE_EVENT(in, eventDone);
     RESTORE_SCALAR(in, pending);
 
     uint64_t size;
     RESTORE_SCALAR(in, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      auto item = restoreItem(in);
+      auto item = restoreItem(in, object);
 
       queue.emplace_back(item);
     }
@@ -125,7 +127,7 @@ class SingleScheduler : public Object {
     RESTORE_SCALAR(in, size);
 
     for (uint64_t i = 0; i < size; i++) {
-      auto item = restoreItem(in);
+      auto item = restoreItem(in, object);
 
       pendingQueue.emplace_back(item);
     }

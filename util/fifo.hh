@@ -74,7 +74,7 @@ class FIFO : public DMAInterface, public Object {
     Queue(uint64_t);
 
     void backup(std::ostream &) const noexcept;
-    void restore(std::istream &) noexcept;
+    void restore(std::istream &, ObjectData &) noexcept;
   };
 
   DMAInterface *upstream;

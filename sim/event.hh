@@ -44,52 +44,6 @@ using EventFunction = std::function<void(uint64_t, uint64_t)>;
  */
 using InterruptFunction = std::function<void(Event, uint64_t)>;
 
-class Request {
- public:
-  uint64_t offset;
-  uint64_t length;
-  Event eid;
-  uint64_t beginAt;
-
-  Request() : offset(0), length(0), eid(InvalidEventID) {}
-  Request(uint64_t a, uint64_t l, Event e) : offset(a), length(l), eid(e) {}
-  Request(const Request &) = delete;
-  Request(Request &&) noexcept = default;
-
-  Request &operator=(const Request &) = delete;
-  Request &operator=(Request &&) = default;
-
-  static void backup(std::ostream &out, Request *item) {
-    BACKUP_SCALAR(out, item->offset);
-    BACKUP_SCALAR(out, item->length);
-    BACKUP_SCALAR(out, item->beginAt);
-  }
-
-  static Request *restore(std::istream &in) {
-    auto item = new Request();
-
-    RESTORE_SCALAR(in, item->offset);
-    RESTORE_SCALAR(in, item->length);
-    RESTORE_SCALAR(in, item->beginAt);
-
-    return item;
-  }
-};
-
-class RequestWithData : public Request {
- public:
-  uint8_t *buffer;
-
-  RequestWithData() : Request(), buffer(nullptr) {}
-  RequestWithData(uint64_t a, uint64_t l, Event e, uint8_t *b)
-      : Request(a, l, e), buffer(b) {}
-  RequestWithData(const RequestWithData &) = delete;
-  RequestWithData(RequestWithData &&) noexcept = default;
-
-  RequestWithData &operator=(const RequestWithData &) = delete;
-  RequestWithData &operator=(RequestWithData &&) = default;
-};
-
 }  // namespace SimpleSSD
 
 #endif

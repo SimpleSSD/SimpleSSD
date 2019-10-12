@@ -47,6 +47,11 @@ void FIFO::Queue::backup(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, insertPending);
   BACKUP_SCALAR(out, transferPending);
 
+  BACKUP_EVENT(out, insertDone);
+  BACKUP_EVENT(out, beginTransfer);
+  BACKUP_EVENT(out, submitCompletion);
+  BACKUP_EVENT(out, transferDone);
+
   uint64_t size = waitQueue.size();
   BACKUP_SCALAR(out, size);
 
@@ -58,7 +63,7 @@ void FIFO::Queue::backup(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.arrivedAt);
     BACKUP_SCALAR(out, iter.insertBeginAt);
     BACKUP_SCALAR(out, iter.insertEndAt);
-    BACKUP_SCALAR(out, iter.eid);
+    BACKUP_EVENT(out, iter.eid);
     BACKUP_BLOB(out, iter.buffer, iter.size);
   }
 
@@ -73,16 +78,21 @@ void FIFO::Queue::backup(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.arrivedAt);
     BACKUP_SCALAR(out, iter.insertBeginAt);
     BACKUP_SCALAR(out, iter.insertEndAt);
-    BACKUP_SCALAR(out, iter.eid);
+    BACKUP_EVENT(out, iter.eid);
     BACKUP_BLOB(out, iter.buffer, iter.size);
   }
 }
 
-void FIFO::Queue::restore(std::istream &in) noexcept {
+void FIFO::Queue::restore(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, capacity);
   RESTORE_SCALAR(in, usage);
   RESTORE_SCALAR(in, insertPending);
   RESTORE_SCALAR(in, transferPending);
+
+  RESTORE_EVENT(in, insertDone);
+  RESTORE_EVENT(in, beginTransfer);
+  RESTORE_EVENT(in, submitCompletion);
+  RESTORE_EVENT(in, transferDone);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
@@ -97,7 +107,7 @@ void FIFO::Queue::restore(std::istream &in) noexcept {
     RESTORE_SCALAR(in, waitQueue.back().arrivedAt);
     RESTORE_SCALAR(in, waitQueue.back().insertBeginAt);
     RESTORE_SCALAR(in, waitQueue.back().insertEndAt);
-    RESTORE_SCALAR(in, waitQueue.back().eid);
+    RESTORE_EVENT(in, waitQueue.back().eid);
     RESTORE_BLOB(in, waitQueue.back().buffer, waitQueue.back().size);
   }
 
@@ -113,7 +123,7 @@ void FIFO::Queue::restore(std::istream &in) noexcept {
     RESTORE_SCALAR(in, transferQueue.back().arrivedAt);
     RESTORE_SCALAR(in, transferQueue.back().insertBeginAt);
     RESTORE_SCALAR(in, transferQueue.back().insertEndAt);
-    RESTORE_SCALAR(in, waitQueue.back().eid);
+    RESTORE_EVENT(in, waitQueue.back().eid);
     RESTORE_BLOB(in, transferQueue.back().buffer, transferQueue.back().size);
   }
 }
@@ -527,8 +537,8 @@ void FIFO::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, param.transferUnit);
   RESTORE_SCALAR(in, unitLatency);
 
-  readQueue.restore(in);
-  writeQueue.restore(in);
+  readQueue.restore(in, object);
+  writeQueue.restore(in, object);
 
   RESTORE_SCALAR(in, counter);
 

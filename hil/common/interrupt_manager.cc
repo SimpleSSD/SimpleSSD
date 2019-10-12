@@ -165,6 +165,8 @@ void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, aggregationThreshold);
   BACKUP_SCALAR(out, aggregationTime);
 
+  BACKUP_EVENT(out, eventTimer);
+
   // Store list by poping all elements
   // Larger one first - for faster restore
   auto size = coalesceMap.size();
@@ -181,6 +183,8 @@ void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
 void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, aggregationThreshold);
   RESTORE_SCALAR(in, aggregationTime);
+
+  RESTORE_EVENT(in, eventTimer);
 
   // Load list by pushping all elements
   uint64_t size;

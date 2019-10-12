@@ -34,7 +34,7 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
       },
       "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
 
-  schedule(autoRefresh,  REFRESH_PERIOD);
+  schedule(autoRefresh, REFRESH_PERIOD);
 }
 
 SimpleDRAM::~SimpleDRAM() {
@@ -128,6 +128,7 @@ void SimpleDRAM::write(uint64_t address, uint64_t length, Event eid) {
 void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractDRAM::createCheckpoint(out);
 
+  BACKUP_EVENT(out, autoRefresh);
   BACKUP_SCALAR(out, pageFetchLatency);
   BACKUP_SCALAR(out, interfaceBandwidth);
 
@@ -137,6 +138,7 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
 void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractDRAM::restoreCheckpoint(in);
 
+  RESTORE_EVENT(in, autoRefresh);
   RESTORE_SCALAR(in, pageFetchLatency);
   RESTORE_SCALAR(in, interfaceBandwidth);
 

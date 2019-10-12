@@ -816,6 +816,10 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, run);
   BACKUP_SCALAR(out, running);
 
+  BACKUP_EVENT(out, work);
+  BACKUP_EVENT(out, eventCompDone);
+  BACKUP_EVENT(out, eventCollect);
+
   // We stored cqSize and sqSize
   bool tmp;
 
@@ -889,7 +893,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : abortSQList) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
+    BACKUP_EVENT(out, iter.second);
   }
 
   size = abortCommandList.size();
@@ -897,7 +901,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : abortCommandList) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
+    BACKUP_EVENT(out, iter.second);
   }
 }
 
@@ -911,6 +915,10 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, shutdownReserved);
   RESTORE_SCALAR(in, run);
   RESTORE_SCALAR(in, running);
+
+  RESTORE_EVENT(in, work);
+  RESTORE_EVENT(in, eventCompDone);
+  RESTORE_EVENT(in, eventCollect);
 
   // Restore queue
   bool tmp;
@@ -997,7 +1005,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     Event eid;
 
     RESTORE_SCALAR(in, id);
-    RESTORE_SCALAR(in, eid);
+    RESTORE_EVENT(in, eid);
 
     abortSQList.emplace(std::make_pair(id, eid));
   }
@@ -1009,7 +1017,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     Event eid;
 
     RESTORE_SCALAR(in, id);
-    RESTORE_SCALAR(in, eid);
+    RESTORE_EVENT(in, eid);
 
     abortCommandList.emplace(std::make_pair(id, eid));
   }
