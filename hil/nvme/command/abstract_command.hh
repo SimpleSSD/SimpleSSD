@@ -10,7 +10,7 @@
 #ifndef __SIMPLESSD_HIL_NVME_COMMAND_ABSTRACT_COMMAND_HH__
 #define __SIMPLESSD_HIL_NVME_COMMAND_ABSTRACT_COMMAND_HH__
 
-#include <deque>
+#include <unordered_map>
 
 #include "hil/common/dma_engine.hh"
 #include "hil/common/interrupt_manager.hh"
@@ -49,7 +49,18 @@ class Command : public Object {
  protected:
   Subsystem *subsystem;
 
-  CommandTag createTag(ControllerData *);
+  /**
+   * \brief Pending command list
+   *
+   * As command can be completed out-of-order, we cannot handle completion
+   * events with simple queue (queue, list or deque).
+   * As checkpoint recovery may change pointer to CommandData, we need to store
+   * both command unique ID and Tag itself.
+   */
+  std::unordered_map<uint64_t, CommandTag> tagList;
+
+  CommandTag createTag(ControllerData *, SQContext *);
+  void destroyTag(CommandTag);
 
  public:
   Command(ObjectData &, Subsystem *);
@@ -57,8 +68,11 @@ class Command : public Object {
   Command(Command &&) noexcept = delete;
   virtual ~Command();
 
-  virtual CommandTag setRequest(ControllerData *, SQContext *) = 0;
-  virtual void completeRequest(CommandTag);
+  virtual void setRequest(ControllerData *, SQContext *) = 0;
+  virtual void completeRequest(CommandTag) = 0;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

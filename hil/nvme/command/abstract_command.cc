@@ -144,8 +144,67 @@ Command::Command(ObjectData &o, Subsystem *s) : Object(o), subsystem(s) {}
 
 Command::~Command() {}
 
-CommandTag Command::createTag(ControllerData *cdata) {
-  return new CommandData(object, this, cdata);
+CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
+  auto ret = new CommandData(object, this, cdata);
+
+  ret->sqc = sqc;
+  auto key = ret->getUniqueID();
+
+  // 64bit command unique ID is unique across the SSD
+  tagList.emplace(std::make_pair(key, ret));
+
+  return ret;
+}
+
+void Command::destroyTag(CommandTag tag) {
+  auto key = tag->getUniqueID();
+  auto iter = tagList.find(key);
+
+  panic_if(iter == tagList.end(),
+           "No such commands are passed to this command handler.");
+
+  tagList.erase(iter);
+
+  delete tag;
+}
+
+void Command::createCheckpoint(std::ostream &out) const noexcept {
+  uint64_t size = tagList.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : tagList) {
+    BACKUP_SCALAR(out, iter.first);
+
+    iter.second->createCheckpoint(out);
+  }
+}
+
+void Command::restoreCheckpoint(std::istream &in) noexcept {
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t uid;
+
+    RESTORE_SCALAR(in, uid);
+
+    // Find controller and request controller data
+    ControllerID ctrlid = (ControllerID)(uid >> 32);
+
+    auto ctrl = (NVMe::Controller *)subsystem->getController(ctrlid);
+    auto cdata = ctrl->getControllerData();
+
+    // Regenerate CommandTag
+    auto newTag = createTag(cdata, nullptr);
+
+    // Restore CommandTag (SQContext recovered here!)
+    newTag->restoreCheckpoint(in);
+
+    // Insert to tagList
+    tagList.emplace(std::make_pair(uid, newTag));
+  }
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
