@@ -42,7 +42,7 @@ class SingleScheduler : public Object {
     auto delay = preSubmit(data);
     pendingQueue.emplace_back(data);
 
-    schedule(eventDone, delay);
+    object.cpu->schedule(eventDone, 0, delay);
   }
 
   void done() {
