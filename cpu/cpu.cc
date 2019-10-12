@@ -76,7 +76,14 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
       [this](Event eid, uint64_t tick) { interrupt(eid, tick); });
 }
 
-CPU::~CPU() {}
+CPU::~CPU() {
+  // Delete all events
+  for (auto &iter : eventList) {
+    delete iter;
+  }
+
+  eventList.clear();
+}
 
 inline void CPU::panic_log(const char *format, ...) noexcept {
   va_list args;
