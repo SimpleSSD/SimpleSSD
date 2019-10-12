@@ -37,10 +37,6 @@ class DMAData {
 
   std::vector<PhysicalRegion> prList;
 
-  Event eid;
-  uint64_t data;
-  int32_t counter;
-
   uint64_t handledSize;
   uint64_t requestedSize;
   uint64_t bufferSize;
@@ -72,6 +68,18 @@ union SGLDescriptor;
  */
 class DMAEngine : public Object {
  private:
+  class DMASession {
+   public:
+    DMATag parent;
+
+    Event eid;
+    uint64_t data;
+    int32_t counter;
+
+    DMASession(DMATag, Event);
+    DMASession(DMATag, Event, uint64_t);
+  };
+
   DMAInterface *interface;
   Event eventDMADone;
 
@@ -80,7 +88,7 @@ class DMAEngine : public Object {
   Event eventSGLReadDone;
 
   std::unordered_set<DMATag> tagList;
-  std::deque<DMATag> pendingTagList;
+  std::deque<DMASession> pendingTagList;
   std::unordered_map<DMATag, DMATag> oldTagList;
 
   uint64_t pageSize;
@@ -95,12 +103,12 @@ class DMAEngine : public Object {
 
   // PRP related
   uint32_t getPRPSize(uint64_t);
-  void getPRPListFromPRP(DMATag, uint64_t);
+  void getPRPListFromPRP(DMATag, uint64_t, DMASession &&);
   void getPRPListFromPRP_readDone();
 
   // SGL related
   void parseSGLDescriptor(DMATag, SGLDescriptor *);
-  void parseSGLSegment(DMATag, uint64_t, uint32_t);
+  void parseSGLSegment(DMATag, uint64_t, uint32_t, DMASession &&);
   void parseSGLSegment_readDone();
 
  public:
