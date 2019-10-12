@@ -21,7 +21,7 @@ namespace SimpleSSD::HIL::NVMe {
 
 #define debugprint_command(tag, format, ...)                                   \
   {                                                                            \
-    uint64_t _uid = tag->getUniqueID();                                        \
+    uint64_t _uid = tag->getGCID();                                            \
                                                                                \
     debugprint(Log::DebugID::HIL_NVMe_Command,                                 \
                "CTRL %-3u | SQ %2u:%-5u | " format, (uint16_t)(_uid >> 32),    \
@@ -59,14 +59,15 @@ class Command : public Object {
    */
   std::unordered_map<uint64_t, CommandTag> tagList;
 
-  CommandTag createTag(ControllerData *, SQContext *);
+  virtual CommandTag createTag(ControllerData *, SQContext *);
+  CommandTag findTag(uint64_t);
   void destroyTag(CommandTag);
+  void addTagToList(CommandTag);
 
  public:
   Command(ObjectData &, Subsystem *);
   Command(const Command &) = delete;
   Command(Command &&) noexcept = delete;
-  virtual ~Command();
 
   virtual void setRequest(ControllerData *, SQContext *) = 0;
   virtual void completeRequest(CommandTag) = 0;

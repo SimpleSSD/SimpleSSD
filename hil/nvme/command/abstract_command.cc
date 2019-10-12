@@ -12,160 +12,44 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-CommandData::CommandData(ObjectData &o, Command *p, ControllerData *c)
-    : Object(o),
-      parent(p),
-      controller(c->controller),
-      interface(c->interface),
-      arbitrator(c->arbitrator),
-      interrupt(c->interruptManager),
-      dmaEngine(c->dmaEngine),
-      sqc(nullptr),
-      cqc(nullptr),
-      dmaTag(InvalidDMATag) {}
-
-CommandData::~CommandData() {
-  // Must not delete sqc
-  delete cqc;
-
-  if (dmaTag != InvalidDMATag) {
-    panic("DMA not uninitialized.");
-  }
-}
-
-void CommandData::createResponse() {
-  panic_if(!sqc, "Request not submitted.");
-
-  cqc = new CQContext();
-
-  panic_if(!cqc, "Out of memory.");
-
-  cqc->update(sqc);
-}
-
-/**
- * Create DMAEngine for command handling
- *
- * \param[in] size  Expected data size (for PRPEngine)
- * \param[in] eid   DMA init callback
- */
-void CommandData::createDMAEngine(uint32_t size, Event eid) {
-  auto entry = sqc->getData();
-
-  if (sqc->isSGL()) {
-    dmaTag = dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid);
-  }
-  else {
-    dmaTag = dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid);
-  }
-}
-
-void CommandData::destroyDMAEngine() {
-  dmaEngine->deinit(dmaTag);
-  dmaTag = InvalidDMATag;
-}
-
-CQContext *CommandData::getResponse() {
-  panic_if(!cqc, "Response not created.");
-
-  return cqc;
-}
-
-uint64_t CommandData::getUniqueID() {
-  panic_if(!sqc, "Request not submitted.");
-
-  // This ID is unique in subsystem
-  return MAKE_GCID(controller->getControllerID(), sqc->getCCID());
-}
-
-Command *CommandData::getParent() {
-  return parent;
-}
-
-Arbitrator *CommandData::getArbitrator() {
-  return arbitrator;
-}
-
-void CommandData::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
-  BACKUP_DMATAG(out, dmaTag);
-
-  // Backup only Command Unique ID
-  // All SQContext are allocated only once (not copied) and it wiil be backup in
-  // SimpleSSD::HIL::NVMe::Arbitrator.
-  exist = sqc != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    uint32_t id = sqc->getCCID();
-
-    BACKUP_SCALAR(out, id);
-  }
-
-  // Backup all cqc because we create it.
-  exist = cqc != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    // If we have cqc, we always have sqc. Just store data only.
-    BACKUP_BLOB(out, cqc->getData(), 16);
-  }
-}
-
-void CommandData::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
-  RESTORE_DMATAG(dmaEngine, in, dmaTag);
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    uint32_t id;
-
-    RESTORE_SCALAR(in, id);
-
-    sqc = arbitrator->getRecoveredRequest(id);
-
-    panic_if(!sqc, "Invalid SQContext found while recover command status.");
-  }
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    cqc = new CQContext();
-
-    cqc->update(sqc);
-    RESTORE_BLOB(in, cqc->getData(), 16);
-  }
-}
-
 Command::Command(ObjectData &o, Subsystem *s) : Object(o), subsystem(s) {}
-
-Command::~Command() {}
 
 CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
   auto ret = new CommandData(object, this, cdata);
 
   ret->sqc = sqc;
-  auto key = ret->getUniqueID();
 
-  // 64bit command unique ID is unique across the SSD
-  tagList.emplace(std::make_pair(key, ret));
+  addTagToList(ret);
 
   return ret;
 }
 
+CommandTag Command::findTag(uint64_t gcid) {
+  auto iter = tagList.find(gcid);
+
+  panic_if(iter == tagList.end(),
+           "No such command is passed to this command handler.");
+
+  return iter->second;
+}
+
 void Command::destroyTag(CommandTag tag) {
-  auto key = tag->getUniqueID();
+  auto key = tag->getGCID();
   auto iter = tagList.find(key);
 
   panic_if(iter == tagList.end(),
-           "No such commands are passed to this command handler.");
+           "No such command is passed to this command handler.");
 
   tagList.erase(iter);
 
   delete tag;
+}
+
+void Command::addTagToList(CommandTag tag) {
+  auto key = tag->getGCID();
+
+  // 64bit command unique ID is unique across the SSD
+  tagList.emplace(std::make_pair(key, tag));
 }
 
 void Command::createCheckpoint(std::ostream &out) const noexcept {
