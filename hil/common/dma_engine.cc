@@ -411,6 +411,8 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
   else {
     panic("Unexpected SGL descriptor type.");
   }
+
+  return ret;
 }
 
 DMATag DMAEngine::initRaw(uint64_t base, uint32_t size) noexcept {

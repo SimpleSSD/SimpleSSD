@@ -35,6 +35,8 @@ class SQContext;
 class CQContext;
 class ControllerData;
 class CommandData;
+class IOCommandData;
+class CompareCommandData;
 
 using CommandTag = CommandData *;
 

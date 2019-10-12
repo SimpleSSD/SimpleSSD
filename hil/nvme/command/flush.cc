@@ -17,10 +17,6 @@ Flush::Flush(ObjectData &o, Subsystem *s) : Command(o, s) {
                   "HIL::NVMe::Flush::readDoneEvent");
 }
 
-Flush::~Flush() {
-  destroyEvent(flushDoneEvent);
-}
-
 void Flush::flushDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
   auto now = getTick();

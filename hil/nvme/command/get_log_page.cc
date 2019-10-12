@@ -120,7 +120,6 @@ void GetLogPage::getStatValues(std::vector<double> &) noexcept {}
 void GetLogPage::resetStatValues() noexcept {}
 
 void GetLogPage::createCheckpoint(std::ostream &out) const noexcept {
-
   Command::createCheckpoint(out);
 
   BACKUP_EVENT(out, dmaInitEvent);
@@ -128,8 +127,6 @@ void GetLogPage::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void GetLogPage::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   Command::restoreCheckpoint(in);
 
   RESTORE_EVENT(in, dmaInitEvent);

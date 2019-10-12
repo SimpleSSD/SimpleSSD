@@ -342,8 +342,6 @@ void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
 }
 
 void Subsystem::complete(CommandTag command) {
-  uint64_t uid = command->getGCID();
-
   // Complete
   auto arbitrator = command->getArbitrator();
   arbitrator->complete(command->getResponse());

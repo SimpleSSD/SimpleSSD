@@ -7,7 +7,6 @@
 
 #include "hil/nvme/command/abstract_command.hh"
 
-#include "hil/nvme/command/command.hh"
 #include "hil/nvme/command/internal.hh"
 
 namespace SimpleSSD::HIL::NVMe {

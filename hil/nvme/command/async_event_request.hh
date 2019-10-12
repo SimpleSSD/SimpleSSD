@@ -12,6 +12,8 @@
 
 #include "hil/nvme/command/abstract_command.hh"
 
+#include "hil/nvme/def.hh"
+
 namespace SimpleSSD::HIL::NVMe {
 
 class AsyncEventRequest : public Command {

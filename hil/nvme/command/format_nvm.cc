@@ -17,8 +17,6 @@ FormatNVM::FormatNVM(ObjectData &o, Subsystem *s) : Command(o, s) {
                   "HIL::NVMe::FormatNVM::eventFormatDone");
 }
 
-FormatNVM::~FormatNVM() {}
-
 void FormatNVM::formatDone(uint64_t gcid) {
   auto tag = findTag(gcid);
 

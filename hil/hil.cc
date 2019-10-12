@@ -21,7 +21,7 @@ HIL<LPN, T>::~HIL() {}
 
 HIL_TEMPLATE
 void HIL<LPN, T>::readPages(LPN /* offset */, LPN /* length */,
-                            uint8_t * /* buffer */, Event, uint64_t dataeid) {
+                            uint8_t * /* buffer */, Event eid, uint64_t data) {
   // TODO: bypass command to ICL
   schedule(eid, 1000000, data);
 }

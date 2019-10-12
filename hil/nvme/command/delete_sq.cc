@@ -17,10 +17,6 @@ DeleteSQ::DeleteSQ(ObjectData &o, Subsystem *s) : Command(o, s) {
                   "HIL::NVMe::DeleteSQ::eventErased");
 }
 
-DeleteSQ::~DeleteSQ() {
-  destroyEvent(eventErased);
-}
-
 void DeleteSQ::eraseDone(uint64_t gcid) {
   auto tag = findTag(gcid);
 
