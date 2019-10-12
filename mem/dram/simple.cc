@@ -27,7 +27,7 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
                        pStructure->channel / 8.0 / pTiming->tCK;
 
   autoRefresh = createEvent(
-      [this](uint64_t now) {
+      [this](uint64_t now, uint64_t) {
         dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
 
         schedule(autoRefresh, REFRESH_PERIOD);

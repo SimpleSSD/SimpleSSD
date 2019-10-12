@@ -76,8 +76,8 @@ class SingleScheduler : public Object {
         backupItem(b),
         restoreItem(r) {
     // Create events
-    eventDone =
-        createEvent([this](uint64_t) { done(); }, prefix + "::eventDone");
+    eventDone = createEvent([this](uint64_t, uint64_t) { done(); },
+                            prefix + "::eventDone");
   }
 
   void enqueue(Type data) {

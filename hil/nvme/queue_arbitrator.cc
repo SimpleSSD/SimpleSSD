@@ -128,11 +128,11 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
   sqList = (SQueue **)calloc(sqSize, sizeof(SQueue *));
 
   // Create events
-  work = createEvent([this](uint64_t) { collect(); },
+  work = createEvent([this](uint64_t, uint64_t) { collect(); },
                      "HIL::NVMe::Arbitrator::work");
-  eventCompDone = createEvent([this](uint64_t) { completion_done(); },
+  eventCompDone = createEvent([this](uint64_t, uint64_t) { completion_done(); },
                               "HIL::NVMe::Arbitrator::eventCompDone");
-  eventCollect = createEvent([this](uint64_t) { collect_done(); },
+  eventCollect = createEvent([this](uint64_t, uint64_t) { collect_done(); },
                              "HIL::NVMe::Arbitrator::eventCollect");
 
   // Not running!

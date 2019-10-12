@@ -134,25 +134,30 @@ FIFO::FIFO(ObjectData &o, DMAInterface *up, FIFOParam &p)
   unitLatency = param.latency(param.transferUnit);
 
   // Allocate events and functions for each queue
-  writeQueue.insertDone = createEvent([this](uint64_t) { insertWriteDone(); },
-                                      "FIFO::writeQueue::insertDone");
-  writeQueue.beginTransfer = createEvent([this](uint64_t) { transferWrite(); },
-                                         "FIFO::writeQueue::beginTransfer");
+  writeQueue.insertDone =
+      createEvent([this](uint64_t, uint64_t) { insertWriteDone(); },
+                  "FIFO::writeQueue::insertDone");
+  writeQueue.beginTransfer =
+      createEvent([this](uint64_t, uint64_t) { transferWrite(); },
+                  "FIFO::writeQueue::beginTransfer");
   writeQueue.submitCompletion =
-      createEvent([this](uint64_t) { transferWriteDoneNext(); },
+      createEvent([this](uint64_t, uint64_t) { transferWriteDoneNext(); },
                   "FIFO::writeQueue::submitCompletion");
   writeQueue.transferDone =
-      createEvent([this](uint64_t) { transferWriteDone(); },
+      createEvent([this](uint64_t, uint64_t) { transferWriteDone(); },
                   "FIFO::writeQueue::transferDone");
-  readQueue.insertDone = createEvent([this](uint64_t) { insertReadDone(); },
-                                     "FIFO::readQueue::insertDone");
-  readQueue.beginTransfer = createEvent([this](uint64_t) { insertRead(); },
-                                        "FIFO::readQueue::beginTransfer");
+  readQueue.insertDone =
+      createEvent([this](uint64_t, uint64_t) { insertReadDone(); },
+                  "FIFO::readQueue::insertDone");
+  readQueue.beginTransfer =
+      createEvent([this](uint64_t, uint64_t) { insertRead(); },
+                  "FIFO::readQueue::beginTransfer");
   readQueue.submitCompletion =
-      createEvent([this](uint64_t) { insertReadDoneNext(); },
+      createEvent([this](uint64_t, uint64_t) { insertReadDoneNext(); },
                   "FIFO::readQueue::submitCompletion");
-  readQueue.transferDone = createEvent([this](uint64_t) { transferReadDone(); },
-                                       "FIFO::readQueue::transferDone");
+  readQueue.transferDone =
+      createEvent([this](uint64_t, uint64_t) { transferReadDone(); },
+                  "FIFO::readQueue::transferDone");
 }
 
 FIFO::~FIFO() {}

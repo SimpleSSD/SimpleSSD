@@ -92,15 +92,16 @@ void DMAData::deallocateBuffer() {
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
     : Object(o), interface(i), pageSize(0) {
-  eventDMADone = createEvent([this](uint64_t) { dmaDone(); },
+  eventDMADone = createEvent([this](uint64_t, uint64_t) { dmaDone(); },
                              "HIL::DMAEngine::dmaHandler");
-  eventPRDTInitDone = createEvent([this](uint64_t) { prdt_readDone(); },
-                                  "HIL::DMAEngine::eventPRDTInitDone");
+  eventPRDTInitDone =
+      createEvent([this](uint64_t, uint64_t) { prdt_readDone(); },
+                  "HIL::DMAEngine::eventPRDTInitDone");
   eventPRPReadDone =
-      createEvent([this](uint64_t) { getPRPListFromPRP_readDone(); },
+      createEvent([this](uint64_t, uint64_t) { getPRPListFromPRP_readDone(); },
                   "HIL::DMAEngine::eventPRPReadDone");
   eventSGLReadDone =
-      createEvent([this](uint64_t) { parseSGLSegment_readDone(); },
+      createEvent([this](uint64_t, uint64_t) { parseSGLSegment_readDone(); },
                   "HIL::DMAEngine::eventSGLReadDone");
 }
 
