@@ -665,7 +665,7 @@ void Arbitrator::collect() {
   }
 
   // Schedule collect
-  schedule(work, period);
+  object.cpu->schedule(work, 0ull, period);
 
   if (!handled) {
     running = false;

@@ -78,7 +78,6 @@ class CommandData : public Object {
   CQContext *cqc;
 
   CommandData(ObjectData &, Command *, ControllerData *);
-  ~CommandData();
 
   void createResponse();
 
@@ -120,7 +119,6 @@ class IOCommandData : public CommandData {
   uint64_t beginAt;  // For log
 
   IOCommandData(ObjectData &, Command *, ControllerData *);
-  ~IOCommandData();
 
   void createDMAEngine(uint32_t, Event);
   void destroyDMAEngine();
@@ -140,7 +138,6 @@ class CompareCommandData : public IOCommandData {
   uint8_t *subBuffer;
 
   CompareCommandData(ObjectData &, Command *, ControllerData *);
-  ~CompareCommandData();
 
  public:
   void createCheckpoint(std::ostream &) const noexcept override;

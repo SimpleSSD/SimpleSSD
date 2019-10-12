@@ -22,11 +22,6 @@ CommandData::CommandData(ObjectData &o, Command *p, ControllerData *c)
       sqc(nullptr),
       cqc(nullptr) {}
 
-CommandData::~CommandData() {
-  // Must not delete sqc
-  delete cqc;
-}
-
 void CommandData::createResponse() {
   panic_if(!sqc, "Request not submitted.");
 
@@ -121,12 +116,6 @@ IOCommandData::IOCommandData(ObjectData &o, Command *p, ControllerData *c)
       buffer(nullptr),
       beginAt(0) {}
 
-IOCommandData::~IOCommandData() {
-  if (buffer) {
-    free(buffer);
-  }
-}
-
 /**
  * Create DMAEngine for command handling
  *
@@ -201,12 +190,6 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
 CompareCommandData::CompareCommandData(ObjectData &o, Command *p,
                                        ControllerData *c)
     : IOCommandData(o, p, c), complete(0), subBuffer(nullptr) {}
-
-CompareCommandData::~CompareCommandData() {
-  if (subBuffer) {
-    free(subBuffer);
-  }
-}
 
 void CompareCommandData::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
