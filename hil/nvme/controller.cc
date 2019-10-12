@@ -440,6 +440,7 @@ void Controller::resetStatValues() noexcept {}
 void Controller::createCheckpoint(std::ostream &out) const noexcept {
   AbstractController::createCheckpoint(out);
 
+  controllerData.dmaEngine->createCheckpoint(out);
   controllerData.interruptManager->createCheckpoint(out);
   controllerData.arbitrator->createCheckpoint(out);
   pcie->createCheckpoint(out);
@@ -460,6 +461,7 @@ void Controller::createCheckpoint(std::ostream &out) const noexcept {
 void Controller::restoreCheckpoint(std::istream &in) noexcept {
   AbstractController::restoreCheckpoint(in);
 
+  controllerData.dmaEngine->restoreCheckpoint(in);
   controllerData.interruptManager->restoreCheckpoint(in);
   controllerData.arbitrator->restoreCheckpoint(in);
   pcie->restoreCheckpoint(in);

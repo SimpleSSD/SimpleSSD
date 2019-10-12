@@ -228,9 +228,9 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   BACKUP_BLOB(file, version.c_str(), size);
 
   // Checkpoint chain begins here
-  subsystem->createCheckpoint(file);
-
   object.cpu->createCheckpoint(file);
+
+  subsystem->createCheckpoint(file);
 
   file.close();
 }
@@ -267,9 +267,9 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
   }
 
   // Restore chain begins here
-  subsystem->restoreCheckpoint(file);
-
   object.cpu->restoreCheckpoint(file);
+
+  subsystem->restoreCheckpoint(file);
 
   file.close();
 }

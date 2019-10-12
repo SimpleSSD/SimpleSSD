@@ -742,6 +742,27 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, set);
     }
   }
+
+  // Store command status
+  commandDeleteSQ->createCheckpoint(out);
+  commandCreateSQ->createCheckpoint(out);
+  commandGetLogPage->createCheckpoint(out);
+  commandDeleteCQ->createCheckpoint(out);
+  commandCreateCQ->createCheckpoint(out);
+  commandIdentify->createCheckpoint(out);
+  commandAbort->createCheckpoint(out);
+  commandSetFeature->createCheckpoint(out);
+  commandGetFeature->createCheckpoint(out);
+  commandAsyncEventRequest->createCheckpoint(out);
+  commandNamespaceManagement->createCheckpoint(out);
+  commandNamespaceAttachment->createCheckpoint(out);
+  commandFormatNVM->createCheckpoint(out);
+
+  commandFlush->createCheckpoint(out);
+  commandWrite->createCheckpoint(out);
+  commandRead->createCheckpoint(out);
+  commandCompare->createCheckpoint(out);
+  commandDatasetManagement->createCheckpoint(out);
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
@@ -803,6 +824,26 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
       iter.first->second.emplace(nsid);
     }
   }
+
+  commandDeleteSQ->restoreCheckpoint(in);
+  commandCreateSQ->restoreCheckpoint(in);
+  commandGetLogPage->restoreCheckpoint(in);
+  commandDeleteCQ->restoreCheckpoint(in);
+  commandCreateCQ->restoreCheckpoint(in);
+  commandIdentify->restoreCheckpoint(in);
+  commandAbort->restoreCheckpoint(in);
+  commandSetFeature->restoreCheckpoint(in);
+  commandGetFeature->restoreCheckpoint(in);
+  commandAsyncEventRequest->restoreCheckpoint(in);
+  commandNamespaceManagement->restoreCheckpoint(in);
+  commandNamespaceAttachment->restoreCheckpoint(in);
+  commandFormatNVM->restoreCheckpoint(in);
+
+  commandFlush->restoreCheckpoint(in);
+  commandWrite->restoreCheckpoint(in);
+  commandRead->restoreCheckpoint(in);
+  commandCompare->restoreCheckpoint(in);
+  commandDatasetManagement->restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
