@@ -572,7 +572,7 @@ void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {
 
   func.cycles = delay;
 
-  schedule(CPUGroup::None, eid, data, Function());
+  schedule(CPUGroup::None, eid, data, func);
 }
 
 void CPU::deschedule(Event eid) noexcept {
