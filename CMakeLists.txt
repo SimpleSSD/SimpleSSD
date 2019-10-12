@@ -134,7 +134,6 @@ set(SRC_HIL_COMMON
 )
 set(SRC_HIL_NVME
   hil/nvme/controller.cc
-  hil/nvme/dma_engine.cc
   hil/nvme/namespace.cc
   hil/nvme/queue_arbitrator.cc
   hil/nvme/queue.cc
@@ -142,6 +141,7 @@ set(SRC_HIL_NVME
 )
 set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/abstract_command.cc
+  hil/nvme/command/command.cc
   hil/nvme/command/feature.cc
   hil/nvme/command/log_page.cc
   hil/nvme/command/delete_sq.cc
@@ -153,6 +153,7 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/abort.cc
   hil/nvme/command/set_feature.cc
   hil/nvme/command/get_feature.cc
+  hil/nvme/command/async_event_request.cc
   hil/nvme/command/namespace_management.cc
   hil/nvme/command/namespace_attachment.cc
   hil/nvme/command/format_nvm.cc
