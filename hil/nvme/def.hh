@@ -23,6 +23,12 @@ namespace SimpleSSD::HIL::NVMe {
 #define OCSSD_SSVID_1_2 0x0102
 #define OCSSD_SSVID_2_0 0x0200
 
+// Controller-wide Unique Command ID
+#define MAKE_CCID(qid, cid) (((uint32_t)qid << 16) | cid)
+
+// Global (SSD-wide) Unique Command ID
+#define MAKE_GCID(ctrlid, ccid) (((uint64_t)ctrlid << 32) | ccid)
+
 const uint32_t nLBAFormat = 4;
 const uint32_t lbaFormat[nLBAFormat] = {
     0x02090000,  // 512B + 0, Good performance

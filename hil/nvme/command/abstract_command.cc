@@ -75,7 +75,7 @@ uint64_t CommandData::getUniqueID() {
   panic_if(!sqc, "Request not submitted.");
 
   // This ID is unique in subsystem
-  return ((uint64_t)controller->getControllerID() << 32) | sqc->getID();
+  return MAKE_GCID(controller->getControllerID(), sqc->getCCID());
 }
 
 Command *CommandData::getParent() {
@@ -98,7 +98,7 @@ void CommandData::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, exist);
 
   if (exist) {
-    uint32_t id = sqc->getID();
+    uint32_t id = sqc->getCCID();
 
     BACKUP_SCALAR(out, id);
   }

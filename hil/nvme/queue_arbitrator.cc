@@ -47,8 +47,12 @@ SQEntry *SQContext::getData() noexcept {
   return &entry;
 }
 
-uint32_t SQContext::getID() noexcept {
-  return ((uint32_t)sqID << 16) | commandID;
+uint16_t SQContext::getCommandID() noexcept {
+  return commandID;
+}
+
+uint32_t SQContext::getCCID() noexcept {
+  return MAKE_CCID(sqID, commandID);
 }
 
 uint16_t SQContext::getSQID() noexcept {
@@ -83,8 +87,8 @@ CQEntry *CQContext::getData() {
   return &entry;
 }
 
-uint32_t CQContext::getID() noexcept {
-  return ((uint32_t)entry.dword2.sqID << 16) | entry.dword3.commandID;
+uint32_t CQContext::getCCID() noexcept {
+  return MAKE_CCID(entry.dword2.sqID, entry.dword3.commandID);
 }
 
 uint16_t CQContext::getSQID() noexcept {
@@ -217,7 +221,7 @@ dispatch_again:
 
     entry->dispatched = true;
 
-    auto ret = dispatchedQueue.push_back(entry->getID(), entry);
+    auto ret = dispatchedQueue.push_back(entry->getCCID(), entry);
     requestQueue.pop_front();
 
     if (UNLIKELY(!ret.second)) {
@@ -454,7 +458,7 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
 
   // Find corresponding SQContext
   if (UNLIKELY(!ignore)) {
-    auto iter = dispatchedQueue.find(cqe->getID());
+    auto iter = dispatchedQueue.find(cqe->getCCID());
 
     panic_if(iter == dispatchedQueue.end() || !iter->second,
              "Failed to find corresponding submission entry.");
@@ -479,7 +483,7 @@ void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
 
-  auto id = cqe->getID();
+  auto id = cqe->getCCID();
 
   completionQueue.pop_front();
 
@@ -668,7 +672,7 @@ void Arbitrator::collect_done() {
 
   sqe->update();
 
-  auto ret = requestQueue.push_back(sqe->getID(), sqe);
+  auto ret = requestQueue.push_back(sqe->getCCID(), sqe);
 
   collectQueue.pop_front();
 

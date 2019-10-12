@@ -48,7 +48,8 @@ class SQContext {
   SQEntry *getData() noexcept;
 
   // Getter
-  uint32_t getID() noexcept;
+  uint16_t getCommandID() noexcept;
+  uint32_t getCCID() noexcept;
   uint16_t getSQID() noexcept;
   uint16_t getCQID() noexcept;
   bool isSGL() noexcept;
@@ -88,7 +89,7 @@ class CQContext {
 
   CQEntry *getData();
 
-  uint32_t getID() noexcept;
+  uint32_t getCCID() noexcept;
   uint16_t getSQID() noexcept;
   uint16_t getCQID() noexcept;
 };
