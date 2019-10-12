@@ -41,8 +41,11 @@ namespace SimpleSSD::HIL::NVMe {
  * You can find definition in abstract_command.cc file.
  */
 class CommandData : public Object {
- private:
+ protected:
   friend Command;
+
+  // List of friends - All commands can access this elements.
+  friend Abort;
 
   Command *parent;
 
@@ -54,17 +57,14 @@ class CommandData : public Object {
 
   SQContext *sqc;
   CQContext *cqc;
-  DMATag dmaTag;
 
-  CommandData(ObjectData &o, Command *, ControllerData *);
+  CommandData(ObjectData &, Command *, ControllerData *);
   ~CommandData();
 
   void createResponse();
-  void createDMAEngine(uint32_t, Event);
-  void destroyDMAEngine();
 
  public:
-  uint64_t getUniqueID();
+  uint64_t getGCID();
   CQContext *getResponse();
 
   Command *getParent();
@@ -75,6 +75,53 @@ class CommandData : public Object {
   void getStatValues(std::vector<double> &) noexcept override {}
   void resetStatValues() noexcept override {}
 
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
+};
+
+class IOCommandData : public CommandData {
+ protected:
+  // List of friends - All commands can access this elements.
+  friend Flush;
+
+  DMATag dmaTag;
+
+  uint64_t slpn;
+  uint64_t nlp;
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
+  uint64_t _slba;
+  uint16_t _nlb;
+
+  uint64_t size;
+  uint8_t *buffer;
+
+  uint64_t beginAt;  // For log
+
+  IOCommandData(ObjectData &, Command *, ControllerData *);
+  ~IOCommandData();
+
+  void createDMAEngine(uint32_t, Event);
+  void destroyDMAEngine();
+
+ public:
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
+};
+
+class CompareCommandData : public IOCommandData {
+ protected:
+  // List of friends - All commands can access this elements.
+  friend Compare;
+
+  uint8_t complete;
+  uint8_t *subBuffer;
+
+  CompareCommandData(ObjectData &, Command *, ControllerData *);
+  ~CompareCommandData();
+
+ public:
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
