@@ -26,10 +26,9 @@ struct PhysicalRegion {
   uint32_t size;
   bool ignore;
 
-  PhysicalRegion() : address(0), size(0), ignore(true) {}
-  PhysicalRegion(uint64_t a, uint32_t s) : address(a), size(s), ignore(false) {}
-  PhysicalRegion(uint64_t a, uint32_t s, bool i)
-      : address(a), size(s), ignore(i) {}
+  PhysicalRegion();
+  PhysicalRegion(uint64_t, uint32_t);
+  PhysicalRegion(uint64_t, uint32_t, bool);
 };
 
 class DMAData {
@@ -41,10 +40,19 @@ class DMAData {
   Event eid;
   int32_t counter;
 
+  uint64_t handledSize;
+  uint64_t requestedSize;
+  uint64_t bufferSize;
+  uint8_t *buffer;
+
+  void allocateBuffer(uint64_t);
+  void deallocateBuffer();
+
  public:
-  DMAData() : eid(InvalidEventID), counter(0) {}
+  DMAData();
   DMAData(const DMAData &) = delete;
   DMAData(DMAData &&) noexcept = delete;
+  ~DMAData();
 
   DMAData &operator=(const DMAData &&) = delete;
   DMAData &operator=(DMAData &&) = delete;
@@ -52,24 +60,45 @@ class DMAData {
 
 using DMATag = DMAData *;
 
+union SGLDescriptor;
+
 /**
- * \brief DMA Engine abstract class
+ * \brief DMA Engine class
  *
- * DMA engine class for SSD controllers.
+ * DMA engine for various SSD controllers.
  */
 class DMAEngine : public Object {
- protected:
+ private:
   DMAInterface *interface;
   Event eventDMADone;
+
+  Event eventPRDTInitDone;
+  Event eventPRPReadDone;
+  Event eventSGLReadDone;
 
   std::unordered_set<DMATag> tagList;
   std::deque<DMATag> pendingTagList;
   std::unordered_map<DMATag, DMATag> oldTagList;
 
+  uint64_t pageSize;
+
   void dmaDone();
 
   DMATag createTag();
   void destroyTag(DMATag);
+
+  // PRDT related
+  void prdt_readDone();
+
+  // PRP related
+  uint32_t getPRPSize(uint64_t);
+  void getPRPListFromPRP(DMATag, uint64_t);
+  void getPRPListFromPRP_readDone();
+
+  // SGL related
+  void parseSGLDescriptor(DMATag, SGLDescriptor *);
+  void parseSGLSegment(DMATag, uint64_t, uint32_t);
+  void parseSGLSegment_readDone();
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);
@@ -80,37 +109,55 @@ class DMAEngine : public Object {
   DMAEngine &operator=(const DMAEngine &) = delete;
   DMAEngine &operator=(DMAEngine &&) = default;
 
-  /**
-   * \brief Initialize DMA session
-   *
-   * Create DMATag from provided DMA info structure base and buffer length size.
-   * When DMA session initialization finished, Event eid will be called.
-   */
-  virtual DMATag init(uint64_t base, uint32_t size, Event eid) noexcept = 0;
+  void updatePageSize(uint64_t);
 
   /**
-   * \brief Initialize DMA session
+   * \brief Initialize PRDT based DMA session
    *
-   * Same as above, but uses 128bit base address.
+   * Create DMATag from provided PRDT base address and PRDT length size.
+   * When DMA session initialization finished, Event eid will be called.
    */
-  virtual DMATag init(uint64_t base1, uint64_t base2, uint32_t size,
-                      Event eid) noexcept = 0;
+  DMATag initFromPRDT(uint64_t base, uint32_t size, Event eid) noexcept;
+
+  /**
+   * \brief Initialize PRP based DMA session
+   *
+   * Create DMATag from provided two PRP addresses and buffer length size.
+   * When DMA session initialization finished, Event eid will be called.
+   */
+  DMATag initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
+                     Event eid) noexcept;
+
+  /**
+   * \brief Initialize SGL based DMA session
+   *
+   * Create DMATag from provided SGL segment addresses and buffer length size.
+   * When DMA session initialization finished, Event eid will be called.
+   */
+  DMATag initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
+                     Event eid) noexcept;
+
+  /**
+   * \brief Initialize DMA session from raw pointer
+   *
+   * Create DMATag from provided pointer and size.
+   */
+  DMATag initRaw(uint64_t base, uint32_t size) noexcept;
 
   /**
    * \brief Close DMA session
    *
-   * Free resource about DMA session. You must call this function after all DMA
-   * operations are finished, and you will not call anymore.
+   * Free resources about DMA session.
    */
-  virtual void deinit(DMATag tag) noexcept = 0;
+  void deinit(DMATag tag) noexcept;
 
   //! DMA read with provided session
-  virtual void read(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
-                    Event eid) noexcept = 0;
+  void read(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
+            Event eid) noexcept;
 
   //! DMA write with provided session
-  virtual void write(DMATag tag, uint64_t offset, uint32_t size,
-                     uint8_t *buffer, Event eid) noexcept = 0;
+  void write(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
+             Event eid) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
