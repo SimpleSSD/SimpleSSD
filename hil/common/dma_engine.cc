@@ -117,7 +117,7 @@ void DMAEngine::dmaDone() {
   if (tag->counter == 0) {
     pendingTagList.pop_front();
 
-    schedule(tag->eid);
+    schedule(tag->eid, tag->data);
   }
 }
 
@@ -155,7 +155,7 @@ void DMAEngine::prdt_readDone() {
 
   tag->deallocateBuffer();
 
-  schedule(tag->eid);
+  schedule(tag->eid, tag->data);
 }
 
 uint32_t DMAEngine::getPRPSize(uint64_t prp) {
@@ -202,7 +202,7 @@ void DMAEngine::getPRPListFromPRP_readDone() {
     getPRPListFromPRP(tag, listPRP);
   }
   else {
-    schedule(tag->eid);
+    schedule(tag->eid, tag->data);
   }
 }
 
@@ -269,7 +269,7 @@ void DMAEngine::parseSGLSegment_readDone() {
     parseSGLSegment(tag, desc->address, desc->length);
   }
   else {
-    schedule(tag->eid);
+    schedule(tag->eid, tag->data);
   }
 }
 
@@ -277,8 +277,8 @@ void DMAEngine::updatePageSize(uint64_t size) {
   pageSize = size;
 }
 
-DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size,
-                               Event eid) noexcept {
+DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size, Event eid,
+                               uint64_t data) noexcept {
   auto ret = createTag();
 
   // PRDT is continuous list
@@ -286,6 +286,7 @@ DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size,
 
   // Prepare for PRDT read
   ret->eid = eid;
+  ret->data = data;
   ret->handledSize = 0;
   ret->requestedSize = 0;  // No requested size in PRDT, reuse it
   ret->allocateBuffer(size);
@@ -297,7 +298,7 @@ DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size,
 }
 
 DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
-                              Event eid) noexcept {
+                              Event eid, uint64_t data) noexcept {
   panic_if(popcount64(pageSize) != 1, "Invalid memory page size provided.");
 
   auto ret = createTag();
@@ -361,6 +362,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
       // Prepare for read
       immediate = false;
       ret->eid = eid;
+      ret->data = data;
       ret->handledSize = prp1Size;
 
       getPRPListFromPRP(ret, prp2);
@@ -373,14 +375,14 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   }
 
   if (immediate) {
-    schedule(eid);
+    schedule(eid, data);
   }
 
   return ret;
 }
 
 DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
-                              Event eid) noexcept {
+                              Event eid, uint64_t data) noexcept {
   auto ret = createTag();
 
   SGLDescriptor desc;
@@ -397,11 +399,12 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
     // This is entire buffer
     parseSGLDescriptor(ret, &desc);
 
-    schedule(eid);
+    schedule(eid, data);
   }
   else if (desc.getType() == SGLDescriptorType::Segment ||
            desc.getType() == SGLDescriptorType::LastSegment) {
     ret->eid = eid;
+    ret->data = data;
 
     parseSGLSegment(ret, desc.address, desc.length);
   }
@@ -426,7 +429,7 @@ void DMAEngine::deinit(DMATag tag) noexcept {
 }
 
 void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
-                     uint8_t *buffer, Event eid) noexcept {
+                     uint8_t *buffer, Event eid, uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t totalRead = 0;
@@ -435,6 +438,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   bool begin = false;
 
   tag->eid = eid;
+  tag->data = data;
   tag->counter = 0;
 
   for (auto &iter : tag->prList) {
@@ -482,7 +486,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 }
 
 void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
-                      uint8_t *buffer, Event eid) noexcept {
+                      uint8_t *buffer, Event eid, uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t totalWritten = 0;
@@ -491,6 +495,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   bool begin = false;
 
   tag->eid = eid;
+  tag->data = data;
   tag->counter = 0;
 
   for (auto &iter : tag->prList) {

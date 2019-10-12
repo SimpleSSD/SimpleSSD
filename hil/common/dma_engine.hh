@@ -38,6 +38,7 @@ class DMAData {
   std::vector<PhysicalRegion> prList;
 
   Event eid;
+  uint64_t data;
   int32_t counter;
 
   uint64_t handledSize;
@@ -119,7 +120,8 @@ class DMAEngine : public Object {
    * Create DMATag from provided PRDT base address and PRDT length size.
    * When DMA session initialization finished, Event eid will be called.
    */
-  DMATag initFromPRDT(uint64_t base, uint32_t size, Event eid) noexcept;
+  DMATag initFromPRDT(uint64_t base, uint32_t size, Event eid,
+                      uint64_t data = 0) noexcept;
 
   /**
    * \brief Initialize PRP based DMA session
@@ -127,8 +129,8 @@ class DMAEngine : public Object {
    * Create DMATag from provided two PRP addresses and buffer length size.
    * When DMA session initialization finished, Event eid will be called.
    */
-  DMATag initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
-                     Event eid) noexcept;
+  DMATag initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size, Event eid,
+                     uint64_t data = 0) noexcept;
 
   /**
    * \brief Initialize SGL based DMA session
@@ -136,8 +138,8 @@ class DMAEngine : public Object {
    * Create DMATag from provided SGL segment addresses and buffer length size.
    * When DMA session initialization finished, Event eid will be called.
    */
-  DMATag initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
-                     Event eid) noexcept;
+  DMATag initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size, Event eid,
+                     uint64_t data = 0) noexcept;
 
   /**
    * \brief Initialize DMA session from raw pointer
@@ -155,11 +157,11 @@ class DMAEngine : public Object {
 
   //! DMA read with provided session
   void read(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
-            Event eid) noexcept;
+            Event eid, uint64_t data = 0) noexcept;
 
   //! DMA write with provided session
   void write(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
-             Event eid) noexcept;
+             Event eid, uint64_t data = 0) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
