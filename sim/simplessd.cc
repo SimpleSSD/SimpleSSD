@@ -150,6 +150,8 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
 void SimpleSSD::deinit() noexcept {
   if (inited) {
     // Delete objects
+    delete subsystem;
+    delete object.cpu;
 
     // Deinitialize log system
     log.deinit();
