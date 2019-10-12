@@ -427,27 +427,37 @@ CPU::Core *CPU::getIdleCoreInRange(uint16_t begin, uint16_t end) {
 }
 
 void CPU::dispatch(uint64_t now) {
+  // Find event to dispatch
+  for (auto &core : coreList) {
+    auto event = core.eventQueue.begin();
+
+    if (event != core.eventQueue.end() && (*event)->scheduledAt <= now) {
+      EventData *eptr = *event;
+
+      core.eventQueue.erase(event);
+
+      eptr->func(now, eptr->data);
+    }
+  }
+
+  scheduleNext();
+}
+
+void CPU::interrupt(Event eid, uint64_t tick) {
+  // Engine invokes event!
+  eid->func(tick, 0);
+}
+
+void CPU::scheduleNext() {
+  // Schedule CPU
   uint64_t next = std::numeric_limits<uint64_t>::max();
 
   // Find event to dispatch
   for (auto &core : coreList) {
     auto event = core.eventQueue.begin();
 
-    if (event != core.eventQueue.end() && (*event)->scheduledAt <= now) {
-      (*event)->func(now, (*event)->data);
-
-      core.eventQueue.erase(event);
-
-      event = core.eventQueue.begin();
-
-      if (event == core.eventQueue.end()) {
-        continue;
-      }
-    }
-
-    // Find next event
-    if (next > (*event)->scheduledAt) {
-      next = (*event)->scheduledAt;
+    if (event != core.eventQueue.end()) {
+      next = MIN(next, (*event)->scheduledAt);
     }
   }
 
@@ -455,11 +465,6 @@ void CPU::dispatch(uint64_t now) {
   if (UNLIKELY(next != std::numeric_limits<uint64_t>::max())) {
     engine->schedule(next);
   }
-}
-
-void CPU::interrupt(Event eid, uint64_t tick) {
-  // Engine invokes event!
-  eid->func(tick, 0);
 }
 
 uint64_t CPU::getTick() noexcept {
@@ -559,20 +564,7 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
   eid->data = data;
   core->eventQueue.insert(iter, eid);
 
-  // Schedule CPU
-  uint64_t next = std::numeric_limits<uint64_t>::max();
-
-  // Find event to dispatch
-  for (auto &core : coreList) {
-    auto event = core.eventQueue.begin();
-
-    if (event != core.eventQueue.end()) {
-      next = MIN(next, (*event)->scheduledAt);
-    }
-  }
-
-  // Schedule next dispatch
-  engine->schedule(next);
+  scheduleNext();
 }
 
 void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {

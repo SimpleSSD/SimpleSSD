@@ -124,6 +124,8 @@ class CPU {
   void dispatch(uint64_t);
   void interrupt(Event, uint64_t);
 
+  void scheduleNext();
+
   inline void panic_log(const char *format, ...) noexcept;
   inline void warn_log(const char *format, ...) noexcept;
 
