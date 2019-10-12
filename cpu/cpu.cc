@@ -57,7 +57,7 @@ void Function::clear() {
 }
 
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
-    : engine(e), config(c), log(l), lastResetStat(0), curTick(0) {
+    : engine(e), config(c), log(l), lastResetStat(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
   clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
 
@@ -429,8 +429,6 @@ CPU::Core *CPU::getIdleCoreInRange(uint16_t begin, uint16_t end) {
 void CPU::dispatch(uint64_t now) {
   uint64_t next = std::numeric_limits<uint64_t>::max();
 
-  curTick = now;
-
   // Find event to dispatch
   for (auto &core : coreList) {
     auto event = core.eventQueue.begin();
@@ -461,20 +459,18 @@ void CPU::dispatch(uint64_t now) {
 
 void CPU::interrupt(Event eid, uint64_t tick) {
   // Engine invokes event!
-  curTick = tick;
-
   eid->func(tick, 0);
 }
 
 uint64_t CPU::getTick() noexcept {
-  return curTick;
+  return engine->getTick();
 }
 
 Event CPU::createEvent(const EventFunction &func,
                        const std::string &name) noexcept {
   Event eid = new EventData(std::move(func), std::move(name));
 
-  if (UNLIKELY(curTick != 0)) {
+  if (UNLIKELY(engine->getTick() != 0)) {
     panic_log("All Event should be created in constructor (time = 0).");
   }
 
@@ -487,6 +483,7 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
                    const Function &func) noexcept {
   uint16_t begin = 0;
   uint16_t end = hilCore;
+  uint64_t curTick = engine->getTick();
 
   if (UNLIKELY(eid == InvalidEventID)) {
     return;
@@ -561,6 +558,21 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
   eid->scheduledAt = newTick;
   eid->data = data;
   core->eventQueue.insert(iter, eid);
+
+  // Schedule CPU
+  uint64_t next = std::numeric_limits<uint64_t>::max();
+
+  // Find event to dispatch
+  for (auto &core : coreList) {
+    auto event = core.eventQueue.begin();
+
+    if (event != core.eventQueue.end()) {
+      next = MIN(next, (*event)->scheduledAt);
+    }
+  }
+
+  // Schedule next dispatch
+  engine->schedule(next);
 }
 
 void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {
@@ -694,7 +706,6 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, hilCore);
   BACKUP_SCALAR(out, iclCore);
   BACKUP_SCALAR(out, ftlCore);
-  BACKUP_SCALAR(out, curTick);
 
   uint64_t size = eventList.size();
   BACKUP_SCALAR(out, size);
@@ -726,7 +737,6 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, hilCore);
   RESTORE_SCALAR(in, iclCore);
   RESTORE_SCALAR(in, ftlCore);
-  RESTORE_SCALAR(in, curTick);
 
   uint64_t size;
   Event eid;

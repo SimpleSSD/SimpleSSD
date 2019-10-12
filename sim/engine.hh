@@ -44,6 +44,9 @@ class Engine {
    * Schedule event at provided tick. Reschedule if event is already scheduled.
    */
   virtual void schedule(uint64_t) = 0;
+
+  //! Get current simulation tick in pico-second
+  virtual uint64_t getTick() = 0;
 };
 
 }  // namespace SimpleSSD

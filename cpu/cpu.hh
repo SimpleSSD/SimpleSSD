@@ -113,8 +113,6 @@ class CPU {
   uint16_t iclCore;
   uint16_t ftlCore;
 
-  uint64_t curTick;
-
   std::vector<Core> coreList;
   std::vector<Event> eventList;
 
