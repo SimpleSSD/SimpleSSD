@@ -548,7 +548,7 @@ void Arbitrator::abort_SQDone() {
       delete sqList[iter->first];
       sqList[iter->first] = nullptr;
 
-      schedule(iter->second.first, 0ull, iter->second.second);
+      schedule(iter->second.first, iter->second.second);
 
       iter = abortSQList.erase(iter);
     }
@@ -567,7 +567,7 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
 
   if (iter != abortCommandList.end()) {
     // Aborted command finished
-    schedule(iter->second.first, 0ull, iter->second.second);
+    schedule(iter->second.first, iter->second.second);
 
     abortCommandList.erase(iter);
   }

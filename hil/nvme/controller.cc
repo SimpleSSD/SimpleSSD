@@ -356,6 +356,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     uint16_t entrySize = 0;
 
     adminQueueInited &= 0xFC;
+    adminQueueCreated++;
 
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
     controllerData.arbitrator->createAdminCQ(registers.adminCQueueBaseAddress,
@@ -365,6 +366,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     uint16_t entrySize = 0;
 
     adminQueueInited &= 0xF3;
+    adminQueueCreated++;
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
     controllerData.arbitrator->createAdminSQ(registers.adminSQueueBaseAddress,

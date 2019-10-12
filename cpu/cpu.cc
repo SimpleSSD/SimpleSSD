@@ -483,10 +483,14 @@ Event CPU::createEvent(const EventFunction &func,
   return eid;
 }
 
-void CPU::schedule(CPUGroup group, Event eid, const Function &func,
-                   uint64_t data) noexcept {
+void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
+                   const Function &func) noexcept {
   uint16_t begin = 0;
   uint16_t end = hilCore;
+
+  if (UNLIKELY(eid == InvalidEventID)) {
+    return;
+  }
 
   if (UNLIKELY(group != CPUGroup::None && func.cycles == 0)) {
     panic_log("Invalid function object passed.");
@@ -559,12 +563,12 @@ void CPU::schedule(CPUGroup group, Event eid, const Function &func,
   core->eventQueue.insert(iter, eid);
 }
 
-void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
+void CPU::schedule(Event eid, uint64_t delay, uint64_t data) noexcept {
   Function func;
 
   func.cycles = delay;
 
-  schedule(CPUGroup::None, eid, Function(), data);
+  schedule(CPUGroup::None, eid, data, Function());
 }
 
 void CPU::deschedule(Event eid) noexcept {
