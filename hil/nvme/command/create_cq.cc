@@ -49,7 +49,7 @@ void CreateCQ::setRequest(ControllerData *cdata, SQContext *req) {
   }
   else {
     auto ret = tag->arbitrator->createIOCQ(entry->dptr1, id, size, iv, ien, pc,
-                                           eventCreated);
+                                           eventCreated, tag->getGCID());
 
     switch (ret) {
       case 0:

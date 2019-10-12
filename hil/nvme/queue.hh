@@ -87,8 +87,10 @@ class Queue : public Object {
 
  public:
   Queue(ObjectData &, DMAEngine *);
-  Queue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t, bool, Event);
+  Queue(ObjectData &, DMAEngine *, uint16_t, uint16_t, uint64_t);
   ~Queue();
+
+  void setDMAData(uint64_t, bool, Event, uint64_t);
 
   uint16_t getID();
   uint16_t getItemCount();
@@ -112,8 +114,8 @@ class CQueue : public Queue {
 
  public:
   CQueue(ObjectData &, DMAEngine *);
-  CQueue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t, bool, Event,
-         uint16_t, bool);
+  CQueue(ObjectData &, DMAEngine *, uint16_t, uint16_t, uint64_t, uint16_t,
+         bool);
 
   void setData(CQEntry *, Event);
   uint16_t incHead();
@@ -132,8 +134,8 @@ class SQueue : public Queue {
 
  public:
   SQueue(ObjectData &, DMAEngine *);
-  SQueue(ObjectData &, DMAEngine *, uint16_t, uint64_t, uint16_t, uint64_t, bool, Event,
-         uint16_t, QueuePriority);
+  SQueue(ObjectData &, DMAEngine *, uint16_t, uint16_t, uint64_t, uint16_t,
+         QueuePriority);
 
   uint16_t getCQID();
   void setTail(uint16_t);

@@ -139,8 +139,8 @@ class Arbitrator : public Object {
   void completion_done();
 
   // Abort
-  std::map<uint16_t, Event> abortSQList;
-  std::map<uint32_t, Event> abortCommandList;
+  std::map<uint16_t, std::pair<Event, uint64_t>> abortSQList;
+  std::map<uint32_t, std::pair<Event, uint64_t>> abortCommandList;
 
   void abort_SQDone();
   void abort_CommandDone(uint32_t);
@@ -206,11 +206,12 @@ class Arbitrator : public Object {
   void applyArbitrationData();
   void requestIOQueues(uint16_t &, uint16_t &);
   uint8_t createIOSQ(uint64_t, uint16_t, uint16_t, uint16_t, uint8_t, bool,
-                     uint16_t, Event);
-  uint8_t createIOCQ(uint64_t, uint16_t, uint16_t, uint16_t, bool, bool, Event);
-  uint8_t deleteIOSQ(uint16_t, Event);
+                     uint16_t, Event, uint64_t);
+  uint8_t createIOCQ(uint64_t, uint16_t, uint16_t, uint16_t, bool, bool, Event,
+                     uint64_t);
+  uint8_t deleteIOSQ(uint16_t, Event, uint64_t);
   uint8_t deleteIOCQ(uint16_t);
-  uint8_t abortCommand(uint16_t, uint16_t, Event);
+  uint8_t abortCommand(uint16_t, uint16_t, Event, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

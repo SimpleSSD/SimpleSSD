@@ -37,7 +37,8 @@ void Abort::setRequest(ControllerData *cdata, SQContext *req) {
   // Make response
   tag->createResponse();
 
-  auto ret = tag->arbitrator->abortCommand(sqid, cid, eventAbort);
+  auto ret =
+      tag->arbitrator->abortCommand(sqid, cid, eventAbort, tag->getGCID());
 
   switch (ret) {
     case 0:

@@ -37,7 +37,7 @@ void DeleteSQ::setRequest(ControllerData *cdata, SQContext *req) {
   // Make response
   tag->createResponse();
 
-  auto ret = tag->arbitrator->deleteIOSQ(id, eventErased);
+  auto ret = tag->arbitrator->deleteIOSQ(id, eventErased, tag->getGCID());
 
   switch (ret) {
     case 0:

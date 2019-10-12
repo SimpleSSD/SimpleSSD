@@ -51,8 +51,9 @@ void CreateSQ::setRequest(ControllerData *cdata, SQContext *req) {
                          CommandSpecificStatusCode::Invalid_QueueSize);
   }
   else {
-    auto ret = tag->arbitrator->createIOSQ(entry->dptr1, id, size, cqid,
-                                           priority, pc, setid, eventCreated);
+    auto ret =
+        tag->arbitrator->createIOSQ(entry->dptr1, id, size, cqid, priority, pc,
+                                    setid, eventCreated, tag->getGCID());
 
     switch (ret) {
       case 0:

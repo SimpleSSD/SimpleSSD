@@ -250,8 +250,8 @@ void Arbitrator::createAdminCQ(uint64_t base, uint16_t size) {
     delete cqList[0];
   }
 
-  cqList[0] = new CQueue(object, controller->dmaEngine, 0, base, size, 16, true,
-                         InvalidEventID, 0, true);
+  cqList[0] = new CQueue(object, controller->dmaEngine, 0, size, 16, 0, true);
+  cqList[0]->setDMAData(base, true, InvalidEventID, 0);
 
   debugprint_ctrl("CQ 0    | CREATE | Entry size %d", size);
 }
@@ -261,8 +261,9 @@ void Arbitrator::createAdminSQ(uint64_t base, uint16_t size) {
     delete sqList[0];
   }
 
-  sqList[0] = new SQueue(object, controller->dmaEngine, 0, base, size, 64, true,
-                         InvalidEventID, 0, QueuePriority::Urgent);
+  sqList[0] = new SQueue(object, controller->dmaEngine, 0, size, 64, 0,
+                         QueuePriority::Urgent);
+  sqList[0]->setDMAData(base, true, InvalidEventID, 0);
 
   debugprint_ctrl("SQ 0    | CREATE | Entry size %d", size);
 }
@@ -301,7 +302,7 @@ void Arbitrator::requestIOQueues(uint16_t &nsq, uint16_t &ncq) {
 
 uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
                                uint16_t cqid, uint8_t pri, bool pc,
-                               uint16_t setid, Event eid) {
+                               uint16_t setid, Event eid, uint64_t gcid) {
   uint64_t sqEntrySize, cqEntrySize;
 
   if (UNLIKELY(!cqList[cqid])) {
@@ -314,8 +315,9 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto sq = new SQueue(object, controller->dmaEngine, id, base, size,
-                       sqEntrySize, pc, eid, cqid, (QueuePriority)pri);
+  auto sq = new SQueue(object, controller->dmaEngine, id, size, sqEntrySize,
+                       cqid, (QueuePriority)pri);
+  sq->setDMAData(base, pc, eid, gcid);
 
   panic_if(!sq, "Failed to allocate completion queue.");
 
@@ -329,7 +331,8 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
 }
 
 uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
-                               uint16_t iv, bool ien, bool pc, Event eid) {
+                               uint16_t iv, bool ien, bool pc, Event eid,
+                               uint64_t gcid) {
   uint64_t sqEntrySize, cqEntrySize;
 
   if (UNLIKELY(cqList[id])) {
@@ -338,8 +341,9 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto cq = new CQueue(object, controller->dmaEngine, id, base, size,
-                       sqEntrySize, pc, eid, iv, ien);
+  auto cq =
+      new CQueue(object, controller->dmaEngine, id, size, sqEntrySize, iv, ien);
+  cq->setDMAData(base, pc, eid, gcid);
 
   panic_if(!cq, "Failed to allocate completion queue.");
 
@@ -350,7 +354,7 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
   return 0;
 }
 
-uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
+uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid, uint64_t gcid) {
   auto sq = sqList[id];
   bool aborted = false;
 
@@ -383,7 +387,7 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid) {
   }
 
   // Push current event to wait all aborted commands to complete
-  abortSQList.emplace(std::make_pair(id, eid));
+  abortSQList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
 
   if (!aborted) {
     // We don't have aborted commands
@@ -419,7 +423,8 @@ uint8_t Arbitrator::deleteIOCQ(uint16_t id) {
   return 0;
 }
 
-uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid) {
+uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid,
+                                 uint64_t gcid) {
   uint32_t id = ((uint32_t)sqid << 16) | cid;
 
   // Find command
@@ -434,7 +439,7 @@ uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid) {
 
     delete iter->second;
 
-    abortCommandList.emplace(std::make_pair(id, eid));
+    abortCommandList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
 
     return 0u;
   }
@@ -543,7 +548,7 @@ void Arbitrator::abort_SQDone() {
       delete sqList[iter->first];
       sqList[iter->first] = nullptr;
 
-      schedule(iter->second);
+      schedule(iter->second.first, 0ull, iter->second.second);
 
       iter = abortSQList.erase(iter);
     }
@@ -562,7 +567,7 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
 
   if (iter != abortCommandList.end()) {
     // Aborted command finished
-    schedule(iter->second);
+    schedule(iter->second.first, 0ull, iter->second.second);
 
     abortCommandList.erase(iter);
   }
