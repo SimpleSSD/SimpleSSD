@@ -57,7 +57,7 @@ void Function::clear() {
 }
 
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
-    : engine(e), config(c), log(l), lastResetStat(0) {
+    : engine(e), config(c), log(l), lastResetStat(0), lastScheduledAt(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
   clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
 
@@ -427,16 +427,23 @@ CPU::Core *CPU::getIdleCoreInRange(uint16_t begin, uint16_t end) {
 }
 
 void CPU::dispatch(uint64_t now) {
-  // Find event to dispatch
-  for (auto &core : coreList) {
-    auto event = core.eventQueue.begin();
+  // We are de-scheduled
+  lastScheduledAt = std::numeric_limits<uint64_t>::max();
 
-    if (event != core.eventQueue.end() && (*event)->scheduledAt <= now) {
+  // Find event to dispatch
+  for (auto event = eventQueue.begin(); event != eventQueue.end();) {
+    if ((*event)->scheduledAt <= now) {
       EventData *eptr = *event;
 
-      core.eventQueue.erase(event);
+      event = eventQueue.erase(event);
+
+      warn_log("Event ID %016" PRIx64 " (%s) called at %" PRIu64 ".", eptr,
+               eptr->name.c_str(), now);
 
       eptr->func(now, eptr->data);
+    }
+    else {
+      break;
     }
   }
 
@@ -453,16 +460,18 @@ void CPU::scheduleNext() {
   uint64_t next = std::numeric_limits<uint64_t>::max();
 
   // Find event to dispatch
-  for (auto &core : coreList) {
-    auto event = core.eventQueue.begin();
+  auto event = eventQueue.begin();
 
-    if (event != core.eventQueue.end()) {
-      next = MIN(next, (*event)->scheduledAt);
-    }
+  if (event != eventQueue.end()) {
+    next = MIN(next, (*event)->scheduledAt);
   }
 
   // Schedule next dispatch
-  if (UNLIKELY(next != std::numeric_limits<uint64_t>::max())) {
+  if (next != lastScheduledAt && next != std::numeric_limits<uint64_t>::max()) {
+    warn_log("CPU scheduled at %" PRIu64 ".", next);
+
+    lastScheduledAt = next;
+
     engine->schedule(next);
   }
 }
@@ -543,26 +552,33 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     newTick = core->busyUntil;
   }
 
-  auto iter = core->eventQueue.begin();
+  bool found = false;
+  bool flag = false;
+  auto old = eventQueue.begin();
+  auto insert = eventQueue.end();
 
-  for (; iter != core->eventQueue.end();) {
-    if (*iter == eid) {
-      warn_log("Event ID %016" PRIx64 " (%s) rescheduled from %" PRIu64
-               " to %" PRIu64,
-               eid, eid->name.c_str(), eid->scheduledAt, newTick);
-
-      iter = core->eventQueue.erase(iter);
-    }
-    else if (newTick < (*iter)->scheduledAt) {
-      break;
+  for (auto entry = eventQueue.begin(); entry != eventQueue.end(); ++entry) {
+    if (*entry == eid) {
+      found = true;
+      old = entry;
     }
 
-    ++iter;
+    if ((*entry)->scheduledAt > newTick && !flag) {
+      insert = entry;
+      flag = true;
+    }
   }
 
   eid->scheduledAt = newTick;
   eid->data = data;
-  core->eventQueue.insert(iter, eid);
+  eventQueue.insert(insert, eid);
+
+  if (found) {
+    eventQueue.erase(old);
+  }
+
+  warn_log("Event ID %016" PRIx64 " (%s) scheduled at %" PRIu64 ".", eid,
+           eid->name.c_str(), eid->scheduledAt);
 
   scheduleNext();
 }
@@ -576,26 +592,21 @@ void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
 }
 
 void CPU::deschedule(Event eid) noexcept {
-  for (auto &core : coreList) {
-    for (auto iter = core.eventQueue.begin(); iter != core.eventQueue.end();
-         ++iter) {
-      if (*iter == eid) {
-        eid->scheduledAt = std::numeric_limits<uint64_t>::max();
+  for (auto iter = eventQueue.begin(); iter != eventQueue.end(); ++iter) {
+    if (*iter == eid) {
+      eid->scheduledAt = std::numeric_limits<uint64_t>::max();
 
-        core.eventQueue.erase(iter);
+      eventQueue.erase(iter);
 
-        return;
-      }
+      return;
     }
   }
 }
 
 bool CPU::isScheduled(Event eid) noexcept {
-  for (auto &core : coreList) {
-    for (auto &iter : core.eventQueue) {
-      if (iter == eid) {
-        return true;
-      }
+  for (auto &iter : eventQueue) {
+    if (iter == eid) {
+      return true;
     }
   }
 
@@ -692,6 +703,7 @@ void CPU::resetStatValues() noexcept {
 
 void CPU::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, lastResetStat);
+  BACKUP_SCALAR(out, lastScheduledAt);
   BACKUP_SCALAR(out, clockSpeed);
   BACKUP_SCALAR(out, clockPeriod);
   BACKUP_SCALAR(out, useDedicatedCore);
@@ -706,23 +718,19 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter);
   }
 
-  size = coreList.size();
+  size = eventQueue.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : coreList) {
-    size = iter.eventQueue.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &event : iter.eventQueue) {
-      BACKUP_SCALAR(out, event);
-      BACKUP_SCALAR(out, event->scheduledAt);
-      BACKUP_SCALAR(out, event->data);
-    }
+  for (auto &event : eventQueue) {
+    BACKUP_SCALAR(out, event);
+    BACKUP_SCALAR(out, event->scheduledAt);
+    BACKUP_SCALAR(out, event->data);
   }
 }
 
 void CPU::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, lastResetStat);
+  RESTORE_SCALAR(in, lastScheduledAt);
   RESTORE_SCALAR(in, clockSpeed);
   RESTORE_SCALAR(in, clockPeriod);
   RESTORE_SCALAR(in, useDedicatedCore);
@@ -752,24 +760,18 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
     panic_log("Total core count mismatch while restore CPU.");
   }
 
-  uint64_t list;
+  RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    auto &core = coreList.at(i);
+    Event eid;
 
-    RESTORE_SCALAR(in, list);
+    RESTORE_SCALAR(in, eid);
+    eid = restoreEventID(eid);
 
-    for (uint64_t j = 0; j < list; j++) {
-      Event eid;
+    RESTORE_SCALAR(in, eid->scheduledAt);
+    RESTORE_SCALAR(in, eid->data);
 
-      RESTORE_SCALAR(in, eid);
-      eid = restoreEventID(eid);
-
-      RESTORE_SCALAR(in, eid->scheduledAt);
-      RESTORE_SCALAR(in, eid->data);
-
-      core.eventQueue.push_back(eid);
-    }
+    eventQueue.push_back(eid);
   }
 }
 

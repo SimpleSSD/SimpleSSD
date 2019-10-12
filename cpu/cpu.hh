@@ -94,8 +94,6 @@ class CPU {
     EventStat eventStat;
     Function instructionStat;
 
-    std::list<Event> eventQueue;
-
     Core() : busyUntil(0) {}
   };
 
@@ -104,6 +102,7 @@ class CPU {
   Log *log;              //!< Log engine
 
   uint64_t lastResetStat;
+  uint64_t lastScheduledAt;
 
   uint64_t clockSpeed;
   uint64_t clockPeriod;
@@ -115,6 +114,7 @@ class CPU {
 
   std::vector<Core> coreList;
   std::vector<Event> eventList;
+  std::list<Event> eventQueue;
 
   std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
 
