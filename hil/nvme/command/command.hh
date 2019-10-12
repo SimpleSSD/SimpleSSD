@@ -81,6 +81,8 @@ class CommandData : public Object {
 
 class IOCommandData : public CommandData {
  protected:
+  friend Command;
+
   // List of friends - All commands can access this elements.
   friend Flush;
 
@@ -112,6 +114,8 @@ class IOCommandData : public CommandData {
 
 class CompareCommandData : public IOCommandData {
  protected:
+  friend Command;
+
   // List of friends - All commands can access this elements.
   friend Compare;
 

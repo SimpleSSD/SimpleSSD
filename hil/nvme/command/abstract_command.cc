@@ -24,6 +24,26 @@ CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
+CommandTag Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
+  auto ret = new IOCommandData(object, this, cdata);
+
+  ret->sqc = sqc;
+
+  addTagToList(ret);
+
+  return ret;
+}
+
+CommandTag Command::createCompareTag(ControllerData *cdata, SQContext *sqc) {
+  auto ret = new CompareCommandData(object, this, cdata);
+
+  ret->sqc = sqc;
+
+  addTagToList(ret);
+
+  return ret;
+}
+
 CommandTag Command::findTag(uint64_t gcid) {
   auto iter = tagList.find(gcid);
 

@@ -59,7 +59,10 @@ class Command : public Object {
    */
   std::unordered_map<uint64_t, CommandTag> tagList;
 
-  virtual CommandTag createTag(ControllerData *, SQContext *);
+  CommandTag createTag(ControllerData *, SQContext *);
+  CommandTag createIOTag(ControllerData *, SQContext *);
+  CommandTag createCompareTag(ControllerData *, SQContext *);
+
   CommandTag findTag(uint64_t);
   void destroyTag(CommandTag);
   void addTagToList(CommandTag);
