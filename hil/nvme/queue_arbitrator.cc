@@ -898,7 +898,8 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : abortSQList) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_EVENT(out, iter.second);
+    BACKUP_EVENT(out, iter.second.first);
+    BACKUP_SCALAR(out, iter.second.second);
   }
 
   size = abortCommandList.size();
@@ -906,7 +907,8 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : abortCommandList) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_EVENT(out, iter.second);
+    BACKUP_EVENT(out, iter.second.first);
+    BACKUP_SCALAR(out, iter.second.second);
   }
 }
 
@@ -1008,11 +1010,13 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   for (uint64_t i = 0; i < size; i++) {
     uint16_t id;
     Event eid;
+    uint64_t gcid;
 
     RESTORE_SCALAR(in, id);
     RESTORE_EVENT(in, eid);
+    RESTORE_SCALAR(in, gcid);
 
-    abortSQList.emplace(std::make_pair(id, eid));
+    abortSQList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
   }
 
   RESTORE_SCALAR(in, size);
@@ -1020,11 +1024,13 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   for (uint64_t i = 0; i < size; i++) {
     uint32_t id;
     Event eid;
+    uint64_t gcid;
 
     RESTORE_SCALAR(in, id);
     RESTORE_EVENT(in, eid);
+    RESTORE_SCALAR(in, gcid);
 
-    abortCommandList.emplace(std::make_pair(id, eid));
+    abortCommandList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
   }
 }
 
