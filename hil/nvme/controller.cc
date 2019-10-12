@@ -20,7 +20,6 @@ namespace SimpleSSD::HIL::NVMe {
 ControllerData::ControllerData()
     : controller(nullptr),
       interface(nullptr),
-      dma(nullptr),
       interruptManager(nullptr),
       arbitrator(nullptr),
       dmaEngine(nullptr) {}
@@ -44,7 +43,6 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   // Fill me!
   controllerData.controller = this;
   controllerData.interface = interface;
-  controllerData.dma = nullptr;
   controllerData.interruptManager = nullptr;
   controllerData.arbitrator = nullptr;
 
@@ -60,7 +58,7 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   param.transferUnit = 64;
   param.latency = ARM::AXI::makeFunction(axiClock, axiWidth);
 
-  controllerData.dma = new FIFO(o, i, param);
+  pcie = new FIFO(o, i, param);
 
   // [Bits ] Name  : Description                        : Current Setting
   // [63:58] Reserved
@@ -92,23 +90,9 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.interruptManager =
       new InterruptManager(object, interface, controllerID);
   controllerData.arbitrator = new Arbitrator(object, &controllerData);
-  controllerData.dmaEngine = new DMAEngine(object, controllerData.dma);
+  controllerData.dmaEngine = new DMAEngine(object, pcie);
 
   controllerData.dmaEngine->updatePageSize(1ull << 12);
-
-  // Create events
-  eventQueueInit = createEvent(
-      [this](uint64_t) {
-        adminQueueCreated++;
-
-        if (adminQueueCreated == 2 && registers.cc.en && !registers.cs.rdy) {
-          registers.cs.rdy = 1;
-          registers.cs.shst = 0;
-
-          controllerData.arbitrator->enable(true);
-        }
-      },
-      "HIL::NVMe::Controller::eventQueueInit");
 
   debugprint_ctrl("CREATE");
 }
@@ -117,7 +101,7 @@ Controller::~Controller() {
   delete controllerData.dmaEngine;
   delete controllerData.interruptManager;
   delete controllerData.arbitrator;
-  delete controllerData.dma;
+  delete pcie;
   // delete interconnect;
 }
 
@@ -375,7 +359,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
     entrySize = ((registers.adminQueueAttributes & 0x0FFF0000) >> 16) + 1;
     controllerData.arbitrator->createAdminCQ(registers.adminCQueueBaseAddress,
-                                             entrySize, eventQueueInit);
+                                             entrySize);
   }
   if ((adminQueueInited & 0x0C) == 0x0C) {
     uint16_t entrySize = 0;
@@ -384,7 +368,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
     entrySize = (registers.adminQueueAttributes & 0x0FFF) + 1;
     controllerData.arbitrator->createAdminSQ(registers.adminSQueueBaseAddress,
-                                             entrySize, eventQueueInit);
+                                             entrySize);
   }
 
   return 0;
@@ -458,7 +442,7 @@ void Controller::createCheckpoint(std::ostream &out) const noexcept {
 
   controllerData.interruptManager->createCheckpoint(out);
   controllerData.arbitrator->createCheckpoint(out);
-  ((FIFO *)controllerData.dma)->createCheckpoint(out);
+  pcie->createCheckpoint(out);
 
   feature.createCheckpoint(out);
   logPage.createCheckpoint(out);
@@ -478,7 +462,7 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
 
   controllerData.interruptManager->restoreCheckpoint(in);
   controllerData.arbitrator->restoreCheckpoint(in);
-  ((FIFO *)controllerData.dma)->restoreCheckpoint(in);
+  pcie->restoreCheckpoint(in);
 
   feature.restoreCheckpoint(in);
   logPage.restoreCheckpoint(in);

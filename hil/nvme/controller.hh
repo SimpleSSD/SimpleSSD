@@ -26,7 +26,6 @@ class ControllerData {
  public:
   Controller *controller;
   Interface *interface;  //!< Top-most host interface
-  DMAInterface *dma;     //!< DMA port for current controller
   InterruptManager *interruptManager;
   Arbitrator *arbitrator;
   DMAEngine *dmaEngine;
@@ -107,7 +106,7 @@ class Controller : public AbstractController {
 
   ControllerData controllerData;
 
-  // FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
+  FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
   // FIFO *interconnect;  //!< FIFO for PCIe PHY <-> Interconnect
 
   RegisterTable registers;
@@ -124,8 +123,6 @@ class Controller : public AbstractController {
 
   // Queue DMA initialization
   uint8_t adminQueueCreated;  //!< When queue DMAEngine initialized
-
-  Event eventQueueInit;
 
   void handleControllerConfig(uint32_t);
 
