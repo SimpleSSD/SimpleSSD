@@ -15,13 +15,16 @@ CommandData::CommandData(Subsystem *s, ControllerData *c)
     : subsystem(s),
       controller(c->controller),
       interface(c->interface),
-      dma(c->dma),
       arbitrator(c->arbitrator),
       interrupt(c->interruptManager),
-      memoryPageSize(c->memoryPageSize) {}
+      dmaEngine(c->dmaEngine) {}
 
 Command::Command(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Object(o), data(s, c), dmaEngine(nullptr), sqc(nullptr), cqc(nullptr) {}
+    : Object(o),
+      data(s, c),
+      dmaTag(InvalidDMATag),
+      sqc(nullptr),
+      cqc(nullptr) {}
 
 Command::~Command() {}
 
@@ -41,19 +44,17 @@ void Command::createResponse() {
  * \param[in] size  Expected data size (for PRPEngine)
  * \param[in] eid   DMA init callback
  */
-void Command::createDMAEngine(uint64_t size, Event eid) {
+void Command::createDMAEngine(uint32_t size, Event eid) {
   panic_if(!sqc, "Request not submitted.");
 
   auto entry = sqc->getData();
 
   if (sqc->isSGL()) {
-    dmaEngine = new SGLEngine(object, data.dma);
+    dmaTag = data.dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid);
   }
   else {
-    dmaEngine = new PRPEngine(object, data.dma, data.memoryPageSize);
+    dmaTag = data.dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid);
   }
-
-  dmaEngine->init(entry->dptr1, entry->dptr2, size, eid);
 }
 
 CQContext *Command::getResult() {

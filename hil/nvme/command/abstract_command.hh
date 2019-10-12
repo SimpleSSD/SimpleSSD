@@ -40,10 +40,9 @@ class CommandData {
   Subsystem *subsystem;
   Controller *controller;
   Interface *interface;
-  DMAInterface *dma;
   Arbitrator *arbitrator;
   InterruptManager *interrupt;
-  uint64_t memoryPageSize;
+  DMAEngine *dmaEngine;
 
   CommandData(Subsystem *, ControllerData *);
 };
@@ -57,13 +56,13 @@ class Command : public Object {
  protected:
   CommandData data;
 
-  DMAEngine *dmaEngine;
+  DMATag dmaTag;
 
   SQContext *sqc;
   CQContext *cqc;
 
   void createResponse();
-  void createDMAEngine(uint64_t, Event);
+  void createDMAEngine(uint32_t, Event);
 
  public:
   Command(ObjectData &, Subsystem *, ControllerData *);
