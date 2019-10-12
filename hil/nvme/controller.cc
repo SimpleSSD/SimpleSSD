@@ -23,7 +23,7 @@ ControllerData::ControllerData()
       dma(nullptr),
       interruptManager(nullptr),
       arbitrator(nullptr),
-      memoryPageSize(0) {}
+      dmaEngine(nullptr) {}
 
 Controller::RegisterTable::RegisterTable() {
   memset(data, 0, sizeof(RegisterTable));
@@ -47,7 +47,6 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.dma = nullptr;
   controllerData.interruptManager = nullptr;
   controllerData.arbitrator = nullptr;
-  controllerData.memoryPageSize = 1ull << 12;  // Initial value in NVMe
 
   // Initialize FIFO queues
   auto axiWidth = (ARM::AXI::Width)readConfigUint(Section::HostInterface,
@@ -93,6 +92,9 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.interruptManager =
       new InterruptManager(object, interface, controllerID);
   controllerData.arbitrator = new Arbitrator(object, &controllerData);
+  controllerData.dmaEngine = new DMAEngine(object, controllerData.dma);
+
+  controllerData.dmaEngine->updatePageSize(1ull << 12);
 
   // Create events
   eventQueueInit = createEvent(
@@ -112,6 +114,7 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
 }
 
 Controller::~Controller() {
+  delete controllerData.dmaEngine;
   delete controllerData.interruptManager;
   delete controllerData.arbitrator;
   delete controllerData.dma;
@@ -418,7 +421,7 @@ void Controller::handleControllerConfig(uint32_t update) {
   }
   if (((old >> 7) & 0x0F) != registers.cc.mps) {
     // Memory Page Size changed
-    controllerData.memoryPageSize = 1ull << (registers.cc.mps + 12);
+    controllerData.dmaEngine->updatePageSize(1ull << (registers.cc.mps + 12));
   }
   if (((old >> 4) & 0x07) != registers.cc.css) {
     // I/O Command Set Selected changed
@@ -460,7 +463,6 @@ void Controller::createCheckpoint(std::ostream &out) const noexcept {
   feature.createCheckpoint(out);
   logPage.createCheckpoint(out);
 
-  BACKUP_SCALAR(out, controllerData.memoryPageSize);
   BACKUP_BLOB(out, registers.data, sizeof(RegisterTable));
   BACKUP_BLOB(out, pmrRegisters.data, sizeof(PersistentMemoryRegion));
   BACKUP_SCALAR(out, sqStride);
@@ -481,7 +483,6 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
   feature.restoreCheckpoint(in);
   logPage.restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, controllerData.memoryPageSize);
   RESTORE_BLOB(in, registers.data, sizeof(RegisterTable));
   RESTORE_BLOB(in, pmrRegisters.data, sizeof(PersistentMemoryRegion));
   RESTORE_SCALAR(in, sqStride);

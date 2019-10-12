@@ -29,7 +29,7 @@ class ControllerData {
   DMAInterface *dma;     //!< DMA port for current controller
   InterruptManager *interruptManager;
   Arbitrator *arbitrator;
-  uint64_t memoryPageSize;  //!< This is only for PRPEngine
+  DMAEngine *dmaEngine;
 
   ControllerData();
 };

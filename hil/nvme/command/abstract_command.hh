@@ -13,7 +13,7 @@
 #include <queue>
 
 #include "hil/common/interrupt_manager.hh"
-#include "hil/nvme/dma_engine.hh"
+#include "hil/common/dma_engine.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
 
