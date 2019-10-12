@@ -60,6 +60,8 @@ class DMAData {
 
 using DMATag = DMAData *;
 
+const DMATag InvalidDMATag = nullptr;
+
 union SGLDescriptor;
 
 /**
