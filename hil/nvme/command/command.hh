@@ -35,8 +35,24 @@
 namespace SimpleSSD::HIL::NVMe {
 
 #define FRIEND_LIST                                                            \
+  friend DeleteSQ;                                                             \
+  friend CreateSQ;                                                             \
+  friend GetLogPage;                                                           \
+  friend DeleteCQ;                                                             \
+  friend CreateCQ;                                                             \
+  friend Identify;                                                             \
   friend Abort;                                                                \
-  friend Compare;
+  friend SetFeature;                                                           \
+  friend GetFeature;                                                           \
+  friend AsyncEventRequest;                                                    \
+  friend NamespaceManagement;                                                  \
+  friend NamespaceAttachment;                                                  \
+  friend FormatNVM;                                                            \
+  friend Flush;                                                                \
+  friend Write;                                                                \
+  friend Read;                                                                 \
+  friend Compare;                                                              \
+  friend DatasetManagement;
 
 /**
  * \brief CommandData class
