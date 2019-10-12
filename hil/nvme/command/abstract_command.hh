@@ -19,9 +19,9 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-#define debugprint_command(format, ...)                                        \
+#define debugprint_command(tag, format, ...)                                   \
   {                                                                            \
-    uint64_t _uid = getUniqueID();                                             \
+    uint64_t _uid = tag->getUniqueID();                                        \
                                                                                \
     debugprint(Log::DebugID::HIL_NVMe_Command,                                 \
                "CTRL %-3u | SQ %2u:%-5u | " format, (uint16_t)(_uid >> 32),    \
@@ -49,6 +49,8 @@ class Command : public Object {
  protected:
   Subsystem *subsystem;
 
+  CommandTag createTag(ControllerData *);
+
  public:
   Command(ObjectData &, Subsystem *);
   Command(const Command &) = delete;
@@ -57,10 +59,6 @@ class Command : public Object {
 
   virtual CommandTag setRequest(ControllerData *, SQContext *) = 0;
   virtual void completeRequest(CommandTag);
-
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

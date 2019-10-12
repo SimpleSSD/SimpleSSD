@@ -44,6 +44,8 @@ class CommandData : public Object {
  private:
   friend Command;
 
+  Command *parent;
+
   Controller *controller;
   Interface *interface;
   Arbitrator *arbitrator;
@@ -54,16 +56,27 @@ class CommandData : public Object {
   CQContext *cqc;
   DMATag dmaTag;
 
-  CommandData(ObjectData &o, ControllerData *);
+  CommandData(ObjectData &o, Command *, ControllerData *);
+  ~CommandData();
 
   void createResponse();
   void createDMAEngine(uint32_t, Event);
+  void destroyDMAEngine();
 
  public:
   uint64_t getUniqueID();
   CQContext *getResponse();
 
+  Command *getParent();
+
   Arbitrator *getArbitrator();
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override {}
+  void getStatValues(std::vector<double> &) noexcept override {}
+  void resetStatValues() noexcept override {}
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -638,6 +638,10 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
 }
 
 DMATag DMAEngine::restoreDMATag(DMATag oldTag) noexcept {
+  if (oldTag == InvalidDMATag) {
+    return InvalidDMATag;
+  }
+
   auto iter = oldTagList.find(oldTag);
 
   if (iter == oldTagList.end()) {
