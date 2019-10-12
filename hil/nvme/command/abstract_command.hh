@@ -10,10 +10,10 @@
 #ifndef __SIMPLESSD_HIL_NVME_COMMAND_ABSTRACT_COMMAND_HH__
 #define __SIMPLESSD_HIL_NVME_COMMAND_ABSTRACT_COMMAND_HH__
 
-#include <queue>
+#include <deque>
 
-#include "hil/common/interrupt_manager.hh"
 #include "hil/common/dma_engine.hh"
+#include "hil/common/interrupt_manager.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
 
@@ -34,18 +34,11 @@ class Arbitrator;
 class SQContext;
 class CQContext;
 class ControllerData;
+class CommandData;
 
-class CommandData {
- public:
-  Subsystem *subsystem;
-  Controller *controller;
-  Interface *interface;
-  Arbitrator *arbitrator;
-  InterruptManager *interrupt;
-  DMAEngine *dmaEngine;
+using CommandTag = CommandData *;
 
-  CommandData(Subsystem *, ControllerData *);
-};
+const CommandTag InvalidCommandTag = nullptr;
 
 /**
  * \brief Command object
@@ -54,33 +47,20 @@ class CommandData {
  */
 class Command : public Object {
  protected:
-  CommandData data;
-
-  DMATag dmaTag;
-
-  SQContext *sqc;
-  CQContext *cqc;
-
-  void createResponse();
-  void createDMAEngine(uint32_t, Event);
+  Subsystem *subsystem;
 
  public:
-  Command(ObjectData &, Subsystem *, ControllerData *);
+  Command(ObjectData &, Subsystem *);
   Command(const Command &) = delete;
-  Command(Command &&) noexcept = default;
+  Command(Command &&) noexcept = delete;
   virtual ~Command();
 
-  CQContext *getResult();
-  CommandData &getCommandData();
-  uint64_t getUniqueID();
-  virtual void setRequest(SQContext *) = 0;
+  virtual CommandTag setRequest(ControllerData *, SQContext *) = 0;
+  virtual void completeRequest(CommandTag);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe
