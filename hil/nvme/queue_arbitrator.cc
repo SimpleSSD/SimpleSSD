@@ -342,7 +342,7 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
   auto cq =
-      new CQueue(object, controller->dmaEngine, id, size, sqEntrySize, iv, ien);
+      new CQueue(object, controller->dmaEngine, id, size, cqEntrySize, iv, ien);
   cq->setDMAData(base, pc, eid, gcid);
 
   panic_if(!cq, "Failed to allocate completion queue.");
@@ -673,6 +673,7 @@ void Arbitrator::collect() {
 }
 
 void Arbitrator::collect_done() {
+collect_begin:
   auto sqe = collectQueue.front();
 
   sqe->update();
@@ -689,7 +690,10 @@ void Arbitrator::collect_done() {
     delete sqe;
   }
 
-  if (collectQueue.size() == 0) {
+  if (collectQueue.size() > 0) {
+    goto collect_begin;
+  }
+  else {
     running = false;
 
     controller->controller->notifySubsystem(internalQueueSize);
