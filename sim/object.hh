@@ -13,6 +13,8 @@
 #include <vector>
 
 #include "cpu/cpu.hh"
+#include "mem/dram/abstract_dram.hh"
+#include "mem/sram/abstract_sram.hh"
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/log.hh"
@@ -66,13 +68,24 @@ namespace SimpleSSD {
 #endif
 
 using ObjectData = struct _ObjectData {
+  /* SSD hardware */
   CPU::CPU *cpu;
+  Memory::DRAM::AbstractDRAM *dram;
+  Memory::SRAM::AbstractSRAM *sram;
+
+  /* Simulation utilities */
   ConfigReader *config;
   Log *log;
 
-  _ObjectData() : cpu(nullptr), config(nullptr), log(nullptr) {}
-  _ObjectData(CPU::CPU *e, ConfigReader *c, Log *l)
-      : cpu(e), config(c), log(l) {}
+  _ObjectData()
+      : cpu(nullptr),
+        dram(nullptr),
+        sram(nullptr),
+        config(nullptr),
+        log(nullptr) {}
+  _ObjectData(CPU::CPU *e, Memory::DRAM::AbstractDRAM *d,
+              Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
+      : cpu(e), dram(d), sram(s), config(c), log(l) {}
 };
 
 /**

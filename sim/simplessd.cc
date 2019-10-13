@@ -10,6 +10,8 @@
 #include <iostream>
 
 #include "hil/nvme/subsystem.hh"
+#include "mem/dram/simple.hh"
+#include "mem/sram/sram.hh"
 
 #define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
 #define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
@@ -104,7 +106,6 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
  * \return Initialization result.
  */
 bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
-  object.cpu = new CPU::CPU(e, c, &log);
   object.config = c;
   object.log = &log;
 
@@ -122,6 +123,11 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
 
   // Initialize log system
   log.init(object.cpu, outfile, errfile, debugfile);
+
+  // Initialize hardware
+  object.cpu = new CPU::CPU(e, c, &log);
+  object.dram = new Memory::DRAM::SimpleDRAM(object);
+  object.sram = new Memory::SRAM::SRAM(object);
 
   // Initialize objects
   switch (mode) {
@@ -151,6 +157,10 @@ void SimpleSSD::deinit() noexcept {
   if (inited) {
     // Delete objects
     delete subsystem;
+
+    // Deinitialize hardware
+    delete object.sram;
+    delete object.dram;
     delete object.cpu;
 
     // Deinitialize log system
