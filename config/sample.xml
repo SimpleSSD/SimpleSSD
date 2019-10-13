@@ -311,30 +311,33 @@
       For the definition of parallelism group, see FIL section.
 
       Possible values:
-        0: Each page in first-level parallelism group
-        1: Each page in all parallelism group
-    -->
+        1: Each page in first-level parallelism group
+        2: Each page in second-level parallelism group
+        4: Each page in third-level parallelism group
+        8: Each page in fourth-level parallelism group
+        15: Each page in all parallelism group
+     -->
     <config name="PrefetchMode">0</config>
     <!--
       <int> Prefetch/read-ahead trigger condition - request count
 
       Set the number of consecutive sequential read request to trigger
       prefetch/read-ahead. This value should be larger than 1.
-    -->
+     -->
     <config name="PrefetchCount">4</config>
     <!--
       <int> Prefetch/read-ahead trigger condition - read capacity
 
       Set the amount of data should be read in sequential to trigger
       prefetch/read-ahead. This value is unit of one physical page.
-    -->
+     -->
     <config name="PrefetchRatio">32</config>
     <!--
       <int> Cache algorithm
 
       Possible values:
         0: Set-associative Cache (released with Amber)
-    -->
+     -->
     <config name="CacheMode">0</config>
     <!-- Set-associatve cache configuration  -->
     <section name="amber">
@@ -346,7 +349,7 @@
         Set count will be automatically calculated.
         To configure cache as directed-map, set way as 1.
         To configure cache as fully-associative, set way as 0.
-      -->
+       -->
       <config name="CacheWaySize">8</config>
       <!--
         <int> Cache eviction policy
@@ -355,7 +358,7 @@
           0: RANDOM: Evict random entry
           1: FIFO: Evict least recently added entry
           2: LRU: Evict least recently used entry
-      -->
+       -->
       <config name="EvictPolicy">2</config>
       <!--
         <int> Eviction granularity
@@ -364,9 +367,12 @@
         Cache will try to collect as many pages as it can.
 
         Possible values:
-          0: Each page in first-level parallelism group
-          1: Each page in all parallelism group
-      -->
+          1: Each page in first-level parallelism group
+          2: Each page in second-level parallelism group
+          4: Each page in third-level parallelism group
+          8: Each page in fourth-level parallelism group
+          15: Each page in all parallelism group
+       -->
       <config name="EvictMode">1</config>
     </section>
   </section>
@@ -383,7 +389,6 @@
         0: Page-level Mapping (Supports superpage)
         1: Block-level Mapping
         2: Virtually-Linked FTL (Extended version of FTL released with Amber)
-        3: N+K Mapping
      -->
     <config name="MappingMode">2</config>
     <!--
@@ -480,6 +485,39 @@
       <config name="GCReclaimBlocks">1</config>
       <!-- <int> threshold until reclaim (See GCThresold for definition) -->
       <config name="GCReclaimThreshold">0.1</config>
+    </section>
+    <!--
+      Common FTL algorithm configurations
+
+      May not applied to hybrid-FTL
+     -->
+    <section name="common">
+      <!--
+        <bool> Use superpage
+
+        Superpage can be used to reduce size of mapping table by grouping pages
+        in same parallelism group. See PageAllocation for more details on
+        parallelism group.
+       -->
+      <config name="UseSuperpage">true</config>
+      <!--
+        <str> Superpage configuration
+
+        Specify level of parallelism group to group pages in one super page.
+        Example) Specify 'C' to group a page in same page index in different
+        channel.
+       -->
+      <config name="SuperpageAllocation">C</config>
+    </section>
+    <!-- VLFTL configuration -->
+    <section name="vlftl">
+      <!-- <float> Ratio of partial-mapping table -->
+      <section name="VLTableRatio">0.3</section>
+      <!-- <float> Merge threshold -->
+      <section name="MergeBeginThreshold">0.1</section>
+      <!-- <float> Merge terminate threshold -->
+      <section name="MergeEndThreshold">0.2</section>
+      <!-- Other param follows GC setting -->
     </section>
   </section>
   <!--

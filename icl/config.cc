@@ -48,10 +48,14 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_CACHE_MODE, Mode, mode);
 
     if (strcmp(name, "amber") == 0 && isSection(node)) {
-      LOAD_NAME_UINT(node, NAME_CACHE_SIZE, cacheSize);
-      LOAD_NAME_UINT(node, NAME_WAY_SIZE, cacheWaySize);
-      LOAD_NAME_UINT_TYPE(node, NAME_EVICT_POLICY, EvictModeType, evictPolicy);
-      LOAD_NAME_UINT_TYPE(node, NAME_EVICT_MODE, Granularity, evictMode);
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT(node2, NAME_CACHE_SIZE, cacheSize);
+        LOAD_NAME_UINT(node2, NAME_WAY_SIZE, cacheWaySize);
+        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_POLICY, EvictModeType,
+                            evictPolicy);
+        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_MODE, Granularity, evictMode);
+      }
     }
   }
 }
