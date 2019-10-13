@@ -97,6 +97,15 @@ class CPU {
     Core() : busyUntil(0) {}
   };
 
+  class Job {
+   public:
+    Event eid;
+    uint64_t data;
+    uint64_t scheduledAt;
+
+    Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), scheduledAt(t) {}
+  };
+
   Engine *engine;        //!< Simulation engine
   ConfigReader *config;  //!< Config reader
   Log *log;              //!< Log engine
@@ -114,7 +123,7 @@ class CPU {
 
   std::vector<Core> coreList;
   std::vector<Event> eventList;
-  std::list<Event> eventQueue;
+  std::list<Job> jobQueue;
 
   std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
 
@@ -227,14 +236,9 @@ class EventData {
   EventFunction func;
   std::string name;
 
-  uint64_t scheduledAt;
-  uint64_t data;
-
  public:
   EventData(const EventFunction &f, const std::string &s)
-      : func(std::move(f)),
-        name(std::move(s)),
-        scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+      : func(std::move(f)), name(std::move(s)) {}
   EventData(const EventData &) = delete;
   EventData(EventData &&) noexcept = delete;
 
