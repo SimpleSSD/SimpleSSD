@@ -314,21 +314,21 @@
         0: Each page in first-level parallelism group
         1: Each page in all parallelism group
     -->
-    <config name="ReadPrefetchMode">0</config>
+    <config name="PrefetchMode">0</config>
     <!--
       <int> Prefetch/read-ahead trigger condition - request count
 
       Set the number of consecutive sequential read request to trigger
       prefetch/read-ahead. This value should be larger than 1.
     -->
-    <config name="ReadPrefetchCount">4</config>
+    <config name="PrefetchCount">4</config>
     <!--
       <int> Prefetch/read-ahead trigger condition - read capacity
 
       Set the amount of data should be read in sequential to trigger
       prefetch/read-ahead. This value is unit of one physical page.
     -->
-    <config name="ReadPrefetchRatio">32</config>
+    <config name="PrefetchRatio">32</config>
     <!--
       <int> Cache algorithm
 
@@ -521,7 +521,27 @@
           2: Triple Level Cell (level 0 ~ 2 of timing section should be valid)
        -->
       <config name="NANDType">1</config>
-      <!-- <str> Page allocation methid -->
+      <!--
+        <str> Page allocation method
+
+        Set order of address (PPN) decomposition
+        C for channel, W for way, D for die and P for package
+
+        If you set page allocation strategy as CWDP, the PPN will look like:
+        MSB .................. LSB
+        [Plane][Die][Way][Channel]
+        So that the consecutive page I/O goes to next channel.
+
+        In SimpleSSD, first-level parallelism group should be channel in above
+        example.
+        Example) Each page in first-level parallelism group ->
+                 Each page across the channel ->
+                 Can be accessed in parallel
+
+        See following paper for more details and impacts:
+        M. Jung and M. Kandemir, "An Evaluation of Different Page Allocation
+        Strateges on High-Speed SSDs," HotStorage 2012
+       -->
       <config name="PageAllocation">CWDP</config>
       <!-- <time> NAND timing table -->
       <section name="timing">
