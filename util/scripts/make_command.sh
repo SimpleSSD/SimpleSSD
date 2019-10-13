@@ -64,10 +64,10 @@ class ${CLASS_NAME} : public Command {
  private:
 
  public:
-  ${CLASS_NAME}(ObjectData &, Subsystem *, ControllerData *);
-  ~${CLASS_NAME}();
+  ${CLASS_NAME}(ObjectData &, Subsystem *);
 
-  void setRequest(SQContext *) override;
+  void setRequest(ControllerData *, SQContext *) override;
+  // void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -96,12 +96,12 @@ cat > $PREFIX"/"$SOURCE_FILE << EOF
 
 namespace SimpleSSD::HIL::NVMe {
 
-${CLASS_NAME}::${CLASS_NAME}(ObjectData &o, Subsystem *s, ControllerData *c)
-    : Command(o, s, c) {}
+${CLASS_NAME}::${CLASS_NAME}(ObjectData &o, Subsystem *s)
+    : Command(o, s) {}
 
-${CLASS_NAME}::~${CLASS_NAME}() {}
+void ${CLASS_NAME}::setRequest(ControllerData *cdata, SQContext *req) {}
 
-void ${CLASS_NAME}::setRequest(SQContext *req) {}
+// void ${CLASS_NAME}::completeRequest(CommandTag tag) {}
 
 void ${CLASS_NAME}::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
