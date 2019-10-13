@@ -485,8 +485,6 @@ void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
   auto cq = cqList[cqe->getCQID()];
 
-  auto id = cqe->getCCID();
-
   completionQueue.pop_front();
 
   if (cq->interruptEnabled()) {
@@ -497,6 +495,8 @@ void Arbitrator::completion_done() {
   delete cqe;
 
   if (completionQueue.size() == 0) {
+    auto id = cqe->getCCID();
+
   // Pending abort events?
   abort_SQDone();
   abort_CommandDone(id);
