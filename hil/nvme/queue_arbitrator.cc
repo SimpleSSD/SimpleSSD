@@ -478,11 +478,8 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
   // Insert to completion queue
   completionQueue.push_back(cqe);
 
-  if (completionQueue.size() == 1) {
-    // Write entry to CQ
     cq->setData(cqe->getData(), eventCompDone);
   }
-}
 
 void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
@@ -499,16 +496,7 @@ void Arbitrator::completion_done() {
   // Remove CQContext
   delete cqe;
 
-  if (completionQueue.size() > 0) {
-    cqe = completionQueue.front();
-    cq = cqList[cqe->getCQID()];
-
-    // Write entry to CQ
-    cq->setData(cqe->getData(), eventCompDone);
-
-    return;
-  }
-
+  if (completionQueue.size() == 0) {
   // Pending abort events?
   abort_SQDone();
   abort_CommandDone(id);
@@ -517,6 +505,7 @@ void Arbitrator::completion_done() {
   if (UNLIKELY(shutdownReserved && checkShutdown())) {
     finishShutdown();
   }
+}
 }
 
 void Arbitrator::abort_SQDone() {
@@ -673,7 +662,6 @@ void Arbitrator::collect() {
 }
 
 void Arbitrator::collect_done() {
-collect_begin:
   auto sqe = collectQueue.front();
 
   sqe->update();
@@ -690,10 +678,7 @@ collect_begin:
     delete sqe;
   }
 
-  if (collectQueue.size() > 0) {
-    goto collect_begin;
-  }
-  else {
+  if (collectQueue.size() == 0) {
     running = false;
 
     controller->controller->notifySubsystem(internalQueueSize);
