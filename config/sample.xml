@@ -294,4 +294,254 @@
       </section>
     </section>
   </section>
+  <!--
+    Internal Cache Layer configuration
+   -->
+  <section name="icl">
+    <!-- <bool> Enable read caching -->
+    <config name="EnableReadCache">true</config>
+    <!-- <bool> Enable read prefetching / read-ahead -->
+    <config name="EnableReadPrefetch">true</config>
+    <!-- <bool> Enable write caching -->
+    <config name="EnableWriteCache">true</config>
+    <!--
+      <int> Prefetch/Read-ahead granularity
+
+      Set quantity of data to read when prefetch/read-ahead triggered.
+      For the definition of parallelism group, see FIL section.
+
+      Possible values:
+        0: Each page in first-level parallelism group
+        1: Each page in all parallelism group
+    -->
+    <config name="ReadPrefetchMode">0</config>
+    <!--
+      <int> Prefetch/read-ahead trigger condition - request count
+
+      Set the number of consecutive sequential read request to trigger
+      prefetch/read-ahead. This value should be larger than 1.
+    -->
+    <config name="ReadPrefetchCount">4</config>
+    <!--
+      <int> Prefetch/read-ahead trigger condition - read capacity
+
+      Set the amount of data should be read in sequential to trigger
+      prefetch/read-ahead. This value is unit of one physical page.
+    -->
+    <config name="ReadPrefetchRatio">32</config>
+    <!--
+      <int> Cache algorithm
+
+      Possible values:
+        0: Set-associative Cache (released with Amber)
+    -->
+    <config name="CacheMode">0</config>
+    <!-- Set-associatve cache configuration  -->
+    <section name="amber">
+      <!-- <int> Cache size in bytes -->
+      <config name="CacheSize">512M</config>
+      <!--
+        <int> Cache way count
+
+        Set count will be automatically calculated.
+        To configure cache as directed-map, set way as 1.
+        To configure cache as fully-associative, set way as 0.
+      -->
+      <config name="CacheWaySize">8</config>
+      <!--
+        <int> Cache eviction policy
+
+        Possible values:
+          0: RANDOM: Evict random entry
+          1: FIFO: Evict least recently added entry
+          2: LRU: Evict least recently used entry
+      -->
+      <config name="EvictPolicy">2</config>
+      <!--
+        <int> Eviction granularity
+
+        Set quantity of data to evict when capacity/confilct miss occurs.
+        Cache will try to collect as many pages as it can.
+
+        Possible values:
+          0: Each page in first-level parallelism group
+          1: Each page in all parallelism group
+      -->
+      <config name="EvictMode">1</config>
+    </section>
+  </section>
+  <!--
+    Flash Translation Layer configuration
+   -->
+  <section name="ftl">
+    <!--
+      <int> Mapping algorithm
+
+      Select FTL mapping algorithm
+
+      Possible values:
+        0: Page-level Mapping (Supports superpage)
+        1: Block-level Mapping
+        2: Virtually-Linked FTL (Extended version of FTL released with Amber)
+        3: N+K Mapping
+     -->
+    <config name="MappingMode">2</config>
+    <!--
+      <float> Overprovisioning Ratio
+
+      Select OP ratio (ratio between user-visible logical range and physical NVM
+      range). (1 - this value) * (total SSD size) become user-visible range.
+
+      This value will rounded to FTL mapping granularity.
+     -->
+    <config name="OverProvisioningRatio">0.2</config>
+    <!--
+      <int> Bad block threshold
+
+      Set P/E cycle threshold to mark block as bad.
+
+      TODO: Add error model and change this value to BER or ECC retry count.
+     -->
+    <config name="EraseThreshold">100k</config>
+    <!-- Filling/Warm-up configuration -->
+    <section name="warmup">
+      <!--
+        <int> Filling Mode
+
+        Here, we have two-pass filling algorithm to invoke GC in very beginning
+        of simulation. In first pass, FTL fills mapping - clean write. In second
+        pass, FTL overwrites pages written in first pass which makes invalid
+        pages.
+
+        Possible values:
+          0: Sequential filling + Sequential invalidation
+          1: Sequential filling + Random invalidation
+          2: Random filling + Random invalidation
+       -->
+      <config name="FillingMode">0</config>
+      <!--
+        <float> Range to fill in first pass
+
+        In sequential filling, LPN from 0 to (this config value) * (SSD size)
+        will be filled.
+        In random filling, (this config value) * (total physical page count)
+        physical pages will be filled in random fashion. Because of memory
+        requirement, we does not ensure unique random address - overwritten can
+        be occur in first pass.
+       -->
+      <config name="FillRatio">1.0</config>
+      <!--
+        <float> Range to fill in second pass
+
+        Try to overwrite page written in first pass. If you use random address,
+        some pages will not overwritten as we don't remember what addresses are
+        written.
+
+        This valud will clipped to make GC not occured in warm-up phase.
+       -->
+      <config name="InvalidFillRatio">0.0</config>
+    </section>
+    <!-- Garbage Collection configuration -->
+    <section name="gc">
+      <!--
+        <int> Victim block selection algorithm
+
+        Possible values:
+          0: Greedy: Choose lease utilized block (lease number of valid pages).
+          1: Cost-Benefit: Choose block that has lowest value of equation:
+             utilization / ((1 - utilization) * age)
+          2: Random: Choose random block
+          3: D-Choice: Choose lease utilized block in randomly sampled blocks
+       -->
+      <config name="VictimSelectionPolicy">0</config>
+      <!--
+        <int> D-Choice parameter
+
+        Sampling factor. (blocks to erase) * (this config value) blocks will
+        randomly sampled.
+       -->
+      <config name="DChoiceParam">3</config>
+      <!--
+        <float> GC triggering threshold
+
+        If the number of free blocks left < (this config value) * (total blocks)
+        On-demand GC (Foreground GC) will triggered.
+       -->
+      <config name="GCThreshold">0.05</config>
+      <!--
+        <int> Victim block count selection policy
+
+        Possible values:
+          0: Reclaim #GCReclaimBlocks blocks
+          1: Reclaim blocks until GCReclaimThreshold
+       -->
+      <config name="GCMode">0</config>
+      <!-- <int> # blocks to reclaim -->
+      <config name="GCReclaimBlocks">1</config>
+      <!-- <int> threshold until reclaim (See GCThresold for definition) -->
+      <config name="GCReclaimThreshold">0.1</config>
+    </section>
+  </section>
+  <!--
+    Flash Interface Layer configuration
+   -->
+  <section name="fil">
+    <!-- <int> # channel -->
+    <config name="Channel">8</config>
+    <!-- <int> # packages / channel (way) -->
+    <config name="Way">4</config>
+    <!--
+      <int> Select NVM model
+
+      Possible values:
+        0: PAL: Parallelism Abstraction Layer in SimpleSSD 1.0 ~ 2.0
+        1: NAND: Generic NAND flash
+     -->
+    <config name="Model">0</config>
+    <!-- NAND configuration (valid for Model = 0/1) -->
+    <section name="nand">
+      <!-- <int> # die / package -->
+      <config name="Die">1</config>
+      <!-- <int> # plane / die -->
+      <config name="Plane">2</config>
+      <!-- <int> # block / plane -->
+      <config name="Block">512</config>
+      <!-- <int> # page / block -->
+      <config name="Page">512</config>
+      <!-- <int> page size in byte - data -->
+      <config name="PageSize">16K</config>
+      <!-- <int> page size in byte - spare -->
+      <config name="SpareSize">1216</config>
+      <!--
+        <int> NAND type
+
+        Possible values:
+          0: Single Level Cell (level 0 of timing section should be valid)
+          1: Multi Level Cell (level 0, 1 of timing section should be valid)
+          2: Triple Level Cell (level 0 ~ 2 of timing section should be valid)
+       -->
+      <config name="NANDType">1</config>
+      <!-- <str> Page allocation methid -->
+      <config name="PageAllocation">CWDP</config>
+      <!-- <time> NAND timing table -->
+      <section name="timing">
+        <config name="Read" level="0">40us</config> <!-- SLC -->
+        <config name="Read" level="1">65us</config> <!-- MLC MSB -->
+        <config name="Read" level="2"></config>     <!-- TLC MSB -->
+        <config name="Write" level="0">500us</config>
+        <config name="Write" level="1">1300us</config>
+        <config name="Write" level="2"></config>
+        <config name="Erase">3ms</config>
+      </section>
+    </section>
+    <!--
+      <int> Channel speed
+
+      Specify channel speed in transfers / second (T/s)
+      One transfer has size of DMAWidth.
+     -->
+    <config name="DMASpeed">333m</config>
+    <!-- <int> Channel width -->
+    <config name="DMAWidth">8</config>
+  </section>
 </simplessd>
