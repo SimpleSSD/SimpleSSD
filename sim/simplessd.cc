@@ -199,16 +199,22 @@ void SimpleSSD::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
   subsystem->getStatList(list, prefix);
   object.cpu->getStatList(list, prefix + ".cpu");
+  object.dram->getStatList(list, prefix + ".dram");
+  object.sram->getStatList(list, prefix + ".sram");
 }
 
 void SimpleSSD::getStatValues(std::vector<double> &values) noexcept {
   subsystem->getStatValues(values);
   object.cpu->getStatValues(values);
+  object.dram->getStatValues(values);
+  object.sram->getStatValues(values);
 }
 
 void SimpleSSD::resetStatValues() noexcept {
   subsystem->resetStatValues();
   object.cpu->resetStatValues();
+  object.dram->resetStatValues();
+  object.sram->resetStatValues();
 }
 
 void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
@@ -237,9 +243,12 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   BACKUP_SCALAR(file, size);
   BACKUP_BLOB(file, version.c_str(), size);
 
-  // Checkpoint chain begins here
+  // Backup hardware first
   object.cpu->createCheckpoint(file);
+  object.dram->createCheckpoint(file);
+  object.sram->createCheckpoint(file);
 
+  // All simulation objects
   subsystem->createCheckpoint(file);
 
   file.close();
@@ -278,6 +287,8 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
 
   // Restore chain begins here
   object.cpu->restoreCheckpoint(file);
+  object.dram->restoreCheckpoint(file);
+  object.sram->restoreCheckpoint(file);
 
   subsystem->restoreCheckpoint(file);
 
