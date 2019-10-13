@@ -37,19 +37,10 @@ class DMAData {
 
   std::vector<PhysicalRegion> prList;
 
-  uint64_t handledSize;
-  uint64_t requestedSize;
-  uint64_t bufferSize;
-  uint8_t *buffer;
-
-  void allocateBuffer(uint64_t);
-  void deallocateBuffer();
-
  public:
   DMAData();
   DMAData(const DMAData &) = delete;
   DMAData(DMAData &&) noexcept = delete;
-  ~DMAData();
 
   DMAData &operator=(const DMAData &&) = delete;
   DMAData &operator=(DMAData &&) = delete;
@@ -74,10 +65,22 @@ class DMAEngine : public Object {
 
     Event eid;
     uint64_t data;
-    int32_t counter;
+
+    bool read;
+
+    uint64_t handled;
+    uint64_t requested;
+    uint64_t bufferSize;
+    uint8_t *buffer;
+
+    uint64_t regionIndex;
+
+    void allocateBuffer(uint64_t);
+    void deallocateBuffer();
 
     DMASession(DMATag, Event);
     DMASession(DMATag, Event, uint64_t);
+    DMASession(DMATag, Event, uint64_t, bool, uint64_t, uint8_t *);
   };
 
   DMAInterface *interface;
@@ -89,6 +92,7 @@ class DMAEngine : public Object {
 
   std::unordered_set<DMATag> tagList;
   std::deque<DMASession> pendingTagList;
+  std::deque<DMASession> pendingInitTagList;
   std::unordered_map<DMATag, DMATag> oldTagList;
 
   uint64_t pageSize;
@@ -103,13 +107,17 @@ class DMAEngine : public Object {
 
   // PRP related
   uint32_t getPRPSize(uint64_t);
-  void getPRPListFromPRP(DMATag, uint64_t, DMASession &&);
+  void getPRPListFromPRP(DMASession &&, uint64_t);
   void getPRPListFromPRP_readDone();
 
   // SGL related
-  void parseSGLDescriptor(DMATag, SGLDescriptor *);
-  void parseSGLSegment(DMATag, uint64_t, uint32_t, DMASession &&);
+  void parseSGLDescriptor(DMASession &, SGLDescriptor *);
+  void parseSGLSegment(DMASession &&, uint64_t, uint32_t);
   void parseSGLSegment_readDone();
+
+  // I/O related
+  void readNext(DMASession &&) noexcept;
+  void writeNext(DMASession &&) noexcept;
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);

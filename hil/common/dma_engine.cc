@@ -64,32 +64,50 @@ PhysicalRegion::PhysicalRegion(uint64_t a, uint32_t s)
 PhysicalRegion::PhysicalRegion(uint64_t a, uint32_t s, bool i)
     : address(a), size(s), ignore(i) {}
 
-DMAData::DMAData()
-    : handledSize(0), requestedSize(0), bufferSize(0), buffer(nullptr) {}
+DMAData::DMAData() {}
 
-DMAData::~DMAData() {
-  if (bufferSize > 0) {
-    free(buffer);
-  }
-}
+DMAEngine::DMASession::DMASession(DMATag t, Event e)
+    : parent(t),
+      eid(e),
+      data(0),
+      read(false),
+      handled(0),
+      requested(0),
+      bufferSize(0),
+      buffer(nullptr) {}
 
-void DMAData::allocateBuffer(uint64_t size) {
+DMAEngine::DMASession::DMASession(DMATag t, Event e, uint64_t d)
+    : parent(t),
+      eid(e),
+      data(d),
+      read(false),
+      handled(0),
+      requested(0),
+      bufferSize(0),
+      buffer(nullptr) {}
+
+DMAEngine::DMASession::DMASession(DMATag t, Event e, uint64_t d, bool r,
+                                  uint64_t s, uint8_t *b)
+    : parent(t),
+      eid(e),
+      data(d),
+      read(r),
+      handled(0),
+      requested(s),
+      bufferSize(0),
+      buffer(b) {}
+
+void DMAEngine::DMASession::allocateBuffer(uint64_t size) {
   bufferSize = size;
   buffer = (uint8_t *)calloc(size, 1);
 }
 
-void DMAData::deallocateBuffer() {
+void DMAEngine::DMASession::deallocateBuffer() {
   free(buffer);
 
   bufferSize = 0;
   buffer = nullptr;
 }
-
-DMAEngine::DMASession::DMASession(DMATag t, Event e)
-    : parent(t), eid(e), data(0), counter(0) {}
-
-DMAEngine::DMASession::DMASession(DMATag t, Event e, uint64_t d)
-    : parent(t), eid(e), data(d), counter(0) {}
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
     : Object(o), interface(i), pageSize(0) {
@@ -111,14 +129,20 @@ DMAEngine::~DMAEngine() {
 }
 
 void DMAEngine::dmaDone() {
-  auto &tag = pendingTagList.front();
+  auto session = std::move(pendingTagList.front());
 
-  tag.counter--;
+  pendingTagList.pop_front();
 
-  if (tag.counter == 0) {
-    pendingTagList.pop_front();
-
-    schedule(tag.eid, tag.data);
+  if (session.handled == session.requested) {
+    schedule(session.eid, session.data);
+  }
+  else {
+    if (session.read) {
+      readNext(std::move(session));
+    }
+    else {
+      writeNext(std::move(session));
+    }
   }
 }
 
@@ -141,21 +165,21 @@ void DMAEngine::destroyTag(DMATag tag) {
 }
 
 void DMAEngine::prdt_readDone() {
-  auto &session = pendingTagList.front();
-  auto tag = session.parent;
+  auto session = std::move(pendingInitTagList.front());
 
-  pendingTagList.pop_front();
+  pendingInitTagList.pop_front();
 
   // Fill vector
-  PRDT *prdt = (PRDT *)tag->buffer;
-  uint32_t entryCount = (uint32_t)(tag->bufferSize / sizeof(PRDT));
+  PRDT *prdt = (PRDT *)session.buffer;
+  uint32_t entryCount = (uint32_t)(session.bufferSize / sizeof(PRDT));
 
   for (uint32_t i = 0; i < entryCount; i++) {
-    tag->prList.push_back(PhysicalRegion(prdt->address, prdt->size + 1));
-    tag->handledSize += prdt->size + 1;
+    session.parent->prList.push_back(
+        PhysicalRegion(prdt->address, prdt->size + 1));
+    session.handled += prdt->size + 1;
   }
 
-  tag->deallocateBuffer();
+  session.deallocateBuffer();
 
   schedule(session.eid, session.data);
 }
@@ -164,65 +188,65 @@ uint32_t DMAEngine::getPRPSize(uint64_t prp) {
   return pageSize - (prp & (pageSize - 1));
 }
 
-void DMAEngine::getPRPListFromPRP(DMATag tag, uint64_t prp,
-                                  DMASession &&session) {
-  tag->allocateBuffer(getPRPSize(prp));
-  pendingTagList.emplace_back(session);
+void DMAEngine::getPRPListFromPRP(DMASession &&session, uint64_t prp) {
+  session.allocateBuffer(getPRPSize(prp));
+  pendingInitTagList.emplace_back(session);
 
-  interface->read(prp, tag->bufferSize, tag->buffer, eventPRPReadDone);
+  interface->read(prp, session.bufferSize, session.buffer, eventPRPReadDone);
 }
 
 void DMAEngine::getPRPListFromPRP_readDone() {
-  auto &session = pendingTagList.front();
-  auto tag = session.parent;
+  auto session = std::move(pendingInitTagList.front());
   uint64_t listPRP;
   uint64_t listPRPSize;
 
-  pendingTagList.pop_front();
+  pendingInitTagList.pop_front();
 
-  for (size_t i = 0; i < tag->bufferSize; i += 8) {
-    listPRP = *((uint64_t *)(tag->buffer + i));
+  for (size_t i = 0; i < session.bufferSize; i += 8) {
+    listPRP = *((uint64_t *)(session.buffer + i));
     listPRPSize = getPRPSize(listPRP);
 
     if (listPRP == 0) {
       panic("Invalid PRP in PRP List");
     }
 
-    tag->prList.push_back(PhysicalRegion(listPRP, listPRPSize));
-    tag->handledSize += listPRPSize;
+    session.parent->prList.push_back(PhysicalRegion(listPRP, listPRPSize));
+    session.handled += listPRPSize;
 
-    if (tag->handledSize >= tag->requestedSize) {
+    if (session.handled >= session.requested) {
       break;
     }
   }
 
-  tag->deallocateBuffer();
+  session.deallocateBuffer();
 
-  if (tag->handledSize < tag->requestedSize) {
+  if (session.handled < session.requested) {
     // PRP list ends but size is not full
     // Last item of PRP list is pointer of another PRP list
-    listPRP = tag->prList.back().address;
+    listPRP = session.parent->prList.back().address;
 
-    tag->prList.pop_back();
+    session.parent->prList.pop_back();
 
-    getPRPListFromPRP(tag, listPRP, std::move(session));
+    getPRPListFromPRP(std::move(session), listPRP);
   }
   else {
     schedule(session.eid, session.data);
   }
 }
 
-void DMAEngine::parseSGLDescriptor(DMATag tag, SGLDescriptor *desc) {
+void DMAEngine::parseSGLDescriptor(DMASession &session, SGLDescriptor *desc) {
   switch (desc->getType()) {
     case DataBlock:
     case KeyedDataBlock:
-      tag->prList.push_back(PhysicalRegion(desc->address, desc->length));
-      tag->handledSize += desc->length;
+      session.parent->prList.push_back(
+          PhysicalRegion(desc->address, desc->length));
+      session.handled += desc->length;
 
       break;
     case BitBucket:
-      tag->prList.push_back(PhysicalRegion(desc->address, desc->length, true));
-      tag->handledSize += desc->length;
+      session.parent->prList.push_back(
+          PhysicalRegion(desc->address, desc->length, true));
+      session.handled += desc->length;
 
       break;
     default:
@@ -234,31 +258,31 @@ void DMAEngine::parseSGLDescriptor(DMATag tag, SGLDescriptor *desc) {
            "Unexpected SGL subtype");
 }
 
-void DMAEngine::parseSGLSegment(DMATag tag, uint64_t address, uint32_t length,
-                                DMASession &&session) {
-  tag->allocateBuffer(length);
-  pendingTagList.emplace_back(session);
+void DMAEngine::parseSGLSegment(DMASession &&session, uint64_t address,
+                                uint32_t length) {
+  session.allocateBuffer(length);
+  pendingInitTagList.emplace_back(session);
 
-  interface->read(address, tag->bufferSize, tag->buffer, eventSGLReadDone);
+  interface->read(address, session.bufferSize, session.buffer,
+                  eventSGLReadDone);
 }
 
 void DMAEngine::parseSGLSegment_readDone() {
-  auto &session = pendingTagList.front();
-  auto tag = session.parent;
+  auto session = std::move(pendingInitTagList.front());
   bool next = false;
 
-  pendingTagList.pop_front();
+  pendingInitTagList.pop_front();
 
   SGLDescriptor *desc;
 
-  for (uint32_t i = 0; i < tag->bufferSize; i += 16) {
-    desc = (SGLDescriptor *)(tag->buffer + i * 16);
+  for (uint32_t i = 0; i < session.bufferSize; i += 16) {
+    desc = (SGLDescriptor *)(session.buffer + i * 16);
 
     switch (desc->getType()) {
       case DataBlock:
       case KeyedDataBlock:
       case BitBucket:
-        parseSGLDescriptor(tag, desc);
+        parseSGLDescriptor(session, desc);
 
         break;
       case Segment:
@@ -266,17 +290,17 @@ void DMAEngine::parseSGLSegment_readDone() {
         next = true;
 
         // Segment must appear at the end of buffer
-        panic_if(i + 16 != tag->bufferSize, "Invalid SGL segment");
+        panic_if(i + 16 != session.bufferSize, "Invalid SGL segment");
 
         break;
     }
   }
 
-  tag->deallocateBuffer();
+  session.deallocateBuffer();
 
   // Go to next
   if (next) {
-    parseSGLSegment(tag, desc->address, desc->length, std::move(session));
+    parseSGLSegment(std::move(session), desc->address, desc->length);
   }
   else {
     schedule(session.eid, session.data);
@@ -295,12 +319,12 @@ DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size, Event eid,
   size *= sizeof(PRDT);
 
   // Prepare for PRDT read
-  ret->handledSize = 0;
-  ret->requestedSize = 0;  // No requested size in PRDT, reuse it
-  ret->allocateBuffer(size);
-  pendingTagList.push_back(DMASession(ret, eid, data));
+  DMASession session(ret, eid, data, false, size, nullptr);
 
-  interface->read(base, size, ret->buffer, eventPRDTInitDone);
+  session.allocateBuffer(size);
+  pendingInitTagList.emplace_back(session);
+
+  interface->read(base, size, session.buffer, eventPRDTInitDone);
 
   return ret;
 }
@@ -316,23 +340,22 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   uint64_t prp1Size = getPRPSize(prp1);
   uint64_t prp2Size = getPRPSize(prp2);
 
-  ret->handledSize = 0;
-  ret->requestedSize = size;
+  DMASession session(ret, eid, data, false, size, nullptr);
 
   // Determine PRP1 and PRP2
   if (prp1 == 0) {
     // This is non-continuous NVMe queue
     mode = 3;
   }
-  else if (ret->requestedSize <= pageSize) {
-    if (ret->requestedSize <= prp1Size) {
+  else if (session.requested <= pageSize) {
+    if (session.requested <= prp1Size) {
       mode = 0;
     }
     else {
       mode = 1;
     }
   }
-  else if (ret->requestedSize <= pageSize * 2) {
+  else if (session.requested <= pageSize * 2) {
     if (prp1Size == pageSize) {
       mode = 1;
     }
@@ -348,7 +371,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
     case 0:
       // PRP1 is PRP pointer, PRP2 is not used
       ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
-      ret->handledSize = prp1Size;
+      session.handled = prp1Size;
 
       break;
     case 1:
@@ -356,9 +379,9 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
       ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
       ret->prList.push_back(PhysicalRegion(prp2, prp2Size));
 
-      panic_if(prp1Size + prp2Size < ret->requestedSize, "Invalid DPTR size");
+      panic_if(prp1Size + prp2Size < session.requested, "Invalid DPTR size");
 
-      ret->requestedSize = prp1Size + prp2Size;
+      session.requested = prp1Size + prp2Size;
 
       break;
     case 2:
@@ -369,9 +392,9 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
     case 3:
       // Prepare for read
       immediate = false;
-      ret->handledSize = prp1Size;
+      session.handled = prp1Size;
 
-      getPRPListFromPRP(ret, prp2, DMASession(ret, eid, data));
+      getPRPListFromPRP(std::move(session), prp2);
 
       break;
     default:
@@ -393,7 +416,7 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
 
   SGLDescriptor desc;
 
-  ret->requestedSize = size;
+  DMASession session(ret, eid, data, false, size, nullptr);
 
   // Create first SGL descriptor from PRP pointers
   desc.dptr1 = dptr1;
@@ -403,13 +426,13 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
   if (desc.getType() == SGLDescriptorType::DataBlock ||
       desc.getType() == SGLDescriptorType::KeyedDataBlock) {
     // This is entire buffer
-    parseSGLDescriptor(ret, &desc);
+    parseSGLDescriptor(session, &desc);
 
     schedule(eid, data);
   }
   else if (desc.getType() == SGLDescriptorType::Segment ||
            desc.getType() == SGLDescriptorType::LastSegment) {
-    parseSGLSegment(ret, desc.address, desc.length, DMASession(ret, eid, data));
+    parseSGLSegment(std::move(session), desc.address, desc.length);
   }
   else {
     panic("Unexpected SGL descriptor type.");
@@ -421,8 +444,6 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
 DMATag DMAEngine::initRaw(uint64_t base, uint32_t size) noexcept {
   auto ret = createTag();
 
-  ret->handledSize = 0;
-  ret->requestedSize = size;
   ret->prList.push_back(PhysicalRegion(base, size));
 
   return ret;
@@ -432,47 +453,60 @@ void DMAEngine::deinit(DMATag tag) noexcept {
   destroyTag(tag);
 }
 
+void DMAEngine::readNext(DMASession &&session) noexcept {
+  uint64_t read;
+  bool submit = false;
+
+  auto iter = session.parent->prList.at(++session.regionIndex);
+
+  read = MIN(iter.size, session.requested - session.handled);
+
+  if (!iter.ignore) {
+    submit = true;
+
+    interface->read(iter.address, read,
+                    session.buffer ? session.buffer + session.handled : nullptr,
+                    eventDMADone);
+  }
+
+  session.handled += read;
+
+  pendingTagList.emplace_back(session);
+
+  if (!submit) {
+    dmaDone();
+  }
+}
+
 void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
                      uint8_t *buffer, Event eid, uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
-  uint64_t totalRead = 0;
   uint64_t currentOffset = 0;
   uint64_t read;
-  bool begin = false;
+  bool submit = false;
 
-  DMASession session(tag, eid, data);
+  DMASession session(tag, eid, data, true, size, buffer);
 
-  for (auto &iter : tag->prList) {
-    if (begin) {
-      read = MIN(iter.size, size - totalRead);
+  for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
+       session.regionIndex++) {
+    auto iter = tag->prList.at(session.regionIndex);
+
+    if (currentOffset + iter.size > offset) {
+      session.handled = offset - currentOffset;
+
+      read = MIN(iter.size - session.handled, size);
 
       if (!iter.ignore) {
-        session.counter++;
-
-        interface->read(iter.address, read, buffer ? buffer + totalRead : NULL,
+        interface->read(iter.address + session.handled, read, buffer,
                         eventDMADone);
+
+        submit = true;
       }
 
-      totalRead += read;
+      session.handled = read;
 
-      if (totalRead == size) {
-        break;
-      }
-    }
-
-    if (!begin && currentOffset + iter.size > offset) {
-      begin = true;
-      totalRead = offset - currentOffset;
-      read = MIN(iter.size - totalRead, size);
-
-      if (!iter.ignore) {
-        session.counter++;
-
-        interface->read(iter.address + totalRead, read, buffer, eventDMADone);
-      }
-
-      totalRead = read;
+      break;
     }
 
     currentOffset += iter.size;
@@ -480,9 +514,33 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 
   pendingTagList.emplace_back(session);
 
-  if (session.counter == 0) {
-    pendingTagList.back().counter = 1;
+  if (!submit) {
+    dmaDone();
+  }
+}
 
+void DMAEngine::writeNext(DMASession &&session) noexcept {
+  uint64_t written;
+  bool submit = false;
+
+  auto iter = session.parent->prList.at(++session.regionIndex);
+
+  written = MIN(iter.size, session.requested - session.handled);
+
+  if (!iter.ignore) {
+    submit = true;
+
+    interface->write(
+        iter.address, written,
+        session.buffer ? session.buffer + session.handled : nullptr,
+        eventDMADone);
+  }
+
+  session.handled += written;
+
+  pendingTagList.emplace_back(session);
+
+  if (!submit) {
     dmaDone();
   }
 }
@@ -491,44 +549,30 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
                       uint8_t *buffer, Event eid, uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
-  uint64_t totalWritten = 0;
   uint64_t currentOffset = 0;
   uint64_t written;
-  bool begin = false;
+  bool submit = false;
 
-  DMASession session(tag, eid, data);
+  DMASession session(tag, eid, data, false, size, buffer);
 
-  for (auto &iter : tag->prList) {
-    if (begin) {
-      written = MIN(iter.size, size - totalWritten);
+  for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
+       session.regionIndex++) {
+    auto iter = tag->prList.at(session.regionIndex);
+    if (currentOffset + iter.size > offset) {
+      session.handled = offset - currentOffset;
 
-      if (!iter.ignore) {
-        session.counter++;
-
-        interface->write(iter.address, written,
-                         buffer ? buffer + totalWritten : NULL, eventDMADone);
-      }
-
-      totalWritten += written;
-
-      if (totalWritten == size) {
-        break;
-      }
-    }
-
-    if (!begin && currentOffset + iter.size > offset) {
-      begin = true;
-      totalWritten = offset - currentOffset;
-      written = MIN(iter.size - totalWritten, size);
+      written = MIN(iter.size - session.handled, size);
 
       if (!iter.ignore) {
-        session.counter++;
+        submit = true;
 
-        interface->write(iter.address + totalWritten, written, buffer,
+        interface->write(iter.address + session.handled, written, buffer,
                          eventDMADone);
       }
 
-      totalWritten = written;
+      session.handled = written;
+
+      break;
     }
 
     currentOffset += iter.size;
@@ -536,9 +580,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
 
   pendingTagList.emplace_back(session);
 
-  if (session.counter == 0) {
-    pendingTagList.back().counter = 1;
-
+  if (!submit) {
     dmaDone();
   }
 }
@@ -550,6 +592,8 @@ void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
 void DMAEngine::resetStatValues() noexcept {}
 
 void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
+  bool exist;
+
   BACKUP_EVENT(out, eventDMADone);
   BACKUP_EVENT(out, eventPRDTInitDone);
   BACKUP_EVENT(out, eventPRPReadDone);
@@ -560,14 +604,6 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : tagList) {
     BACKUP_DMATAG(out, iter);
-
-    BACKUP_SCALAR(out, iter->handledSize);
-    BACKUP_SCALAR(out, iter->requestedSize);
-    BACKUP_SCALAR(out, iter->bufferSize);
-
-    if (iter->bufferSize) {
-      BACKUP_BLOB(out, iter->buffer, iter->bufferSize);
-    }
 
     uint64_t size = iter->prList.size();
     BACKUP_SCALAR(out, size);
@@ -586,11 +622,42 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_DMATAG(out, iter.parent);
     BACKUP_EVENT(out, iter.eid);
     BACKUP_SCALAR(out, iter.data);
-    BACKUP_SCALAR(out, iter.counter);
+
+    BACKUP_SCALAR(out, iter.read);
+    BACKUP_SCALAR(out, iter.handled);
+    BACKUP_SCALAR(out, iter.requested);
+
+    exist = iter.buffer != nullptr;
+    BACKUP_SCALAR(out, exist);
+
+    if (exist) {
+      BACKUP_BLOB(out, iter.buffer, iter.requested);
+    }
+
+    BACKUP_SCALAR(out, iter.regionIndex);
+  }
+
+  size = pendingInitTagList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : pendingInitTagList) {
+    BACKUP_DMATAG(out, iter.parent);
+    BACKUP_EVENT(out, iter.eid);
+    BACKUP_SCALAR(out, iter.data);
+
+    BACKUP_SCALAR(out, iter.handled);
+    BACKUP_SCALAR(out, iter.requested);
+    BACKUP_SCALAR(out, iter.bufferSize);
+
+    if (iter.bufferSize > 0) {
+      BACKUP_BLOB(out, iter.buffer, iter.bufferSize);
+    }
   }
 }
 
 void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
+  bool exist;
+
   RESTORE_EVENT(in, eventDMADone);
   RESTORE_EVENT(in, eventPRDTInitDone);
   RESTORE_EVENT(in, eventPRPReadDone);
@@ -605,14 +672,6 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
     newTag = new DMAData();
 
     RESTORE_SCALAR(in, oldTag);
-
-    RESTORE_SCALAR(in, newTag->handledSize);
-    RESTORE_SCALAR(in, newTag->requestedSize);
-    RESTORE_SCALAR(in, newTag->bufferSize);
-
-    if (newTag->bufferSize) {
-      RESTORE_BLOB(in, newTag->buffer, newTag->bufferSize);
-    }
 
     uint64_t list;
     RESTORE_SCALAR(in, list);
@@ -642,9 +701,45 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_EVENT(in, session.eid);
     RESTORE_SCALAR(in, session.data);
-    RESTORE_SCALAR(in, session.counter);
+
+    RESTORE_SCALAR(in, session.read);
+    RESTORE_SCALAR(in, session.handled);
+    RESTORE_SCALAR(in, session.requested);
+
+    RESTORE_SCALAR(in, exist);
+
+    if (exist) {
+      session.buffer = (uint8_t *)calloc(session.requested, 1);
+      RESTORE_BLOB(in, session.buffer, session.requested);
+    }
+
+    RESTORE_SCALAR(in, session.regionIndex);
 
     pendingTagList.emplace_back(session);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    DMASession session(InvalidDMATag, InvalidEventID);
+
+    RESTORE_SCALAR(in, oldTag);
+    oldTag = restoreDMATag(oldTag);
+
+    session.parent = oldTag;
+
+    RESTORE_EVENT(in, session.eid);
+    RESTORE_SCALAR(in, session.data);
+
+    RESTORE_SCALAR(in, session.handled);
+    RESTORE_SCALAR(in, session.requested);
+    RESTORE_SCALAR(in, session.bufferSize);
+
+    if (session.bufferSize > 0) {
+      RESTORE_BLOB(in, session.buffer, session.bufferSize);
+    }
+
+    pendingInitTagList.emplace_back(session);
   }
 }
 
