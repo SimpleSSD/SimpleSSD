@@ -734,12 +734,6 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
-  if (UNLIKELY(size != coreList.size())) {
-    panic_log("Total core count mismatch while restore CPU.");
-  }
-
-  RESTORE_SCALAR(in, size);
-
   for (uint64_t i = 0; i < size; i++) {
     Event eid;
     uint64_t data;

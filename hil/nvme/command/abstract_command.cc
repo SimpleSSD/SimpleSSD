@@ -86,11 +86,29 @@ void Command::completeRequest(CommandTag tag) {
 
 void Command::createCheckpoint(std::ostream &out) const noexcept {
   uint64_t size = tagList.size();
+  uint8_t type;
 
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : tagList) {
     BACKUP_SCALAR(out, iter.first);
+
+    // Store type of CommandData
+    if (dynamic_cast<CompareCommandData *>(iter.second)) {
+      type = 3;
+    }
+    else if (dynamic_cast<IOCommandData *>(iter.second)) {
+      type = 2;
+    }
+    else if (dynamic_cast<CommandData *>(iter.second)) {
+      type = 1;
+    }
+    else {
+      // Actually, we cannot be here!
+      abort();
+    }
+
+    BACKUP_SCALAR(out, type);
 
     iter.second->createCheckpoint(out);
   }
@@ -98,6 +116,7 @@ void Command::createCheckpoint(std::ostream &out) const noexcept {
 
 void Command::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
+  uint8_t type;
 
   RESTORE_SCALAR(in, size);
 
@@ -113,7 +132,23 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
     auto cdata = ctrl->getControllerData();
 
     // Regenerate CommandTag
-    auto newTag = createTag(cdata, nullptr);
+    RESTORE_SCALAR(in, type);
+
+    CommandTag newTag = InvalidCommandTag;
+
+    switch (type) {
+      case 1:
+        newTag = new CommandData(object, this, cdata);
+        break;
+      case 2:
+        newTag = new IOCommandData(object, this, cdata);
+        break;
+      case 3:
+        newTag = new CompareCommandData(object, this, cdata);
+        break;
+      default:
+        panic("Unexpected CommandTag type.");
+    }
 
     // Restore CommandTag (SQContext recovered here!)
     newTag->restoreCheckpoint(in);

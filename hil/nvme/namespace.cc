@@ -198,20 +198,19 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
 
     if (dynamic_cast<MemDisk *>(disk)) {
       type = 3;
-      BACKUP_SCALAR(out, type);
     }
     else if (dynamic_cast<CoWDisk *>(disk)) {
       type = 2;
-      BACKUP_SCALAR(out, type);
     }
     else if (dynamic_cast<Disk *>(disk)) {
       type = 1;
-      BACKUP_SCALAR(out, type);
     }
     else {
       // Actually, we cannot be here!
       abort();
     }
+
+    BACKUP_SCALAR(out, type);
 
     disk->createCheckpoint(out);
   }
