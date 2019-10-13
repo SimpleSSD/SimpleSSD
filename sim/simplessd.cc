@@ -198,9 +198,9 @@ ObjectData &SimpleSSD::getObject() {
 void SimpleSSD::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
   subsystem->getStatList(list, prefix);
-  object.cpu->getStatList(list, prefix + ".cpu");
-  object.dram->getStatList(list, prefix + ".dram");
-  object.sram->getStatList(list, prefix + ".sram");
+  object.cpu->getStatList(list, prefix + "cpu.");
+  object.dram->getStatList(list, prefix + "dram.");
+  object.sram->getStatList(list, prefix + "sram.");
 }
 
 void SimpleSSD::getStatValues(std::vector<double> &values) noexcept {
