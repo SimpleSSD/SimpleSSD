@@ -438,9 +438,6 @@ void CPU::dispatch(uint64_t now) {
 
       job = jobQueue.erase(job);
 
-      warn_log("Event ID %016" PRIx64 " (%s) called at %" PRIu64 ".", eptr,
-               eptr->name.c_str(), now);
-
       eptr->func(now, data);
     }
     else {
@@ -469,8 +466,6 @@ void CPU::scheduleNext() {
 
   // Schedule next dispatch
   if (next != lastScheduledAt && next != std::numeric_limits<uint64_t>::max()) {
-    warn_log("CPU scheduled at %" PRIu64 ".", next);
-
     lastScheduledAt = next;
 
     engine->schedule(next);
@@ -562,9 +557,6 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
       break;
     }
   }
-
-  warn_log("Event ID %016" PRIx64 " (%s) scheduled at %" PRIu64 ".", eid,
-           eid->name.c_str(), newTick);
 
   jobQueue.emplace(insert, Job(eid, data, newTick));
 
