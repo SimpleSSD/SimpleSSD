@@ -337,7 +337,7 @@ void Config::update() {
 
 uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
-    case Key::DRAMModel:
+    case DRAMModel:
       return dramModel;
   }
 
@@ -348,7 +348,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::DRAMModel:
+    case DRAMModel:
       dramModel = (Model)value;
       break;
     default:

@@ -53,16 +53,16 @@ uint64_t Config::readUint(uint32_t idx) {
   uint64_t ret = 0;
 
   switch (idx) {
-    case Key::Clock:
+    case Clock:
       ret = clock;
       break;
-    case Key::HILCore:
+    case HILCore:
       ret = hilCore;
       break;
-    case Key::ICLCore:
+    case ICLCore:
       ret = iclCore;
       break;
-    case Key::FTLCore:
+    case FTLCore:
       ret = ftlCore;
       break;
   }
@@ -74,7 +74,7 @@ bool Config::readBoolean(uint32_t idx) {
   bool ret = false;
 
   switch (idx) {
-    case Key::UseDedicatedCore:
+    case UseDedicatedCore:
       ret = useDedicatedCore;
       break;
   }
@@ -86,16 +86,16 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::Clock:
+    case Clock:
       clock = value;
       break;
-    case Key::HILCore:
+    case HILCore:
       hilCore = (uint32_t)value;
       break;
-    case Key::ICLCore:
+    case ICLCore:
       iclCore = (uint32_t)value;
       break;
-    case Key::FTLCore:
+    case FTLCore:
       ftlCore = (uint32_t)value;
       break;
     default:
@@ -110,7 +110,7 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::UseDedicatedCore:
+    case UseDedicatedCore:
       useDedicatedCore = value;
       break;
     default:

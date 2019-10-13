@@ -328,49 +328,49 @@ uint64_t Config::readUint(uint32_t idx) {
   uint64_t ret = 0;
 
   switch (idx) {
-    case Key::WorkInterval:
+    case WorkInterval:
       ret = workInterval;
       break;
-    case Key::RequestQueueSize:
+    case RequestQueueSize:
       ret = requestQueueSize;
       break;
-    case Key::PCIeGeneration:
+    case PCIeGeneration:
       ret = (uint64_t)pcieGen;
       break;
-    case Key::PCIeLane:
+    case PCIeLane:
       ret = pcieLane;
       break;
-    case Key::SATAGeneration:
+    case SATAGeneration:
       ret = (uint64_t)sataGen;
       break;
-    case Key::MPHYMode:
+    case MPHYMode:
       ret = (uint64_t)mphyMode;
       break;
-    case Key::MPHYLane:
+    case MPHYLane:
       ret = mphyLane;
       break;
-    case Key::AXIWidth:
+    case AXIWidth:
       ret = (uint64_t)axiWidth;
       break;
-    case Key::AXIClock:
+    case AXIClock:
       ret = axiClock;
       break;
-    case Key::NVMeMaxSQ:
+    case NVMeMaxSQ:
       ret = maxSQ;
       break;
-    case Key::NVMeMaxCQ:
+    case NVMeMaxCQ:
       ret = maxCQ;
       break;
-    case Key::NVMeWRRHigh:
+    case NVMeWRRHigh:
       ret = wrrHigh;
       break;
-    case Key::NVMeWRRMedium:
+    case NVMeWRRMedium:
       ret = wrrMedium;
       break;
-    case Key::NVMeMaxNamespace:
+    case NVMeMaxNamespace:
       ret = maxNamespace;
       break;
-    case Key::NVMeDefaultNamespace:
+    case NVMeDefaultNamespace:
       ret = defaultNamespace;
       break;
   }
@@ -380,7 +380,7 @@ uint64_t Config::readUint(uint32_t idx) {
 
 bool Config::readBoolean(uint32_t idx) {
   switch (idx) {
-    case Key::NVMeAttachDefaultNamespaces:
+    case NVMeAttachDefaultNamespaces:
       return attachDefaultNamespaces;
   }
 
@@ -391,49 +391,49 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::WorkInterval:
+    case WorkInterval:
       workInterval = value;
       break;
-    case Key::RequestQueueSize:
+    case RequestQueueSize:
       requestQueueSize = value;
       break;
-    case Key::PCIeGeneration:
+    case PCIeGeneration:
       pcieGen = (PCIExpress::Generation)value;
       break;
-    case Key::PCIeLane:
+    case PCIeLane:
       pcieLane = value;
       break;
-    case Key::SATAGeneration:
+    case SATAGeneration:
       sataGen = (SATA::Generation)value;
       break;
-    case Key::MPHYMode:
+    case MPHYMode:
       mphyMode = (MIPI::M_PHY::Mode)value;
       break;
-    case Key::MPHYLane:
+    case MPHYLane:
       mphyLane = value;
       break;
-    case Key::AXIWidth:
+    case AXIWidth:
       axiWidth = (ARM::AXI::Width)value;
       break;
-    case Key::AXIClock:
+    case AXIClock:
       axiClock = value;
       break;
-    case Key::NVMeMaxSQ:
+    case NVMeMaxSQ:
       maxSQ = value;
       break;
-    case Key::NVMeMaxCQ:
+    case NVMeMaxCQ:
       maxCQ = value;
       break;
-    case Key::NVMeWRRHigh:
+    case NVMeWRRHigh:
       wrrHigh = value;
       break;
-    case Key::NVMeWRRMedium:
+    case NVMeWRRMedium:
       wrrMedium = value;
       break;
-    case Key::NVMeMaxNamespace:
+    case NVMeMaxNamespace:
       maxNamespace = value;
       break;
-    case Key::NVMeDefaultNamespace:
+    case NVMeDefaultNamespace:
       defaultNamespace = value;
       break;
     default:
@@ -448,7 +448,7 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::NVMeAttachDefaultNamespaces:
+    case NVMeAttachDefaultNamespaces:
       attachDefaultNamespaces = value;
       break;
     default:

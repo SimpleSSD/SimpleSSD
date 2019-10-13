@@ -50,7 +50,7 @@ void Config::storeTo(pugi::xml_node &section) {
 
 uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
-    case Key::Controller:
+    case Controller:
       return (uint64_t)mode;
   }
 
@@ -59,13 +59,13 @@ uint64_t Config::readUint(uint32_t idx) {
 
 std::string Config::readString(uint32_t idx) {
   switch (idx) {
-    case Key::OutputDirectory:
+    case OutputDirectory:
       return outputDirectory;
-    case Key::OutputFile:
+    case OutputFile:
       return outputFile;
-    case Key::ErrorFile:
+    case ErrorFile:
       return errorFile;
-    case Key::DebugFile:
+    case DebugFile:
       return debugFile;
   }
 
@@ -76,7 +76,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::Controller:
+    case Controller:
       mode = (Mode)value;
       break;
     default:
@@ -91,16 +91,16 @@ bool Config::writeString(uint32_t idx, std::string &value) {
   bool ret = true;
 
   switch (idx) {
-    case Key::OutputDirectory:
+    case OutputDirectory:
       outputDirectory = value;
       break;
-    case Key::OutputFile:
+    case OutputFile:
       outputFile = value;
       break;
-    case Key::ErrorFile:
+    case ErrorFile:
       errorFile = value;
       break;
-    case Key::DebugFile:
+    case DebugFile:
       debugFile = value;
       break;
     default:
