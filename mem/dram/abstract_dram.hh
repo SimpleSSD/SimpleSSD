@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_MEM_DRAM_ABSTRACT_DRAM__
-#define __SIMPLESSD_MEM_DRAM_ABSTRACT_DRAM__
+#ifndef __SIMPLESSD_MEM_DRAM_ABSTRACT_DRAM_HH__
+#define __SIMPLESSD_MEM_DRAM_ABSTRACT_DRAM_HH__
 
 #include <cinttypes>
 

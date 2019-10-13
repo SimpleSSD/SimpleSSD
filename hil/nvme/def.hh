@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_HIL_NVME_DEF__
-#define __SIMPLESSD_HIL_NVME_DEF__
+#ifndef __SIMPLESSD_HIL_NVME_DEF_HH__
+#define __SIMPLESSD_HIL_NVME_DEF_HH__
 
 #include <cinttypes>
 #include <cstring>

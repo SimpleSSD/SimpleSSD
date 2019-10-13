@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_UTIL_INTERFACE__
-#define __SIMPLESSD_UTIL_INTERFACE__
+#ifndef __SIMPLESSD_UTIL_INTERFACE_HH__
+#define __SIMPLESSD_UTIL_INTERFACE_HH__
 
 #include <cinttypes>
 #include <functional>

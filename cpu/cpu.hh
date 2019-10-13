@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_CPU_CPU__
-#define __SIMPLESSD_CPU_CPU__
+#ifndef __SIMPLESSD_CPU_CPU_HH__
+#define __SIMPLESSD_CPU_CPU_HH__
 
 #include <cstdarg>
 #include <unordered_map>

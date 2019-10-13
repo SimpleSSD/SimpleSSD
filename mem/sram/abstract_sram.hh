@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_MEM_SRAM_ABSTRACT_SRAM__
-#define __SIMPLESSD_MEM_SRAM_ABSTRACT_SRAM__
+#ifndef __SIMPLESSD_MEM_SRAM_ABSTRACT_SRAM_HH__
+#define __SIMPLESSD_MEM_SRAM_ABSTRACT_SRAM_HH__
 
 #include <cinttypes>
 
