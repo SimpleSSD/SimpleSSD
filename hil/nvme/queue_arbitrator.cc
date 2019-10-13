@@ -478,8 +478,8 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
   // Insert to completion queue
   completionQueue.push_back(cqe);
 
-    cq->setData(cqe->getData(), eventCompDone);
-  }
+  cq->setData(cqe->getData(), eventCompDone);
+}
 
 void Arbitrator::completion_done() {
   auto cqe = completionQueue.front();
@@ -497,15 +497,15 @@ void Arbitrator::completion_done() {
   if (completionQueue.size() == 0) {
     auto id = cqe->getCCID();
 
-  // Pending abort events?
-  abort_SQDone();
-  abort_CommandDone(id);
+    // Pending abort events?
+    abort_SQDone();
+    abort_CommandDone(id);
 
-  // Shutdown?
-  if (UNLIKELY(shutdownReserved && checkShutdown())) {
-    finishShutdown();
+    // Shutdown?
+    if (UNLIKELY(shutdownReserved && checkShutdown())) {
+      finishShutdown();
+    }
   }
-}
 }
 
 void Arbitrator::abort_SQDone() {
