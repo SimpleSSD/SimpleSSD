@@ -36,6 +36,9 @@ class Log {
     HIL_Common,
     HIL_NVMe,
     HIL_NVMe_Command,
+    ICL,
+    FTL,
+    FIL,
   };
 
   enum class LogID : uint32_t {

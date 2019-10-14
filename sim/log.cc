@@ -24,6 +24,9 @@ const std::string idPrefix[] = {
     "HIL::Common",
     "HIL::NVMe",
     "HIL::NVMe::Command",
+    "ICL",
+    "FTL",
+    "FIL",
 };
 
 const std::string logPrefix[] = {
