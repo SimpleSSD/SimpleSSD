@@ -66,6 +66,12 @@ void ConfigReader::load(const char *path) noexcept {
       else if (strcmp(name, hilConfig.getSectionName()) == 0) {
         hilConfig.loadFrom(section);
       }
+      else if (strcmp(name, iclConfig.getSectionName()) == 0) {
+        iclConfig.loadFrom(section);
+      }
+      else if (strcmp(name, ftlConfig.getSectionName()) == 0) {
+        ftlConfig.loadFrom(section);
+      }
     }
 
     // Update config objects
@@ -73,6 +79,8 @@ void ConfigReader::load(const char *path) noexcept {
     cpuConfig.update();
     memConfig.update();
     hilConfig.update();
+    iclConfig.update();
+    ftlConfig.update();
   }
 
   // Close
@@ -109,6 +117,12 @@ void ConfigReader::save(const char *path) noexcept {
   STORE_SECTION(config, hilConfig.getSectionName(), section)
   hilConfig.storeTo(section);
 
+  STORE_SECTION(config, iclConfig.getSectionName(), section)
+  iclConfig.storeTo(section);
+
+  STORE_SECTION(config, ftlConfig.getSectionName(), section)
+  ftlConfig.storeTo(section);
+
   auto result =
       file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
 
@@ -135,6 +149,10 @@ int64_t ConfigReader::readInt(Section section, uint32_t key) {
       return memConfig.readInt(key);
     case Section::HostInterface:
       return hilConfig.readInt(key);
+    case Section::InternalCache:
+      return iclConfig.readInt(key);
+    case Section::FlashTranslation:
+      return ftlConfig.readInt(key);
   }
 
   return 0ll;
@@ -151,6 +169,10 @@ uint64_t ConfigReader::readUint(Section section, uint32_t key) {
       return memConfig.readUint(key);
     case Section::HostInterface:
       return hilConfig.readUint(key);
+    case Section::InternalCache:
+      return iclConfig.readUint(key);
+    case Section::FlashTranslation:
+      return ftlConfig.readUint(key);
   }
 
   return 0ull;
@@ -167,6 +189,10 @@ float ConfigReader::readFloat(Section section, uint32_t key) {
       return memConfig.readFloat(key);
     case Section::HostInterface:
       return hilConfig.readFloat(key);
+    case Section::InternalCache:
+      return iclConfig.readFloat(key);
+    case Section::FlashTranslation:
+      return ftlConfig.readFloat(key);
   }
 
   return 0.f;
@@ -183,6 +209,10 @@ std::string ConfigReader::readString(Section section, uint32_t key) {
       return memConfig.readString(key);
     case Section::HostInterface:
       return hilConfig.readString(key);
+    case Section::InternalCache:
+      return iclConfig.readString(key);
+    case Section::FlashTranslation:
+      return ftlConfig.readString(key);
   }
 
   return "";
@@ -199,6 +229,10 @@ bool ConfigReader::readBoolean(Section section, uint32_t key) {
       return memConfig.readBoolean(key);
     case Section::HostInterface:
       return hilConfig.readBoolean(key);
+    case Section::InternalCache:
+      return iclConfig.readBoolean(key);
+    case Section::FlashTranslation:
+      return ftlConfig.readBoolean(key);
   }
 
   return "";
@@ -220,6 +254,12 @@ bool ConfigReader::writeInt(Section section, uint32_t key, int64_t value) {
       break;
     case Section::HostInterface:
       ret = hilConfig.writeInt(key, value);
+      break;
+    case Section::InternalCache:
+      ret = iclConfig.writeInt(key, value);
+      break;
+    case Section::FlashTranslation:
+      ret = ftlConfig.writeInt(key, value);
       break;
   }
 
@@ -243,6 +283,12 @@ bool ConfigReader::writeUint(Section section, uint32_t key, uint64_t value) {
     case Section::HostInterface:
       ret = hilConfig.writeUint(key, value);
       break;
+    case Section::InternalCache:
+      ret = iclConfig.writeUint(key, value);
+      break;
+    case Section::FlashTranslation:
+      ret = ftlConfig.writeUint(key, value);
+      break;
   }
 
   return ret;
@@ -264,6 +310,12 @@ bool ConfigReader::writeFloat(Section section, uint32_t key, float value) {
       break;
     case Section::HostInterface:
       ret = hilConfig.writeFloat(key, value);
+      break;
+    case Section::InternalCache:
+      ret = iclConfig.writeFloat(key, value);
+      break;
+    case Section::FlashTranslation:
+      ret = ftlConfig.writeFloat(key, value);
       break;
   }
 
@@ -288,6 +340,12 @@ bool ConfigReader::writeString(Section section, uint32_t key,
     case Section::HostInterface:
       ret = hilConfig.writeString(key, value);
       break;
+    case Section::InternalCache:
+      ret = iclConfig.writeString(key, value);
+      break;
+    case Section::FlashTranslation:
+      ret = ftlConfig.writeString(key, value);
+      break;
   }
 
   return ret;
@@ -309,6 +367,12 @@ bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
       break;
     case Section::HostInterface:
       ret = hilConfig.writeBoolean(key, value);
+      break;
+    case Section::InternalCache:
+      ret = iclConfig.writeBoolean(key, value);
+      break;
+    case Section::FlashTranslation:
+      ret = ftlConfig.writeBoolean(key, value);
       break;
   }
 

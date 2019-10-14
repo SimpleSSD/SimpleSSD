@@ -13,7 +13,10 @@
 #include <string>
 
 #include "cpu/config.hh"
+// #include "fil/config.hh"
+#include "ftl/config.hh"
 #include "hil/config.hh"
+#include "icl/config.hh"
 #include "mem/config.hh"
 #include "sim/config.hh"
 
@@ -25,6 +28,9 @@ enum class Section {
   CPU,
   Memory,
   HostInterface,
+  InternalCache,
+  FlashTranslation,
+  FlashInterface,
 };
 
 /**
@@ -41,6 +47,9 @@ class ConfigReader {
   CPU::Config cpuConfig;
   Memory::Config memConfig;
   HIL::Config hilConfig;
+  ICL::Config iclConfig;
+  FTL::Config ftlConfig;
+  // FIL::Config filConfig;
 
  public:
   ConfigReader();
