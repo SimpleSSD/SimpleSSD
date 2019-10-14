@@ -529,6 +529,15 @@
     <!-- <int> # packages / channel (way) -->
     <config name="Way">4</config>
     <!--
+      <int> Channel speed
+
+      Specify channel speed in transfers / second (T/s)
+      One transfer has size of DMAWidth.
+     -->
+    <config name="DMASpeed">200m</config>
+    <!-- <int> Channel width -->
+    <config name="DMAWidth">8</config>
+    <!--
       <int> Select NVM model
 
       Possible values:
@@ -538,6 +547,8 @@
     <config name="Model">0</config>
     <!-- NAND configuration (valid for Model = 0/1) -->
     <section name="nand">
+      <!-- <int> Number of partial page programming allowed -->
+      <config name="NOP">1</config>
       <!-- <int> # die / package -->
       <config name="Die">1</config>
       <!-- <int> # plane / die -->
@@ -583,23 +594,67 @@
       <config name="PageAllocation">CWDP</config>
       <!-- <time> NAND timing table -->
       <section name="timing">
-        <config name="Read" level="0">40us</config> <!-- SLC -->
-        <config name="Read" level="1">65us</config> <!-- MLC MSB -->
-        <config name="Read" level="2"></config>     <!-- TLC MSB -->
-        <config name="Write" level="0">500us</config>
-        <config name="Write" level="1">1300us</config>
-        <config name="Write" level="2"></config>
-        <config name="Erase">3ms</config>
+        <!-- Address cycle to Data Load time -->
+        <config name="tADL">70ns</config>
+        <!-- CE_n Setup time -->
+        <config name="tCS">20ns</config>
+        <!-- Data Hold time -->
+        <config name="tDH">280ps</config>
+        <!-- Data Setup time -->
+        <config name="tDS">280ps</config>
+        <!-- RE_n Cycle time -->
+        <config name="tRC">5ns</config>
+        <!-- Ready to data output cycle -->
+        <config name="tRR">20ns</config>
+        <!-- WE_n high to SR[6] low -->
+        <config name="tWB">100ns</config>
+        <!-- WE_n Cycle time -->
+        <config name="tWC">25ns</config>
+        <!-- WE_n Pulse width -->
+        <config name="tWP">11ns</config>
+        <!-- Block erase time -->
+        <config name="tBERS">5ms</config>
+        <!-- Cache busy time -->
+        <config name="tCBSY">35us</config>
+        <!-- Dummy busy time (tPLRBSY/tPLPBSY/tPLEBSY) -->
+        <config name="tDBSY">500ns</config>
+        <!-- Read Cache busy time -->
+        <config name="tRCBSY">3us</config>
+        <!-- Page program time (SLC/MLC LSB/TLC LSB) -->
+        <config name="tPROG" level="0">1250us</config>
+        <!-- Page program time (MLC MSB/TLC CSB) -->
+        <config name="tPROG" level="1">3ms</config>
+        <!-- Page program time (TLC MSB) -->
+        <config name="tPROG" level="2"></config>
+        <!-- Page read time (SLC/MLC LSB/TLC LSB) -->
+        <config name="tR" level="0">65us</config>
+        <!-- Page read time (MLC MSB/TLC CSB) -->
+        <config name="tR" level="1">110us</config>
+        <!-- Page read time (TLC MSB) -->
+        <config name="tR" level="2"></config>
+      </section>
+      <!--
+        DRAM power configuration
+        All values in <float>, current in uA, voltage in V.
+       -->
+      <section name="power">
+        <!-- Array Read Current -->
+        <config name="ICC1">25000</config>
+        <!-- Array Program Current -->
+        <config name="ICC2">25000</config>
+        <!-- Array Erase Current -->
+        <config name="ICC3">25000</config>
+        <!-- I/O Burst Read Current -->
+        <config name="ICC4R">10000</config>
+        <!-- I/O Burst Write Current -->
+        <config name="ICC4W">10000</config>
+        <!-- Bus Idle Current -->
+        <config name="ICC5">5000</config>
+        <!-- Standby Current -->
+        <config name="ISB">30</config>
+        <!-- Voltage -->
+        <config name="VCC">3.3</config>
       </section>
     </section>
-    <!--
-      <int> Channel speed
-
-      Specify channel speed in transfers / second (T/s)
-      One transfer has size of DMAWidth.
-     -->
-    <config name="DMASpeed">333m</config>
-    <!-- <int> Channel width -->
-    <config name="DMAWidth">8</config>
   </section>
 </simplessd>
