@@ -58,16 +58,7 @@ struct Request {
  * \brief ICL (Internal Cache Layer) class
  *
  * Defines abstract layer to the internal data buffer interface.
- *
- * Provides five basic operations - read, write, flush, trim and format.
- * TRIM and format is simillar - both operation erases user data.
- *
- * Use LPN as logical page notation (should be unsigned integral type).
- * See std::is_integral and std::is_unsigned.
  */
-// ENABLE THIS AFTER DEBUGGING
-using LPN = uint64_t;
-// template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
 class ICL : public Object {
  private:
   FTL::FTL *pFTL;
