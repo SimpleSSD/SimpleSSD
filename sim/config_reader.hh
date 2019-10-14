@@ -13,7 +13,7 @@
 #include <string>
 
 #include "cpu/config.hh"
-// #include "fil/config.hh"
+#include "fil/config.hh"
 #include "ftl/config.hh"
 #include "hil/config.hh"
 #include "icl/config.hh"
@@ -49,7 +49,7 @@ class ConfigReader {
   HIL::Config hilConfig;
   ICL::Config iclConfig;
   FTL::Config ftlConfig;
-  // FIL::Config filConfig;
+  FIL::Config filConfig;
 
  public:
   ConfigReader();
@@ -87,6 +87,11 @@ class ConfigReader {
   // Interface for HIL::Config
   std::vector<HIL::Config::Disk> &getDiskList();
   std::vector<HIL::Config::Namespace> &getNamespaceList();
+
+  // Interface for FIL::Config
+  FIL::Config::NANDStructure *getNANDStructure();
+  FIL::Config::NANDTiming *getNANDTiming();
+  FIL::Config::NANDPower *getNANDPower();
 };
 
 }  // namespace SimpleSSD

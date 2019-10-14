@@ -72,6 +72,9 @@ void ConfigReader::load(const char *path) noexcept {
       else if (strcmp(name, ftlConfig.getSectionName()) == 0) {
         ftlConfig.loadFrom(section);
       }
+      else if (strcmp(name, filConfig.getSectionName()) == 0) {
+        filConfig.loadFrom(section);
+      }
     }
 
     // Update config objects
@@ -81,6 +84,7 @@ void ConfigReader::load(const char *path) noexcept {
     hilConfig.update();
     iclConfig.update();
     ftlConfig.update();
+    filConfig.update();
   }
 
   // Close
@@ -123,6 +127,9 @@ void ConfigReader::save(const char *path) noexcept {
   STORE_SECTION(config, ftlConfig.getSectionName(), section)
   ftlConfig.storeTo(section);
 
+  STORE_SECTION(config, filConfig.getSectionName(), section)
+  filConfig.storeTo(section);
+
   auto result =
       file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
 
@@ -153,6 +160,8 @@ int64_t ConfigReader::readInt(Section section, uint32_t key) {
       return iclConfig.readInt(key);
     case Section::FlashTranslation:
       return ftlConfig.readInt(key);
+    case Section::FlashInterface:
+      return filConfig.readInt(key);
   }
 
   return 0ll;
@@ -173,6 +182,8 @@ uint64_t ConfigReader::readUint(Section section, uint32_t key) {
       return iclConfig.readUint(key);
     case Section::FlashTranslation:
       return ftlConfig.readUint(key);
+    case Section::FlashInterface:
+      return filConfig.readUint(key);
   }
 
   return 0ull;
@@ -193,6 +204,8 @@ float ConfigReader::readFloat(Section section, uint32_t key) {
       return iclConfig.readFloat(key);
     case Section::FlashTranslation:
       return ftlConfig.readFloat(key);
+    case Section::FlashInterface:
+      return filConfig.readFloat(key);
   }
 
   return 0.f;
@@ -213,6 +226,8 @@ std::string ConfigReader::readString(Section section, uint32_t key) {
       return iclConfig.readString(key);
     case Section::FlashTranslation:
       return ftlConfig.readString(key);
+    case Section::FlashInterface:
+      return filConfig.readString(key);
   }
 
   return "";
@@ -233,6 +248,8 @@ bool ConfigReader::readBoolean(Section section, uint32_t key) {
       return iclConfig.readBoolean(key);
     case Section::FlashTranslation:
       return ftlConfig.readBoolean(key);
+    case Section::FlashInterface:
+      return filConfig.readBoolean(key);
   }
 
   return "";
@@ -260,6 +277,9 @@ bool ConfigReader::writeInt(Section section, uint32_t key, int64_t value) {
       break;
     case Section::FlashTranslation:
       ret = ftlConfig.writeInt(key, value);
+      break;
+    case Section::FlashInterface:
+      ret = filConfig.writeInt(key, value);
       break;
   }
 
@@ -289,6 +309,9 @@ bool ConfigReader::writeUint(Section section, uint32_t key, uint64_t value) {
     case Section::FlashTranslation:
       ret = ftlConfig.writeUint(key, value);
       break;
+    case Section::FlashInterface:
+      ret = filConfig.writeUint(key, value);
+      break;
   }
 
   return ret;
@@ -316,6 +339,9 @@ bool ConfigReader::writeFloat(Section section, uint32_t key, float value) {
       break;
     case Section::FlashTranslation:
       ret = ftlConfig.writeFloat(key, value);
+      break;
+    case Section::FlashInterface:
+      ret = filConfig.writeFloat(key, value);
       break;
   }
 
@@ -346,6 +372,9 @@ bool ConfigReader::writeString(Section section, uint32_t key,
     case Section::FlashTranslation:
       ret = ftlConfig.writeString(key, value);
       break;
+    case Section::FlashInterface:
+      ret = filConfig.writeString(key, value);
+      break;
   }
 
   return ret;
@@ -374,6 +403,9 @@ bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
     case Section::FlashTranslation:
       ret = ftlConfig.writeBoolean(key, value);
       break;
+    case Section::FlashInterface:
+      ret = filConfig.writeBoolean(key, value);
+      break;
   }
 
   return ret;
@@ -401,6 +433,16 @@ std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
 
 std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() {
   return hilConfig.getNamespaceList();
+}
+
+FIL::Config::NANDStructure *ConfigReader::getNANDStructure() {
+  return filConfig.getNANDStructure();
+}
+FIL::Config::NANDTiming *ConfigReader::getNANDTiming() {
+  return filConfig.getNANDTiming();
+}
+FIL::Config::NANDPower *ConfigReader::getNANDPower() {
+  return filConfig.getNANDPower();
 }
 
 }  // namespace SimpleSSD
