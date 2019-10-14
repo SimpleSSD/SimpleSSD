@@ -84,7 +84,7 @@ class Config : public BaseConfig {
   uint64_t gcReclaimBlocks;
   float gcReclaimThreshold;
   bool useSuperpage;
-  FIL::PageAllocation superpageAllocation;
+  uint8_t superpageAllocation;
   float pmTableRatio;
   float mergeBeginThreshold;
   float mergeEndThreshold;

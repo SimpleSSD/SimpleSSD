@@ -139,6 +139,25 @@ void Config::update() {
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
            "Invalid InvalidPageRatio.");
+
+  if (superpage.length() > 0) {
+    superpageAllocation = 0;
+
+    for (auto &iter : superpage) {
+      if ((iter == 'C') | (iter == 'c')) {
+        superpageAllocation |= FIL::PageAllocation::Channel;
+      }
+      else if ((iter == 'W') | (iter == 'w')) {
+        superpageAllocation |= FIL::PageAllocation::Way;
+      }
+      else if ((iter == 'D') | (iter == 'd')) {
+        superpageAllocation |= FIL::PageAllocation::Die;
+      }
+      else if ((iter == 'P') | (iter == 'p')) {
+        superpageAllocation |= FIL::PageAllocation::Plane;
+      }
+    }
+  }
 }
 
 uint64_t Config::readUint(uint32_t idx) {
@@ -167,7 +186,7 @@ uint64_t Config::readUint(uint32_t idx) {
       ret = gcReclaimBlocks;
       break;
     case SuperpageAllocation:
-      ret = (uint64_t)superpageAllocation;
+      ret = superpageAllocation;
       break;
   }
 
@@ -245,7 +264,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       gcReclaimBlocks = value;
       break;
     case SuperpageAllocation:
-      superpageAllocation = (FIL::PageAllocation)value;
+      superpageAllocation = value;
       break;
     default:
       ret = false;
