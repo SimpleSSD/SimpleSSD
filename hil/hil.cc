@@ -69,24 +69,24 @@ void HIL::writePages(LPN offset, LPN length, uint8_t *buffer,
 }
 
 void HIL::flushCache(LPN offset, LPN length, Event eid, uint64_t data) {
-  pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
-                            ICL::Operation::Flush, offset, length));
+  pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Flush,
+                            offset, length));
 }
 
 void HIL::trimPages(LPN offset, LPN length, Event eid, uint64_t data) {
-  pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
-                            ICL::Operation::Trim, offset, length));
+  pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Trim,
+                            offset, length));
 }
 
 void HIL::formatPages(LPN offset, LPN length, FormatOption option, Event eid,
                       uint64_t data) {
   switch (option) {
     case FormatOption::None:
-      pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+      pICL->submit(ICL::Request(requestCounter++, eid, data,
                                 ICL::Operation::Trim, offset, length));
       break;
     case FormatOption::UserDataErase:  // Same with FormatOption::BlockErase:
-      pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+      pICL->submit(ICL::Request(requestCounter++, eid, data,
                                 ICL::Operation::Format, offset, length));
       break;
     default:

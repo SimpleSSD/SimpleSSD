@@ -19,6 +19,14 @@ namespace SimpleSSD ::ICL {
 
 class AbstractCache;
 
+enum class Operation : uint8_t {
+  Read,    // Read data
+  Write,   // Write data
+  Flush,   // Cache flush
+  Trim,    // Lazy erase
+  Format,  // Immediate erase
+};
+
 struct Request {
   uint64_t id;
   uint64_t sid;
@@ -26,14 +34,24 @@ struct Request {
   Event eid;
   uint64_t data;
 
-  uint64_t address;
-  uint32_t skipFront;
-  uint32_t skipEnd;
+  Operation opcode;
+
+  LPN address;
+
+  union {
+    struct {
+      uint32_t skipFront;
+      uint32_t skipEnd;
+    };
+    LPN length;
+  };
+
   uint8_t *buffer;
 
   Request();
-  Request(uint64_t, uint64_t, Event, uint64_t, uint64_t, uint32_t, uint32_t,
-          uint8_t *);
+  Request(uint64_t, uint64_t, Event, uint64_t, Operation, LPN, uint32_t,
+          uint32_t, uint8_t *);
+  Request(uint64_t, Event, uint64_t, Operation, LPN, LPN);
 };
 
 /**
@@ -61,6 +79,22 @@ class ICL : public Object {
   uint32_t logicalPageSize;
 
   bool enabled;
+
+  enum Key : uint8_t {
+    StatRead,
+    StatWrite,
+    StatAll,
+  };
+
+  struct {
+    uint64_t request[2];
+    uint64_t busy[3];
+    uint64_t iosize[2];
+    uint64_t lastBusyAt[3];
+  } stat;
+
+  void beginRequest(Key);
+  void endRequest(Key);
 
  public:
   ICL(ObjectData &);
