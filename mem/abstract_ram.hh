@@ -40,6 +40,17 @@ class AbstractRAM : public Object {
    * \param[in] eid     Event ID of callback event
    */
   virtual void write(uint64_t address, uint64_t length, Event eid) = 0;
+
+  /**
+   * \brief Allocate range of RAM
+   *
+   * Allocate a portion of memory address range. If no space available, it
+   * panic. (You need to configure larger RAM for firmware.)
+   *
+   * \param[in] size  Requested memory size
+   * \return address  Beginning address of allocated range
+   */
+  virtual uint64_t allocate(uint64_t size) = 0;
 };
 
 class Request {
