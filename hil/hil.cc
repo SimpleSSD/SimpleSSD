@@ -7,100 +7,139 @@
 
 #include "hil/hil.hh"
 
-#ifndef HIL_TEMPLATE
-#define HIL_TEMPLATE                                                           \
-  template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> T>
-
 namespace SimpleSSD::HIL {
 
-HIL_TEMPLATE
-HIL<LPN, T>::HIL(ObjectData &o) : Object(o) {}
+HIL::HIL(ObjectData &o) : Object(o), requestCounter(1) {
+  pICL = new ICL::ICL(object);
 
-HIL_TEMPLATE
-HIL<LPN, T>::~HIL() {}
-
-HIL_TEMPLATE
-void HIL<LPN, T>::readPages(LPN /* offset */, LPN /* length */,
-                            uint8_t * /* buffer */, Event eid, uint64_t data) {
-  // TODO: bypass command to ICL
-  object.cpu->schedule(eid, data, 1000000);
+  logicalPageSize = pICL->getLPNSize();
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::writePages(LPN /* offset */, LPN /* length */,
-                             uint8_t * /* buffer */,
-                             std::pair<uint32_t, uint32_t> /* unwritten */,
-                             Event eid, uint64_t data) {
-  // TODO: bypass command to ICL
-  object.cpu->schedule(eid, data, 1000000);
+HIL::~HIL() {
+  delete pICL;
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::flushCache(LPN /* offset */, LPN /* length */, Event eid,
-                             uint64_t data) {
-  // TODO: bypass command to ICL
-  object.cpu->schedule(eid, data, 1000000);
+void HIL::readPages(LPN offset, LPN length, uint8_t *buffer,
+                    std::pair<uint32_t, uint32_t> &&unread, Event eid,
+                    uint64_t data) {
+  uint64_t subID = 1;
+  uint32_t skipFirst = unread.first;
+  uint32_t skipEnd = 0;
+
+  // When reading, we don't need to care about skip bytes
+  // But for statistic (host read bytes), pass skip bytes to ICL
+  for (LPN i = 0; i < length; i++) {
+    if (i == length - 1) {
+      skipEnd = unread.second;
+    }
+
+    pICL->submit(ICL::Request(
+        requestCounter++, subID++, eid, data, ICL::Operation::Read, offset + i,
+        skipFirst, skipEnd,
+        buffer == nullptr ? nullptr : buffer + i * logicalPageSize));
+
+    if (i == 0) {
+      skipFirst = 0;
+    }
+  }
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::trimPages(LPN /* offset */, LPN /* length */, Event eid,
-                            uint64_t data) {
-  // TODO: bypass command to ICL
-  object.cpu->schedule(eid, data, 1000000);
+void HIL::writePages(LPN offset, LPN length, uint8_t *buffer,
+                     std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
+                     uint64_t data) {
+  uint64_t subID = 1;
+  uint32_t skipFirst = unwritten.first;
+  uint32_t skipEnd = 0;
+
+  // Only first/last request has skip bytes
+  for (LPN i = 0; i < length; i++) {
+    if (i == length - 1) {
+      skipEnd = unwritten.second;
+    }
+
+    pICL->submit(ICL::Request(
+        requestCounter++, subID++, eid, data, ICL::Operation::Write, offset + i,
+        skipFirst, skipEnd,
+        buffer == nullptr ? nullptr : buffer + i * logicalPageSize));
+
+    if (i == 0) {
+      skipFirst = 0;
+    }
+  }
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::formatPages(LPN /* offset */, LPN /* length */,
-                              FormatOption /* option */, Event eid,
-                              uint64_t data) {
-  // TODO: bypass command to ICL
-  object.cpu->schedule(eid, data, 1000000);
+void HIL::flushCache(LPN offset, LPN length, Event eid, uint64_t data) {
+  pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+                            ICL::Operation::Flush, offset, length));
 }
 
-HIL_TEMPLATE
-LPN HIL<LPN, T>::getPageUsage(LPN /* offset */, LPN /* length */) {
-  // TODO: bypass command to ICL
-  return (LPN)0;
+void HIL::trimPages(LPN offset, LPN length, Event eid, uint64_t data) {
+  pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+                            ICL::Operation::Trim, offset, length));
 }
 
-HIL_TEMPLATE
-LPN HIL<LPN, T>::getTotalPages() {
-  // TODO: bypass command to ICL
-  return (LPN)26214400;  // * 16KiB = 400GB
+void HIL::formatPages(LPN offset, LPN length, FormatOption option, Event eid,
+                      uint64_t data) {
+  switch (option) {
+    case FormatOption::None:
+      pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+                                ICL::Operation::Trim, offset, length));
+      break;
+    case FormatOption::UserDataErase:  // Same with FormatOption::BlockErase:
+      pICL->submit(ICL::Request(requestCounter++, 1, eid, data,
+                                ICL::Operation::Format, offset, length));
+      break;
+    default:
+      panic("Unsupported format option specified.");
+      break;
+  }
 }
 
-HIL_TEMPLATE
-uint64_t HIL<LPN, T>::getLPNSize() {
-  // TODO: bypass command to ICL
-  return 16384;
+LPN HIL::getPageUsage(LPN offset, LPN length) {
+  return pICL->getPageUsage(offset, length);
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::setCache(bool) {
-  // TODO: bypass command to ICL
+LPN HIL::getTotalPages() {
+  return pICL->getTotalPages();
 }
 
-HIL_TEMPLATE
-bool HIL<LPN, T>::getCache() {
-  // TODO: bypass command to ICL
-  return true;
+uint64_t HIL::getLPNSize() {
+  return logicalPageSize;
 }
 
-HIL_TEMPLATE
-void HIL<LPN, T>::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void HIL::setCache(bool set) {
+  pICL->setCache(set);
+}
 
-HIL_TEMPLATE
-void HIL<LPN, T>::getStatValues(std::vector<double> &) noexcept {}
+bool HIL::getCache() {
+  return pICL->getCache();
+}
 
-HIL_TEMPLATE
-void HIL<LPN, T>::resetStatValues() noexcept {}
+void HIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  pICL->getStatList(list, prefix);
+}
 
-HIL_TEMPLATE
-void HIL<LPN, T>::createCheckpoint(std::ostream &) const noexcept {}
+void HIL::getStatValues(std::vector<double> &values) noexcept {
+  pICL->getStatValues(values);
+}
 
-HIL_TEMPLATE
-void HIL<LPN, T>::restoreCheckpoint(std::istream &) noexcept {}
+void HIL::resetStatValues() noexcept {
+  pICL->resetStatValues();
+}
+
+void HIL::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, requestCounter);
+
+  pICL->createCheckpoint(out);
+}
+
+void HIL::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, requestCounter);
+
+  pICL->restoreCheckpoint(in);
+
+  // Just update this value here
+  logicalPageSize = pICL->getLPNSize();
+}
 
 }  // namespace SimpleSSD::HIL
-
-#endif

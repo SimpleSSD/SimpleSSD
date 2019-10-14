@@ -67,6 +67,12 @@ namespace SimpleSSD {
 #define info(format, ...)
 #endif
 
+/**
+ * \brief Common data for Object
+ *
+ * Hardware including CPU (Event engine), DRAM and SRAM.
+ * Simulation system like configuration reader and log system.
+ */
 using ObjectData = struct _ObjectData {
   /* SSD hardware */
   CPU::CPU *cpu;
@@ -87,6 +93,12 @@ using ObjectData = struct _ObjectData {
               Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
       : cpu(e), dram(d), sram(s), config(c), log(l) {}
 };
+
+//! Logical Page Number definition
+using LPN = uint64_t;
+
+//! Physical Page Number definition
+using PPN = uint64_t;
 
 /**
  * \brief Object object declaration

@@ -12,6 +12,7 @@
 
 #include <utility>
 
+#include "icl/icl.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::HIL {
@@ -37,15 +38,15 @@ enum class FormatOption {
  * Provides five basic operations - read, write, flush, trim and format.
  * TRIM and format is simillar - both operation erases user data.
  *
- * Use LPN as logical/physical page notation (should be unsigned integral type).
- * See std::is_integral and std::is_unsigned.
- *
  * Actually, this is not a HIL - a part of HIL.
  */
-template <class LPN, std::enable_if_t<std::is_unsigned_v<LPN>, LPN> = 0>
 class HIL : public Object {
  private:
-  // ICL<LPN> *cacheLayer;
+  ICL::ICL *pICL;
+
+  uint64_t requestCounter;
+
+  uint32_t logicalPageSize;
 
  public:
   HIL(ObjectData &);
@@ -62,10 +63,12 @@ class HIL : public Object {
    * \param[in]  offset   Offset in LPN to read
    * \param[in]  length   # of logical pages to read
    * \param[out] buffer   Array for retrived data (length * logical page size)
+   * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
    * \param[in]  eid      Completion event
    * \param[in]  data     Data for event
    */
-  void readPages(LPN offset, LPN length, uint8_t *buffer, Event eid,
+  void readPages(LPN offset, LPN length, uint8_t *buffer,
+                 std::pair<uint32_t, uint32_t> &&unread, Event eid,
                  uint64_t data = 0);
 
   /**
@@ -83,7 +86,7 @@ class HIL : public Object {
    * \param[in] data      Data for event
    */
   void writePages(LPN offset, LPN length, uint8_t *buffer,
-                  std::pair<uint32_t, uint32_t> unwritten, Event eid,
+                  std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
                   uint64_t data = 0);
 
   /**
@@ -145,19 +148,13 @@ class HIL : public Object {
   bool getCache();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
-
   void getStatValues(std::vector<double> &) noexcept override;
-
   void resetStatValues() noexcept override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
-
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL
-
-// Include source file because HIL is template class
-#include "hil/hil.cc"
 
 #endif
