@@ -27,6 +27,7 @@ const std::string idPrefix[] = {
     "ICL",
     "FTL",
     "FIL",
+    "FIL::PALOLD",
 };
 
 const std::string logPrefix[] = {

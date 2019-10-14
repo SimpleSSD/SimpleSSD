@@ -39,6 +39,7 @@ class Log {
     ICL,
     FTL,
     FIL,
+    FIL_PALOLD,
   };
 
   enum class LogID : uint32_t {
