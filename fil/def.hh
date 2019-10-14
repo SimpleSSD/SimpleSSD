@@ -15,19 +15,6 @@
 
 namespace SimpleSSD::FIL {
 
-struct Parameter {
-  uint32_t channel;          //!< Total # channels
-  uint32_t package;          //!< # packages / channel
-  uint32_t die;              //!< # dies / package
-  uint32_t plane;            //!< # planes / die
-  uint32_t block;            //!< # blocks / plane
-  uint32_t page;             //!< # pages / block
-  uint32_t superBlock;       //!< Total super blocks
-  uint32_t pageSize;         //!< Size of page in bytes
-  uint32_t superPageSize;    //!< Size of super page in bytes
-  uint32_t pageInSuperPage;  //!< # pages in one superpage
-};
-
 enum PageAllocation : uint8_t {
   None = 0,
   Channel = 1,

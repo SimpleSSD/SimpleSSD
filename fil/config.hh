@@ -29,7 +29,7 @@ class Config : public BaseConfig {
 
   enum class NVMType : uint8_t {
     PAL,
-    NAND,
+    GenericNAND,
   };
 
   enum class NANDType : uint8_t {
