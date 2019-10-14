@@ -10,8 +10,8 @@
 #ifndef __SIMPLESSD_ICL_ABSTRACT_CACHE_HH__
 #define __SIMPLESSD_ICL_ABSTRACT_CACHE_HH__
 
-#include "sim/object.hh"
 #include "icl/icl.hh"
+#include "sim/object.hh"
 
 namespace SimpleSSD::ICL {
 
@@ -19,13 +19,66 @@ class AbstractCache : public Object {
  protected:
   ICL *parent;
 
+  std::deque<Request> pendingQueue;
+  uint32_t logicalPageSize;
+
  public:
-  AbstractCache(ObjectData &o, ICL *p) : Object(o), parent(p) {}
+  AbstractCache(ObjectData &o, ICL *p)
+      : Object(o), parent(p), logicalPageSize(p->getLPNSize()) {}
   virtual ~AbstractCache() {}
 
   virtual void enqueue(Request &) = 0;
+
+  void createCheckpoint(std::ostream &out) const noexcept {
+    bool exist;
+
+    uint64_t size = pendingQueue.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : pendingQueue) {
+      BACKUP_SCALAR(out, iter.id);
+      BACKUP_SCALAR(out, iter.sid);
+      BACKUP_EVENT(out, iter.eid);
+      BACKUP_SCALAR(out, iter.data);
+      BACKUP_SCALAR(out, iter.address);
+      BACKUP_SCALAR(out, iter.length);
+
+      exist = iter.buffer != nullptr;
+      BACKUP_SCALAR(out, exist);
+
+      if (exist) {
+        BACKUP_BLOB(out, iter.buffer, logicalPageSize);
+      }
+    }
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept {
+    bool exist;
+
+    logicalPageSize = parent->getLPNSize();
+
+    uint64_t size;
+    RESTORE_SCALAR(in, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      Request tmp;
+
+      RESTORE_SCALAR(in, tmp.id);
+      RESTORE_SCALAR(in, tmp.sid);
+      RESTORE_EVENT(in, tmp.eid);
+      RESTORE_SCALAR(in, tmp.data);
+      RESTORE_SCALAR(in, tmp.address);
+      RESTORE_SCALAR(in, tmp.length);
+
+      RESTORE_SCALAR(in, exist);
+
+      if (exist) {
+        RESTORE_BLOB(in, tmp.buffer, logicalPageSize);
+      }
+    }
+  }
 };
 
-}  // namespace ICL
+}  // namespace SimpleSSD::ICL
 
 #endif

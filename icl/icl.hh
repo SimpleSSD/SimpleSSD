@@ -73,8 +73,6 @@ class ICL : public Object {
   FTL::FTL *pFTL;
   AbstractCache *pCache;
 
-  std::deque<Request> pendingQueue;
-
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;
 

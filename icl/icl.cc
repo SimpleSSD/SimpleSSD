@@ -76,10 +76,7 @@ ICL::~ICL() {
 }
 
 void ICL::submit(Request &&req) {
-  // Enqueue
-  pendingQueue.emplace_back(req);
-
-  // TODO: Trigger cache
+  pCache->enqueue(req);
 }
 
 void ICL::submit(FTL::Request &&req) {
@@ -173,65 +170,20 @@ void ICL::resetStatValues() noexcept {
 }
 
 void ICL::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   BACKUP_BLOB(out, &stat, sizeof(stat));
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, logicalPageSize);
   BACKUP_SCALAR(out, enabled);
-
-  uint64_t size = pendingQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : pendingQueue) {
-    BACKUP_SCALAR(out, iter.id);
-    BACKUP_SCALAR(out, iter.sid);
-    BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.data);
-    BACKUP_SCALAR(out, iter.address);
-    BACKUP_SCALAR(out, iter.skipFront);
-    BACKUP_SCALAR(out, iter.skipEnd);
-
-    exist = iter.buffer != nullptr;
-    BACKUP_SCALAR(out, exist);
-
-    if (exist) {
-      BACKUP_BLOB(out, iter.buffer, logicalPageSize);
-    }
-  }
 
   pCache->createCheckpoint(out);
   pFTL->createCheckpoint(out);
 }
 
 void ICL::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   RESTORE_BLOB(in, &stat, sizeof(stat));
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, logicalPageSize);
   RESTORE_SCALAR(in, enabled);
-
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    Request tmp;
-
-    RESTORE_SCALAR(in, tmp.id);
-    RESTORE_SCALAR(in, tmp.sid);
-    RESTORE_EVENT(in, tmp.eid);
-    RESTORE_SCALAR(in, tmp.data);
-    RESTORE_SCALAR(in, tmp.address);
-    RESTORE_SCALAR(in, tmp.skipFront);
-    RESTORE_SCALAR(in, tmp.skipEnd);
-
-    RESTORE_SCALAR(in, exist);
-
-    if (exist) {
-      RESTORE_BLOB(in, tmp.buffer, logicalPageSize);
-    }
-  }
 
   pCache->restoreCheckpoint(in);
   pFTL->restoreCheckpoint(in);
