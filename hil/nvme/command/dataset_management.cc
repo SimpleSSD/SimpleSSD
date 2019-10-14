@@ -63,14 +63,9 @@ void DatasetManagement::dmaComplete(uint64_t gcid) {
   }
 
   auto pHIL = subsystem->getHIL();
+  auto &first = trimList.front();
 
-  std::visit(
-      [this, gcid](auto &&hil) {
-        auto &first = trimList.front();
-
-        hil->trimPages(first.first, first.second, trimDoneEvent, gcid);
-      },
-      pHIL);
+  pHIL->trimPages(first.first, first.second, trimDoneEvent, gcid);
 }
 
 void DatasetManagement::trimDone(uint64_t gcid) {
@@ -80,14 +75,9 @@ void DatasetManagement::trimDone(uint64_t gcid) {
 
   if (trimList.size() > 0) {
     auto pHIL = subsystem->getHIL();
+    auto &first = trimList.front();
 
-    std::visit(
-        [this, gcid](auto &&hil) {
-          auto &first = trimList.front();
-
-          hil->trimPages(first.first, first.second, trimDoneEvent, gcid);
-        },
-        pHIL);
+    pHIL->trimPages(first.first, first.second, trimDoneEvent, gcid);
   }
   else {
     auto now = getTick();

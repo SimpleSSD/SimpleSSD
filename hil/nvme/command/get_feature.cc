@@ -75,9 +75,7 @@ void GetFeature::setRequest(ControllerData *cdata, SQContext *req) {
       case FeatureID::VolatileWriteCache: {
         auto pHIL = subsystem->getHIL();
 
-        std::visit([entry = tag->cqc->getData()](
-                       auto &&hil) { entry->dword0 = hil->getCache() ? 1 : 0; },
-                   pHIL);
+        tag->cqc->getData()->dword0 = pHIL->getCache() ? 1 : 0;
       } break;
       case FeatureID::NumberOfQueues:
         tag->cqc->getData()->dword0 = tag->controller->getFeature()->noq.data;

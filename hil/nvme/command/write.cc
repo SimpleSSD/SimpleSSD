@@ -61,13 +61,9 @@ void Write::dmaComplete(uint64_t gcid) {
 
   auto pHIL = subsystem->getHIL();
 
-  std::visit(
-      [this, tag, gcid](auto &&hil) {
-        hil->writePages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
-                        std::make_pair(tag->skipFront, tag->skipEnd),
-                        writeDoneEvent, gcid);
-      },
-      pHIL);
+  pHIL->writePages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
+                   std::make_pair(tag->skipFront, tag->skipEnd), writeDoneEvent,
+                   gcid);
 }
 
 void Write::setRequest(ControllerData *cdata, SQContext *req) {

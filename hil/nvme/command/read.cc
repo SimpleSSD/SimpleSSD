@@ -26,15 +26,11 @@ Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
 
 void Read::dmaInitDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
-
   auto pHIL = subsystem->getHIL();
 
-  std::visit(
-      [this, tag, gcid](auto &&hil) {
-        hil->readPages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
-                       readDoneEvent, gcid);
-      },
-      pHIL);
+  pHIL->readPages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
+                  std::make_pair(tag->skipFront, tag->skipEnd), readDoneEvent,
+                  gcid);
 }
 
 void Read::readDone(uint64_t gcid) {

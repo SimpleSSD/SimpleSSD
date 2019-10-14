@@ -16,29 +16,7 @@ namespace SimpleSSD::HIL::NVMe {
 
 Subsystem::Subsystem(ObjectData &o)
     : AbstractSubsystem(o), controllerID(0), allocatedLogicalPages(0) {
-  // TODO: Get total physical page count from configuration
-  // auto page = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto block = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto plane = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto die = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto way = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto channel = readConfigUint(Section::FTL, FTL::Config::Key::Page);
-  // auto size = channel * way * die * plane * block * page;
-  auto size = 33554432ul;  // 8 * 4 * 2 * 2 * 512 * 512
-
-  if (size <= std::numeric_limits<uint16_t>::max()) {
-    pHIL = new HIL<uint16_t>(o);
-  }
-  else if (size <= std::numeric_limits<uint32_t>::max()) {
-    pHIL = new HIL<uint32_t>(o);
-  }
-  else if (size <= std::numeric_limits<uint64_t>::max()) {
-    pHIL = new HIL<uint64_t>(o);
-  }
-  else {
-    // Not possible though... (128bit?)
-    panic("Too many physical page counts.");
-  }
+  pHIL = new HIL(o);
 
   // Create commands
   commandDeleteSQ = new DeleteSQ(object, this);
@@ -467,7 +445,7 @@ AbstractController *Subsystem::getController(ControllerID ctrlid) noexcept {
   return nullptr;
 }
 
-const Subsystem::HILPointer &Subsystem::getHIL() const {
+HIL *Subsystem::getHIL() const {
   return pHIL;
 }
 

@@ -61,14 +61,10 @@ void Identify::makeNamespaceStructure(IOCommandData *tag, uint32_t nsid,
       memcpy(tag->buffer + 8, &info->capacity, 8);
 
       // Namespace Utilization
-      std::visit(
-          [info, logicalPageSize](auto &&hil) {
-            info->utilization = hil->getPageUsage(info->namespaceRange.first,
-                                                  info->namespaceRange.second);
-            info->utilization *= logicalPageSize;
-            info->utilization /= info->lbaSize;
-          },
-          pHIL);
+      info->utilization = pHIL->getPageUsage(info->namespaceRange.first,
+                                             info->namespaceRange.second);
+      info->utilization *= logicalPageSize;
+      info->utilization /= info->lbaSize;
 
       memcpy(tag->buffer + 16, &info->utilization, 8);
 

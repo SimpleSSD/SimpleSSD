@@ -137,12 +137,9 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   // Read
   auto pHIL = subsystem->getHIL();
 
-  std::visit(
-      [this, tag](auto &&hil) {
-        hil->readPages(tag->slpn, tag->nlp, tag->subBuffer + tag->skipFront,
-                       readNVMDoneEvent);
-      },
-      pHIL);
+  pHIL->readPages(tag->slpn, tag->nlp, tag->subBuffer + tag->skipFront,
+                  std::make_pair(tag->skipFront, tag->skipEnd),
+                  readNVMDoneEvent);
 }
 
 void Compare::completeRequest(CommandTag tag) {

@@ -27,10 +27,7 @@ class ControllerData;
 
 class Subsystem : public AbstractSubsystem {
  protected:
-  using HILPointer =
-      std::variant<HIL<uint16_t> *, HIL<uint32_t> *, HIL<uint64_t> *>;
-
-  HILPointer pHIL;
+  HIL *pHIL;
 
   ControllerID controllerID;
 
@@ -88,7 +85,7 @@ class Subsystem : public AbstractSubsystem {
   AbstractController *getController(ControllerID) noexcept override;
 
   // Command interface
-  const HILPointer &getHIL() const;
+  HIL *getHIL() const;
   const std::map<uint32_t, Namespace *> &getNamespaceList() const;
   const std::set<uint32_t> *getAttachment(ControllerID ctrlid) const;
   const std::map<ControllerID, ControllerData *> &getControllerList() const;

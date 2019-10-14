@@ -46,11 +46,7 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
     auto last = subsystem->getTotalPages();
     auto pHIL = subsystem->getHIL();
 
-    std::visit(
-        [this, tag, last](auto &&hil) {
-          hil->flushCache(0, last, flushDoneEvent, tag->getGCID());
-        },
-        pHIL);
+    pHIL->flushCache(0, last, flushDoneEvent, tag->getGCID());
   }
   else {
     auto nslist = subsystem->getNamespaceList();
@@ -68,12 +64,7 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
     auto range = ns->second->getInfo()->namespaceRange;
     auto pHIL = subsystem->getHIL();
 
-    std::visit(
-        [this, range, tag](auto &&hil) {
-          hil->flushCache(range.first, range.second, flushDoneEvent,
-                          tag->getGCID());
-        },
-        pHIL);
+    pHIL->flushCache(range.first, range.second, flushDoneEvent, tag->getGCID());
   }
 }
 
