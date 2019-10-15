@@ -25,6 +25,8 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
   pageFetchLatency = pTiming->tRP + pTiming->tRAS;
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;
+  unallocated = pStructure->chipSize * pStructure->chip * pStructure->rank *
+                pStructure->channel;
 
   autoRefresh = createEvent(
       [this](uint64_t now, uint64_t) {
@@ -103,6 +105,26 @@ void SimpleDRAM::postDone(Request *req) {
   delete req;
 }
 
+uint64_t SimpleDRAM::allocate(uint64_t size) {
+  uint64_t ret = 0;
+
+  for (auto &iter : addressMap) {
+    unallocated -= iter.second;
+  }
+
+  panic_if(unallocated < size,
+           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in SRAM.",
+           size, unallocated);
+
+  if (addressMap.size() > 0) {
+    ret = addressMap.back().first + addressMap.back().second;
+  }
+
+  addressMap.emplace_back(std::make_pair(ret, size));
+
+  return ret;
+}
+
 void SimpleDRAM::read(uint64_t address, uint64_t length, Event eid) {
   auto req = new Request(address, length, eid);
 
@@ -130,7 +152,16 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_EVENT(out, autoRefresh);
   BACKUP_SCALAR(out, pageFetchLatency);
+  BACKUP_SCALAR(out, unallocated);
   BACKUP_SCALAR(out, interfaceBandwidth);
+
+  uint64_t size = addressMap.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : addressMap) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
 
   scheduler.createCheckpoint(out);
 }
@@ -140,7 +171,20 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_EVENT(in, autoRefresh);
   RESTORE_SCALAR(in, pageFetchLatency);
+  RESTORE_SCALAR(in, unallocated);
   RESTORE_SCALAR(in, interfaceBandwidth);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t a, s;
+
+    RESTORE_SCALAR(in, a);
+    RESTORE_SCALAR(in, s);
+
+    addressMap.push_back(std::make_pair(a, s));
+  }
 
   scheduler.restoreCheckpoint(in);
 }

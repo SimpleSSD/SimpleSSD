@@ -38,6 +38,27 @@ void SRAM::postDone(Request *req) {
   delete req;
 }
 
+uint64_t SRAM::allocate(uint64_t size) {
+  uint64_t unallocated = pStructure->size;
+  uint64_t ret = 0;
+
+  for (auto &iter : addressMap) {
+    unallocated -= iter.second;
+  }
+
+  panic_if(unallocated < size,
+           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in SRAM.",
+           size, unallocated);
+
+  if (addressMap.size() > 0) {
+    ret = addressMap.back().first + addressMap.back().second;
+  }
+
+  addressMap.emplace_back(std::make_pair(ret, size));
+
+  return ret;
+}
+
 void SRAM::read(uint64_t address, uint64_t length, Event eid) {
   auto req = new Request(address, length, eid);
 
@@ -69,11 +90,31 @@ void SRAM::write(uint64_t address, uint64_t length, Event eid) {
 void SRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractSRAM::createCheckpoint(out);
 
+  uint64_t size = addressMap.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : addressMap) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
   scheduler.createCheckpoint(out);
 }
 
 void SRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractSRAM::restoreCheckpoint(in);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t a, s;
+
+    RESTORE_SCALAR(in, a);
+    RESTORE_SCALAR(in, s);
+
+    addressMap.push_back(std::make_pair(a, s));
+  }
 
   scheduler.restoreCheckpoint(in);
 }

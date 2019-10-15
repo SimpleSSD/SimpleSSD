@@ -19,7 +19,10 @@ class SimpleDRAM : public AbstractDRAM {
  private:
   Scheduler<Request *> scheduler;
 
+  std::vector<std::pair<uint64_t, uint64_t>> addressMap;
+
   uint64_t pageFetchLatency;
+  uint64_t unallocated;
   double interfaceBandwidth;
 
   Event autoRefresh;
@@ -31,6 +34,8 @@ class SimpleDRAM : public AbstractDRAM {
  public:
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
+
+  uint64_t allocate(uint64_t) override;
 
   void read(uint64_t, uint64_t, Event) override;
   void write(uint64_t, uint64_t, Event) override;
