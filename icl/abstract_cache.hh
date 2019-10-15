@@ -27,7 +27,7 @@ class AbstractCache : public Object {
       : Object(o), parent(p), logicalPageSize(p->getLPNSize()) {}
   virtual ~AbstractCache() {}
 
-  virtual void enqueue(Request &) = 0;
+  virtual void enqueue(Request &&) = 0;
 
   void createCheckpoint(std::ostream &out) const noexcept {
     bool exist;
@@ -42,13 +42,7 @@ class AbstractCache : public Object {
       BACKUP_SCALAR(out, iter.data);
       BACKUP_SCALAR(out, iter.address);
       BACKUP_SCALAR(out, iter.length);
-
-      exist = iter.buffer != nullptr;
-      BACKUP_SCALAR(out, exist);
-
-      if (exist) {
-        BACKUP_BLOB(out, iter.buffer, logicalPageSize);
-      }
+      BACKUP_SCALAR(out, iter.buffer);
     }
   }
 
@@ -69,12 +63,9 @@ class AbstractCache : public Object {
       RESTORE_SCALAR(in, tmp.data);
       RESTORE_SCALAR(in, tmp.address);
       RESTORE_SCALAR(in, tmp.length);
+      RESTORE_SCALAR(in, tmp.buffer);
 
-      RESTORE_SCALAR(in, exist);
-
-      if (exist) {
-        RESTORE_BLOB(in, tmp.buffer, logicalPageSize);
-      }
+      tmp.buffer = object.bufmgr->restorePointer(tmp.buffer);
     }
   }
 };

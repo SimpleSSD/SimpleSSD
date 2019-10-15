@@ -739,6 +739,9 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   commandRead->createCheckpoint(out);
   commandCompare->createCheckpoint(out);
   commandDatasetManagement->createCheckpoint(out);
+
+  // Store HIL
+  pHIL->createCheckpoint(out);
 }
 
 void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
@@ -820,6 +823,8 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   commandRead->restoreCheckpoint(in);
   commandCompare->restoreCheckpoint(in);
   commandDatasetManagement->restoreCheckpoint(in);
+
+  pHIL->restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

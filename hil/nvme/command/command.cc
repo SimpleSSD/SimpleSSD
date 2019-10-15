@@ -160,6 +160,8 @@ void IOCommandData::createCheckpoint(std::ostream &out) const noexcept {
 
   if (exist) {
     BACKUP_BLOB(out, buffer, size);
+
+    object.bufmgr->registerPointer(out, buffer, size);
   }
 }
 
@@ -184,6 +186,8 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
     buffer = (uint8_t *)malloc(size);
 
     RESTORE_BLOB(in, buffer, size);
+
+    object.bufmgr->updatePointer(in, buffer, size);
   }
 }
 
@@ -203,6 +207,8 @@ void CompareCommandData::createCheckpoint(std::ostream &out) const noexcept {
 
   if (exist) {
     BACKUP_BLOB(out, subBuffer, size);
+
+    object.bufmgr->registerPointer(out, buffer, size);
   }
 }
 
@@ -218,6 +224,8 @@ void CompareCommandData::restoreCheckpoint(std::istream &in) noexcept {
 
   if (exist) {
     RESTORE_BLOB(in, subBuffer, size);
+
+    object.bufmgr->updatePointer(in, buffer, size);
   }
 }
 

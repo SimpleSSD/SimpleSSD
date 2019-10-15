@@ -48,6 +48,7 @@ class AbstractFTL : public Object {
       BACKUP_EVENT(out, iter.eid);
       BACKUP_SCALAR(out, iter.data);
       BACKUP_SCALAR(out, iter.address);
+      BACKUP_SCALAR(out, iter.buffer);
     }
   }
 
@@ -65,8 +66,9 @@ class AbstractFTL : public Object {
       RESTORE_EVENT(in, tmp.eid);
       RESTORE_SCALAR(in, tmp.data);
       RESTORE_SCALAR(in, tmp.address);
+      RESTORE_SCALAR(in, tmp.buffer);
 
-      // TODO: We need to restore buffer pointer from ICL::AbstractCache
+      tmp.buffer = object.bufmgr->restorePointer(tmp.buffer);
     }
   }
 };
