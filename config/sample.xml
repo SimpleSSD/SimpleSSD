@@ -311,11 +311,8 @@
       For the definition of parallelism group, see FIL section.
 
       Possible values:
-        1: Each page in first-level parallelism group
-        2: Each page in second-level parallelism group
-        4: Each page in third-level parallelism group
-        8: Each page in fourth-level parallelism group
-        15: Each page in all parallelism group
+        0: Superpage granularity
+        1: Each page in all parallelism group
      -->
     <config name="PrefetchMode">0</config>
     <!--
@@ -367,11 +364,8 @@
         Cache will try to collect as many pages as it can.
 
         Possible values:
-          1: Each page in first-level parallelism group
-          2: Each page in second-level parallelism group
-          4: Each page in third-level parallelism group
-          8: Each page in fourth-level parallelism group
-          15: Each page in all parallelism group
+          0: Superpage granularity
+          1: Each page in all parallelism group
        -->
       <config name="EvictMode">1</config>
     </section>
