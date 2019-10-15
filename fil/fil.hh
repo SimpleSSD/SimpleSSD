@@ -18,7 +18,7 @@ namespace SimpleSSD::FIL {
 class AbstractFIL;
 enum class Operation : uint8_t {
   Read,
-  Write,
+  Program,
   Erase,
   Copyback,
 };

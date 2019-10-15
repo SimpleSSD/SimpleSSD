@@ -26,7 +26,7 @@ class AbstractFIL : public Object {
   AbstractFIL(ObjectData &o, FIL *p) : Object(o), parent(p) {}
   virtual ~AbstractFIL() {}
 
-  virtual void enqueue(Request &) = 0;
+  virtual void enqueue(Request &&) = 0;
 
   void createCheckpoint(std::ostream &out) const noexcept {
     uint64_t size = pendingQueue.size();
