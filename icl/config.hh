@@ -43,11 +43,8 @@ class Config : public BaseConfig {
   };
 
   enum class Granularity : uint8_t {
-    FirstLevel = 1,
-    SecondLevel = 2,
-    ThirdLevel = 4,
-    FourthLevel = 8,
-    AllLevel = 15,
+    SuperpageLevel,
+    AllLevel,
   };
 
  private:
