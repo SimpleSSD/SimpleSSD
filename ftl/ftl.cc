@@ -57,6 +57,21 @@ FTL::FTL(ObjectData &o) : Object(o) {
     param.superpageLevel = FIL::PageAllocation::None;
   }
 
+  // Validate superpage level
+  uint8_t mask = FIL::PageAllocation::None;
+
+  for (uint8_t i = 0; i < 4; i++) {
+    if (param.superpageLevel | filparam->pageAllocation[i]) {
+      mask |= filparam->pageAllocation[i];
+    }
+    else {
+      break;
+    }
+  }
+
+  panic_if(param.superpageLevel != mask,
+           "Invalid superpage configuration detected.");
+
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
                                               Config::Key::MappingMode)) {
     case Config::MappingType::PageLevelFTL:
