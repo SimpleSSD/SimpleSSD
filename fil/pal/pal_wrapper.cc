@@ -345,8 +345,6 @@ void PALOLD::resetStatValues() noexcept {
 }
 
 void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
-  AbstractFIL::createCheckpoint(out);
-
   BACKUP_EVENT(out, flushEvent);
   BACKUP_SCALAR(out, lastResetTick);
   BACKUP_BLOB(out, &stat, sizeof(stat));
@@ -370,8 +368,6 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
-  AbstractFIL::restoreCheckpoint(in);
-
   RESTORE_EVENT(in, flushEvent);
   RESTORE_SCALAR(in, lastResetTick);
   RESTORE_BLOB(in, &stat, sizeof(stat));
