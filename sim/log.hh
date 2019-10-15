@@ -37,6 +37,7 @@ class Log {
     HIL_NVMe,
     HIL_NVMe_Command,
     ICL,
+    ICL_SetAssociative,
     FTL,
     FIL,
     FIL_PALOLD,
