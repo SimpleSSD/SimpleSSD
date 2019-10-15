@@ -27,7 +27,7 @@ typedef struct {
   uint32_t parallelismLevel2;  //!< 2nd parallelism group (Way when CWDP)
   uint32_t parallelismLevel3;  //!< 3rd parallelism group (Die when CWDP)
   uint32_t parallelismLevel4;  //!< 4th parallelism group (Plane when CWDP)
-  uint8_t superpageLevel;
+  uint8_t superpageLevel;      //!< Number of levels (1~N) included in superpage
 } Parameter;
 
 enum class Operation : uint8_t {

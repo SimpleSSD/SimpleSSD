@@ -72,6 +72,8 @@ FTL::FTL(ObjectData &o) : Object(o) {
   panic_if(param.superpageLevel != mask,
            "Invalid superpage configuration detected.");
 
+  param.superpageLevel = popcount16(mask);
+
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
                                               Config::Key::MappingMode)) {
     case Config::MappingType::PageLevelFTL:
