@@ -76,16 +76,11 @@ ICL::~ICL() {
 }
 
 void ICL::submit(Request &&req) {
-  pCache->enqueue(req);
+  pCache->enqueue(std::move(req));
 }
 
-void ICL::submit(FTL::Request &&req) {
-  // TODO: Pass request to FTL
-}
-
-LPN ICL::getPageUsage(LPN, LPN) {
-  // TODO: Pass to FTL
-  return 0;
+LPN ICL::getPageUsage(LPN offset, LPN length) {
+  return pFTL->getPageUsage(offset, length);
 }
 
 LPN ICL::getTotalPages() {

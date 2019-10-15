@@ -17,14 +17,12 @@ namespace SimpleSSD::ICL {
 
 class AbstractCache : public Object {
  protected:
-  ICL *parent;
+  FTL::FTL *pFTL;
 
   std::deque<Request> pendingQueue;
-  uint32_t logicalPageSize;
 
  public:
-  AbstractCache(ObjectData &o, ICL *p)
-      : Object(o), parent(p), logicalPageSize(p->getLPNSize()) {}
+  AbstractCache(ObjectData &o, FTL::FTL *p) : Object(o), pFTL(p) {}
   virtual ~AbstractCache() {}
 
   virtual void enqueue(Request &&) = 0;
@@ -48,8 +46,6 @@ class AbstractCache : public Object {
 
   void restoreCheckpoint(std::istream &in) noexcept {
     bool exist;
-
-    logicalPageSize = parent->getLPNSize();
 
     uint64_t size;
     RESTORE_SCALAR(in, size);
