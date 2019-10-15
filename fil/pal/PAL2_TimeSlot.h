@@ -29,6 +29,9 @@ struct TimeSlot {
 
   TimeSlot(uint64_t startTick, uint64_t duration);
   TimeSlot() : StartTick(0ull), EndTick(0ull){};
+
+  void backup(std::ostream &) const;
+  void restore(std::istream &);
 };
 
 #endif

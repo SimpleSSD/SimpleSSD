@@ -24,6 +24,9 @@ class LatencyMLC : public Latency {
 
   uint64_t GetLatency(uint32_t, uint8_t, uint8_t) override;
   inline uint8_t GetPageType(uint32_t) override;
+
+  void backup(std::ostream &) const override;
+  void restore(std::istream &) override;
 };
 
 #endif  //__LatencyMLC_h__

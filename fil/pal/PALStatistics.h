@@ -12,13 +12,6 @@
 #ifndef __PALStatistics_h__
 #define __PALStatistics_h__
 
-#include "SimpleSSD_types.h"
-
-#include "Latency.h"
-#include "PAL2_TimeSlot.h"
-
-#include "sim/object.hh"
-
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -29,6 +22,11 @@
 #include <limits>
 #include <map>
 #include <string>
+
+#include "Latency.h"
+#include "PAL2_TimeSlot.h"
+#include "SimpleSSD_types.h"
+#include "sim/object.hh"
 using namespace std;
 
 #define OPER_ALL (OPER_NUM + 1)
@@ -95,6 +93,8 @@ class PALStatistics {
   SimpleSSD::ConfigReader *gconf;
   Latency *lat;
   uint64_t totalDie;
+  uint32_t channel;
+  uint32_t package;
 
 #if 0  // ch-die io count (legacy)
     class mini_cnt_page
@@ -223,6 +223,9 @@ class PALStatistics {
     void init();
     void add();
     uint64_t cnt;
+
+    void backup(std::ostream &) const;
+    void restore(std::istream &);
   };
 
   class CounterOper {
@@ -232,6 +235,9 @@ class PALStatistics {
     void init();
     void add(uint32_t oper);
     void printstat(const char *namestr);
+
+    void backup(std::ostream &) const;
+    void restore(std::istream &);
   };
 
   CounterOper PPN_requested_rwe;
@@ -255,6 +261,9 @@ class PALStatistics {
     double legacy_avg();
     double sum, minval, maxval, cnt, sampled_sum, sampled_cnt, legacy_sum,
         legacy_cnt, legacy_minval, legacy_maxval;
+
+    void backup(std::ostream &) const;
+    void restore(std::istream &);
   };
 
   class ValueOper {
@@ -280,6 +289,9 @@ class PALStatistics {
     void printstat_oper_iops(class ValueOper *, uint64_t *, uint64_t *);
 
     void printstat_energy(const char *namestr);
+
+    void backup(std::ostream &) const;
+    void restore(std::istream &);
   };
 
   ValueOper Ticks_DMA0WAIT;
@@ -308,6 +320,9 @@ class PALStatistics {
   ValueOper Access_Oper_Iops;
   uint64_t SampledTick;
   bool skip;
+
+  void backup(std::ostream &) const;
+  void restore(std::istream &);
 
   void PrintDieIdleTicks(uint32_t die_num, uint64_t sim_time_ps,
                          uint64_t idle_power_nw);

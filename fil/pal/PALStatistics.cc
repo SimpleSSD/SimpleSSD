@@ -12,19 +12,21 @@
 #include "SimpleSSD_types.h"
 #include "util/algorithm.hh"
 
-char ADDR_STRINFO[ADDR_NUM][10] = {"Channel", "Package", "Die",
-                                   "Plane",   "Block",   "Page"};
-char ADDR_STRINFO2[ADDR_NUM][15] = {"ADDR_CHANNEL", "ADDR_PACKAGE",
-                                    "ADDR_DIE",     "ADDR_PLANE",
-                                    "ADDR_BLOCK",   "ADDR_PAGE"};
-char OPER_STRINFO[OPER_NUM][10] = {"R", "W", "E"};
-char OPER_STRINFO2[OPER_NUM][10] = {"Read ", "Write", "Erase"};
-char BUSY_STRINFO[BUSY_NUM][10] = {"IDLE",     "DMA0", "MEM",
-                                   "DMA1WAIT", "DMA1", "END"};
-char PAGE_STRINFO[PAGE_NUM][10] = {"LSB", "CSB", "MSB"};
-char NAND_STRINFO[NAND_NUM][10] = {"SLC", "MLC", "TLC"};
+using namespace SimpleSSD;
+
+const char ADDR_STRINFO[ADDR_NUM][10] = {"Channel", "Package", "Die",
+                                         "Plane",   "Block",   "Page"};
+const char ADDR_STRINFO2[ADDR_NUM][15] = {"ADDR_CHANNEL", "ADDR_PACKAGE",
+                                          "ADDR_DIE",     "ADDR_PLANE",
+                                          "ADDR_BLOCK",   "ADDR_PAGE"};
+const char OPER_STRINFO[OPER_NUM][10] = {"R", "W", "E"};
+const char OPER_STRINFO2[OPER_NUM][10] = {"Read ", "Write", "Erase"};
+const char BUSY_STRINFO[BUSY_NUM][10] = {"IDLE",     "DMA0", "MEM",
+                                         "DMA1WAIT", "DMA1", "END"};
+const char PAGE_STRINFO[PAGE_NUM][10] = {"LSB", "CSB", "MSB"};
+const char NAND_STRINFO[NAND_NUM][10] = {"SLC", "MLC", "TLC"};
 #if GATHER_RESOURCE_CONFLICT
-char CONFLICT_STRINFO[CONFLICT_NUM][10] = {"NONE", "DMA0", "MEM", "DMA1"};
+const char CONFLICT_STRINFO[CONFLICT_NUM][10] = {"NONE", "DMA0", "MEM", "DMA1"};
 #endif
 
 PALStatistics::Counter::Counter() {
@@ -37,6 +39,14 @@ void PALStatistics::Counter::init() {
 
 void PALStatistics::Counter::add() {
   cnt++;
+}
+
+void PALStatistics::Counter::backup(std::ostream &out) const {
+  BACKUP_SCALAR(out, cnt);
+}
+
+void PALStatistics::Counter::restore(std::istream &in) {
+  RESTORE_SCALAR(in, cnt);
 }
 
 PALStatistics::CounterOper::CounterOper() {
@@ -62,6 +72,18 @@ void PALStatistics::CounterOper::printstat(const char *) {}
 //     DPRINTF(PAL, "%s, %" PRIu64 "\n", OPER_STR[i], cnts[i].cnt);
 //   }
 // }
+
+void PALStatistics::CounterOper::backup(std::ostream &out) const {
+  for (int i = 0; i < OPER_ALL; i++) {
+    cnts[i].backup(out);
+  }
+}
+
+void PALStatistics::CounterOper::restore(std::istream &in) {
+  for (int i = 0; i < OPER_ALL; i++) {
+    cnts[i].restore(in);
+  }
+}
 
 PALStatistics::Value::Value() {
   init();
@@ -104,6 +126,32 @@ double PALStatistics::Value::avg() {
 
 double PALStatistics::Value::legacy_avg() {
   return SAFEDIV(legacy_sum, legacy_cnt);
+}
+
+void PALStatistics::Value::backup(std::ostream &out) const {
+  BACKUP_SCALAR(out, sum);
+  BACKUP_SCALAR(out, minval);
+  BACKUP_SCALAR(out, maxval);
+  BACKUP_SCALAR(out, cnt);
+  BACKUP_SCALAR(out, sampled_sum);
+  BACKUP_SCALAR(out, sampled_cnt);
+  BACKUP_SCALAR(out, legacy_sum);
+  BACKUP_SCALAR(out, legacy_cnt);
+  BACKUP_SCALAR(out, legacy_minval);
+  BACKUP_SCALAR(out, legacy_maxval);
+}
+
+void PALStatistics::Value::restore(std::istream &in) {
+  RESTORE_SCALAR(in, sum);
+  RESTORE_SCALAR(in, minval);
+  RESTORE_SCALAR(in, maxval);
+  RESTORE_SCALAR(in, cnt);
+  RESTORE_SCALAR(in, sampled_sum);
+  RESTORE_SCALAR(in, sampled_cnt);
+  RESTORE_SCALAR(in, legacy_sum);
+  RESTORE_SCALAR(in, legacy_cnt);
+  RESTORE_SCALAR(in, legacy_minval);
+  RESTORE_SCALAR(in, legacy_maxval);
 }
 
 PALStatistics::ValueOper::ValueOper() {
@@ -166,6 +214,18 @@ void PALStatistics::ValueOper::printstat(const char *) {}
 //   }
 // }
 
+void PALStatistics::ValueOper::backup(std::ostream &out) const {
+  for (int i = 0; i < OPER_ALL; i++) {
+    vals[i].backup(out);
+  }
+}
+
+void PALStatistics::ValueOper::restore(std::istream &in) {
+  for (int i = 0; i < OPER_ALL; i++) {
+    vals[i].restore(in);
+  }
+}
+
 void PALStatistics::getTickStat(OperStats &stat) {
   stat.read = Ticks_Total.vals[OPER_READ].avg();
   stat.write = Ticks_Total.vals[OPER_WRITE].avg();
@@ -226,10 +286,7 @@ void PALStatistics::getEraseBreakdown(Breakdown &value) {
 }
 
 void PALStatistics::getChannelActiveTime(uint32_t c, ActiveTime &stat) {
-  static uint32_t numOfChannel = gconf->readUint(
-      SimpleSSD::Section::FlashInterface, SimpleSSD::FIL::Config::Key::Channel);
-
-  if (c < numOfChannel) {
+  if (c < channel) {
     stat.min = Ticks_Active_ch[c].vals[OPER_NUM].minval;
     stat.max = Ticks_Active_ch[c].vals[OPER_NUM].maxval;
     stat.average = Ticks_Active_ch[c].vals[OPER_NUM].avg();
@@ -245,15 +302,13 @@ void PALStatistics::getDieActiveTime(uint32_t d, ActiveTime &stat) {
 }
 
 void PALStatistics::getChannelActiveTimeAll(ActiveTime &stat) {
-  static uint32_t numOfChannel = gconf->readUint(
-      SimpleSSD::Section::FlashInterface, SimpleSSD::FIL::Config::Key::Channel);
   ActiveTime tmp;
 
   stat.min = (double)std::numeric_limits<uint64_t>::max();
   stat.max = 0.;
   stat.average = 0.;
 
-  for (uint32_t i = 0; i < numOfChannel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     getChannelActiveTime(i, tmp);
 
     if (stat.min > tmp.min) {
@@ -266,7 +321,7 @@ void PALStatistics::getChannelActiveTimeAll(ActiveTime &stat) {
     stat.average += tmp.average;
   }
 
-  stat.average /= numOfChannel;
+  stat.average /= channel;
 }
 
 void PALStatistics::getDieActiveTimeAll(ActiveTime &stat) {
@@ -503,8 +558,7 @@ void PALStatistics::ValueOper::printstat_latency(const char *) {}
 //   }
 // }
 
-PALStatistics::PALStatistics(SimpleSSD::ConfigReader *c, Latency *l)
-    : gconf(c), lat(l) {
+PALStatistics::PALStatistics(ConfigReader *c, Latency *l) : gconf(c), lat(l) {
   LastTick = 0;
 
   InitStats();
@@ -532,10 +586,8 @@ void PALStatistics::InitStats() {
   OpBusyTime[0] = OpBusyTime[1] = OpBusyTime[2] = 0;
   LastOpBusyTime[0] = LastOpBusyTime[1] = LastOpBusyTime[2] = 0;
 
-  auto channel = gconf->readUint(SimpleSSD::Section::FlashInterface,
-                                 SimpleSSD::FIL::Config::Key::Channel);
-  auto package = gconf->readUint(SimpleSSD::Section::FlashInterface,
-                                 SimpleSSD::FIL::Config::Key::Way);
+  channel = gconf->readUint(Section::FlashInterface, FIL::Config::Key::Channel);
+  package = gconf->readUint(Section::FlashInterface, FIL::Config::Key::Way);
   auto param = gconf->getNANDStructure();
 
   totalDie = channel * package * param->die;
@@ -818,8 +870,6 @@ void PALStatistics::PrintFinalStats(uint64_t sim_time_ps) {
   // DPRINTF(PAL, "Total execution time (ms), Total SSD active time (ms)\n");
   // DPRINTF(PAL, "%.2f\t\t\t, %.2f\n", sim_time_ps * 1.0 / 1000000000,
   //         SampledExactBusyTime * 1.0 / 1000000000);
-  auto channel = gconf->readUint(SimpleSSD::Section::FlashInterface,
-                                 SimpleSSD::FIL::Config::Key::Channel);
 
   assert(Access_Capacity_snapshot.size() > 0);
   std::map<uint64_t, ValueOper *>::iterator e = Access_Capacity_snapshot.end();
@@ -940,8 +990,6 @@ void PALStatistics::PrintStats(uint64_t sim_time_ps) {
   //          ExactBusyTime);
   // fDPRINTF(PAL, "Busy Performance: %Lf MB/Sec\n",
   //          (long double)TRANSFER_TOTAL_MB / BUSY_TIME_SEC);
-  auto channel = gconf->readUint(SimpleSSD::Section::FlashInterface,
-                                 SimpleSSD::FIL::Config::Key::Channel);
 
   std::map<uint64_t, ValueOper *>::iterator e =
       Access_Capacity_snapshot.find(sim_time_ps / EPOCH_INTERVAL - 1);
@@ -1075,4 +1123,197 @@ void PALStatistics::PrintStats(uint64_t sim_time_ps) {
   for (int i = 0; i < OPER_ALL; i++) {
     Access_Capacity.vals[i].backup();
   }
+}
+
+void PALStatistics::backup(std::ostream &out) const {
+  BACKUP_SCALAR(out, totalDie);
+  BACKUP_SCALAR(out, channel);
+  BACKUP_SCALAR(out, package);
+  BACKUP_SCALAR(out, sim_start_time_ps);
+  BACKUP_SCALAR(out, LastTick);
+  BACKUP_SCALAR(out, ExactBusyTime);
+  BACKUP_SCALAR(out, SampledExactBusyTime);
+  BACKUP_SCALAR(out, OpBusyTime[0]);
+  BACKUP_SCALAR(out, OpBusyTime[1]);
+  BACKUP_SCALAR(out, OpBusyTime[2]);
+  BACKUP_SCALAR(out, LastOpBusyTime[0]);
+  BACKUP_SCALAR(out, LastOpBusyTime[1]);
+  BACKUP_SCALAR(out, LastOpBusyTime[2]);
+
+  PPN_requested_rwe.backup(out);
+
+  for (int i = 0; i < PAGE_ALL; i++) {
+    PPN_requested_pagetype[i].backup(out);
+  }
+
+  for (int i = 0; i < channel; i++) {
+    PPN_requested_ch[i].backup(out);
+  }
+
+  for (int i = 0; i < totalDie; i++) {
+    PPN_requested_die[i].backup(out);
+  }
+
+  CF_DMA0_dma.backup(out);
+  CF_DMA0_mem.backup(out);
+  CF_DMA0_none.backup(out);
+  CF_DMA1_dma.backup(out);
+  CF_DMA1_none.backup(out);
+
+  Ticks_DMA0WAIT.backup(out);
+  Ticks_DMA0.backup(out);
+  Ticks_MEM.backup(out);
+  Ticks_DMA1WAIT.backup(out);
+  Ticks_DMA1.backup(out);
+  Ticks_Total.backup(out);
+  Energy_DMA0.backup(out);
+  Energy_MEM.backup(out);
+  Energy_DMA1.backup(out);
+  Energy_Total.backup(out);
+
+  uint64_t size = Ticks_Total_snapshot.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : Ticks_Total_snapshot) {
+    BACKUP_SCALAR(out, iter.first);
+    iter.second->backup(out);
+  }
+
+  Ticks_TotalOpti.backup(out);
+
+  for (int i = 0; i < channel; i++) {
+    Ticks_Active_ch[i].backup(out);
+  }
+
+  for (int i = 0; i < totalDie; i++) {
+    Ticks_Active_die[i].backup(out);
+  }
+
+  Access_Capacity.backup(out);
+
+  size = Access_Capacity_snapshot.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : Access_Capacity_snapshot) {
+    BACKUP_SCALAR(out, iter.first);
+    iter.second->backup(out);
+  }
+
+  Access_Bandwidth.backup(out);
+  Access_Bandwidth_widle.backup(out);
+  Access_Oper_Bandwidth.backup(out);
+  Access_Iops.backup(out);
+  Access_Iops_widle.backup(out);
+  Access_Oper_Iops.backup(out);
+  BACKUP_SCALAR(out, SampledTick);
+  BACKUP_SCALAR(out, skip);
+}
+
+void PALStatistics::restore(std::istream &in) {
+  RESTORE_SCALAR(in, totalDie);
+  RESTORE_SCALAR(in, channel);
+  RESTORE_SCALAR(in, package);
+  RESTORE_SCALAR(in, sim_start_time_ps);
+  RESTORE_SCALAR(in, LastTick);
+  RESTORE_SCALAR(in, ExactBusyTime);
+  RESTORE_SCALAR(in, SampledExactBusyTime);
+  RESTORE_SCALAR(in, OpBusyTime[0]);
+  RESTORE_SCALAR(in, OpBusyTime[1]);
+  RESTORE_SCALAR(in, OpBusyTime[2]);
+  RESTORE_SCALAR(in, LastOpBusyTime[0]);
+  RESTORE_SCALAR(in, LastOpBusyTime[1]);
+  RESTORE_SCALAR(in, LastOpBusyTime[2]);
+
+  PPN_requested_rwe.restore(in);
+
+  for (int i = 0; i < PAGE_ALL; i++) {
+    PPN_requested_pagetype[i].restore(in);
+  }
+
+  for (int i = 0; i < channel; i++) {
+    PPN_requested_ch[i].restore(in);
+  }
+
+  for (int i = 0; i < totalDie; i++) {
+    PPN_requested_die[i].restore(in);
+  }
+
+  CF_DMA0_dma.restore(in);
+  CF_DMA0_mem.restore(in);
+  CF_DMA0_none.restore(in);
+  CF_DMA1_dma.restore(in);
+  CF_DMA1_none.restore(in);
+
+  Ticks_DMA0WAIT.restore(in);
+  Ticks_DMA0.restore(in);
+  Ticks_MEM.restore(in);
+  Ticks_DMA1WAIT.restore(in);
+  Ticks_DMA1.restore(in);
+  Ticks_Total.restore(in);
+  Energy_DMA0.restore(in);
+  Energy_MEM.restore(in);
+  Energy_DMA1.restore(in);
+  Energy_Total.restore(in);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  if (Ticks_Total_snapshot.size() > 0) {
+    for (auto &iter : Ticks_Total_snapshot) {
+      delete iter.second;
+    }
+
+    Ticks_Total_snapshot.clear();
+  }
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t t;
+    ValueOper *ptr = new ValueOper();
+
+    RESTORE_SCALAR(in, t);
+    ptr->restore(in);
+
+    Ticks_Total_snapshot.emplace(std::make_pair(t, ptr));
+  }
+
+  Ticks_TotalOpti.restore(in);
+
+  for (int i = 0; i < channel; i++) {
+    Ticks_Active_ch[i].restore(in);
+  }
+
+  for (int i = 0; i < totalDie; i++) {
+    Ticks_Active_die[i].restore(in);
+  }
+
+  Access_Capacity.restore(in);
+
+  RESTORE_SCALAR(in, size);
+
+  if (Ticks_Total_snapshot.size() > 0) {
+    for (auto &iter : Access_Capacity_snapshot) {
+      delete iter.second;
+    }
+
+    Access_Capacity_snapshot.clear();
+  }
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t t;
+    ValueOper *ptr = new ValueOper();
+
+    RESTORE_SCALAR(in, t);
+    ptr->restore(in);
+
+    Access_Capacity_snapshot.emplace(std::make_pair(t, ptr));
+  }
+
+  Access_Bandwidth.restore(in);
+  Access_Bandwidth_widle.restore(in);
+  Access_Oper_Bandwidth.restore(in);
+  Access_Iops.restore(in);
+  Access_Iops_widle.restore(in);
+  Access_Oper_Iops.restore(in);
+  RESTORE_SCALAR(in, SampledTick);
+  RESTORE_SCALAR(in, skip);
 }

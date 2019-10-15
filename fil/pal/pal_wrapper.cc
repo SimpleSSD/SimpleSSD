@@ -344,4 +344,58 @@ void PALOLD::resetStatValues() noexcept {
   memset(&stat, 0, sizeof(stat));
 }
 
+void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractFIL::createCheckpoint(out);
+
+  BACKUP_EVENT(out, flushEvent);
+  BACKUP_SCALAR(out, lastResetTick);
+  BACKUP_BLOB(out, &stat, sizeof(stat));
+  BACKUP_EVENT(out, completeEvent);
+
+  uint64_t size = completionQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : completionQueue) {
+    BACKUP_SCALAR(out, iter.id);
+    BACKUP_SCALAR(out, iter.sid);
+    BACKUP_EVENT(out, iter.eid);
+    BACKUP_SCALAR(out, iter.data);
+    BACKUP_SCALAR(out, iter.beginAt);
+    BACKUP_SCALAR(out, iter.finishedAt);
+  }
+
+  lat->backup(out);
+  stats->backup(out);
+  pal->backup(out);
+}
+
+void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractFIL::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, flushEvent);
+  RESTORE_SCALAR(in, lastResetTick);
+  RESTORE_BLOB(in, &stat, sizeof(stat));
+  RESTORE_EVENT(in, completeEvent);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    Complete tmp;
+
+    RESTORE_SCALAR(in, tmp.id);
+    RESTORE_SCALAR(in, tmp.sid);
+    RESTORE_EVENT(in, tmp.eid);
+    RESTORE_SCALAR(in, tmp.data);
+    RESTORE_SCALAR(in, tmp.beginAt);
+    RESTORE_SCALAR(in, tmp.finishedAt);
+
+    completionQueue.emplace_back(tmp);
+  }
+
+  lat->restore(in);
+  stats->restore(in);
+  pal->restore(in);
+}
+
 }  // namespace SimpleSSD::FIL

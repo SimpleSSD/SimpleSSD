@@ -60,6 +60,9 @@ class Latency {
 
   // Setup DMA speed and pagesize
   virtual uint64_t GetPower(uint8_t, uint8_t);
+
+  virtual void backup(std::ostream &) const;
+  virtual void restore(std::istream &);
 };
 
 #endif  //__Latency_h__

@@ -9,7 +9,9 @@
 
 #include "LatencyTLC.h"
 
-LatencyTLC::LatencyTLC(SimpleSSD::ConfigReader *config) : Latency(config) {
+using namespace SimpleSSD;
+
+LatencyTLC::LatencyTLC(ConfigReader *config) : Latency(config) {
   read[0] = timing->tDS + timing->tWB + timing->tR[0] + timing->tRR;
   write[0] = timing->tPROG[0] + timing->tWP + timing->tDH;
   read[1] = timing->tDS + timing->tWB + timing->tR[1] + timing->tRR;
@@ -73,4 +75,28 @@ uint64_t LatencyTLC::GetLatency(uint32_t AddrPage, uint8_t Oper, uint8_t Busy) {
   }
 
   return 10;
+}
+
+void LatencyTLC::backup(std::ostream &out) const {
+  Latency::backup(out);
+
+  BACKUP_SCALAR(out, read[0]);
+  BACKUP_SCALAR(out, read[1]);
+  BACKUP_SCALAR(out, read[2]);
+  BACKUP_SCALAR(out, write[0]);
+  BACKUP_SCALAR(out, write[1]);
+  BACKUP_SCALAR(out, write[2]);
+  BACKUP_SCALAR(out, erase);
+}
+
+void LatencyTLC::restore(std::istream &in) {
+  Latency::restore(in);
+
+  RESTORE_SCALAR(in, read[0]);
+  RESTORE_SCALAR(in, read[1]);
+  RESTORE_SCALAR(in, read[2]);
+  RESTORE_SCALAR(in, write[0]);
+  RESTORE_SCALAR(in, write[1]);
+  RESTORE_SCALAR(in, write[2]);
+  RESTORE_SCALAR(in, erase);
 }

@@ -11,22 +11,21 @@
 
 #include "util/algorithm.hh"
 
-PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
+using namespace SimpleSSD;
+
+PAL2::PAL2(PALStatistics *statistics, ConfigReader *c, Latency *l)
     : pParam(c->getNANDStructure()), lat(l), stats(statistics) {
   uint32_t OriginalSizes[7];
-  uint32_t SPDIV = c->readUint(SimpleSSD::Section::FlashInterface,
-                               SimpleSSD::FIL::Config::Key::DMASpeed) /
-                   50;
+  uint32_t SPDIV =
+      c->readUint(Section::FlashInterface, FIL::Config::Key::DMASpeed) / 50;
   uint32_t PGDIV = 16384 / pParam->pageSize;
 
   if (SPDIV == 0 || PGDIV == 0) {
     abort();
   }
 
-  channel = c->readUint(SimpleSSD::Section::FlashInterface,
-                        SimpleSSD::FIL::Config::Key::Channel);
-  package = c->readUint(SimpleSSD::Section::FlashInterface,
-                        SimpleSSD::FIL::Config::Key::Way);
+  channel = c->readUint(Section::FlashInterface, FIL::Config::Key::Channel);
+  package = c->readUint(Section::FlashInterface, FIL::Config::Key::Way);
 
   OriginalSizes[ADDR_CHANNEL] = channel;
   OriginalSizes[ADDR_PACKAGE] = package;
@@ -69,7 +68,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
   for (unsigned i = 0; i < channel; i++) {
     std::map<uint64_t, uint64_t> *tmp;
     switch (pParam->type) {
-      case SimpleSSD::FIL::Config::NANDType::SLC:
+      case FIL::Config::NANDType::SLC:
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -81,7 +80,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][1500000 / SPDIV] = tmp;
         break;
-      case SimpleSSD::FIL::Config::NANDType::MLC:
+      case FIL::Config::NANDType::MLC:
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -93,7 +92,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][1500000 / SPDIV] = tmp;
         break;
-      case SimpleSSD::FIL::Config::NANDType::TLC:
+      case FIL::Config::NANDType::TLC:
         tmp = new std::map<uint64_t, uint64_t>;
         ChFreeSlots[i][100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -115,7 +114,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
   for (unsigned i = 0; i < totalDie; i++) {
     std::map<uint64_t, uint64_t> *tmp;
     switch (pParam->type) {
-      case SimpleSSD::FIL::Config::NANDType::SLC:
+      case FIL::Config::NANDType::SLC:
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][25000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -123,7 +122,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][2000000000 + 100000 / SPDIV] = tmp;
         break;
-      case SimpleSSD::FIL::Config::NANDType::MLC:
+      case FIL::Config::NANDType::MLC:
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][40000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -135,7 +134,7 @@ PAL2::PAL2(PALStatistics *statistics, SimpleSSD::ConfigReader *c, Latency *l)
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][3500000000 + 100000 / SPDIV] = tmp;
         break;
-      case SimpleSSD::FIL::Config::NANDType::TLC:
+      case FIL::Config::NANDType::TLC:
         tmp = new std::map<uint64_t, uint64_t>;
         DieFreeSlots[i][58000000 + 100000 / SPDIV] = tmp;
         tmp = new std::map<uint64_t, uint64_t>;
@@ -942,4 +941,176 @@ void PAL2::AssemblePPN(CPDPBP *pCPDPBP, uint64_t *pPPN) {
   printCPDPBP(pCPDPBP);
   DPRINTF(PAL, "PAL    ==> 0x%llx (%llu)\n", *pPPN, *pPPN);  // Use DPRINTF here
 #endif
+}
+
+void PAL2::backup(std::ostream &out) const {
+  uint64_t size = MergedTimeSlots.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : MergedTimeSlots) {
+    iter.backup(out);
+  }
+
+  BACKUP_SCALAR(out, totalDie);
+
+  for (int i = 0; i < 3; i++) {
+    size = OpTimeStamp[i].size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : OpTimeStamp[i]) {
+      BACKUP_SCALAR(out, iter.first);
+      BACKUP_SCALAR(out, iter.second);
+    }
+  }
+
+  uint64_t size2 = 0;
+
+  for (int i = 0; i < channel; i++) {
+    auto &slot = ChFreeSlots[i];
+
+    size = slot.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : slot) {
+      auto &slot2 = *iter.second;
+
+      BACKUP_SCALAR(out, iter.first);
+
+      size2 = slot2.size();
+      BACKUP_SCALAR(out, size2);
+
+      for (auto &iter2 : slot2) {
+        BACKUP_SCALAR(out, iter2.first);
+        BACKUP_SCALAR(out, iter2.second);
+      }
+    }
+  }
+
+  size = sizeof(uint64_t) * channel;
+  BACKUP_BLOB(out, ChStartPoint, size);
+
+  for (int i = 0; i < totalDie; i++) {
+    auto &slot = DieFreeSlots[i];
+
+    size = slot.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : slot) {
+      auto &slot2 = *iter.second;
+
+      BACKUP_SCALAR(out, iter.first);
+
+      size2 = slot2.size();
+      BACKUP_SCALAR(out, size2);
+
+      for (auto &iter2 : slot2) {
+        BACKUP_SCALAR(out, iter2.first);
+        BACKUP_SCALAR(out, iter2.second);
+      }
+    }
+  }
+
+  size = sizeof(uint64_t) * totalDie;
+  BACKUP_BLOB(out, DieStartPoint, size);
+}
+
+void PAL2::restore(std::istream &in) {
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  MergedTimeSlots.clear();
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t f, s;
+
+    RESTORE_SCALAR(in, f);
+    RESTORE_SCALAR(in, s);
+
+    MergedTimeSlots.emplace_back(std::make_pair(f, s));
+  }
+
+  RESTORE_SCALAR(in, totalDie);
+
+  for (int i = 0; i < 3; i++) {
+    RESTORE_SCALAR(in, size);
+
+    OpTimeStamp[i].clear();
+
+    for (uint64_t j = 0; j < size; j++) {
+      uint64_t f, s;
+
+      RESTORE_SCALAR(in, f);
+      RESTORE_SCALAR(in, s);
+
+      OpTimeStamp[i].emplace(std::make_pair(f, s));
+    }
+  }
+
+  uint64_t size2 = 0;
+
+  for (int i = 0; i < channel; i++) {
+    auto &slot = ChFreeSlots[i];
+
+    RESTORE_SCALAR(in, size);
+
+    for (auto &iter : slot) {
+      delete iter.second;
+    }
+
+    for (uint64_t j = 0; j < size; j++) {
+      uint64_t key;
+
+      std::map<uint64_t, uint64_t> *ptr = new std::map<uint64_t, uint64_t>();
+
+      RESTORE_SCALAR(in, key);
+      RESTORE_SCALAR(in, size2);
+
+      for (uint64_t k = 0; k < size2; k++) {
+        uint64_t f, s;
+
+        RESTORE_SCALAR(in, f);
+        RESTORE_SCALAR(in, s);
+
+        ptr->emplace(std::make_pair(f, s));
+      }
+
+      ChFreeSlots[i].emplace(std::make_pair(key, ptr));
+    }
+  }
+
+  size = sizeof(uint64_t) * channel;
+  RESTORE_BLOB(in, ChStartPoint, size);
+
+  for (int i = 0; i < totalDie; i++) {
+    auto &slot = DieFreeSlots[i];
+
+    RESTORE_SCALAR(in, size);
+
+    for (auto &iter : slot) {
+      delete iter.second;
+    }
+
+    for (uint64_t j = 0; j < size; j++) {
+      uint64_t key;
+
+      std::map<uint64_t, uint64_t> *ptr = new std::map<uint64_t, uint64_t>();
+
+      RESTORE_SCALAR(in, key);
+      RESTORE_SCALAR(in, size2);
+
+      for (uint64_t k = 0; k < size2; k++) {
+        uint64_t f, s;
+
+        RESTORE_SCALAR(in, f);
+        RESTORE_SCALAR(in, s);
+
+        ptr->emplace(std::make_pair(f, s));
+      }
+
+      DieFreeSlots[i].emplace(std::make_pair(key, ptr));
+    }
+  }
+
+  size = sizeof(uint64_t) * totalDie;
+  RESTORE_BLOB(in, DieStartPoint, size);
 }
