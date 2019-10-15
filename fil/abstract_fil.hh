@@ -23,8 +23,8 @@ class AbstractFIL : public Object {
   std::deque<Request> pendingQueue;
 
  public:
-  AbstractPAL(ObjectData &o, FIL *p) : Object(o), parent(p) {}
-  virtual ~AbstractPAL() {}
+  AbstractFIL(ObjectData &o, FIL *p) : Object(o), parent(p) {}
+  virtual ~AbstractFIL() {}
 
   virtual void enqueue(Request &) = 0;
 
