@@ -375,6 +375,16 @@ class DRAMStats {
  */
 class TimingDRAM : public AbstractDRAM {
  private:
+  struct RetryRequest {
+    uint64_t addr;
+    uint64_t size;
+    Event eid;
+    uint64_t data;
+
+    RetryRequest(uint64_t a, uint64_t s, Event e, uint64_t d)
+        : addr(a), size(s), eid(e), data(d) {}
+  };
+
   friend Rank;
   friend DRAMStats;
 
@@ -430,6 +440,9 @@ class TimingDRAM : public AbstractDRAM {
   uint64_t totalReadQueueSize;
   uint64_t totalWriteQueueSize;
 
+  std::deque<RetryRequest> retryReadQueue;
+  std::deque<RetryRequest> retryWriteQueue;
+
   Event nextReqEvent;
   Event respondEvent;
 
@@ -467,6 +480,9 @@ class TimingDRAM : public AbstractDRAM {
 
   void backupQueue(std::ostream &, const DRAMPacketQueue *) const;
   void restoreQueue(std::istream &, DRAMPacketQueue *);
+
+  void retryRead();
+  void retryWrite();
 
  public:
   TimingDRAM(ObjectData &);

@@ -1529,7 +1529,8 @@ void TimingDRAM::processRespondEvent() {
 
   if (retryRdReq) {
     retryRdReq = false;
-    // TODO: implement queue full handling
+
+    retryRead();
   }
 }
 
@@ -1993,7 +1994,8 @@ void TimingDRAM::processNextReqEvent() {
 
   if (retryWrReq && totalWriteQueueSize < gem5Config->writeBufferSize) {
     retryWrReq = false;
-    // TODO: implement queue full handling
+
+    retryWrite();
   }
 }
 
@@ -2071,21 +2073,65 @@ void TimingDRAM::logResponse(BusState dir, uint64_t entries) {
   }
 }
 
+void TimingDRAM::retryRead() {
+  while (retryReadQueue.size() > 0) {
+    auto &req = retryReadQueue.front();
+    auto ret = receive(req.addr, req.size, true, req.eid, req.data);
+
+    if (retryRdReq) {
+      break;
+    }
+    else if (ret) {
+      retryReadQueue.pop_front();
+    }
+    else {
+      scheduleNow(req.eid, req.data);
+    }
+  }
+}
+
+void TimingDRAM::retryWrite() {
+  while (retryWriteQueue.size() > 0) {
+    auto &req = retryWriteQueue.front();
+    receive(req.addr, req.size, false, req.eid, req.data);
+
+    if (!retryWrReq) {
+      scheduleNow(req.eid, req.data);
+
+      retryWriteQueue.pop_front();
+    }
+    else {
+      break;
+    }
+  }
+}
+
 void TimingDRAM::read(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
   auto ret = receive(addr, size, true, eid, data);
 
   if (!ret) {
     // Not submitted
-    // TODO: implement queue full handling
+    if (retryRdReq) {
+      // Put request to retry queue
+      retryReadQueue.emplace_back(RetryRequest(addr, size, eid, data));
+    }
+    else {
+      // Read served by write queue
+      scheduleNow(eid, data);
+    }
   }
 }
 
 void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
-  auto ret = receive(addr, size, false, eid, data);
+  receive(addr, size, false, eid, data);
 
-  if (!ret) {
-    // Not submitted
-    // TODO: implement queue full handling
+  if (retryWrReq) {
+    // Put request to retry queue
+    retryWriteQueue.emplace_back(RetryRequest(addr, size, eid, data));
+  }
+  else {
+    // Request successfully pushed to queue (write is async!)
+    scheduleNow(eid, data);
   }
 }
 
