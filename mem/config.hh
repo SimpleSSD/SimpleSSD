@@ -27,6 +27,7 @@ class Config : public BaseConfig {
 
   enum Model : uint8_t {
     Simple,
+    Gem5,
     Full = 1,
   };
 

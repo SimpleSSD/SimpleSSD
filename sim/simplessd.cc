@@ -11,6 +11,7 @@
 
 #include "hil/buffer_manager.hh"
 #include "hil/nvme/subsystem.hh"
+#include "mem/dram/gem5.hh"
 #include "mem/dram/simple.hh"
 #include "mem/sram/sram.hh"
 
@@ -127,9 +128,22 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
 
   // Initialize hardware
   object.cpu = new CPU::CPU(e, c, &log);
-  object.dram = new Memory::DRAM::SimpleDRAM(object);
   object.sram = new Memory::SRAM::SRAM(object);
   object.bufmgr = new HIL::BufferManager(object);
+
+  switch ((Memory::Config::Model)c->readUint(Section::Memory,
+                                             Memory::Config::Key::DRAMModel)) {
+    case Memory::Config::Model::Simple:
+      object.dram = new Memory::DRAM::SimpleDRAM(object);
+      break;
+    case Memory::Config::Model::Gem5:
+      object.dram = new Memory::DRAM::TimingDRAM(object);
+      break;
+    default:
+      std::cerr << "Invalid DRAM model selected." << std::endl;
+
+      abort();
+  }
 
   // Initialize objects
   switch (mode) {
