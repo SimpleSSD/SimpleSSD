@@ -12,7 +12,7 @@
 
 #include <cinttypes>
 
-#include "mem/abstract_ram.hh"
+#include "sim/object.hh"
 
 namespace SimpleSSD::Memory::SRAM {
 

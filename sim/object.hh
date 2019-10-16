@@ -232,4 +232,9 @@ class Object {
 
 }  // namespace SimpleSSD
 
+#include "hil/buffer_manager.hh"
+#include "mem/abstract_ram.hh"
+#include "mem/dram/abstract_dram.hh"
+#include "mem/sram/abstract_sram.hh"
+
 #endif

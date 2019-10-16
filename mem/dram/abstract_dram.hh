@@ -13,7 +13,7 @@
 #include <cinttypes>
 
 #include "libdrampower/LibDRAMPower.h"
-#include "mem/abstract_ram.hh"
+#include "sim/object.hh"
 
 namespace SimpleSSD::Memory::DRAM {
 
