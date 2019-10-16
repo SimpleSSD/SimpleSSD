@@ -13,9 +13,6 @@
 #include <vector>
 
 #include "cpu/cpu.hh"
-#include "hil/buffer_manager.hh"
-#include "mem/dram/abstract_dram.hh"
-#include "mem/sram/abstract_sram.hh"
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/log.hh"
@@ -68,6 +65,25 @@ namespace SimpleSSD {
 #define info(format, ...)
 #endif
 
+// Forware definitions
+namespace Memory::DRAM {
+
+class AbstractDRAM;
+
+}
+
+namespace Memory::SRAM {
+
+class AbstractSRAM;
+
+}
+
+namespace HIL {
+
+class BufferManager;
+
+}
+
 /**
  * \brief Common data for Object
  *
@@ -119,7 +135,7 @@ class Object {
     return object.cpu->createEvent(ef, s);
   }
   inline void scheduleFunction(CPU::CPUGroup g, Event e,
-                       const CPU::Function &f) noexcept {
+                               const CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, 0, f);
   }
   inline void scheduleNow(Event e, uint64_t c = 0) noexcept {

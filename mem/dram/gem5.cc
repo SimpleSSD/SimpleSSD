@@ -60,6 +60,17 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
+inline uint64_t mask(int nbits) {
+  return (nbits == 64) ? (uint64_t)-1LL : (1ULL << nbits) - 1;
+}
+
+template <class T, class B>
+inline T insertBits(T val, int first, int last, B bit_val) {
+  T t_bit_val = bit_val;
+  T bmask = mask(first - last + 1) << last;
+  return ((t_bit_val << last) & bmask) | (val & ~bmask);
+}
+
 template <class T>
 inline T bits(T val, int first, int last) {
   int nbits = first - last + 1;
@@ -217,7 +228,7 @@ Rank::Rank(ObjectData &o, TimingDRAM *p, uint8_t r)
       pwrState(PowerState::Idle),
       refreshState(RefreshState::Idle),
       inLowPowerState(false),
-      rank(rank),
+      rank(r),
       readEntries(0),
       writeEntries(0),
       outstandingEvents(0),
@@ -1076,7 +1087,7 @@ void DRAMStats::getStatValues(std::vector<double> &values,
   values.push_back(avgGap);
 }
 
-void DRAMStats::resetStatValues() {
+void DRAMStats::resetStatValues() noexcept {
   readReqs = 0.;
   writeReqs = 0.;
   readBursts = 0.;
@@ -1335,7 +1346,7 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
   unsigned pktsServicedByWrQ = 0;
 
   BurstHelper *burst_helper = NULL;
-  for (int cnt = 0; cnt < pktCount; ++cnt) {
+  for (uint32_t cnt = 0; cnt < pktCount; ++cnt) {
     auto size = MIN((addr | (burstSize - 1)) + 1, addr + pktsize) - addr;
 
     stats.readBursts++;
@@ -1396,7 +1407,7 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
 
 bool TimingDRAM::addToWriteQueue(uint64_t addr, uint32_t pktsize,
                                  uint32_t pktCount) {
-  for (int cnt = 0; cnt < pktCount; ++cnt) {
+  for (uint32_t cnt = 0; cnt < pktCount; ++cnt) {
     auto size = MIN((addr | (burstSize - 1)) + 1, addr + pktsize) - addr;
 
     stats.writeBursts++;
@@ -1728,11 +1739,7 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
 
   Bank &bank = dram_pkt->bankRef;
 
-  bool row_hit = true;
-
   if (bank.openRow != dram_pkt->row) {
-    row_hit = false;
-
     if (bank.openRow != Bank::NO_ROW) {
       prechargeBank(rank, bank, MAX(bank.preAllowedAt, now));
     }
@@ -1980,9 +1987,6 @@ void TimingDRAM::processNextReqEvent() {
 
     delete dram_pkt;
 
-    bool below_threshold =
-        totalWriteQueueSize + gem5Config->minWriteBurst < writeLowThreshold;
-
     if (totalWriteQueueSize == 0 ||
         (totalReadQueueSize && writesThisTime >= gem5Config->minWriteBurst)) {
       busStateNext = BusState::Read;
@@ -2225,7 +2229,7 @@ void TimingDRAM::restoreQueue(std::istream &in, DRAMPacketQueue *queue) {
   uint32_t row;
   uint16_t bankId;
   uint64_t addr;
-  uint32_t size;
+  uint32_t _size;
   Event eid;
   uint64_t data;
   uint64_t count;
@@ -2242,12 +2246,12 @@ void TimingDRAM::restoreQueue(std::istream &in, DRAMPacketQueue *queue) {
     RESTORE_SCALAR(in, row);
     RESTORE_SCALAR(in, bankId);
     RESTORE_SCALAR(in, addr);
-    RESTORE_SCALAR(in, size);
+    RESTORE_SCALAR(in, _size);
     RESTORE_EVENT(in, eid);
     RESTORE_SCALAR(in, data);
 
     auto *pkt = new DRAMPacket(entryTime, read, rank, bank, row, bankId, addr,
-                               size, ranks[rank]->banks[bank], *ranks[rank]);
+                               _size, ranks[rank]->banks[bank], *ranks[rank]);
 
     pkt->readyTime = readyTime;
     pkt->eid = eid;
