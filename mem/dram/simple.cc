@@ -32,11 +32,11 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
       [this](uint64_t now, uint64_t) {
         dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
 
-        schedule(autoRefresh, REFRESH_PERIOD);
+        scheduleRel(autoRefresh, 0ull, REFRESH_PERIOD);
       },
       "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
 
-  schedule(autoRefresh, REFRESH_PERIOD);
+  scheduleRel(autoRefresh, 0ull, REFRESH_PERIOD);
 }
 
 SimpleDRAM::~SimpleDRAM() {
@@ -100,7 +100,7 @@ uint64_t SimpleDRAM::preSubmitWrite(Request *req) {
 void SimpleDRAM::postDone(Request *req) {
   updateStats(req->beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
 
-  scheduleNow(req->eid);
+  scheduleNow(req->eid, req->data);
 
   delete req;
 }
@@ -125,8 +125,9 @@ uint64_t SimpleDRAM::allocate(uint64_t size) {
   return ret;
 }
 
-void SimpleDRAM::read(uint64_t address, uint64_t length, Event eid) {
-  auto req = new Request(address, length, eid);
+void SimpleDRAM::read(uint64_t address, uint64_t length, Event eid,
+                      uint64_t data) {
+  auto req = new Request(address, length, eid, data);
 
   // Stat Update
   readStat.count++;
@@ -136,8 +137,9 @@ void SimpleDRAM::read(uint64_t address, uint64_t length, Event eid) {
   scheduler.read(req);
 }
 
-void SimpleDRAM::write(uint64_t address, uint64_t length, Event eid) {
-  auto req = new Request(address, length, eid);
+void SimpleDRAM::write(uint64_t address, uint64_t length, Event eid,
+                       uint64_t data) {
+  auto req = new Request(address, length, eid, data);
 
   // Stat Update
   writeStat.count++;

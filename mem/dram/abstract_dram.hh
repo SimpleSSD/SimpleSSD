@@ -17,14 +17,6 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
-typedef enum : uint8_t {
-  ACTIVE,                //!< Row active
-  IDLE,                  //!< Precharged
-  POWER_DOWN_PRECHARGE,  //!< Precharge power down
-  POWER_DOWN_ACTIVE,     //!< Active power down
-  SELF_REFRESH,          //!< Self refresh
-} DRAMState;
-
 class AbstractDRAM : public AbstractRAM {
  protected:
   struct Stats {

@@ -33,7 +33,7 @@ uint64_t SRAM::preSubmit(Request *req) {
 
 void SRAM::postDone(Request *req) {
   // Call handler
-  scheduleNow(req->eid);
+  scheduleNow(req->eid, req->data);
 
   delete req;
 }
@@ -59,8 +59,8 @@ uint64_t SRAM::allocate(uint64_t size) {
   return ret;
 }
 
-void SRAM::read(uint64_t address, uint64_t length, Event eid) {
-  auto req = new Request(address, length, eid);
+void SRAM::read(uint64_t address, uint64_t length, Event eid, uint64_t data) {
+  auto req = new Request(address, length, eid, data);
 
   rangeCheck(address, length);
 
@@ -73,8 +73,8 @@ void SRAM::read(uint64_t address, uint64_t length, Event eid) {
   scheduler.read(req);
 }
 
-void SRAM::write(uint64_t address, uint64_t length, Event eid) {
-  auto req = new Request(address, length, eid);
+void SRAM::write(uint64_t address, uint64_t length, Event eid, uint64_t data) {
+  auto req = new Request(address, length, eid, data);
 
   rangeCheck(address, length);
 

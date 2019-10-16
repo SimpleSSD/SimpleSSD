@@ -37,8 +37,8 @@ class SimpleDRAM : public AbstractDRAM {
 
   uint64_t allocate(uint64_t) override;
 
-  void read(uint64_t, uint64_t, Event) override;
-  void write(uint64_t, uint64_t, Event) override;
+  void read(uint64_t, uint64_t, Event, uint64_t) override;
+  void write(uint64_t, uint64_t, Event, uint64_t) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
