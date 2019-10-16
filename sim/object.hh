@@ -118,12 +118,18 @@ class Object {
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return object.cpu->createEvent(ef, s);
   }
-  inline void schedule(CPU::CPUGroup g, Event e,
+  inline void scheduleFunction(CPU::CPUGroup g, Event e,
                        const CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, 0, f);
   }
-  inline void schedule(Event e, uint64_t c = 0) noexcept {
+  inline void scheduleNow(Event e, uint64_t c = 0) noexcept {
     object.cpu->schedule(e, c);
+  }
+  inline void scheduleRel(Event e, uint64_t c, uint64_t d) noexcept {
+    object.cpu->schedule(e, c, d);
+  }
+  inline void scheduleAbs(Event e, uint64_t c, uint64_t t) noexcept {
+    object.cpu->scheduleAbs(e, c, t);
   }
   inline void deschedule(Event e) noexcept { object.cpu->deschedule(e); }
   inline bool isScheduled(Event e) noexcept {

@@ -32,7 +32,6 @@ namespace CPU {
 class CPU;
 
 enum class CPUGroup {
-  None,                   //!< Only for events, not function
   HostInterface,          //!< Assign function to HIL core
   InternalCache,          //!< Assign function to ICL core
   FlashTranslationLayer,  //!< Assign function to FTL core
@@ -75,14 +74,12 @@ class CPU {
   class EventStat {
    public:
     uint64_t handledFunction;
-    uint64_t handledEvent;
     uint64_t busy;
 
     EventStat() : handledFunction(0), handledEvent(0), busy(0) {}
 
     void clear() {
       handledFunction = 0;
-      handledEvent = 0;
       busy = 0;
     }
   };
@@ -192,6 +189,21 @@ class CPU {
    * \param[in] delay Ticks to delay
    */
   void schedule(Event eid, uint64_t data = 0, uint64_t delay = 0) noexcept;
+
+  /**
+   * \brief Schedule event
+   *
+   * This is short-hand schedule function when we just need to call event
+   * immediately. It does not affects CPU statistic object.
+   *
+   * Use this function when calling function is not related to firmware
+   * execution - not important or hardware event.
+   *
+   * \param[in] eid   Event ID to schedule
+   * \param[in] data  Data to pass (this should be value, not pointer)
+   * \param[in] tick  Tick to call event
+   */
+  void scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept;
 
   /**
    * \brief Deschedule event

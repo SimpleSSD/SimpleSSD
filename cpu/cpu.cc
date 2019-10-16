@@ -499,7 +499,7 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     return;
   }
 
-  if (UNLIKELY(group != CPUGroup::None && func.cycles == 0)) {
+  if (UNLIKELY(func.cycles == 0)) {
     panic_log("Invalid function object passed.");
   }
 
@@ -514,7 +514,6 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     case CPUGroup::FlashTranslationLayer:
       begin = hilCore + iclCore;
       /* fallthrough */
-    case CPUGroup::None:
     case CPUGroup::Any:
       end = hilCore + iclCore + ftlCore;
       break;
@@ -526,49 +525,41 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     panic_log("Unexpected null-pointer while schedule.");
   }
 
-  uint64_t newTick = 0;
+  // Maybe core has running job
+  uint64_t beginAt = MAX(curTick, core->busyUntil);
 
-  if (UNLIKELY(group == CPUGroup::None)) {
-    newTick = curTick + func.cycles;
+  // Current job runs after previous job
+  uint64_t busy = func.cycles * clockPeriod;
 
-    // This is hardware event - DMA or ignored function event
-    core->eventStat.handledEvent++;
-  }
-  else {
-    // Maybe core has running job
-    uint64_t beginAt = MAX(curTick, core->busyUntil);
+  core->busyUntil = beginAt + busy;
+  core->eventStat.busy += busy;
+  core->eventStat.handledFunction++;
 
-    // Current job runs after previous job
-    uint64_t busy = func.cycles * clockPeriod;
+  scheduleAbs(eid, data, core->busyUntil);
+}
 
-    core->busyUntil = beginAt + busy;
-    core->eventStat.busy += busy;
-    core->eventStat.handledFunction++;
+void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
+  scheduleAbs(eid, data, delay + engine->getTick());
+}
 
-    newTick = core->busyUntil;
+void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
+  if (UNLIKELY(tick < engine->getTick())) {
+    panic_log("Invalid tick %" PRIu64, tick);
   }
 
   auto insert = jobQueue.end();
 
   for (auto entry = jobQueue.begin(); entry != jobQueue.end(); ++entry) {
-    if (entry->scheduledAt > newTick) {
+    if (entry->scheduledAt > tick) {
       insert = entry;
 
       break;
     }
   }
 
-  jobQueue.emplace(insert, Job(eid, data, newTick));
+  jobQueue.emplace(insert, Job(eid, data, tick));
 
   scheduleNext();
-}
-
-void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
-  Function func;
-
-  func.cycles = delay;
-
-  schedule(CPUGroup::None, eid, data, func);
 }
 
 void CPU::deschedule(Event eid) noexcept {
@@ -626,10 +617,6 @@ void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
     temp.desc = "CPU core " + number + " total functions executed";
     list.push_back(temp);
 
-    temp.name = prefix + prefix2 + number + ".handled_events";
-    temp.desc = "CPU core " + number + " total events executed";
-    list.push_back(temp);
-
     temp.name = prefix + prefix2 + number + ".insts.branch";
     temp.desc = "CPU core " + number + " executed branch instructions";
     list.push_back(temp);
@@ -660,7 +647,6 @@ void CPU::getStatValues(std::vector<double> &values) noexcept {
   for (auto &core : coreList) {
     values.push_back(core.eventStat.busy);
     values.push_back(core.eventStat.handledFunction);
-    values.push_back(core.eventStat.handledEvent);
     values.push_back(core.instructionStat.branch);
     values.push_back(core.instructionStat.load);
     values.push_back(core.instructionStat.store);
