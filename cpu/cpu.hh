@@ -65,6 +65,13 @@ class Function {
 };
 
 /**
+ * \brief Create function object
+ *
+ * This will become marker for LLVM pass
+ */
+Function initFunction();
+
+/**
  * \brief CPU object declaration
  *
  * This object manages event scheduling and firmware execution latency.

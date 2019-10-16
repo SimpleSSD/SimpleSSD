@@ -56,6 +56,10 @@ void Function::clear() {
   cycles = 0;
 }
 
+Function initFunction() {
+  return Function();
+}
+
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
     : engine(e), config(c), log(l), lastResetStat(0), lastScheduledAt(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
