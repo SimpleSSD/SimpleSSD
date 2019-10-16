@@ -93,7 +93,7 @@ enum class BusState : uint8_t {
 };
 
 class TimingDRAM;
-class RankStats;
+class Rank;
 
 /**
  * \brief Wrapper class of libDRAMPower by gem5
@@ -149,6 +149,40 @@ class Bank {
         actAllowedAt(0),
         rowAccesses(0),
         bytesAccessed(0) {}
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
+};
+
+class RankStats {
+ private:
+  friend Rank;
+
+  Rank *parent;
+
+  double actEnergy;
+  double preEnergy;
+  double readEnergy;
+  double writeEnergy;
+  double refreshEnergy;
+  double actBackEnergy;
+  double preBackEnergy;
+  double actPowerDownEnergy;
+  double prePowerDownEnergy;
+  double selfRefreshEnergy;
+  double totalEnergy;
+  double averagePower;
+  double totalIdleTime;
+
+ public:
+  RankStats(Rank *);
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept;
+  void getStatValues(std::vector<double> &) noexcept;
+  void resetStatValues() noexcept;
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 class Rank : public Object {
@@ -227,34 +261,6 @@ class Rank : public Object {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
-};
-
-class RankStats {
- private:
-  friend Rank;
-
-  Rank *parent;
-
-  double actEnergy;
-  double preEnergy;
-  double readEnergy;
-  double writeEnergy;
-  double refreshEnergy;
-  double actBackEnergy;
-  double preBackEnergy;
-  double actPowerDownEnergy;
-  double prePowerDownEnergy;
-  double selfRefreshEnergy;
-  double totalEnergy;
-  double averagePower;
-  double totalIdleTime;
-
- public:
-  RankStats(Rank *);
-
-  void getStatList(std::vector<Stat> &, std::string) noexcept;
-  void getStatValues(std::vector<double> &) noexcept;
-  void resetStatValues() noexcept;
 };
 
 class BurstHelper {
@@ -355,6 +361,9 @@ class DRAMStats {
   void getStatList(std::vector<Stat> &, std::string) noexcept;
   void getStatValues(std::vector<double> &, double) noexcept;
   void resetStatValues() noexcept;
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 /**
@@ -456,6 +465,9 @@ class TimingDRAM : public AbstractDRAM {
   void logRequest(BusState, uint64_t);
   void logResponse(BusState, uint64_t);
 
+  void backupQueue(std::ostream &, const DRAMPacketQueue *) const;
+  void restoreQueue(std::istream &, DRAMPacketQueue *);
+
  public:
   TimingDRAM(ObjectData &);
 
@@ -463,6 +475,13 @@ class TimingDRAM : public AbstractDRAM {
   void write(uint64_t, uint64_t, Event, uint64_t) override;
 
   uint64_t allocate(uint64_t) override;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::Memory::DRAM

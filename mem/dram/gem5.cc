@@ -183,6 +183,30 @@ Data::MemorySpecification DRAMPower::getMemSpec(ConfigReader *config) {
 DRAMPower::DRAMPower(ConfigReader *config, bool include_io)
     : powerlib(getMemSpec(config), include_io) {}
 
+void Bank::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, openRow);
+  BACKUP_SCALAR(out, bank);
+  BACKUP_SCALAR(out, bankgr);
+  BACKUP_SCALAR(out, rdAllowedAt);
+  BACKUP_SCALAR(out, wrAllowedAt);
+  BACKUP_SCALAR(out, preAllowedAt);
+  BACKUP_SCALAR(out, actAllowedAt);
+  BACKUP_SCALAR(out, rowAccesses);
+  BACKUP_SCALAR(out, bytesAccessed);
+}
+
+void Bank::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, openRow);
+  RESTORE_SCALAR(in, bank);
+  RESTORE_SCALAR(in, bankgr);
+  RESTORE_SCALAR(in, rdAllowedAt);
+  RESTORE_SCALAR(in, wrAllowedAt);
+  RESTORE_SCALAR(in, preAllowedAt);
+  RESTORE_SCALAR(in, actAllowedAt);
+  RESTORE_SCALAR(in, rowAccesses);
+  RESTORE_SCALAR(in, bytesAccessed);
+}
+
 Rank::Rank(ObjectData &o, TimingDRAM *p, uint8_t r)
     : Object(o),
       parent(p),
@@ -199,7 +223,7 @@ Rank::Rank(ObjectData &o, TimingDRAM *p, uint8_t r)
       outstandingEvents(0),
       wakeUpAllowedAt(0),
       power(o.config, false),
-      banks(o.config->getDRAM()->bank),
+      banks(o.config->getDRAM()->bank, Bank(o)),
       numBanksActive(0),
       actTicks(o.config->getDRAM()->activationLimit, 0),
       stats(this) {
@@ -667,21 +691,119 @@ void Rank::computeStats() {
   pwrStateTick = getTick();
 }
 
-void Rank::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void Rank::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  stats.getStatList(list, prefix);
+}
 
-void Rank::getStatValues(std::vector<double> &) noexcept {}
+void Rank::getStatValues(std::vector<double> &values) noexcept {
+  stats.getStatValues(values);
+}
 
 void Rank::resetStatValues() noexcept {
+  stats.resetStatValues();
   power.powerlib.calcWindowEnergy(DIVCEIL(getTick(), timing->tCK) -
                                   parent->timestampOffset);
 }
 
-void Rank::createCheckpoint(std::ostream &) const noexcept {
-  // TODO: FILL HERE
+void Rank::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, pwrStateTrans);
+  BACKUP_SCALAR(out, pwrStatePostRefresh);
+  BACKUP_SCALAR(out, pwrStateTick);
+  BACKUP_SCALAR(out, refreshDueAt);
+  BACKUP_SCALAR(out, pwrState);
+  BACKUP_SCALAR(out, refreshState);
+  BACKUP_SCALAR(out, inLowPowerState);
+  BACKUP_SCALAR(out, rank);
+  BACKUP_SCALAR(out, readEntries);
+  BACKUP_SCALAR(out, writeEntries);
+  BACKUP_SCALAR(out, outstandingEvents);
+  BACKUP_SCALAR(out, wakeUpAllowedAt);
+  BACKUP_SCALAR(out, numBanksActive);
+  BACKUP_EVENT(out, writeDoneEvent);
+  BACKUP_EVENT(out, activateEvent);
+  BACKUP_EVENT(out, prechargeEvent);
+  BACKUP_EVENT(out, refreshEvent);
+  BACKUP_EVENT(out, powerEvent);
+  BACKUP_EVENT(out, wakeUpEvent);
+
+  uint64_t size = cmdList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : cmdList) {
+    BACKUP_SCALAR(out, iter.bank);
+    BACKUP_SCALAR(out, iter.type);
+    BACKUP_SCALAR(out, iter.timestamp);
+  }
+
+  size = banks.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : banks) {
+    iter.createCheckpoint(out);
+  }
+
+  size = actTicks.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : actTicks) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  stats.createCheckpoint(out);
 }
 
-void Rank::restoreCheckpoint(std::istream &) noexcept {
-  // TODO: FILL HERE
+void Rank::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, pwrStateTrans);
+  RESTORE_SCALAR(in, pwrStatePostRefresh);
+  RESTORE_SCALAR(in, pwrStateTick);
+  RESTORE_SCALAR(in, refreshDueAt);
+  RESTORE_SCALAR(in, pwrState);
+  RESTORE_SCALAR(in, refreshState);
+  RESTORE_SCALAR(in, inLowPowerState);
+  RESTORE_SCALAR(in, rank);
+  RESTORE_SCALAR(in, readEntries);
+  RESTORE_SCALAR(in, writeEntries);
+  RESTORE_SCALAR(in, outstandingEvents);
+  RESTORE_SCALAR(in, wakeUpAllowedAt);
+  RESTORE_SCALAR(in, numBanksActive);
+  RESTORE_EVENT(in, writeDoneEvent);
+  RESTORE_EVENT(in, activateEvent);
+  RESTORE_EVENT(in, prechargeEvent);
+  RESTORE_EVENT(in, refreshEvent);
+  RESTORE_EVENT(in, powerEvent);
+  RESTORE_EVENT(in, wakeUpEvent);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    Data::MemCommand::cmds cmd;
+    uint8_t bank;
+    uint64_t time;
+
+    RESTORE_SCALAR(in, bank);
+    RESTORE_SCALAR(in, cmd);
+    RESTORE_SCALAR(in, time);
+
+    cmdList.emplace_back(Command(cmd, bank, time));
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    banks.at(i).restoreCheckpoint(in);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint32_t tmp;
+
+    RESTORE_SCALAR(in, tmp);
+    actTicks.emplace_back(tmp);
+  }
+
+  stats.restoreCheckpoint(in);
 }
 
 RankStats::RankStats(Rank *p) : parent(p) {}
@@ -773,8 +895,38 @@ void RankStats::resetStatValues() noexcept {
   totalEnergy = 0.;
   averagePower = 0.;
   totalIdleTime = 0.;
+}
 
-  parent->resetStatValues();
+void RankStats::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, actEnergy);
+  BACKUP_SCALAR(out, preEnergy);
+  BACKUP_SCALAR(out, readEnergy);
+  BACKUP_SCALAR(out, writeEnergy);
+  BACKUP_SCALAR(out, refreshEnergy);
+  BACKUP_SCALAR(out, actBackEnergy);
+  BACKUP_SCALAR(out, preBackEnergy);
+  BACKUP_SCALAR(out, actPowerDownEnergy);
+  BACKUP_SCALAR(out, prePowerDownEnergy);
+  BACKUP_SCALAR(out, selfRefreshEnergy);
+  BACKUP_SCALAR(out, totalEnergy);
+  BACKUP_SCALAR(out, averagePower);
+  BACKUP_SCALAR(out, totalIdleTime);
+}
+
+void RankStats::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, actEnergy);
+  RESTORE_SCALAR(in, preEnergy);
+  RESTORE_SCALAR(in, readEnergy);
+  RESTORE_SCALAR(in, writeEnergy);
+  RESTORE_SCALAR(in, refreshEnergy);
+  RESTORE_SCALAR(in, actBackEnergy);
+  RESTORE_SCALAR(in, preBackEnergy);
+  RESTORE_SCALAR(in, actPowerDownEnergy);
+  RESTORE_SCALAR(in, prePowerDownEnergy);
+  RESTORE_SCALAR(in, selfRefreshEnergy);
+  RESTORE_SCALAR(in, totalEnergy);
+  RESTORE_SCALAR(in, averagePower);
+  RESTORE_SCALAR(in, totalIdleTime);
 }
 
 DRAMStats::DRAMStats(TimingDRAM *p) : parent(p) {}
@@ -949,6 +1101,64 @@ void DRAMStats::resetStatValues() {
   busUtil = 0.;
   busUtilRead = 0.;
   busUtilWrite = 0.;
+}
+
+void DRAMStats::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, readReqs);
+  BACKUP_SCALAR(out, writeReqs);
+  BACKUP_SCALAR(out, readBursts);
+  BACKUP_SCALAR(out, writeBursts);
+  BACKUP_SCALAR(out, servicedByWrQ);
+  BACKUP_SCALAR(out, mergedWrBursts);
+  BACKUP_SCALAR(out, neitherReadNorWriteReqs);
+  BACKUP_SCALAR(out, totQLat);
+  BACKUP_SCALAR(out, totBusLat);
+  BACKUP_SCALAR(out, totMemAccLat);
+  BACKUP_SCALAR(out, avgQLat);
+  BACKUP_SCALAR(out, avgBusLat);
+  BACKUP_SCALAR(out, avgMemAccLat);
+  BACKUP_SCALAR(out, numRdRetry);
+  BACKUP_SCALAR(out, numWrRetry);
+  BACKUP_SCALAR(out, bytesReadDRAM);
+  BACKUP_SCALAR(out, bytesReadWrQ);
+  BACKUP_SCALAR(out, bytesWritten);
+  BACKUP_SCALAR(out, avgRdBW);
+  BACKUP_SCALAR(out, avgWrBW);
+  BACKUP_SCALAR(out, peakBW);
+  BACKUP_SCALAR(out, busUtil);
+  BACKUP_SCALAR(out, busUtilRead);
+  BACKUP_SCALAR(out, busUtilWrite);
+  BACKUP_SCALAR(out, totGap);
+  BACKUP_SCALAR(out, avgGap);
+}
+
+void DRAMStats::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, readReqs);
+  RESTORE_SCALAR(in, writeReqs);
+  RESTORE_SCALAR(in, readBursts);
+  RESTORE_SCALAR(in, writeBursts);
+  RESTORE_SCALAR(in, servicedByWrQ);
+  RESTORE_SCALAR(in, mergedWrBursts);
+  RESTORE_SCALAR(in, neitherReadNorWriteReqs);
+  RESTORE_SCALAR(in, totQLat);
+  RESTORE_SCALAR(in, totBusLat);
+  RESTORE_SCALAR(in, totMemAccLat);
+  RESTORE_SCALAR(in, avgQLat);
+  RESTORE_SCALAR(in, avgBusLat);
+  RESTORE_SCALAR(in, avgMemAccLat);
+  RESTORE_SCALAR(in, numRdRetry);
+  RESTORE_SCALAR(in, numWrRetry);
+  RESTORE_SCALAR(in, bytesReadDRAM);
+  RESTORE_SCALAR(in, bytesReadWrQ);
+  RESTORE_SCALAR(in, bytesWritten);
+  RESTORE_SCALAR(in, avgRdBW);
+  RESTORE_SCALAR(in, avgWrBW);
+  RESTORE_SCALAR(in, peakBW);
+  RESTORE_SCALAR(in, busUtil);
+  RESTORE_SCALAR(in, busUtilRead);
+  RESTORE_SCALAR(in, busUtilWrite);
+  RESTORE_SCALAR(in, totGap);
+  RESTORE_SCALAR(in, avgGap);
 }
 
 TimingDRAM::TimingDRAM(ObjectData &o)
@@ -1898,6 +2108,222 @@ uint64_t TimingDRAM::allocate(uint64_t size) {
   addressMap.emplace_back(std::make_pair(ret, size));
 
   return ret;
+}
+
+void TimingDRAM::getStatList(std::vector<Stat> &list,
+                             std::string prefix) noexcept {
+  auto size = ranks.size();
+
+  stats.getStatList(list, prefix + ".dram");
+
+  for (uint32_t i = 0; i < size; i++) {
+    ranks.at(i)->getStatList(list, prefix + ".dram.rank" + std::to_string(i));
+  }
+}
+
+void TimingDRAM::getStatValues(std::vector<double> &values) noexcept {
+  uint64_t duration = getTick() - lastStatsResetTick;
+
+  stats.getStatValues(values, (double)duration / 1000000000000.);
+
+  for (auto &iter : ranks) {
+    iter->getStatValues(values);
+  }
+}
+
+void TimingDRAM::resetStatValues() noexcept {
+  stats.resetStatValues();
+
+  for (auto &iter : ranks) {
+    iter->resetStatValues();
+  }
+}
+
+void TimingDRAM::backupQueue(std::ostream &out,
+                             const DRAMPacketQueue *queue) const {
+  bool exist;
+  uint64_t size = queue->size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : *queue) {
+    BACKUP_SCALAR(out, iter->entryTime);
+    BACKUP_SCALAR(out, iter->readyTime);
+    BACKUP_SCALAR(out, iter->read);
+    BACKUP_SCALAR(out, iter->rank);
+    BACKUP_SCALAR(out, iter->bank);
+    BACKUP_SCALAR(out, iter->row);
+    BACKUP_SCALAR(out, iter->bankId);
+    BACKUP_SCALAR(out, iter->addr);
+    BACKUP_SCALAR(out, iter->size);
+    BACKUP_EVENT(out, iter->eid);
+    BACKUP_SCALAR(out, iter->data);
+
+    exist = iter->burstHelper != nullptr;
+    BACKUP_SCALAR(out, exist);
+
+    if (exist) {
+      BACKUP_SCALAR(out, iter->burstHelper->burstCount);
+      BACKUP_SCALAR(out, iter->burstHelper->burstsServiced);
+    }
+  }
+}
+
+void TimingDRAM::restoreQueue(std::istream &in, DRAMPacketQueue *queue) {
+  bool exist;
+  uint64_t size;
+  uint64_t entryTime;
+  uint64_t readyTime;
+  bool read;
+  uint8_t rank;
+  uint8_t bank;
+  uint32_t row;
+  uint16_t bankId;
+  uint64_t addr;
+  uint32_t size;
+  Event eid;
+  uint64_t data;
+  uint64_t count;
+  uint64_t served;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, entryTime);
+    RESTORE_SCALAR(in, readyTime);
+    RESTORE_SCALAR(in, read);
+    RESTORE_SCALAR(in, rank);
+    RESTORE_SCALAR(in, bank);
+    RESTORE_SCALAR(in, row);
+    RESTORE_SCALAR(in, bankId);
+    RESTORE_SCALAR(in, addr);
+    RESTORE_SCALAR(in, size);
+    RESTORE_EVENT(in, eid);
+    RESTORE_SCALAR(in, data);
+
+    auto *pkt = new DRAMPacket(entryTime, read, rank, bank, row, bankId, addr,
+                               size, ranks[rank]->banks[bank], *ranks[rank]);
+
+    pkt->readyTime = readyTime;
+    pkt->eid = eid;
+    pkt->data = data;
+
+    RESTORE_SCALAR(in, exist);
+
+    if (exist) {
+      RESTORE_SCALAR(in, count);
+      RESTORE_SCALAR(in, served);
+
+      BurstHelper *ptr = new BurstHelper(count);
+      ptr->burstsServiced = served;
+      pkt->burstHelper = ptr;
+    }
+
+    queue->emplace_back(pkt);
+  }
+}
+
+void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, rowsPerBank);
+  BACKUP_SCALAR(out, writesThisTime);
+  BACKUP_SCALAR(out, readsThisTime);
+  BACKUP_SCALAR(out, capacity);
+  BACKUP_SCALAR(out, retryRdReq);
+  BACKUP_SCALAR(out, retryWrReq);
+  BACKUP_SCALAR(out, nextBurstAt);
+  BACKUP_SCALAR(out, prevArrival);
+  BACKUP_SCALAR(out, nextReqTime);
+  BACKUP_SCALAR(out, activeRank);
+  BACKUP_SCALAR(out, timestampOffset);
+  BACKUP_SCALAR(out, lastStatsResetTick);
+  BACKUP_SCALAR(out, busState);
+  BACKUP_SCALAR(out, busStateNext);
+  BACKUP_SCALAR(out, totalReadQueueSize);
+  BACKUP_SCALAR(out, totalWriteQueueSize);
+  BACKUP_EVENT(out, nextReqEvent);
+  BACKUP_EVENT(out, respondEvent);
+
+  uint64_t size = ranks.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : ranks) {
+    iter->createCheckpoint(out);
+  }
+
+  backupQueue(out, &readQueue);
+  backupQueue(out, &writeQueue);
+  backupQueue(out, &respQueue);
+
+  size = addressMap.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : addressMap) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  size = isInWriteQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : isInWriteQueue) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  stats.createCheckpoint(out);
+}
+
+void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, rowsPerBank);
+  RESTORE_SCALAR(in, writesThisTime);
+  RESTORE_SCALAR(in, readsThisTime);
+  RESTORE_SCALAR(in, capacity);
+  RESTORE_SCALAR(in, retryRdReq);
+  RESTORE_SCALAR(in, retryWrReq);
+  RESTORE_SCALAR(in, nextBurstAt);
+  RESTORE_SCALAR(in, prevArrival);
+  RESTORE_SCALAR(in, nextReqTime);
+  RESTORE_SCALAR(in, activeRank);
+  RESTORE_SCALAR(in, timestampOffset);
+  RESTORE_SCALAR(in, lastStatsResetTick);
+  RESTORE_SCALAR(in, busState);
+  RESTORE_SCALAR(in, busStateNext);
+  RESTORE_SCALAR(in, totalReadQueueSize);
+  RESTORE_SCALAR(in, totalWriteQueueSize);
+  RESTORE_EVENT(in, nextReqEvent);
+  RESTORE_EVENT(in, respondEvent);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    ranks.at(i)->restoreCheckpoint(in);
+  }
+
+  restoreQueue(in, &readQueue);
+  restoreQueue(in, &writeQueue);
+  restoreQueue(in, &respQueue);
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t f, s;
+
+    RESTORE_SCALAR(in, f);
+    RESTORE_SCALAR(in, s);
+
+    addressMap.emplace_back(std::make_pair(f, s));
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t t;
+
+    RESTORE_SCALAR(in, t);
+
+    isInWriteQueue.emplace(t);
+  }
+
+  stats.restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::Memory::DRAM
