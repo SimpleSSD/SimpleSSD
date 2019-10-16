@@ -44,7 +44,7 @@ class HIL : public Object {
  private:
   ICL::ICL *pICL;
 
-  uint64_t requestCounter;
+  uint32_t requestCounter;
 
   uint32_t logicalPageSize;
 

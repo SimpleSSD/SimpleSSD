@@ -34,8 +34,8 @@ enum class Operation : uint8_t {
 };
 
 struct Request {
-  uint64_t id;
-  uint64_t sid;
+  uint32_t id;
+  uint32_t sid;
 
   Event eid;
   uint64_t data;
@@ -46,7 +46,7 @@ struct Request {
   uint8_t *buffer;
 
   Request();
-  Request(uint64_t, uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
+  Request(uint32_t, uint32_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
 };
 
 /**

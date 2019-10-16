@@ -22,7 +22,7 @@ Request::Request()
       skipEnd(0),
       buffer(nullptr) {}
 
-Request::Request(uint64_t i, uint64_t s, Event e, uint64_t d, Operation o,
+Request::Request(uint32_t i, uint32_t s, Event e, uint64_t d, Operation o,
                  LPN a, uint32_t sf, uint32_t se, uint8_t *b)
     : id(i),
       sid(s),
@@ -34,7 +34,7 @@ Request::Request(uint64_t i, uint64_t s, Event e, uint64_t d, Operation o,
       skipEnd(se),
       buffer(b) {}
 
-Request::Request(uint64_t i, Event e, uint64_t d, Operation o, LPN a, LPN l)
+Request::Request(uint32_t i, Event e, uint64_t d, Operation o, LPN a, LPN l)
     : id(i),
       sid(1),
       eid(e),

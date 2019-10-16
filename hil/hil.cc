@@ -9,7 +9,7 @@
 
 namespace SimpleSSD::HIL {
 
-HIL::HIL(ObjectData &o) : Object(o), requestCounter(1) {
+HIL::HIL(ObjectData &o) : Object(o), requestCounter(0) {
   pICL = new ICL::ICL(object);
 
   logicalPageSize = pICL->getLPNSize();
@@ -22,7 +22,7 @@ HIL::~HIL() {
 void HIL::readPages(LPN offset, LPN length, uint8_t *buffer,
                     std::pair<uint32_t, uint32_t> &&unread, Event eid,
                     uint64_t data) {
-  uint64_t subID = 1;
+  uint32_t subID = 1;
   uint32_t skipFirst = unread.first;
   uint32_t skipEnd = 0;
 
@@ -47,7 +47,7 @@ void HIL::readPages(LPN offset, LPN length, uint8_t *buffer,
 void HIL::writePages(LPN offset, LPN length, uint8_t *buffer,
                      std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
                      uint64_t data) {
-  uint64_t subID = 1;
+  uint32_t subID = 1;
   uint32_t skipFirst = unwritten.first;
   uint32_t skipEnd = 0;
 
