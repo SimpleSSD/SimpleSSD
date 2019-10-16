@@ -427,6 +427,10 @@ Memory::Config::DRAMPower *ConfigReader::getDRAMPower() {
   return memConfig.getDRAMPower();
 }
 
+Memory::Config::TimingDRAMConfig *ConfigReader::getTimingDRAM() {
+  return memConfig.getTimingDRAM();
+}
+
 std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
   return hilConfig.getDiskList();
 }

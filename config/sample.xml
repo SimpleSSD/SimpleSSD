@@ -71,7 +71,7 @@
 
         Possible values:
          0: Simple DRAM model based on atomic dram controller of gem5
-         1: DRAM model based on timing dram controller of gem5 <NOT IMPLEMENTED>
+         1: DRAM model based on timing dram controller of gem5
        -->
       <config name="Model">0</config>
       <!-- DRAM structural configuration -->
@@ -147,6 +147,62 @@
         <config name="IDD6_1">0</config>
         <config name="VDD_0">1.350</config>
         <config name="VDD_1">0</config>
+      </section>
+      <!--
+        gem5's DRAM controller configuration
+       -->
+      <section name="gem5">
+        <!-- <int> Number of write queue entries -->
+        <config name="WriteBufferSize">64</config>
+        <!-- <int> Number of read queue entries -->
+        <config name="ReadBufferSize">64</config>
+        <!-- <float> Threshold to force writes -->
+        <config name="ForceWriteThreshold">0.85</config>
+        <!-- <float> Threshold to start writes -->
+        <config name="WriteThreshold">0.5</config>
+        <!-- <int> Minimum write bursts before switching to reads -->
+        <config name="MinWriteBurst">16</config>
+        <!--
+          <int> Memory scheduling policy
+
+          Possible values:
+            0: FCFS: First come first serve
+            1: FR-FCFS: First row-hit then first come first serve
+         -->
+        <config name="Scheduling">1</config>
+        <!--
+          <int> Address mapping policy
+
+          Possible values:
+            0: RoRaBaChCo: Row > Rank > Bank > Channel > Column (LSB)
+            1: RoRaBaCoCh: Row > Rank > Bank > Column > Channel
+            2: RoCoRaBaCh: Row > Column > Rank > Bank > Channel
+         -->
+        <config name="Mapping">1</config>
+        <!--
+          <int> Page management policy
+
+          Possible values:
+            0: Open
+            1: Open adaptive
+            2: Close
+            3: Close adaptive
+         -->
+        <config name="PagePolicy">1</config>
+        <!-- <int> Max accesses per row before closing -->
+        <config name="MaxAccessPerRow">16</config>
+        <!-- <time> Static frontend latency -->
+        <config name="FrontendLatency">10ns</config>
+        <!-- <time> Static backend latency -->
+        <config name="BackendLatency">10ns</config>
+        <!-- <int> Page (row buffer) size per device/chip -->
+        <config name="RowbufferSize">4096</config>
+        <!-- <int> Number of bank groups per rank -->
+        <config name="BankGroup">0</config>
+        <!-- <bool> Enable powerdown state -->
+        <config name="EnablePowerdown">false</config>
+        <!-- <bool> DRAM has DLL or not -->
+        <config name="DLL">false</config>
       </section>
     </section>
   </section>

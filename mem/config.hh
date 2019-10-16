@@ -30,6 +30,24 @@ class Config : public BaseConfig {
     Full = 1,
   };
 
+  enum class MemoryScheduling : uint8_t {
+    FCFS,
+    FRFCFS,
+  };
+
+  enum class AddressMapping : uint8_t {
+    RoRaBaChCo,
+    RoRaBaCoCh,
+    RoCoRaBaCh,
+  };
+
+  enum class PagePolicy : uint8_t {
+    Open,
+    OpenAdaptive,
+    Close,
+    CloseAdaptive,
+  };
+
   //! SRAM structure parameters
   struct SRAMStructure {
     uint64_t size;
@@ -92,22 +110,44 @@ class Config : public BaseConfig {
     float pVDD[2];     //!< Main voltage (Unit: V)
   };
 
+  //! TimingDRAM parameters
+  struct TimingDRAMConfig {
+    uint32_t writeBufferSize;
+    uint32_t readBufferSize;
+    float forceWriteThreshold;
+    float startWriteThreshold;
+    uint32_t minWriteBurst;
+    MemoryScheduling scheduling;
+    AddressMapping mapping;
+    PagePolicy policy;
+    uint64_t frontendLatency;
+    uint64_t backendLatency;
+    uint32_t maxAccessesPerRow;
+    uint32_t rowBufferSize;
+    uint32_t bankGroup;
+    bool enablePowerdown;
+    bool useDLL;
+  };
+
  private:
   SRAMStructure sram;
   DRAMStructure dram;
   DRAMTiming timing;
   DRAMPower power;
+  TimingDRAMConfig gem5;
 
   Model dramModel;
 
-  void loadSRAM(pugi::xml_node &, SRAMStructure *);
-  void loadDRAMStructure(pugi::xml_node &, DRAMStructure *);
-  void loadDRAMTiming(pugi::xml_node &, DRAMTiming *);
-  void loadDRAMPower(pugi::xml_node &, DRAMPower *);
-  void storeSRAM(pugi::xml_node &, SRAMStructure *);
-  void storeDRAMStructure(pugi::xml_node &, DRAMStructure *);
-  void storeDRAMTiming(pugi::xml_node &, DRAMTiming *);
-  void storeDRAMPower(pugi::xml_node &, DRAMPower *);
+  void loadSRAM(pugi::xml_node &);
+  void loadDRAMStructure(pugi::xml_node &);
+  void loadDRAMTiming(pugi::xml_node &);
+  void loadDRAMPower(pugi::xml_node &);
+  void loadTimingDRAM(pugi::xml_node &);
+  void storeSRAM(pugi::xml_node &);
+  void storeDRAMStructure(pugi::xml_node &);
+  void storeDRAMTiming(pugi::xml_node &);
+  void storeDRAMPower(pugi::xml_node &);
+  void storeTimingDRAM(pugi::xml_node &);
 
  public:
   Config();
@@ -126,6 +166,7 @@ class Config : public BaseConfig {
   DRAMStructure *getDRAM();
   DRAMTiming *getDRAMTiming();
   DRAMPower *getDRAMPower();
+  TimingDRAMConfig *getTimingDRAM();
 };
 
 }  // namespace SimpleSSD::Memory

@@ -65,6 +65,21 @@ const char NAME_IDD6_0[] = "IDD6_0";
 const char NAME_IDD6_1[] = "IDD6_1";
 const char NAME_VDD_0[] = "VDD_0";
 const char NAME_VDD_1[] = "VDD_1";
+const char NAME_WRITE_BUFFER_SIZE[] = "WriteBufferSize";
+const char NAME_READ_BUFFER_SIZE[] = "ReadBufferSize";
+const char NAME_FORCE_WRITE_THRESHOLD[] = "ForceWriteThreshold";
+const char NAME_START_WRITE_THRESHOLD[] = "WriteThreshold";
+const char NAME_MIN_WRITE_BURST[] = "MinWriteBurst";
+const char NAME_MEMORY_SCHEDULING[] = "Scheduling";
+const char NAME_ADDRESS_MAPPING[] = "Mapping";
+const char NAME_PAGE_POLICY[] = "PagePolicy";
+const char NAME_MAX_ACCESS_PER_ROW[] = "MaxAccessPerRow";
+const char NAME_FRONTEND_LATENCY[] = "FrontendLatency";
+const char NAME_BACKEND_LATENCY[] = "BackendLatency";
+const char NAME_ROW_BUFFER_SIZE[] = "RowbufferSize";
+const char NAME_BANK_GROUP[] = "BankGroup";
+const char NAME_ENABLE_POWERDOWN[] = "EnablePowerdown";
+const char NAME_USE_DLL[] = "DLL";
 
 Config::Config() {
   /* 32MB SRAM */
@@ -136,146 +151,188 @@ Config::Config() {
 
 Config::~Config() {}
 
-void Config::loadSRAM(pugi::xml_node &section, SRAMStructure *param) {
+void Config::loadSRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, param->lineSize);
-    LOAD_NAME_UINT(node, NAME_SIZE, param->size);
-    LOAD_NAME_UINT(node, NAME_LATENCY, param->latency);
+    LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, sram.lineSize);
+    LOAD_NAME_UINT(node, NAME_SIZE, sram.size);
+    LOAD_NAME_UINT(node, NAME_LATENCY, sram.latency);
   }
 }
 
-void Config::loadDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
+void Config::loadDRAMStructure(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint8_t, param->channel);
-    LOAD_NAME_UINT_TYPE(node, NAME_RANK, uint8_t, param->rank);
-    LOAD_NAME_UINT_TYPE(node, NAME_BANK, uint8_t, param->bank);
-    LOAD_NAME_UINT_TYPE(node, NAME_CHIP, uint8_t, param->chip);
-    LOAD_NAME_UINT_TYPE(node, NAME_BUS_WIDTH, uint16_t, param->width);
-    LOAD_NAME_UINT_TYPE(node, NAME_BURST, uint16_t, param->burst);
-    LOAD_NAME_UINT(node, NAME_CHIP_SIZE, param->chipSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint8_t, dram.channel);
+    LOAD_NAME_UINT_TYPE(node, NAME_RANK, uint8_t, dram.rank);
+    LOAD_NAME_UINT_TYPE(node, NAME_BANK, uint8_t, dram.bank);
+    LOAD_NAME_UINT_TYPE(node, NAME_CHIP, uint8_t, dram.chip);
+    LOAD_NAME_UINT_TYPE(node, NAME_BUS_WIDTH, uint16_t, dram.width);
+    LOAD_NAME_UINT_TYPE(node, NAME_BURST, uint16_t, dram.burst);
+    LOAD_NAME_UINT(node, NAME_CHIP_SIZE, dram.chipSize);
   }
 }
 
-void Config::loadDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
+void Config::loadDRAMTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_TCK, uint32_t, param->tCK);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRCD, uint32_t, param->tRCD);
-    LOAD_NAME_UINT_TYPE(node, NAME_TCL, uint32_t, param->tCL);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRP, uint32_t, param->tRP);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRAS, uint32_t, param->tRAS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TWR, uint32_t, param->tWR);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRTP, uint32_t, param->tRTP);
-    LOAD_NAME_UINT_TYPE(node, NAME_TBURST, uint32_t, param->tBURST);
-    LOAD_NAME_UINT_TYPE(node, NAME_TCCD_L, uint32_t, param->tCCD_L);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRFC, uint32_t, param->tRFC);
-    LOAD_NAME_UINT_TYPE(node, NAME_TREFI, uint32_t, param->tREFI);
-    LOAD_NAME_UINT_TYPE(node, NAME_TWTR, uint32_t, param->tWTR);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRTW, uint32_t, param->tRTW);
-    LOAD_NAME_UINT_TYPE(node, NAME_TCS, uint32_t, param->tCS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRRD, uint32_t, param->tRRD);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRRD_L, uint32_t, param->tRRD_L);
-    LOAD_NAME_UINT_TYPE(node, NAME_TXAW, uint32_t, param->tXAW);
-    LOAD_NAME_UINT_TYPE(node, NAME_TXP, uint32_t, param->tXP);
-    LOAD_NAME_UINT_TYPE(node, NAME_TXPDLL, uint32_t, param->tXPDLL);
-    LOAD_NAME_UINT_TYPE(node, NAME_TXS, uint32_t, param->tXS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TXSDLL, uint32_t, param->tXSDLL);
+    LOAD_NAME_TIME(node, NAME_TCK, timing.tCK);
+    LOAD_NAME_TIME(node, NAME_TRCD, timing.tRCD);
+    LOAD_NAME_TIME(node, NAME_TCL, timing.tCL);
+    LOAD_NAME_TIME(node, NAME_TRP, timing.tRP);
+    LOAD_NAME_TIME(node, NAME_TRAS, timing.tRAS);
+    LOAD_NAME_TIME(node, NAME_TWR, timing.tWR);
+    LOAD_NAME_TIME(node, NAME_TRTP, timing.tRTP);
+    LOAD_NAME_TIME(node, NAME_TBURST, timing.tBURST);
+    LOAD_NAME_TIME(node, NAME_TCCD_L, timing.tCCD_L);
+    LOAD_NAME_TIME(node, NAME_TRFC, timing.tRFC);
+    LOAD_NAME_TIME(node, NAME_TREFI, timing.tREFI);
+    LOAD_NAME_TIME(node, NAME_TWTR, timing.tWTR);
+    LOAD_NAME_TIME(node, NAME_TRTW, timing.tRTW);
+    LOAD_NAME_TIME(node, NAME_TCS, timing.tCS);
+    LOAD_NAME_TIME(node, NAME_TRRD, timing.tRRD);
+    LOAD_NAME_TIME(node, NAME_TRRD_L, timing.tRRD_L);
+    LOAD_NAME_TIME(node, NAME_TXAW, timing.tXAW);
+    LOAD_NAME_TIME(node, NAME_TXP, timing.tXP);
+    LOAD_NAME_TIME(node, NAME_TXPDLL, timing.tXPDLL);
+    LOAD_NAME_TIME(node, NAME_TXS, timing.tXS);
+    LOAD_NAME_TIME(node, NAME_TXSDLL, timing.tXSDLL);
   }
 }
 
-void Config::loadDRAMPower(pugi::xml_node &section, DRAMPower *param) {
+void Config::loadDRAMPower(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_FLOAT(node, NAME_IDD0_0, param->pIDD0[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD0_1, param->pIDD0[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2P0_0, param->pIDD2P0[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2P0_1, param->pIDD2P0[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2P1_0, param->pIDD2P1[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2P1_1, param->pIDD2P1[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2N_0, param->pIDD2N[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD2N_1, param->pIDD2N[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3P0_0, param->pIDD3P0[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3P0_1, param->pIDD3P0[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3P1_0, param->pIDD3P1[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3P1_1, param->pIDD3P1[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3N_0, param->pIDD3N[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD3N_1, param->pIDD3N[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD4R_0, param->pIDD4R[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD4R_1, param->pIDD4R[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD4W_0, param->pIDD4W[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD4W_1, param->pIDD4W[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD5_0, param->pIDD5[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD5_1, param->pIDD5[1]);
-    LOAD_NAME_FLOAT(node, NAME_IDD6_0, param->pIDD6[0]);
-    LOAD_NAME_FLOAT(node, NAME_IDD6_1, param->pIDD6[1]);
-    LOAD_NAME_FLOAT(node, NAME_VDD_0, param->pVDD[0]);
-    LOAD_NAME_FLOAT(node, NAME_VDD_1, param->pVDD[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD0_0, power.pIDD0[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD0_1, power.pIDD0[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2P0_0, power.pIDD2P0[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2P0_1, power.pIDD2P0[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2P1_0, power.pIDD2P1[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2P1_1, power.pIDD2P1[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2N_0, power.pIDD2N[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD2N_1, power.pIDD2N[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3P0_0, power.pIDD3P0[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3P0_1, power.pIDD3P0[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3P1_0, power.pIDD3P1[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3P1_1, power.pIDD3P1[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3N_0, power.pIDD3N[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD3N_1, power.pIDD3N[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD4R_0, power.pIDD4R[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD4R_1, power.pIDD4R[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD4W_0, power.pIDD4W[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD4W_1, power.pIDD4W[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD5_0, power.pIDD5[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD5_1, power.pIDD5[1]);
+    LOAD_NAME_FLOAT(node, NAME_IDD6_0, power.pIDD6[0]);
+    LOAD_NAME_FLOAT(node, NAME_IDD6_1, power.pIDD6[1]);
+    LOAD_NAME_FLOAT(node, NAME_VDD_0, power.pVDD[0]);
+    LOAD_NAME_FLOAT(node, NAME_VDD_1, power.pVDD[1]);
   }
 }
 
-void Config::storeSRAM(pugi::xml_node &section, SRAMStructure *param) {
-  STORE_NAME_UINT(section, NAME_LINE_SIZE, param->lineSize);
-  STORE_NAME_UINT(section, NAME_SIZE, param->size);
-  STORE_NAME_UINT(section, NAME_LATENCY, param->latency);
+void Config::loadTimingDRAM(pugi::xml_node &section) {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    LOAD_NAME_UINT(node, NAME_WRITE_BUFFER_SIZE, gem5.writeBufferSize);
+    LOAD_NAME_UINT(node, NAME_READ_BUFFER_SIZE, gem5.readBufferSize);
+    LOAD_NAME_FLOAT(node, NAME_FORCE_WRITE_THRESHOLD, gem5.forceWriteThreshold);
+    LOAD_NAME_FLOAT(node, NAME_START_WRITE_THRESHOLD, gem5.startWriteThreshold);
+    LOAD_NAME_UINT(node, NAME_MIN_WRITE_BURST, gem5.minWriteBurst);
+    LOAD_NAME_UINT_TYPE(node, NAME_MEMORY_SCHEDULING, MemoryScheduling,
+                        gem5.scheduling);
+    LOAD_NAME_UINT_TYPE(node, NAME_ADDRESS_MAPPING, AddressMapping,
+                        gem5.mapping);
+    LOAD_NAME_UINT_TYPE(node, NAME_PAGE_POLICY, PagePolicy, gem5.policy);
+    LOAD_NAME_UINT(node, NAME_MAX_ACCESS_PER_ROW, gem5.frontendLatency);
+    LOAD_NAME_UINT(node, NAME_FRONTEND_LATENCY, gem5.backendLatency);
+    LOAD_NAME_UINT(node, NAME_BACKEND_LATENCY, gem5.maxAccessesPerRow);
+    LOAD_NAME_UINT(node, NAME_ROW_BUFFER_SIZE, gem5.rowBufferSize);
+    LOAD_NAME_UINT(node, NAME_BANK_GROUP, gem5.bankGroup);
+    LOAD_NAME_BOOLEAN(node, NAME_ENABLE_POWERDOWN, gem5.enablePowerdown);
+    LOAD_NAME_BOOLEAN(node, NAME_USE_DLL, gem5.useDLL);
+  }
 }
 
-void Config::storeDRAMStructure(pugi::xml_node &section, DRAMStructure *param) {
-  STORE_NAME_UINT(section, NAME_CHANNEL, param->channel);
-  STORE_NAME_UINT(section, NAME_RANK, param->rank);
-  STORE_NAME_UINT(section, NAME_BANK, param->bank);
-  STORE_NAME_UINT(section, NAME_CHIP, param->chip);
-  STORE_NAME_UINT(section, NAME_BUS_WIDTH, param->width);
-  STORE_NAME_UINT(section, NAME_BURST, param->burst);
-  STORE_NAME_UINT(section, NAME_CHIP_SIZE, param->chipSize);
+void Config::storeSRAM(pugi::xml_node &section) {
+  STORE_NAME_UINT(section, NAME_LINE_SIZE, sram.lineSize);
+  STORE_NAME_UINT(section, NAME_SIZE, sram.size);
+  STORE_NAME_UINT(section, NAME_LATENCY, sram.latency);
 }
 
-void Config::storeDRAMTiming(pugi::xml_node &section, DRAMTiming *param) {
-  STORE_NAME_UINT(section, NAME_TCK, param->tCK);
-  STORE_NAME_UINT(section, NAME_TRCD, param->tRCD);
-  STORE_NAME_UINT(section, NAME_TCL, param->tCL);
-  STORE_NAME_UINT(section, NAME_TRP, param->tRP);
-  STORE_NAME_UINT(section, NAME_TRAS, param->tRAS);
-  STORE_NAME_UINT(section, NAME_TWR, param->tWR);
-  STORE_NAME_UINT(section, NAME_TRTP, param->tRTP);
-  STORE_NAME_UINT(section, NAME_TBURST, param->tBURST);
-  STORE_NAME_UINT(section, NAME_TCCD_L, param->tCCD_L);
-  STORE_NAME_UINT(section, NAME_TRFC, param->tRFC);
-  STORE_NAME_UINT(section, NAME_TREFI, param->tREFI);
-  STORE_NAME_UINT(section, NAME_TWTR, param->tWTR);
-  STORE_NAME_UINT(section, NAME_TRTW, param->tRTW);
-  STORE_NAME_UINT(section, NAME_TCS, param->tCS);
-  STORE_NAME_UINT(section, NAME_TRRD, param->tRRD);
-  STORE_NAME_UINT(section, NAME_TRRD_L, param->tRRD_L);
-  STORE_NAME_UINT(section, NAME_TXAW, param->tXAW);
-  STORE_NAME_UINT(section, NAME_TXP, param->tXP);
-  STORE_NAME_UINT(section, NAME_TXPDLL, param->tXPDLL);
-  STORE_NAME_UINT(section, NAME_TXS, param->tXS);
-  STORE_NAME_UINT(section, NAME_TXSDLL, param->tXSDLL);
+void Config::storeDRAMStructure(pugi::xml_node &section) {
+  STORE_NAME_UINT(section, NAME_CHANNEL, dram.channel);
+  STORE_NAME_UINT(section, NAME_RANK, dram.rank);
+  STORE_NAME_UINT(section, NAME_BANK, dram.bank);
+  STORE_NAME_UINT(section, NAME_CHIP, dram.chip);
+  STORE_NAME_UINT(section, NAME_BUS_WIDTH, dram.width);
+  STORE_NAME_UINT(section, NAME_BURST, dram.burst);
+  STORE_NAME_UINT(section, NAME_CHIP_SIZE, dram.chipSize);
 }
 
-void Config::storeDRAMPower(pugi::xml_node &section, DRAMPower *param) {
-  STORE_NAME_FLOAT(section, NAME_IDD0_0, param->pIDD0[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD0_1, param->pIDD0[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD2P0_0, param->pIDD2P0[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD2P0_1, param->pIDD2P0[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD2P1_0, param->pIDD2P1[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD2P1_1, param->pIDD2P1[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD2N_0, param->pIDD2N[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD2N_1, param->pIDD2N[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD3P0_0, param->pIDD3P0[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD3P0_1, param->pIDD3P0[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD3P1_0, param->pIDD3P1[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD3P1_1, param->pIDD3P1[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD3N_0, param->pIDD3N[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD3N_1, param->pIDD3N[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD4R_0, param->pIDD4R[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD4R_1, param->pIDD4R[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD4W_0, param->pIDD4W[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD4W_1, param->pIDD4W[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD5_0, param->pIDD5[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD5_1, param->pIDD5[1]);
-  STORE_NAME_FLOAT(section, NAME_IDD6_0, param->pIDD6[0]);
-  STORE_NAME_FLOAT(section, NAME_IDD6_1, param->pIDD6[1]);
-  STORE_NAME_FLOAT(section, NAME_VDD_0, param->pVDD[0]);
-  STORE_NAME_FLOAT(section, NAME_VDD_1, param->pVDD[1]);
+void Config::storeDRAMTiming(pugi::xml_node &section) {
+  STORE_NAME_UINT(section, NAME_TCK, timing.tCK);
+  STORE_NAME_UINT(section, NAME_TRCD, timing.tRCD);
+  STORE_NAME_UINT(section, NAME_TCL, timing.tCL);
+  STORE_NAME_UINT(section, NAME_TRP, timing.tRP);
+  STORE_NAME_UINT(section, NAME_TRAS, timing.tRAS);
+  STORE_NAME_UINT(section, NAME_TWR, timing.tWR);
+  STORE_NAME_UINT(section, NAME_TRTP, timing.tRTP);
+  STORE_NAME_UINT(section, NAME_TBURST, timing.tBURST);
+  STORE_NAME_UINT(section, NAME_TCCD_L, timing.tCCD_L);
+  STORE_NAME_UINT(section, NAME_TRFC, timing.tRFC);
+  STORE_NAME_UINT(section, NAME_TREFI, timing.tREFI);
+  STORE_NAME_UINT(section, NAME_TWTR, timing.tWTR);
+  STORE_NAME_UINT(section, NAME_TRTW, timing.tRTW);
+  STORE_NAME_UINT(section, NAME_TCS, timing.tCS);
+  STORE_NAME_UINT(section, NAME_TRRD, timing.tRRD);
+  STORE_NAME_UINT(section, NAME_TRRD_L, timing.tRRD_L);
+  STORE_NAME_UINT(section, NAME_TXAW, timing.tXAW);
+  STORE_NAME_UINT(section, NAME_TXP, timing.tXP);
+  STORE_NAME_UINT(section, NAME_TXPDLL, timing.tXPDLL);
+  STORE_NAME_UINT(section, NAME_TXS, timing.tXS);
+  STORE_NAME_UINT(section, NAME_TXSDLL, timing.tXSDLL);
+}
+
+void Config::storeDRAMPower(pugi::xml_node &section) {
+  STORE_NAME_FLOAT(section, NAME_IDD0_0, power.pIDD0[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD0_1, power.pIDD0[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD2P0_0, power.pIDD2P0[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD2P0_1, power.pIDD2P0[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD2P1_0, power.pIDD2P1[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD2P1_1, power.pIDD2P1[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD2N_0, power.pIDD2N[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD2N_1, power.pIDD2N[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD3P0_0, power.pIDD3P0[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD3P0_1, power.pIDD3P0[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD3P1_0, power.pIDD3P1[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD3P1_1, power.pIDD3P1[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD3N_0, power.pIDD3N[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD3N_1, power.pIDD3N[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD4R_0, power.pIDD4R[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD4R_1, power.pIDD4R[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD4W_0, power.pIDD4W[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD4W_1, power.pIDD4W[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD5_0, power.pIDD5[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD5_1, power.pIDD5[1]);
+  STORE_NAME_FLOAT(section, NAME_IDD6_0, power.pIDD6[0]);
+  STORE_NAME_FLOAT(section, NAME_IDD6_1, power.pIDD6[1]);
+  STORE_NAME_FLOAT(section, NAME_VDD_0, power.pVDD[0]);
+  STORE_NAME_FLOAT(section, NAME_VDD_1, power.pVDD[1]);
+}
+
+void Config::storeTimingDRAM(pugi::xml_node &section) {
+  STORE_NAME_UINT(section, NAME_WRITE_BUFFER_SIZE, gem5.writeBufferSize);
+  STORE_NAME_UINT(section, NAME_READ_BUFFER_SIZE, gem5.readBufferSize);
+  STORE_NAME_FLOAT(section, NAME_FORCE_WRITE_THRESHOLD,
+                   gem5.forceWriteThreshold);
+  STORE_NAME_FLOAT(section, NAME_START_WRITE_THRESHOLD,
+                   gem5.startWriteThreshold);
+  STORE_NAME_UINT(section, NAME_MIN_WRITE_BURST, gem5.minWriteBurst);
+  STORE_NAME_UINT(section, NAME_MEMORY_SCHEDULING, gem5.scheduling);
+  STORE_NAME_UINT(section, NAME_ADDRESS_MAPPING, gem5.mapping);
+  STORE_NAME_UINT(section, NAME_PAGE_POLICY, gem5.policy);
+  STORE_NAME_UINT(section, NAME_MAX_ACCESS_PER_ROW, gem5.frontendLatency);
+  STORE_NAME_UINT(section, NAME_FRONTEND_LATENCY, gem5.backendLatency);
+  STORE_NAME_UINT(section, NAME_BACKEND_LATENCY, gem5.maxAccessesPerRow);
+  STORE_NAME_UINT(section, NAME_ROW_BUFFER_SIZE, gem5.rowBufferSize);
+  STORE_NAME_UINT(section, NAME_BANK_GROUP, gem5.bankGroup);
+  STORE_NAME_BOOLEAN(section, NAME_ENABLE_POWERDOWN, gem5.enablePowerdown);
+  STORE_NAME_BOOLEAN(section, NAME_USE_DLL, gem5.useDLL);
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -283,7 +340,7 @@ void Config::loadFrom(pugi::xml_node &section) {
     auto name = node.attribute("name").value();
 
     if (strcmp(name, "sram") == 0 && isSection(node)) {
-      loadSRAM(node, &sram);
+      loadSRAM(node);
     }
     else if (strcmp(name, "dram") == 0) {
       for (auto node2 = node.first_child(); node2;
@@ -291,13 +348,16 @@ void Config::loadFrom(pugi::xml_node &section) {
         auto name2 = node2.attribute("name").value();
 
         if (strcmp(name2, "struct") == 0 && isSection(node2)) {
-          loadDRAMStructure(node2, &dram);
+          loadDRAMStructure(node2);
         }
         else if (strcmp(name2, "timing") == 0 && isSection(node2)) {
-          loadDRAMTiming(node2, &timing);
+          loadDRAMTiming(node2);
         }
         else if (strcmp(name2, "power") == 0 && isSection(node2)) {
-          loadDRAMPower(node2, &power);
+          loadDRAMPower(node2);
+        }
+        else if (strcmp(name2, "gem5") == 0 && isSection(node2)) {
+          loadDRAMTiming(node2);
         }
 
         LOAD_NAME_UINT_TYPE(node2, NAME_MODEL, Model, dramModel);
@@ -310,19 +370,22 @@ void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node, node2;
 
   STORE_SECTION(section, "sram", node);
-  storeSRAM(node, &sram);
+  storeSRAM(node);
 
   STORE_SECTION(section, "dram", node);
   STORE_NAME_UINT(node, NAME_MODEL, dramModel);
 
   STORE_SECTION(node, "struct", node2);
-  storeDRAMStructure(node2, &dram);
+  storeDRAMStructure(node2);
 
   STORE_SECTION(node, "timing", node2);
-  storeDRAMTiming(node2, &timing);
+  storeDRAMTiming(node2);
 
   STORE_SECTION(node, "power", node2);
-  storeDRAMPower(node2, &power);
+  storeDRAMPower(node2);
+
+  STORE_SECTION(node, "gem5", node2);
+  storeTimingDRAM(node2);
 }
 
 void Config::update() {
