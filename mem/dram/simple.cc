@@ -100,7 +100,7 @@ uint64_t SimpleDRAM::preSubmitWrite(Request *req) {
 void SimpleDRAM::postDone(Request *req) {
   updateStats(req->beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
 
-  schedule(req->eid);
+  scheduleNow(req->eid);
 
   delete req;
 }

@@ -166,7 +166,7 @@ void Arbitrator::enable(bool r) {
   run = r;
 
   if (run) {
-    schedule(work);
+    scheduleNow(work);
   }
   else {
     deschedule(work);
@@ -537,7 +537,7 @@ void Arbitrator::abort_SQDone() {
       delete sqList[iter->first];
       sqList[iter->first] = nullptr;
 
-      schedule(iter->second.first, iter->second.second);
+      scheduleNow(iter->second.first, iter->second.second);
 
       iter = abortSQList.erase(iter);
     }
@@ -556,7 +556,7 @@ void Arbitrator::abort_CommandDone(uint32_t id) {
 
   if (iter != abortCommandList.end()) {
     // Aborted command finished
-    schedule(iter->second.first, iter->second.second);
+    scheduleNow(iter->second.first, iter->second.second);
 
     abortCommandList.erase(iter);
   }
@@ -654,7 +654,7 @@ void Arbitrator::collect() {
   }
 
   // Schedule collect
-  object.cpu->schedule(work, 0ull, period);
+  scheduleRel(work, 0ull, period);
 
   if (!handled) {
     running = false;

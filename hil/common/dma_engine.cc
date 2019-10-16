@@ -134,7 +134,7 @@ void DMAEngine::dmaDone() {
   pendingTagList.pop_front();
 
   if (session.handled == session.requested) {
-    schedule(session.eid, session.data);
+    scheduleNow(session.eid, session.data);
   }
   else {
     if (session.read) {
@@ -181,7 +181,7 @@ void DMAEngine::prdt_readDone() {
 
   session.deallocateBuffer();
 
-  schedule(session.eid, session.data);
+  scheduleNow(session.eid, session.data);
 }
 
 uint32_t DMAEngine::getPRPSize(uint64_t prp) {
@@ -230,7 +230,7 @@ void DMAEngine::getPRPListFromPRP_readDone() {
     getPRPListFromPRP(std::move(session), listPRP);
   }
   else {
-    schedule(session.eid, session.data);
+    scheduleNow(session.eid, session.data);
   }
 }
 
@@ -303,7 +303,7 @@ void DMAEngine::parseSGLSegment_readDone() {
     parseSGLSegment(std::move(session), desc->address, desc->length);
   }
   else {
-    schedule(session.eid, session.data);
+    scheduleNow(session.eid, session.data);
   }
 }
 
@@ -404,7 +404,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   }
 
   if (immediate) {
-    schedule(eid, data);
+    scheduleNow(eid, data);
   }
 
   return ret;
@@ -428,7 +428,7 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
     // This is entire buffer
     parseSGLDescriptor(session, &desc);
 
-    schedule(eid, data);
+    scheduleNow(eid, data);
   }
   else if (desc.getType() == SGLDescriptorType::Segment ||
            desc.getType() == SGLDescriptorType::LastSegment) {

@@ -48,7 +48,7 @@ void Queue::setDMAData(uint64_t base, bool pc, Event eid, uint64_t gcid) {
   if (pc) {
     dmaTag = dmaEngine->initRaw(base, (uint32_t)(size * stride));
 
-    schedule(eid, gcid);
+    scheduleNow(eid, gcid);
   }
   else {
     dmaTag = dmaEngine->initFromPRP(0, base, size * stride, eid, gcid);
