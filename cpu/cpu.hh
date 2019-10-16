@@ -76,7 +76,7 @@ class CPU {
     uint64_t handledFunction;
     uint64_t busy;
 
-    EventStat() : handledFunction(0), handledEvent(0), busy(0) {}
+    EventStat() : handledFunction(0), busy(0) {}
 
     void clear() {
       handledFunction = 0;
@@ -220,6 +220,14 @@ class CPU {
    * \param[in] eid Event ID to check
    */
   bool isScheduled(Event eid) noexcept;
+
+  /**
+   * \brief Check when event is scheduled
+   *
+   * \param[in] eid Event ID to check
+   * \return Tick scheduled (-1 if not scheduled)
+   */
+  uint64_t when(Event eid) noexcept;
 
   /**
    * \brief Destroy event

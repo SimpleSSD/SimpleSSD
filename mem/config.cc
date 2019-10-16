@@ -29,6 +29,7 @@ const char NAME_TWR[] = "tWR";
 const char NAME_TRTP[] = "tRTP";
 const char NAME_TBURST[] = "tBURST";
 const char NAME_TCCD_L[] = "tCCD_L";
+const char NAME_TCCD_L_WR[] = "tCCD_L_WR";
 const char NAME_TRFC[] = "tRFC";
 const char NAME_TREFI[] = "tREFI";
 const char NAME_TWTR[] = "tWTR";
@@ -182,6 +183,7 @@ void Config::loadDRAMTiming(pugi::xml_node &section) {
     LOAD_NAME_TIME(node, NAME_TRTP, timing.tRTP);
     LOAD_NAME_TIME(node, NAME_TBURST, timing.tBURST);
     LOAD_NAME_TIME(node, NAME_TCCD_L, timing.tCCD_L);
+    LOAD_NAME_TIME(node, NAME_TCCD_L_WR, timing.tCCD_L_WR);
     LOAD_NAME_TIME(node, NAME_TRFC, timing.tRFC);
     LOAD_NAME_TIME(node, NAME_TREFI, timing.tREFI);
     LOAD_NAME_TIME(node, NAME_TWTR, timing.tWTR);
@@ -274,6 +276,7 @@ void Config::storeDRAMTiming(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_TRTP, timing.tRTP);
   STORE_NAME_UINT(section, NAME_TBURST, timing.tBURST);
   STORE_NAME_UINT(section, NAME_TCCD_L, timing.tCCD_L);
+  STORE_NAME_UINT(section, NAME_TCCD_L_WR, timing.tCCD_L_WR);
   STORE_NAME_UINT(section, NAME_TRFC, timing.tRFC);
   STORE_NAME_UINT(section, NAME_TREFI, timing.tREFI);
   STORE_NAME_UINT(section, NAME_TWTR, timing.tWTR);

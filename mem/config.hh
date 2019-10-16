@@ -71,27 +71,28 @@ class Config : public BaseConfig {
 
   //! DRAM timing parameters. Unit is ps
   struct DRAMTiming {
-    uint32_t tCK;     //!< Clock period
-    uint32_t tRCD;    //!< RAS to CAS delay
-    uint32_t tCL;     //!< CAS latency
-    uint32_t tRP;     //!< Row precharge time
-    uint32_t tRAS;    //!< ACT to PRE delay
-    uint32_t tWR;     //!< Write recovery time
-    uint32_t tRTP;    //!< Read to precharge delay
-    uint32_t tBURST;  //!< Burst duration
-    uint32_t tCCD_L;  //!< Same bank group CAS to CAS delay
-    uint32_t tRFC;    //!< Refresh cycle time
-    uint32_t tREFI;   //!< Refresh command interval
-    uint32_t tWTR;    //!< Write to read, same rank switching time
-    uint32_t tRTW;    //!< Read to write, same rank switching time
-    uint32_t tCS;     //!< Rank to rank switching time
-    uint32_t tRRD;    //!< ACT to ACT delay
-    uint32_t tRRD_L;  //!< Same bank group RRD
-    uint32_t tXAW;    //!< X activation window
-    uint32_t tXP;     //!< Power-up delay
-    uint32_t tXPDLL;  //!< Power-up delay with locked DLL
-    uint32_t tXS;     //!< Self-refresh exit latency
-    uint32_t tXSDLL;  //!< Self-refresh exit latency DLL
+    uint32_t tCK;        //!< Clock period
+    uint32_t tRCD;       //!< RAS to CAS delay
+    uint32_t tCL;        //!< CAS latency
+    uint32_t tRP;        //!< Row precharge time
+    uint32_t tRAS;       //!< ACT to PRE delay
+    uint32_t tWR;        //!< Write recovery time
+    uint32_t tRTP;       //!< Read to precharge delay
+    uint32_t tBURST;     //!< Burst duration
+    uint32_t tCCD_L;     //!< Same bank group CAS to CAS delay
+    uint32_t tCCD_L_WR;  //!< Same bank group write to writ delay
+    uint32_t tRFC;       //!< Refresh cycle time
+    uint32_t tREFI;      //!< Refresh command interval
+    uint32_t tWTR;       //!< Write to read, same rank switching time
+    uint32_t tRTW;       //!< Read to write, same rank switching time
+    uint32_t tCS;        //!< Rank to rank switching time
+    uint32_t tRRD;       //!< ACT to ACT delay
+    uint32_t tRRD_L;     //!< Same bank group RRD
+    uint32_t tXAW;       //!< X activation window
+    uint32_t tXP;        //!< Power-up delay
+    uint32_t tXPDLL;     //!< Power-up delay with locked DLL
+    uint32_t tXS;        //!< Self-refresh exit latency
+    uint32_t tXSDLL;     //!< Self-refresh exit latency DLL
   };
 
   //! DRAM power parameters. Unit is mA

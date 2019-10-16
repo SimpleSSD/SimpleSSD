@@ -105,6 +105,7 @@
         <config name="tRTP">7500</config>
         <config name="tBURST"></config>
         <config name="tCCD_L"></config>
+        <config name="tCCD_L_WR"></config>
         <config name="tRFC">160000</config>
         <config name="tREFI">7800000</config>
         <config name="tWTR">7500</config>

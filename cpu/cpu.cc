@@ -582,6 +582,16 @@ bool CPU::isScheduled(Event eid) noexcept {
   return false;
 }
 
+uint64_t CPU::when(Event eid) noexcept {
+  for (auto &iter : jobQueue) {
+    if (iter.eid == eid) {
+      return iter.scheduledAt;
+    }
+  }
+
+  return std::numeric_limits<uint64_t>::max();
+}
+
 void CPU::destroyEvent(Event) noexcept {
   panic_log("Not allowed to destroy event");
 }

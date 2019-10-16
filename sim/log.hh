@@ -31,6 +31,7 @@ class Log {
     Common,
     CPU,
     DRAM,
+    DRAM_Timing,
     SRAM,
     HIL,
     HIL_Common,

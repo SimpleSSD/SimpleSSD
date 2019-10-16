@@ -19,6 +19,7 @@ const std::string idPrefix[] = {
     "global",  //!< DebugID::Common
     "CPU",
     "DRAM",
+    "DRAM::TimingDRAM",
     "SRAM",
     "HIL",
     "HIL::Common",
