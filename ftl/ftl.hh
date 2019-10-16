@@ -23,11 +23,8 @@ typedef struct {
   uint64_t totalPhysicalPages;
   uint64_t totalLogicalPages;
   uint32_t pageSize;
-  uint32_t parallelismLevel1;  //!< 1st parallelism group (Channel when CWDP)
-  uint32_t parallelismLevel2;  //!< 2nd parallelism group (Way when CWDP)
-  uint32_t parallelismLevel3;  //!< 3rd parallelism group (Die when CWDP)
-  uint32_t parallelismLevel4;  //!< 4th parallelism group (Plane when CWDP)
-  uint8_t superpageLevel;      //!< Number of levels (1~N) included in superpage
+  uint32_t parallelismLevel[4];  //!< Parallelism group list
+  uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
 
 enum class Operation : uint8_t {

@@ -30,21 +30,19 @@ FTL::FTL(ObjectData &o) : Object(o) {
   param.pageSize = filparam->pageSize;
 
   // Yout MUST NOT REORDER Parameter structure
-  uint32_t *plArray = &param.parallelismLevel1;
-
   for (uint8_t i = 0; i < 4; i++) {
     switch (filparam->pageAllocation[i]) {
       case FIL::PageAllocation::Channel:
-        plArray[i] = channel;
+        param.parallelismLevel[i] = channel;
         break;
       case FIL::PageAllocation::Way:
-        plArray[i] = way;
+        param.parallelismLevel[i] = way;
         break;
       case FIL::PageAllocation::Die:
-        plArray[i] = filparam->die;
+        param.parallelismLevel[i] = filparam->die;
         break;
       case FIL::PageAllocation::Plane:
-        plArray[i] = filparam->plane;
+        param.parallelismLevel[i] = filparam->plane;
         break;
     }
   }
