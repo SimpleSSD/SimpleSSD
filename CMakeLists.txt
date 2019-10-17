@@ -163,6 +163,11 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/compare.cc
   hil/nvme/command/dataset_management.cc
 )
+set(SRC_ICL
+  icl/config.cc
+  icl/icl.cc
+  icl/set_associative.cc
+)
 set(SRC_SIM
   sim/base_config.cc
   sim/config_reader.cc
@@ -184,6 +189,7 @@ SOURCE_GROUP("Source Files\\hil" FILES ${SRC_HIL})
 SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
+SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
 SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
@@ -195,6 +201,7 @@ add_library(simplessd STATIC
   ${SRC_HIL_COMMON}
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
+  ${SRC_ICL}
   ${SRC_SIM}
   ${SRC_UTIL}
 )
