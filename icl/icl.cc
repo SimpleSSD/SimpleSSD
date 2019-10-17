@@ -40,6 +40,28 @@ Request::Request(uint64_t i, Event e, uint64_t d, Operation o, LPN a, LPN l)
       length(l),
       buffer(nullptr) {}
 
+void Request::backup(std::ostream &out) const {
+  BACKUP_SCALAR(out, id);
+  BACKUP_EVENT(out, eid);
+  BACKUP_SCALAR(out, data);
+  BACKUP_SCALAR(out, opcode);
+  BACKUP_SCALAR(out, address);
+  BACKUP_SCALAR(out, length);
+  BACKUP_SCALAR(out, buffer);
+}
+
+void Request::restore(ObjectData &object, std::istream &in) {
+  RESTORE_SCALAR(in, id);
+  RESTORE_EVENT(in, eid);
+  RESTORE_SCALAR(in, data);
+  RESTORE_SCALAR(in, opcode);
+  RESTORE_SCALAR(in, address);
+  RESTORE_SCALAR(in, length);
+  RESTORE_SCALAR(in, buffer);
+
+  buffer = object.bufmgr->restorePointer(buffer);
+}
+
 ICL::ICL(ObjectData &o) : Object(o) {
   pFTL = new FTL::FTL(object);
   auto *param = pFTL->getInfo();

@@ -32,6 +32,8 @@ class SetAssociative : public AbstractCache {
 
   class PrefetchTrigger {
    private:
+    friend SetAssociative;
+
     const uint64_t prefetchCount;  //!< # reads to trigger
     const uint64_t prefetchRatio;  //!< # pages to trigger
     uint64_t lastRequestID;
@@ -45,7 +47,7 @@ class SetAssociative : public AbstractCache {
     bool trigger(Request &);
   };
 
-  enum class LineStatus {
+  enum class LineStatus : uint8_t {
     None,
     ReadHit,
     ReadHitPending,
@@ -227,6 +229,9 @@ class SetAssociative : public AbstractCache {
 
   // Prefetch
   void prefetch(LPN, LPN);
+
+  void backupQueue(std::ostream &, const std::list<CacheContext> *) const;
+  void restoreQueue(std::istream &, std::list<CacheContext> *);
 
  public:
   SetAssociative(ObjectData &, FTL::FTL *);

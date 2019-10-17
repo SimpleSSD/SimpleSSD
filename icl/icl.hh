@@ -51,6 +51,9 @@ struct Request {
   Request(uint64_t, Event, uint64_t, Operation, LPN, uint32_t, uint32_t,
           uint8_t *);
   Request(uint64_t, Event, uint64_t, Operation, LPN, LPN);
+
+  void backup(std::ostream &) const;
+  void restore(ObjectData &, std::istream &);
 };
 
 /**

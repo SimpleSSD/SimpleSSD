@@ -1090,6 +1090,44 @@ void SetAssociative::invalidate_done(uint64_t now, uint64_t tag) {
   scheduleNow(ctx.req.eid, ctx.req.data);
 }
 
+void SetAssociative::backupQueue(std::ostream &out,
+                                 const std::list<CacheContext> *queue) const {
+  uint64_t size = queue->size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : *queue) {
+    iter.req.backup(out);
+
+    BACKUP_SCALAR(out, iter.id);
+    BACKUP_SCALAR(out, iter.setIdx);
+    BACKUP_SCALAR(out, iter.wayIdx);
+    BACKUP_SCALAR(out, iter.submittedAt);
+    BACKUP_SCALAR(out, iter.finishedAt);
+    BACKUP_SCALAR(out, iter.status);
+  }
+}
+
+void SetAssociative::restoreQueue(std::istream &in, std::list<CacheContext> *queue) {
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    CacheContext ctx;
+
+    ctx.req.restore(object, in);
+
+    RESTORE_SCALAR(in, ctx.id);
+    RESTORE_SCALAR(in, ctx.setIdx);
+    RESTORE_SCALAR(in, ctx.wayIdx);
+    RESTORE_SCALAR(in, ctx.submittedAt);
+    RESTORE_SCALAR(in, ctx.finishedAt);
+    RESTORE_SCALAR(in, ctx.status);
+
+    queue->emplace_back(ctx);
+  }
+}
+
 void SetAssociative::enqueue(Request &&req) {
   // Increase clock
   clock++;
@@ -1149,8 +1187,127 @@ void SetAssociative::resetStatValues() noexcept {
   memset(&stat, 0, sizeof(stat));
 }
 
-void SetAssociative::createCheckpoint(std::ostream &) const noexcept {}
+void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, lineSize);
+  BACKUP_SCALAR(out, setSize);
+  BACKUP_SCALAR(out, waySize);
+  BACKUP_BLOB(out, cacheMetadata, sizeof(Line) * setSize * waySize);
+  BACKUP_SCALAR(out, readEnabled);
+  BACKUP_SCALAR(out, writeEnabled);
+  BACKUP_SCALAR(out, prefetchEnabled);
+  BACKUP_SCALAR(out, requestCounter);
+  BACKUP_SCALAR(out, trigger.lastRequestID);
+  BACKUP_SCALAR(out, trigger.requestCounter);
+  BACKUP_SCALAR(out, trigger.requestCapacity);
+  BACKUP_SCALAR(out, trigger.lastAddress);
+  BACKUP_SCALAR(out, prefetchPages);
+  BACKUP_SCALAR(out, evictPages);
+  BACKUP_SCALAR(out, metaAddress);
+  BACKUP_SCALAR(out, metaLineSize);
+  BACKUP_SCALAR(out, dataAddress);
+  BACKUP_SCALAR(out, clock);
+  BACKUP_SCALAR(out, evictPolicy);
 
-void SetAssociative::restoreCheckpoint(std::istream &) noexcept {}
+  backupQueue(out, &readPendingQueue);
+  backupQueue(out, &readMetaQueue);
+  backupQueue(out, &readFTLQueue);
+  backupQueue(out, &readDRAMQueue);
+  backupQueue(out, &readDMAQueue);
+  backupQueue(out, &writePendingQueue);
+  backupQueue(out, &writeMetaQueue);
+  backupQueue(out, &writeDRAMQueue);
+  backupQueue(out, &evictQueue);
+  backupQueue(out, &evictFTLQueue);
+  backupQueue(out, &flushMetaQueue);
+  backupQueue(out, &flushQueue);
+  backupQueue(out, &invalidateMetaQueue);
+  backupQueue(out, &invalidateFTLQueue);
+
+  BACKUP_EVENT(out, eventReadPreCPUDone);
+  BACKUP_EVENT(out, eventReadMetaDone);
+  BACKUP_EVENT(out, eventReadFTLDone);
+  BACKUP_EVENT(out, eventReadDRAMDone);
+  BACKUP_EVENT(out, eventReadDMADone);
+  BACKUP_EVENT(out, eventWritePreCPUDone);
+  BACKUP_EVENT(out, eventWriteMetaDone);
+  BACKUP_EVENT(out, eventWriteDRAMDone);
+  BACKUP_EVENT(out, eventEvictDRAMDone);
+  BACKUP_EVENT(out, eventEvictFTLDone);
+  BACKUP_EVENT(out, eventFlushPreCPUDone);
+  BACKUP_EVENT(out, eventFlushMetaDone);
+  BACKUP_EVENT(out, eventInvalidatePreCPUDone);
+  BACKUP_EVENT(out, eventInvalidateMetaDone);
+  BACKUP_EVENT(out, eventInvalidateFTLDone);
+}
+
+void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
+  uint32_t tmp32;
+  bool tmpb;
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != lineSize, "Line size not matched while restore.");
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != setSize, "Set size not matched while restore.");
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != waySize, "Way size not matched while restore.");
+
+  RESTORE_BLOB(in, cacheMetadata, sizeof(Line) * setSize * waySize);
+
+  RESTORE_SCALAR(in, tmpb);
+  panic_if(tmpb != readEnabled, "readEnabled not matched while restore.");
+
+  RESTORE_SCALAR(in, tmpb);
+  panic_if(tmpb != writeEnabled, "writeEnabled not matched while restore.");
+
+  RESTORE_SCALAR(in, tmpb);
+  panic_if(tmpb != prefetchEnabled,
+           "prefetchEnabled not matched while restore.");
+
+  RESTORE_SCALAR(in, requestCounter);
+  RESTORE_SCALAR(in, trigger.lastRequestID);
+  RESTORE_SCALAR(in, trigger.requestCounter);
+  RESTORE_SCALAR(in, trigger.requestCapacity);
+  RESTORE_SCALAR(in, trigger.lastAddress);
+  RESTORE_SCALAR(in, prefetchPages);
+  RESTORE_SCALAR(in, evictPages);
+  RESTORE_SCALAR(in, metaAddress);
+  RESTORE_SCALAR(in, metaLineSize);
+  RESTORE_SCALAR(in, dataAddress);
+  RESTORE_SCALAR(in, clock);
+  RESTORE_SCALAR(in, evictPolicy);
+
+  restoreQueue(in, &readPendingQueue);
+  restoreQueue(in, &readMetaQueue);
+  restoreQueue(in, &readFTLQueue);
+  restoreQueue(in, &readDRAMQueue);
+  restoreQueue(in, &readDMAQueue);
+  restoreQueue(in, &writePendingQueue);
+  restoreQueue(in, &writeMetaQueue);
+  restoreQueue(in, &writeDRAMQueue);
+  restoreQueue(in, &evictQueue);
+  restoreQueue(in, &evictFTLQueue);
+  restoreQueue(in, &flushMetaQueue);
+  restoreQueue(in, &flushQueue);
+  restoreQueue(in, &invalidateMetaQueue);
+  restoreQueue(in, &invalidateFTLQueue);
+
+  RESTORE_EVENT(in, eventReadPreCPUDone);
+  RESTORE_EVENT(in, eventReadMetaDone);
+  RESTORE_EVENT(in, eventReadFTLDone);
+  RESTORE_EVENT(in, eventReadDRAMDone);
+  RESTORE_EVENT(in, eventReadDMADone);
+  RESTORE_EVENT(in, eventWritePreCPUDone);
+  RESTORE_EVENT(in, eventWriteMetaDone);
+  RESTORE_EVENT(in, eventWriteDRAMDone);
+  RESTORE_EVENT(in, eventEvictDRAMDone);
+  RESTORE_EVENT(in, eventEvictFTLDone);
+  RESTORE_EVENT(in, eventFlushPreCPUDone);
+  RESTORE_EVENT(in, eventFlushMetaDone);
+  RESTORE_EVENT(in, eventInvalidatePreCPUDone);
+  RESTORE_EVENT(in, eventInvalidateMetaDone);
+  RESTORE_EVENT(in, eventInvalidateFTLDone);
+}
 
 }  // namespace SimpleSSD::ICL
