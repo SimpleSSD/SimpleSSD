@@ -7,7 +7,7 @@
 
 #include "icl/icl.hh"
 
-#include "icl/abstract_cache.hh"
+#include "icl/set_associative.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
@@ -60,7 +60,7 @@ ICL::ICL(ObjectData &o) : Object(o) {
   switch ((Config::Mode)readConfigUint(Section::InternalCache,
                                        Config::Key::CacheMode)) {
     case Config::Mode::SetAssociative:
-      // pCache = new GenericCache(conf, pFTL);
+      pCache = new SetAssociative(object, pFTL);
 
       break;
     default:
