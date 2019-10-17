@@ -11,6 +11,28 @@
 
 namespace SimpleSSD::FIL {
 
+Request::Request()
+    : id(0),
+      eid(InvalidEventID),
+      data(0),
+      opcode(Operation::Read),
+      address(0),
+      buffer(nullptr) {}
+
+Request::Request(uint64_t i, Event e, uint64_t d, Operation o, uint64_t a,
+                 uint8_t *b)
+    : id(i), eid(e), data(d), opcode(o), address(a), buffer(b) {}
+
+Request::Request(uint64_t i, Event e, uint64_t d, Operation o, uint64_t a,
+                 uint8_t *b, std::vector<uint8_t> &s)
+    : id(i),
+      eid(e),
+      data(d),
+      opcode(o),
+      address(a),
+      buffer(b),
+      spare(std::move(s)) {}
+
 FIL::FIL(ObjectData &o) : Object(o) {
   auto channel = readConfigUint(Section::FlashInterface, Config::Key::Channel);
   auto way = readConfigUint(Section::FlashInterface, Config::Key::Way);

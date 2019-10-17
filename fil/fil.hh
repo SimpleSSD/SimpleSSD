@@ -31,8 +31,15 @@ struct Request {
 
   Operation opcode;
 
-  PPN address;
+  uint64_t address;
   uint8_t *buffer;
+
+  std::vector<uint8_t> spare;
+
+  Request();
+  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
+  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *,
+          std::vector<uint8_t> &);
 };
 
 /**
