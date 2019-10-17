@@ -13,45 +13,11 @@
 #include <deque>
 
 #include "fil/fil.hh"
-#include "sim/object.hh"
+#include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/def.hh"
+#include "ftl/mapping/abstract_mapping.hh"
 
 namespace SimpleSSD::FTL {
-
-class AbstractFTL;
-
-typedef struct {
-  uint64_t totalPhysicalPages;
-  uint64_t totalLogicalPages;
-  uint32_t pageSize;
-  uint32_t parallelismLevel[4];  //!< Parallelism group list
-  uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
-} Parameter;
-
-enum class Operation : uint8_t {
-  Read,
-  Write,
-  Trim,
-  Format,
-};
-
-struct Request {
-  uint64_t id;
-
-  Event eid;
-  uint64_t data;
-
-  Operation opcode;
-
-  uint64_t address;
-  union {
-    uint8_t *buffer;
-    uint64_t length;  // Used for Trim/Format
-  };
-
-  Request();
-  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
-  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint64_t);
-};
 
 /**
  * \brief FTL (Flash Translation Layer) class
@@ -60,10 +26,10 @@ struct Request {
  */
 class FTL : public Object {
  private:
-  Parameter param;
   FIL::FIL *pFIL;
 
-  AbstractFTL *pFTL;
+  Mapping::AbstractMapping *pMapper;
+  BlockAllocator::AbstractAllocator *pAllocator;
 
  public:
   FTL(ObjectData &);
@@ -78,7 +44,7 @@ class FTL : public Object {
 
   Parameter *getInfo();
 
-  LPN getPageUsage(LPN offset, LPN length);
+  LPN getPageUsage(LPN, LPN);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
