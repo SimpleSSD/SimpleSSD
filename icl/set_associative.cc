@@ -196,6 +196,21 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
                   "ICL::SetAssociative::eventReadDRAMDone");
   eventReadDMADone = createEvent([this](uint64_t, uint64_t d) { read_done(d); },
                                  "ICL::SetAssociative::eventReadDMADone");
+  eventWritePreCPUDone =
+      createEvent([this](uint64_t, uint64_t d) { write_findDone(d); },
+                  "ICL::SetAssociative::eventWritePreCPUDone");
+  eventWriteMetaDone =
+      createEvent([this](uint64_t, uint64_t d) { write_dodram(d); },
+                  "ICL::SetAssociative::eventWriteMetaDone");
+  eventWriteDRAMDone =
+      createEvent([this](uint64_t t, uint64_t d) { write_done(t, d); },
+                  "ICL::SetAssociative::eventWriteDRAMDone");
+  eventEvictDRAMDone =
+      createEvent([this](uint64_t, uint64_t d) { evict_doftl(d); },
+                  "ICL::SetAssociative::eventEvictDRAMDone");
+  eventEvictFTLDone =
+      createEvent([this](uint64_t t, uint64_t d) { evict_done(t, d); },
+                  "ICL::SetAssociative::eventEvictFTLDone");
 }
 
 SetAssociative::~SetAssociative() {
