@@ -265,16 +265,12 @@ SetAssociative::Line *SetAssociative::getLine(uint32_t setIdx,
   return cacheMetadata + (setIdx * waySize + wayIdx);
 }
 
-SetAssociative::CacheContext SetAssociative::findRequest(
-    std::list<CacheContext> &queue, uint64_t tag) {
-  for (auto iter = queue.begin(); iter != queue.end(); ++iter) {
-    if (iter->id == tag) {
-      auto ret = std::move(*iter);
+SetAssociative::CacheContext SetAssociative::findRequest(CacheQueue &queue,
+                                                         uint64_t tag) {
+  auto iter = queue.find(tag);
 
-      queue.erase(iter);
-
-      return ret;
-    }
+  if (LIKELY(iter != queue.end())) {
+    return iter->second;
   }
 
   panic("Failed to find request in queue.");
@@ -286,8 +282,8 @@ SetAssociative::CacheContext SetAssociative::findRequest(
 void SetAssociative::read_find(Request &&req) {
   CPU::Function fstat = CPU::initFunction();
   CacheContext ctx(req);
+  uint64_t id = requestCounter++;
 
-  ctx.id = requestCounter++;
   ctx.submittedAt = getTick();
 
   stat.request[0]++;
@@ -344,25 +340,25 @@ void SetAssociative::read_find(Request &&req) {
       ctx.status = LineStatus::ReadMiss;
     }
 
-    readMetaQueue.emplace_back(ctx);
+    readMetaQueue.emplace(std::make_pair(id, ctx));
 
     if (trigger.trigger(ctx.req) && prefetchEnabled) {
       prefetch(ctx.req.address + 1, ctx.req.address + prefetchPages);
     }
 
-    scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone, ctx.id,
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone, id,
                      fstat);
   }
   else {
     ctx.status = LineStatus::ReadColdMiss;
 
     // Set arbitraray set ID to pervent DRAM write queue hit
-    ctx.wayIdx = ctx.id % waySize;
-    ctx.setIdx = (ctx.id / waySize) % setSize;
+    ctx.wayIdx = id % waySize;
+    ctx.setIdx = (id / waySize) % setSize;
 
-    scheduleNow(eventReadMetaDone, ctx.id);
+    scheduleNow(eventReadMetaDone, id);
 
-    readMetaQueue.emplace_back(ctx);
+    readMetaQueue.emplace(std::make_pair(id, ctx));
   }
 }
 
@@ -373,7 +369,7 @@ void SetAssociative::read_findDone(uint64_t tag) {
   object.sram->read(metaAddress + ctx.setIdx * waySize * metaLineSize,
                     metaLineSize * waySize, eventReadMetaDone, tag);
 
-  readMetaQueue.emplace_back(ctx);
+  readMetaQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::read_doftl(uint64_t tag) {
@@ -385,19 +381,19 @@ void SetAssociative::read_doftl(uint64_t tag) {
       // Skip FTL
       scheduleNow(eventReadDRAMDone, tag);
 
-      readDRAMQueue.emplace_back(ctx);
+      readDRAMQueue.emplace(std::make_pair(tag, ctx));
 
       return;
     case LineStatus::ReadMiss:
       // Evict first
-      evictQueue.emplace_back(ctx);
+      evictQueue.emplace(std::make_pair(tag, ctx));
 
       // We should not push to readFTLQueue
       return;
     case LineStatus::ReadColdMiss:
     case LineStatus::Prefetch:
       // Do read
-      pFTL->submit(FTL::Request(ctx.req.id, eventReadFTLDone, ctx.id,
+      pFTL->submit(FTL::Request(ctx.req.id, eventReadFTLDone, tag,
                                 FTL::Operation::Read, ctx.req.address,
                                 ctx.req.buffer));
 
@@ -408,7 +404,7 @@ void SetAssociative::read_doftl(uint64_t tag) {
       break;
   }
 
-  readFTLQueue.emplace_back(ctx);
+  readFTLQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::read_dodram(uint64_t tag) {
@@ -419,7 +415,7 @@ void SetAssociative::read_dodram(uint64_t tag) {
       dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
       eventReadDRAMDone, tag);
 
-  readDRAMQueue.emplace_back(ctx);
+  readDRAMQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
@@ -472,47 +468,50 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
         eventReadDMADone, tag);
 
-    readDMAQueue.emplace_back(ctx);
+    readDMAQueue.emplace(std::make_pair(tag, ctx));
   }
 
   // At this point, we can handle pending request
   for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
-    auto line = getLine(iter->setIdx, iter->wayIdx);
+    auto line = getLine(iter->second.setIdx, iter->second.wayIdx);
 
     if (line->rpending == false) {
       // Now this request can complete
-      if (iter->status == LineStatus::ReadHitPending) {
-        iter->status = LineStatus::ReadHit;
-        iter->finishedAt = now;
+      if (iter->second.status == LineStatus::ReadHitPending) {
+        iter->second.status = LineStatus::ReadHit;
+        iter->second.finishedAt = now;
 
-        line->tag = iter->req.address;
+        line->tag = iter->second.req.address;
         line->valid = true;
 
         debugprint(Log::DebugID::ICL_SetAssociative,
                    "READ   | REQ %7u | Cache hit delayed (%u, %u) | %" PRIu64
                    " - %" PRIu64 "(%" PRIu64 ")",
-                   iter->req.id, iter->setIdx, iter->wayIdx, iter->submittedAt,
-                   iter->finishedAt, iter->finishedAt - iter->submittedAt);
+                   iter->second.req.id, iter->second.setIdx,
+                   iter->second.wayIdx, iter->second.submittedAt,
+                   iter->second.finishedAt,
+                   iter->second.finishedAt - iter->second.submittedAt);
 
         // Add DRAM -> PCIe DMA latency
-        object.dram->read(
-            dataAddress + (iter->setIdx * waySize + iter->wayIdx) * lineSize,
-            lineSize, eventReadDMADone, iter->id);
+        object.dram->read(dataAddress + (iter->second.setIdx * waySize +
+                                         iter->second.wayIdx) *
+                                            lineSize,
+                          lineSize, eventReadDMADone, iter->first);
 
-        readDMAQueue.emplace_back(*iter);
+        readDMAQueue.emplace(std::make_pair(iter->first, iter->second));
       }
-      else if (iter->status == LineStatus::WriteHitReadPending) {
-        iter->status = LineStatus::WriteCache;
+      else if (iter->second.status == LineStatus::WriteHitReadPending) {
+        iter->second.status = LineStatus::WriteCache;
 
-        line->tag = iter->req.address;
+        line->tag = iter->second.req.address;
         line->valid = true;
         line->dirty = true;
 
-        scheduleNow(eventWriteMetaDone, iter->id);
+        scheduleNow(eventWriteMetaDone, iter->first);
 
-        writeMetaQueue.emplace_back(*iter);
+        writeMetaQueue.emplace(std::make_pair(iter->first, iter->second));
       }
-      else if (iter->status == LineStatus::Invalidate) {
+      else if (iter->second.status == LineStatus::Invalidate) {
         // This line is invalidated by TRIM or Fomrat
       }
       else {
@@ -541,7 +540,7 @@ void SetAssociative::read_done(uint64_t tag) {
 void SetAssociative::write_find(Request &&req) {
   CPU::Function fstat = CPU::initFunction();
   CacheContext ctx(req);
-  ctx.id = requestCounter++;
+  uint64_t id = requestCounter++;
   ctx.submittedAt = getTick();
 
   stat.request[1]++;
@@ -599,20 +598,20 @@ void SetAssociative::write_find(Request &&req) {
       ctx.status = LineStatus::WriteEvict;
     }
 
-    scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, ctx.id,
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, id,
                      fstat);
   }
   else {
     ctx.status = LineStatus::WriteNVM;
 
     // Set arbitraray set ID to pervent DRAM write queue hit
-    ctx.wayIdx = ctx.id % waySize;
-    ctx.setIdx = (ctx.id / waySize) % setSize;
+    ctx.wayIdx = id % waySize;
+    ctx.setIdx = (id / waySize) % setSize;
 
-    scheduleNow(eventWriteMetaDone, ctx.id);
+    scheduleNow(eventWriteMetaDone, id);
   }
 
-  writeMetaQueue.emplace_back(ctx);
+  writeMetaQueue.emplace(std::make_pair(id, ctx));
 }
 
 void SetAssociative::write_findDone(uint64_t tag) {
@@ -622,7 +621,7 @@ void SetAssociative::write_findDone(uint64_t tag) {
   object.sram->read(metaAddress + ctx.setIdx * waySize * metaLineSize,
                     metaLineSize * waySize, eventWriteMetaDone, tag);
 
-  writeMetaQueue.emplace_back(ctx);
+  writeMetaQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::write_dodram(uint64_t tag) {
@@ -632,13 +631,13 @@ void SetAssociative::write_dodram(uint64_t tag) {
     case LineStatus::WriteHitReadPending:
       scheduleNow(eventWriteDRAMDone, tag);
 
-      readPendingQueue.emplace_back(ctx);
+      readPendingQueue.emplace(std::make_pair(tag, ctx));
 
       return;
     case LineStatus::WriteHitWritePending:
       scheduleNow(eventWriteDRAMDone, tag);
 
-      writePendingQueue.emplace_back(ctx);
+      writePendingQueue.emplace(std::make_pair(tag, ctx));
 
       return;
     case LineStatus::WriteCache:
@@ -646,7 +645,7 @@ void SetAssociative::write_dodram(uint64_t tag) {
     case LineStatus::WriteEvict:
     case LineStatus::WriteNVM:
       // Evict first
-      evictQueue.emplace_back(ctx);
+      evictQueue.emplace(std::make_pair(tag, ctx));
 
       evict(ctx.setIdx, ctx.status == LineStatus::WriteNVM);
 
@@ -662,7 +661,7 @@ void SetAssociative::write_dodram(uint64_t tag) {
       dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
       eventWriteDRAMDone, tag);
 
-  writeDRAMQueue.emplace_back(ctx);
+  writeDRAMQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::write_done(uint64_t now, uint64_t tag) {
@@ -683,6 +682,7 @@ void SetAssociative::prefetch(LPN begin, LPN end) {
   CPU::Function fstat = CPU::initFunction();
   uint32_t setIdx;
   uint32_t wayIdx;
+  uint64_t id;
 
   // Check which page to read
   for (LPN i = begin; i < end; i++) {
@@ -706,17 +706,17 @@ void SetAssociative::prefetch(LPN begin, LPN end) {
       // Make request
       CacheContext ctx;
 
-      ctx.id = requestCounter++;
+      id = requestCounter++;
       ctx.req.address = i;
       ctx.setIdx = setIdx;
       ctx.wayIdx = wayIdx;
       ctx.status = LineStatus::Prefetch;
       ctx.submittedAt = getTick();
 
-      readMetaQueue.emplace_back(ctx);
+      readMetaQueue.emplace(std::make_pair(id, ctx));
 
-      scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone,
-                       ctx.id, fstat);
+      scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone, id,
+                       fstat);
     }
     else {
       // No valid way and no empty line
@@ -729,13 +729,14 @@ void SetAssociative::evict(uint32_t set, bool fua) {
   if (UNLIKELY(fua)) {
     // set is invalid
     for (auto iter = evictQueue.begin(); iter != evictQueue.end();) {
-      if (iter->status == LineStatus::WriteNVM) {
-        evictFTLQueue.emplace_back(*iter);
+      if (iter->second.status == LineStatus::WriteNVM) {
+        evictFTLQueue.emplace(std::make_pair(iter->first, iter->second));
 
         // DRAM -> NVM latency
-        object.dram->read(
-            dataAddress + (iter->setIdx * waySize + iter->wayIdx) * lineSize,
-            lineSize, eventWriteDRAMDone, iter->id);
+        object.dram->read(dataAddress + (iter->second.setIdx * waySize +
+                                         iter->second.wayIdx) *
+                                            lineSize,
+                          lineSize, eventWriteDRAMDone, iter->first);
 
         iter = evictQueue.erase(iter);
       }
@@ -793,35 +794,37 @@ void SetAssociative::evict(uint32_t set, bool fua) {
     for (auto &iter : evictFTLQueue) {
       // DRAM -> NVM latency
       object.dram->read(
-          dataAddress + (iter.setIdx * waySize + iter.wayIdx) * lineSize,
-          lineSize, eventWriteDRAMDone, iter.id);
+          dataAddress +
+              (iter.second.setIdx * waySize + iter.second.wayIdx) * lineSize,
+          lineSize, eventWriteDRAMDone, iter.first);
     }
   }
 }
 
 void SetAssociative::markEvict(LPN i, uint32_t setIdx, uint32_t wayIdx) {
+  uint64_t id = requestCounter++;
+
   // Make request
   CacheContext ctx;
 
-  ctx.id = requestCounter++;
   ctx.req.address = i;
   ctx.setIdx = setIdx;
   ctx.wayIdx = wayIdx;
   ctx.status = LineStatus::Eviction;
   ctx.submittedAt = getTick();
 
-  evictFTLQueue.emplace_back(ctx);
+  evictFTLQueue.emplace(std::make_pair(id, ctx));
 }
 
 void SetAssociative::evict_doftl(uint64_t tag) {
   auto ctx = findRequest(evictFTLQueue, tag);
 
   // Perform write
-  pFTL->submit(FTL::Request(ctx.req.id, eventEvictFTLDone, ctx.id,
+  pFTL->submit(FTL::Request(ctx.req.id, eventEvictFTLDone, tag,
                             FTL::Operation::Write, ctx.req.address,
                             ctx.req.buffer));
 
-  evictFTLQueue.emplace_back(ctx);
+  evictFTLQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
@@ -845,18 +848,20 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
     if (UNLIKELY(flushQueue.size() > 0)) {
       // Find which flush request
       for (auto iter = flushQueue.begin(); iter != flushQueue.end(); ++iter) {
-        if (ctx.req.address >= iter->req.address &&
-            ctx.req.address < iter->req.address + iter->req.length) {
-          iter->finishedAt--;
+        if (ctx.req.address >= iter->second.req.address &&
+            ctx.req.address <
+                iter->second.req.address + iter->second.req.length) {
+          iter->second.finishedAt--;
 
-          if (iter->finishedAt == 0) {
+          if (iter->second.finishedAt == 0) {
             // Complete flush request if every pages are evicted
-            debugprint(
-                Log::DebugID::ICL_SetAssociative,
-                "FLUSH  | REQ %7u | %" PRIu64 " - %" PRIu64 "(%" PRIu64 ")",
-                iter->req.id, iter->submittedAt, now, now - iter->submittedAt);
+            debugprint(Log::DebugID::ICL_SetAssociative,
+                       "FLUSH  | REQ %7u | %" PRIu64 " - %" PRIu64 "(%" PRIu64
+                       ")",
+                       iter->second.req.id, iter->second.submittedAt, now,
+                       now - iter->second.submittedAt);
 
-            scheduleNow(iter->req.eid, iter->req.data);
+            scheduleNow(iter->second.req.eid, iter->second.req.data);
 
             flushQueue.erase(iter);
           }
@@ -882,14 +887,14 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 
   // At this point, we can handle pending request
   for (auto iter = evictQueue.begin(); iter != evictQueue.end();) {
-    auto line = getLine(iter->setIdx, iter->wayIdx);
+    auto line = getLine(iter->second.setIdx, iter->second.wayIdx);
 
     if (line->wpending == false) {
       // Now this request can complete
-      if (iter->status == LineStatus::WriteHitWritePending) {
-        iter->status = LineStatus::WriteCache;
+      if (iter->second.status == LineStatus::WriteHitWritePending) {
+        iter->second.status = LineStatus::WriteCache;
 
-        line->tag = iter->req.address;
+        line->tag = iter->second.req.address;
         line->valid = true;
         line->dirty = true;
 
@@ -898,11 +903,11 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
           line->clock = clock;
         }
 
-        scheduleNow(eventWriteMetaDone, iter->id);
+        scheduleNow(eventWriteMetaDone, iter->first);
 
-        writeMetaQueue.emplace_back(*iter);
+        writeMetaQueue.emplace(std::make_pair(iter->first, iter->second));
       }
-      else if (iter->status == LineStatus::Invalidate) {
+      else if (iter->second.status == LineStatus::Invalidate) {
         // This line is invalidated by TRIM or Fomrat
       }
       else {
@@ -920,7 +925,8 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 void SetAssociative::flush_find(Request &&req) {
   CPU::Function fstat = CPU::initFunction();
   CacheContext ctx(req);
-  ctx.id = requestCounter++;
+  uint64_t id = requestCounter++;
+
   ctx.submittedAt = getTick();
 
   debugprint(Log::DebugID::ICL_SetAssociative,
@@ -952,17 +958,17 @@ void SetAssociative::flush_find(Request &&req) {
 
     ctx.status = found ? LineStatus::Flush : LineStatus::FlushNone;
 
-    scheduleFunction(CPU::CPUGroup::InternalCache, eventFlushPreCPUDone, ctx.id,
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventFlushPreCPUDone, id,
                      fstat);
   }
   else {
     // Nothing to flush - no dirty lines!
     ctx.status = LineStatus::FlushNone;
 
-    scheduleNow(eventFlushMetaDone, ctx.id);
+    scheduleNow(eventFlushMetaDone, id);
   }
 
-  flushMetaQueue.emplace_back(ctx);
+  flushMetaQueue.emplace(std::make_pair(id, ctx));
 }
 
 void SetAssociative::flush_findDone(uint64_t tag) {
@@ -972,7 +978,7 @@ void SetAssociative::flush_findDone(uint64_t tag) {
   object.sram->read(metaAddress, metaLineSize * setSize * waySize,
                     eventFlushMetaDone, tag);
 
-  flushMetaQueue.emplace_back(ctx);
+  flushMetaQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::flush_doevict(uint64_t tag) {
@@ -983,7 +989,7 @@ void SetAssociative::flush_doevict(uint64_t tag) {
       // flush requests in evictQueue
       evict(0, true);
 
-      flushQueue.emplace_back(ctx);
+      flushQueue.emplace(std::make_pair(tag, ctx));
 
       return;
     case LineStatus::FlushNone:
@@ -1001,7 +1007,9 @@ void SetAssociative::flush_doevict(uint64_t tag) {
 void SetAssociative::invalidate_find(Request &&req) {
   CPU::Function fstat = CPU::initFunction();
   CacheContext ctx(req);
-  ctx.id = requestCounter++;
+  uint64_t id = requestCounter++;
+  uint64_t id2;
+
   ctx.submittedAt = getTick();
 
   debugprint(Log::DebugID::ICL_SetAssociative,
@@ -1027,26 +1035,26 @@ void SetAssociative::invalidate_find(Request &&req) {
         if (line->rpending) {
           CacheContext ctx2;
 
-          ctx2.id = requestCounter++;
+          id2 = requestCounter++;
           ctx2.req.address = i;
           ctx2.setIdx = setIdx;
           ctx2.wayIdx = wayIdx;
           ctx2.status = LineStatus::Invalidate;
           ctx2.submittedAt = getTick();
 
-          readPendingQueue.emplace_back(ctx2);
+          readPendingQueue.emplace(std::make_pair(id2, ctx2));
         }
         else if (line->wpending) {
           CacheContext ctx2;
 
-          ctx2.id = requestCounter++;
+          id2 = requestCounter++;
           ctx2.req.address = i;
           ctx2.setIdx = setIdx;
           ctx2.wayIdx = wayIdx;
           ctx2.status = LineStatus::Invalidate;
           ctx2.submittedAt = getTick();
 
-          writePendingQueue.emplace_back(ctx2);
+          writePendingQueue.emplace(std::make_pair(id2, ctx2));
         }
         else {
           line->rpending = false;
@@ -1056,15 +1064,15 @@ void SetAssociative::invalidate_find(Request &&req) {
     }
 
     scheduleFunction(CPU::CPUGroup::InternalCache, eventInvalidatePreCPUDone,
-                     ctx.id, fstat);
+                     id, fstat);
   }
   else {
-    scheduleNow(eventInvalidateMetaDone, ctx.id);
+    scheduleNow(eventInvalidateMetaDone, id);
   }
 
   ctx.status = LineStatus::Invalidate;
 
-  invalidateMetaQueue.emplace_back(ctx);
+  invalidateMetaQueue.emplace(std::make_pair(id, ctx));
 }
 
 void SetAssociative::invalidate_findDone(uint64_t tag) {
@@ -1074,7 +1082,7 @@ void SetAssociative::invalidate_findDone(uint64_t tag) {
   object.sram->read(metaAddress, metaLineSize * setSize * waySize,
                     eventFlushMetaDone, tag);
 
-  invalidateMetaQueue.emplace_back(ctx);
+  invalidateMetaQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::invalidate_doftl(uint64_t tag) {
@@ -1083,10 +1091,10 @@ void SetAssociative::invalidate_doftl(uint64_t tag) {
                                                   : FTL::Operation::Format;
 
   // Perform invalidate
-  pFTL->submit(FTL::Request(ctx.req.id, eventInvalidateFTLDone, ctx.id, opcode,
+  pFTL->submit(FTL::Request(ctx.req.id, eventInvalidateFTLDone, tag, opcode,
                             ctx.req.address, ctx.req.length));
 
-  invalidateFTLQueue.emplace_back(ctx);
+  invalidateFTLQueue.emplace(std::make_pair(tag, ctx));
 }
 
 void SetAssociative::invalidate_done(uint64_t now, uint64_t tag) {
@@ -1101,25 +1109,25 @@ void SetAssociative::invalidate_done(uint64_t now, uint64_t tag) {
 }
 
 void SetAssociative::backupQueue(std::ostream &out,
-                                 const std::list<CacheContext> *queue) const {
+                                 const CacheQueue *queue) const {
   uint64_t size = queue->size();
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : *queue) {
-    iter.req.backup(out);
+    iter.second.req.backup(out);
 
-    BACKUP_SCALAR(out, iter.id);
-    BACKUP_SCALAR(out, iter.setIdx);
-    BACKUP_SCALAR(out, iter.wayIdx);
-    BACKUP_SCALAR(out, iter.submittedAt);
-    BACKUP_SCALAR(out, iter.finishedAt);
-    BACKUP_SCALAR(out, iter.status);
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.setIdx);
+    BACKUP_SCALAR(out, iter.second.wayIdx);
+    BACKUP_SCALAR(out, iter.second.submittedAt);
+    BACKUP_SCALAR(out, iter.second.finishedAt);
+    BACKUP_SCALAR(out, iter.second.status);
   }
 }
 
-void SetAssociative::restoreQueue(std::istream &in,
-                                  std::list<CacheContext> *queue) {
+void SetAssociative::restoreQueue(std::istream &in, CacheQueue *queue) {
   uint64_t size;
+  uint64_t id;
 
   RESTORE_SCALAR(in, size);
 
@@ -1128,14 +1136,14 @@ void SetAssociative::restoreQueue(std::istream &in,
 
     ctx.req.restore(object, in);
 
-    RESTORE_SCALAR(in, ctx.id);
+    RESTORE_SCALAR(in, id);
     RESTORE_SCALAR(in, ctx.setIdx);
     RESTORE_SCALAR(in, ctx.wayIdx);
     RESTORE_SCALAR(in, ctx.submittedAt);
     RESTORE_SCALAR(in, ctx.finishedAt);
     RESTORE_SCALAR(in, ctx.status);
 
-    queue->emplace_back(ctx);
+    queue->emplace(std::make_pair(id, ctx));
   }
 }
 

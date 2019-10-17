@@ -11,7 +11,7 @@
 #define __SIMPLESSD_ICL_SET_ASSOCIATIVE_HH__
 
 #include <functional>
-#include <list>
+#include <unordered_map>
 #include <random>
 
 #include "icl/abstract_cache.hh"
@@ -68,8 +68,6 @@ class SetAssociative : public AbstractCache {
   struct CacheContext {
     Request req;
 
-    uint64_t id;  // Different with req.id (Only used in cache)
-
     uint32_t setIdx;
     uint32_t wayIdx;
 
@@ -94,7 +92,7 @@ class SetAssociative : public AbstractCache {
           status(LineStatus::None) {}
   };
 
-  using CacheQueue = std::list<CacheContext>;
+  using CacheQueue = std::unordered_map<uint64_t, CacheContext>;
 
   // Cache size
   uint32_t lineSize;
