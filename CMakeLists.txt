@@ -168,6 +168,21 @@ set(SRC_ICL
   icl/icl.cc
   icl/set_associative.cc
 )
+set(SRC_FIL
+  fil/config.cc
+  fil/fil.cc
+)
+set(SRC_FIL_PAL
+  fil/pal/convert.cc
+  fil/pal/Latency.cc
+  fil/pal/LatencyMLC.cc
+  fil/pal/LatencySLC.cc
+  fil/pal/LatencyTLC.cc
+  fil/pal/PAL2.cc
+  fil/pal/PAL2_TimeSlot.cc
+  fil/pal/PALStatistics.cc
+  fil/pal/pal_wrapper.cc
+)
 set(SRC_SIM
   sim/base_config.cc
   sim/config_reader.cc
@@ -190,6 +205,8 @@ SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
 SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
+SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
+SOURCE_GROUP("Source Files\\fil\\pal" FILES ${SRC_FIL_PAL})
 SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
@@ -202,6 +219,8 @@ add_library(simplessd STATIC
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
   ${SRC_ICL}
+  ${SRC_FIL}
+  ${SRC_FIL_PAL}
   ${SRC_SIM}
   ${SRC_UTIL}
 )
