@@ -153,6 +153,9 @@ void IOCommandData::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, nlp);
   BACKUP_SCALAR(out, skipFront);
   BACKUP_SCALAR(out, skipEnd);
+  BACKUP_SCALAR(out, nlp_done_hil);
+  BACKUP_SCALAR(out, nlp_done_dma);
+  BACKUP_SCALAR(out, lpnSize);
   BACKUP_SCALAR(out, _slba);
   BACKUP_SCALAR(out, _nlb);
   BACKUP_SCALAR(out, size);
@@ -178,6 +181,9 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, nlp);
   RESTORE_SCALAR(in, skipFront);
   RESTORE_SCALAR(in, skipEnd);
+  RESTORE_SCALAR(in, nlp_done_hil);
+  RESTORE_SCALAR(in, nlp_done_dma);
+  RESTORE_SCALAR(in, lpnSize);
   RESTORE_SCALAR(in, _slba);
   RESTORE_SCALAR(in, _nlb);
   RESTORE_SCALAR(in, size);

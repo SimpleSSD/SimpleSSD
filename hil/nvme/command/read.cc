@@ -26,23 +26,12 @@ Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
 
 void Read::dmaInitDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
+  auto pHIL = subsystem->getHIL();
 
-  if (tag->nlp_done_hil > 0) {
-    // DMA not initialized but HIL completes some requests
-    uint32_t size = 0;
-
-    if (tag->nlp == tag->nlp_done_hil) {
-      size = tag->nlp * tag->lpnSize - tag->skipFront - tag->skipEnd;
-    }
-    else {
-      size = tag->nlp_done_hil * tag->lpnSize - tag->skipFront;
-    }
-
-    // Send DMA for completed requests
-    tag->nlp_done_dma = tag->nlp_done_hil - 1;
-    tag->dmaEngine->write(tag->dmaTag, 0, size, tag->buffer + tag->skipFront,
-                          dmaCompleteEvent, gcid);
-  }
+  // Perform first page read
+  pHIL->readPage(tag->slpn, tag->buffer + tag->skipFront,
+                 std::make_pair(tag->skipFront, 0), readDoneEvent,
+                 tag->getGCID());
 }
 
 void Read::readDone(uint64_t gcid) {
@@ -52,32 +41,27 @@ void Read::readDone(uint64_t gcid) {
 
   if (tag->nlp == tag->nlp_done_hil) {
     // We completed all page access, Handle last DMA
-    if (tag->dmaTag->isInited()) {
-      tag->dmaEngine->write(
-          tag->dmaTag, (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront,
-          tag->lpnSize - tag->skipEnd,
-          tag->buffer + (tag->nlp_done_hil - 1) * tag->lpnSize,
-          dmaCompleteEvent, gcid);
-    }
+    tag->dmaEngine->write(
+        tag->dmaTag, (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront,
+        tag->lpnSize - tag->skipEnd,
+        tag->buffer + (tag->nlp_done_hil - 1) * tag->lpnSize, dmaCompleteEvent,
+        gcid);
   }
   else {
-    // Start DMA for previous page and request HIL for current page
-    if (tag->dmaTag->isInited()) {
-      uint64_t offset = 0;
-      uint32_t size = tag->lpnSize - tag->skipFront;
+    // Start DMA for current page and request HIL for next page
+    uint64_t offset = 0;
+    uint32_t size = tag->lpnSize - tag->skipFront;
 
-      if (tag->nlp_done_hil > 1) {
-        // We need to consider skipFront
-        offset = (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront;
-        size = tag->lpnSize;
-      }
-
-      // DMA should be initialized
-      tag->dmaEngine->write(
-          tag->dmaTag, offset, size,
-          tag->buffer + (tag->nlp_done_hil - 1) * tag->lpnSize,
-          dmaCompleteEvent, gcid);
+    if (tag->nlp_done_hil > 1) {
+      // We need to consider skipFront
+      offset = (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront;
+      size = tag->lpnSize;
     }
+
+    // DMA current page
+    tag->dmaEngine->write(tag->dmaTag, offset, size,
+                          tag->buffer + offset + tag->skipFront,
+                          dmaCompleteEvent, gcid);
 
     uint32_t skipEnd = 0;
     auto pHIL = subsystem->getHIL();
@@ -87,6 +71,7 @@ void Read::readDone(uint64_t gcid) {
       skipEnd = tag->skipEnd;
     }
 
+    // Read next page
     pHIL->readPage(tag->slpn + tag->nlp_done_hil,
                    tag->buffer + tag->nlp_done_hil * tag->lpnSize,
                    std::make_pair(0, skipEnd), readDoneEvent, gcid);
@@ -174,20 +159,14 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
+  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
+
   // Handle disk image
   auto disk = ns->second->getDisk();
 
   if (disk) {
     disk->read(slba, nlb, tag->buffer + tag->skipFront);
   }
-
-  // Start DMA and HIL
-  auto pHIL = subsystem->getHIL();
-
-  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
-  pHIL->readPage(tag->slpn, tag->buffer + tag->skipFront,
-                 std::make_pair(tag->skipFront, 0), readDoneEvent,
-                 tag->getGCID());
 }
 
 void Read::completeRequest(CommandTag tag) {
