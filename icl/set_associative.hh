@@ -59,6 +59,8 @@ class SetAssociative : public AbstractCache {
   struct CacheContext {
     Request req;
 
+    uint64_t id;  // Different with req.id (Only used in cache)
+
     uint32_t setIdx;
     uint32_t wayIdx;
 
@@ -66,6 +68,13 @@ class SetAssociative : public AbstractCache {
     uint64_t finishedAt;
 
     LineStatus status;
+
+    CacheContext()
+        : setIdx(0),
+          wayIdx(0),
+          submittedAt(0),
+          finishedAt(0),
+          status(LineStatus::None) {}
 
     CacheContext(Request &r)
         : req(std::move(r)),
@@ -85,6 +94,9 @@ class SetAssociative : public AbstractCache {
 
   bool readEnabled;
   bool writeEnabled;
+  bool prefetchEnabled;
+
+  uint64_t requestCounter;
 
   // Prefetch
   PrefetchTrigger trigger;

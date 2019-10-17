@@ -56,7 +56,8 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
       trigger(
           readConfigUint(Section::InternalCache, Config::Key::PrefetchCount),
           readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio)),
-      clock(0) {
+      clock(0),
+      requestCounter(0) {
   auto param = pFTL->getInfo();
   auto cacheSize =
       readConfigUint(Section::InternalCache, Config::Key::CacheSize);
@@ -124,6 +125,8 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
       readConfigBoolean(Section::InternalCache, Config::Key::EnableReadCache);
   writeEnabled =
       readConfigBoolean(Section::InternalCache, Config::Key::EnableWriteCache);
+  prefetchEnabled =
+      readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
 
   debugprint(
       Log::DebugID::ICL_SetAssociative,
@@ -186,7 +189,7 @@ SetAssociative::~SetAssociative() {
 CacheContext SetAssociative::findRequest(std::list<CacheContext> &queue,
                                          uint64_t tag) {
   for (auto iter = queue.begin(); iter != queue.end(); ++iter) {
-    if (iter->req.id == tag) {
+    if (iter->id == tag) {
       auto ret = std::move(*iter);
 
       queue.erase(iter);
@@ -202,6 +205,7 @@ void SetAssociative::read_find(Request &&req) {
   CPU::Function fstat = CPU::initFunction();
   CacheContext ctx(req);
 
+  ctx.id = requestCounter++;
   ctx.submittedAt = getTick();
 
   if (LIKELY(readEnabled)) {
@@ -250,15 +254,24 @@ void SetAssociative::read_find(Request &&req) {
       ctx.status = LineStatus::ReadMiss;
     }
 
-    if (trigger.trigger(ctx.req)) {
+    readMetaQueue.emplace_back(ctx);
+
+    if (trigger.trigger(ctx.req) && prefetchEnabled) {
       prefetch(ctx.req.address + 1, ctx.req.address + prefetchPages);
     }
+
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone, ctx.id,
+                     fstat);
   }
+  else {
+    ctx.status = LineStatus::ReadColdMiss;
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone,
-                   MAKE64(ctx.req.id, ctx.req.skipEnd), fstat);
+    // Set arbitraray set ID to pervent DRAM write queue hit
+    ctx.wayIdx = ctx.id % waySize;
+    ctx.setIdx = (ctx.id / waySize) % setSize;
 
-  readMetaQueue.emplace_back(ctx);
+    scheduleNow(eventReadMetaDone, ctx.id);
+  }
 }
 
 void SetAssociative::read_findDone(uint64_t tag) {
@@ -277,10 +290,12 @@ void SetAssociative::read_doftl(uint64_t tag) {
   switch (ctx.status) {
     case LineStatus::ReadHitPending:
     case LineStatus::ReadHit:
-      // Nothing to do
-      scheduleNow(eventReadFTLDone);
+      // Skip FTL
+      scheduleNow(eventReadDRAMDone, tag);
 
-      break;
+      readDRAMQueue.emplace_back(ctx);
+
+      return;
     case LineStatus::ReadMiss:
       // Evict first
       readEvictQueue.emplace_back(ctx);
@@ -290,7 +305,7 @@ void SetAssociative::read_doftl(uint64_t tag) {
     case LineStatus::ReadColdMiss:
     case LineStatus::Prefetch:
       // Do read
-      pFTL->submit(FTL::Request(ctx.req.id, eventReadFTLDone, ctx.req.id,
+      pFTL->submit(FTL::Request(ctx.req.id, eventReadFTLDone, ctx.id,
                                 FTL::Operation::Read, ctx.req.address,
                                 ctx.req.buffer));
 
@@ -306,7 +321,7 @@ void SetAssociative::read_dodram(uint64_t tag) {
   // Add NVM -> DRAM DMA latency
   object.dram->write(
       dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
-      eventReadDRAMDone, ctx.req.id);
+      eventReadDRAMDone, tag);
 
   readDRAMQueue.emplace_back(ctx);
 }
@@ -319,13 +334,20 @@ void SetAssociative::read_dodma(uint64_t tag) {
 
   line->rpending = false;
 
-  // Add DRAM -> PCIe DMA latency
-  // Actually, this should be performed in HIL layer -- but they don't know
-  // which memory address to read. All read to memory will hit in write queue
-  // of DRAM controller (It should be negliegible).
-  object.dram->read(
-      dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
-      eventReadDMADone, ctx.req.id);
+  if (ctx.status == LineStatus::Prefetch) {
+    // We will not transfer this request to host (complete here)
+  }
+  else {
+    // Add DRAM -> PCIe DMA latency
+    // Actually, this should be performed in HIL layer -- but they don't know
+    // which memory address to read. All read to memory will hit in write queue
+    // of DRAM controller (It should be negliegible).
+    object.dram->read(
+        dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
+        eventReadDMADone, tag);
+
+    readDMAQueue.emplace_back(ctx);
+  }
 
   // At this point, we can handle pending request
   for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
@@ -339,7 +361,7 @@ void SetAssociative::read_dodma(uint64_t tag) {
         // Add DRAM -> PCIe DMA latency
         object.dram->read(
             dataAddress + (iter->setIdx * waySize + iter->wayIdx) * lineSize,
-            lineSize, eventReadDMADone, iter->req.id);
+            lineSize, eventReadDMADone, iter->id);
 
         readDMAQueue.emplace_back(*iter);
       }
@@ -352,8 +374,6 @@ void SetAssociative::read_dodma(uint64_t tag) {
       break;
     }
   }
-
-  readDMAQueue.emplace_back(ctx);
 }
 
 void SetAssociative::read_done(uint64_t tag) {
@@ -363,6 +383,51 @@ void SetAssociative::read_done(uint64_t tag) {
 }
 
 void SetAssociative::write_find(Request &&req) {}
+
+void SetAssociative::prefetch(LPN begin, LPN end) {
+  CPU::Function fstat = CPU::initFunction();
+  uint32_t setIdx;
+  uint32_t wayIdx;
+
+  // Check which page to read
+  for (LPN i = begin; i < end; i++) {
+    setIdx = getSetIndex(i);
+
+    if (getValidWay(setIdx, wayIdx)) {
+      // We have valid data at current LPN i (Don't need to read)
+    }
+    else if (getEmptyWay(setIdx, wayIdx)) {
+      // No valid way and current set has empty line
+      auto line = getLine(setIdx, wayIdx);
+
+      // Mark as prefetch
+      line->tag = i;
+      line->clock = clock;
+      line->dirty = false;
+      line->valid = true;
+      line->rpending = true;
+      line->wpending = false;
+
+      // Make request
+      CacheContext ctx;
+
+      ctx.id = requestCounter++;
+      ctx.req.address = i;
+      ctx.setIdx = setIdx;
+      ctx.wayIdx = wayIdx;
+      ctx.status = LineStatus::Prefetch;
+
+      readMetaQueue.emplace_back(ctx);
+
+      scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone,
+                       ctx.id, fstat);
+    }
+    else {
+      // No valid way and no empty line
+      // We will not read this LPN i (To not make additional write in prefetch)
+    }
+  }
+}
 
 void SetAssociative::enqueue(Request &&req) {
   // Increase clock
