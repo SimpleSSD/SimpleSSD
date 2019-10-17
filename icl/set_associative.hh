@@ -94,6 +94,8 @@ class SetAssociative : public AbstractCache {
           status(LineStatus::None) {}
   };
 
+  using CacheQueue = std::list<CacheContext>;
+
   // Cache size
   uint32_t lineSize;
   uint32_t setSize;
@@ -139,26 +141,26 @@ class SetAssociative : public AbstractCache {
   } stat;
 
   // Queue between states
-  std::list<CacheContext> readPendingQueue;
-  std::list<CacheContext> readMetaQueue;
-  std::list<CacheContext> readFTLQueue;
-  std::list<CacheContext> readDRAMQueue;
-  std::list<CacheContext> readDMAQueue;
+  CacheQueue readPendingQueue;
+  CacheQueue readMetaQueue;
+  CacheQueue readFTLQueue;
+  CacheQueue readDRAMQueue;
+  CacheQueue readDMAQueue;
 
-  std::list<CacheContext> writePendingQueue;
-  std::list<CacheContext> writeMetaQueue;
-  std::list<CacheContext> writeDRAMQueue;
+  CacheQueue writePendingQueue;
+  CacheQueue writeMetaQueue;
+  CacheQueue writeDRAMQueue;
 
-  std::list<CacheContext> evictQueue;
-  std::list<CacheContext> evictFTLQueue;
+  CacheQueue evictQueue;
+  CacheQueue evictFTLQueue;
 
-  std::list<CacheContext> flushMetaQueue;
-  std::list<CacheContext> flushQueue;
+  CacheQueue flushMetaQueue;
+  CacheQueue flushQueue;
 
-  std::list<CacheContext> invalidateMetaQueue;
-  std::list<CacheContext> invalidateFTLQueue;
+  CacheQueue invalidateMetaQueue;
+  CacheQueue invalidateFTLQueue;
 
-  CacheContext findRequest(std::list<CacheContext> &, uint64_t);
+  CacheContext findRequest(CacheQueue &, uint64_t);
 
   // Helper
   inline uint32_t getSetIndex(LPN);
@@ -230,8 +232,8 @@ class SetAssociative : public AbstractCache {
   // Prefetch
   void prefetch(LPN, LPN);
 
-  void backupQueue(std::ostream &, const std::list<CacheContext> *) const;
-  void restoreQueue(std::istream &, std::list<CacheContext> *);
+  void backupQueue(std::ostream &, const CacheQueue *) const;
+  void restoreQueue(std::istream &, CacheQueue *);
 
  public:
   SetAssociative(ObjectData &, FTL::FTL *);
