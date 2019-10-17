@@ -25,29 +25,66 @@ Compare::Compare(ObjectData &o, Subsystem *s) : Command(o, s) {
 
 void Compare::dmaInitDone(uint64_t gcid) {
   auto tag = findCompareTag(gcid);
+  auto pHIL = subsystem->getHIL();
 
-  tag->dmaEngine->read(tag->dmaTag, 0,
-                       tag->size - tag->skipFront - tag->skipEnd,
+  // Read first page
+  pHIL->readPage(tag->slpn, tag->buffer + tag->skipFront,
+                 std::make_pair(tag->skipFront, 0), readNVMDoneEvent,
+                 tag->getGCID());
+
+  // Read first DMA
+  tag->dmaEngine->read(tag->dmaTag, 0, tag->lpnSize - tag->skipFront,
                        tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
 }
 
 void Compare::dmaComplete(uint64_t gcid) {
   auto tag = findCompareTag(gcid);
 
-  tag->complete |= 0x01;
+  tag->nlp_done_dma++;
 
-  if (tag->complete == 0x03) {
-    compare(tag);
+  if (tag->nlp == tag->nlp_done_dma) {
+    // We completed all DMA
+    tag->complete |= 0x01;
+
+    if (tag->complete == 0x03) {
+      compare(tag);
+    }
+  }
+  else {
+    // Handle next access
+    tag->dmaEngine->read(
+        tag->dmaTag, tag->nlp_done_dma * tag->lpnSize - tag->skipFront,
+        tag->lpnSize, tag->buffer + tag->nlp_done_dma * tag->lpnSize,
+        dmaCompleteEvent, gcid);
   }
 }
 
 void Compare::readNVMDone(uint64_t gcid) {
   auto tag = findCompareTag(gcid);
+  auto pHIL = subsystem->getHIL();
 
-  tag->complete |= 0x02;
+  tag->nlp_done_hil++;
 
-  if (tag->complete == 0x03) {
-    compare(tag);
+  if (tag->nlp == tag->nlp_done_dma) {
+    // We completed all page access
+    tag->complete |= 0x02;
+
+    if (tag->complete == 0x03) {
+      compare(tag);
+    }
+  }
+  else {
+    uint32_t skipEnd = 0;
+
+    if (tag->nlp == tag->nlp_done_hil + 1) {
+      // Last request
+      skipEnd = tag->skipEnd;
+    }
+
+    // Handle next page access
+    pHIL->readPage(tag->slpn + tag->nlp_done_hil,
+                   tag->buffer + tag->nlp_done_hil * tag->lpnSize,
+                   std::make_pair(0, skipEnd), readNVMDoneEvent, gcid);
   }
 }
 
@@ -124,6 +161,7 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   tag->slpn += info->namespaceRange.first;
 
   // Make buffer
+  tag->lpnSize = info->lpnSize;
   tag->size = tag->nlp * info->lpnSize;
   tag->buffer = (uint8_t *)calloc(tag->size, 1);
   tag->subBuffer = (uint8_t *)calloc(tag->size, 1);
@@ -133,13 +171,6 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   tag->beginAt = getTick();
 
   tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
-
-  // Read
-  auto pHIL = subsystem->getHIL();
-
-  pHIL->readPages(tag->slpn, tag->nlp, tag->subBuffer + tag->skipFront,
-                  std::make_pair(tag->skipFront, tag->skipEnd),
-                  readNVMDoneEvent);
 }
 
 void Compare::completeRequest(CommandTag tag) {

@@ -12,6 +12,28 @@
 
 #include "hil/nvme/command/abstract_command.hh"
 
+/**
+ * \brief NVMe Compare command
+ *
+ * Perform compare operation. To overlap PCIe DMA and DRAM access, it access in
+ * sector granularity (512B ~ 4K).
+ * If request has 16KB block size, we don't wait all 16KB is transfered through
+ * PCIe bus. After one sector (e.g., 4K) has been transfered, DRAM access begin.
+ *
+ * Before overlapping:
+ *   PCIe bus util. | [  4K  ][  4K  ][  4K  ][  4K  ]
+ *   DRAM access    |                                 [4K][4K][4K][4K]
+ *   Compare        |                                                 [Compare]
+ *   DRAM access    |          [4K][4K][4K][4K]
+ *   NAND access    | [  16K  ]
+ *
+ * After overlapping:
+ *   PCIe bus util. | [  4K  ][  4K  ][  4K  ][  4K  ]
+ *   DRAM access    |         [4K]    [4K]    [4K]    [4K]
+ *   Compare        |                                         [Compare]
+ *   DRAM access    |             [4K]    [4K]    [4K]    [4K]
+ *   NAND access    | [  4K  ][  4K  ][  4K  ][  4K  ]
+ */
 namespace SimpleSSD::HIL::NVMe {
 
 class Compare : public Command {
