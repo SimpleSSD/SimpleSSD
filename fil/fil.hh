@@ -15,7 +15,8 @@
 
 namespace SimpleSSD::FIL {
 
-class AbstractFIL;
+class AbstractNVM;
+
 enum class Operation : uint8_t {
   Read,
   Program,
@@ -49,7 +50,7 @@ struct Request {
  */
 class FIL : public Object {
  private:
-  AbstractFIL *pFIL;
+  AbstractNVM *pFIL;
 
  public:
   FIL(ObjectData &);

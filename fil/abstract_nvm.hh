@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_FIL_ABSTRACT_FIL_HH__
-#define __SIMPLESSD_FIL_ABSTRACT_FIL_HH__
+#ifndef __SIMPLESSD_FIL_ABSTRACT_NVM_HH__
+#define __SIMPLESSD_FIL_ABSTRACT_NVM_HH__
 
 #include <cinttypes>
 
@@ -16,13 +16,10 @@
 
 namespace SimpleSSD::FIL {
 
-class AbstractFIL : public Object {
- protected:
-  FIL *parent;
-
+class AbstractNVM : public Object {
  public:
-  AbstractFIL(ObjectData &o, FIL *p) : Object(o), parent(p) {}
-  virtual ~AbstractFIL() {}
+  AbstractNVM(ObjectData &o) : Object(o) {}
+  virtual ~AbstractNVM() {}
 
   virtual void enqueue(Request &&) = 0;
 };

@@ -22,7 +22,7 @@
 
 namespace SimpleSSD::FIL {
 
-PALOLD::PALOLD(ObjectData &o, FIL *p) : AbstractFIL(o, p), lastResetTick(0) {
+PALOLD::PALOLD(ObjectData &o) : AbstractNVM(o), lastResetTick(0) {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));

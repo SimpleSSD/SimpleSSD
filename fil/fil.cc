@@ -48,7 +48,7 @@ FIL::FIL(ObjectData &o) : Object(o) {
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
     case Config::NVMType::PAL:
-      pFIL = new PALOLD(object, this);
+      pFIL = new PALOLD(object);
 
       break;
     // case Config::NVMType::GenericNAND:

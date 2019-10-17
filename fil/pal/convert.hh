@@ -15,7 +15,6 @@
 #include <type_traits>
 
 #include "SimpleSSD_types.h"
-#include "fil/abstract_fil.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::FIL {

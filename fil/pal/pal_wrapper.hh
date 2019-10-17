@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "SimpleSSD_types.h"
-#include "fil/abstract_fil.hh"
+#include "fil/abstract_nvm.hh"
 #include "fil/pal/convert.hh"
 
 class PAL2;
@@ -23,7 +23,7 @@ class Latency;
 
 namespace SimpleSSD::FIL {
 
-class PALOLD : public AbstractFIL {
+class PALOLD : public AbstractNVM {
  private:
   ::PAL2 *pal;
   ::PALStatistics *stats;
@@ -61,7 +61,7 @@ class PALOLD : public AbstractFIL {
   void completion(uint64_t);
 
  public:
-  PALOLD(ObjectData &, FIL *);
+  PALOLD(ObjectData &);
   ~PALOLD();
 
   void enqueue(Request &&) override;
