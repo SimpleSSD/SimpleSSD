@@ -19,16 +19,16 @@ HIL::~HIL() {
   delete pICL;
 }
 
-void HIL::readPages(LPN address, uint8_t *buffer,
-                    std::pair<uint32_t, uint32_t> &&unread, Event eid,
-                    uint64_t data) {
+void HIL::readPage(LPN address, uint8_t *buffer,
+                   std::pair<uint32_t, uint32_t> &&unread, Event eid,
+                   uint64_t data) {
   pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Read,
                             address, unread.first, unread.second, buffer));
 }
 
-void HIL::writePages(LPN address, uint8_t *buffer,
-                     std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
-                     uint64_t data) {
+void HIL::writePage(LPN address, uint8_t *buffer,
+                    std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
+                    uint64_t data) {
   pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Write,
                             address, unwritten.first, unwritten.second,
                             buffer));

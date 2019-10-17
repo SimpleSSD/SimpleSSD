@@ -66,9 +66,9 @@ class HIL : public Object {
    * \param[in]  eid      Completion event
    * \param[in]  data     Data for event
    */
-  void readPages(LPN address, uint8_t *buffer,
-                 std::pair<uint32_t, uint32_t> &&unread, Event eid,
-                 uint64_t data = 0);
+  void readPage(LPN address, uint8_t *buffer,
+                std::pair<uint32_t, uint32_t> &&unread, Event eid,
+                uint64_t data = 0);
 
   /**
    * \brief Write logical pages
@@ -83,9 +83,9 @@ class HIL : public Object {
    * \param[in] eid       Completion event
    * \param[in] data      Data for event
    */
-  void writePages(LPN address, uint8_t *buffer,
-                  std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
-                  uint64_t data = 0);
+  void writePage(LPN address, uint8_t *buffer,
+                 std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
+                 uint64_t data = 0);
 
   /**
    * \brief Flush cache
