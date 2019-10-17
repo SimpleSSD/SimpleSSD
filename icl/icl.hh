@@ -42,7 +42,7 @@ struct Request {
       uint32_t skipFront;
       uint32_t skipEnd;
     };
-    LPN length;
+    LPN length;  // Only used in Flush/Trim/Format
   };
 
   uint8_t *buffer;

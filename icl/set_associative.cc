@@ -231,7 +231,7 @@ void SetAssociative::read_find(Request &&req) {
   if (LIKELY(readEnabled)) {
     ctx.setIdx = getSetIndex(ctx.req.address);
 
-    if (getValidWay(ctx.setIdx, ctx.wayIdx)) {  // Hit
+    if (getValidWay(ctx.req.address, ctx.setIdx, ctx.wayIdx)) {  // Hit
       auto line = getLine(ctx.setIdx, ctx.wayIdx);
 
       if (line->rpending) {
@@ -402,7 +402,8 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
   }
 
   // At this point, we can handle pending request
-  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
+  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();
+       ++iter) {
     auto line = getLine(iter->setIdx, iter->wayIdx);
 
     if (line->rpending == false) {
@@ -427,7 +428,7 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
 
         readDMAQueue.emplace_back(*iter);
       }
-      else {
+      else if (iter->status == LineStatus::WriteHitReadPending) {
         iter->status = LineStatus::WriteCache;
 
         line->tag = iter->req.address;
@@ -437,6 +438,9 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         scheduleNow(eventWriteMetaDone, iter->id);
 
         writeMetaQueue.emplace_back(*iter);
+      }
+      else {
+        panic("Unexpected line status.");
       }
 
       if (evictPolicy == Config::EvictModeType::LRU) {
@@ -467,10 +471,12 @@ void SetAssociative::write_find(Request &&req) {
              "WRITE | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
 
+  // Update this if statement to support FUA
   if (LIKELY(writeEnabled)) {
     ctx.setIdx = getSetIndex(ctx.req.address);
 
-    if (getValidWay(ctx.setIdx, ctx.wayIdx)) {  // Hit (Update line)
+    if (getValidWay(ctx.req.address, ctx.setIdx, ctx.wayIdx)) {
+      // Hit (Update line)
       auto line = getLine(ctx.setIdx, ctx.wayIdx);
 
       if (line->rpending) {
@@ -595,7 +601,7 @@ void SetAssociative::prefetch(LPN begin, LPN end) {
   for (LPN i = begin; i < end; i++) {
     setIdx = getSetIndex(i);
 
-    if (getValidWay(setIdx, wayIdx)) {
+    if (getValidWay(i, setIdx, wayIdx)) {
       // We have valid data at current LPN i (Don't need to read)
     }
     else if (getEmptyWay(setIdx, wayIdx)) {
@@ -628,6 +634,171 @@ void SetAssociative::prefetch(LPN begin, LPN end) {
     else {
       // No valid way and no empty line
       // We will not read this LPN i (To not make additional write in prefetch)
+    }
+  }
+}
+
+void SetAssociative::evict(uint32_t set, bool fua) {
+  if (UNLIKELY(fua)) {
+    // set is invalid
+    for (auto iter = evictQueue.begin(); iter != evictQueue.end();) {
+      if (iter->status == LineStatus::WriteNVM) {
+        evictFTLQueue.emplace_back(*iter);
+
+        // DRAM -> NVM latency
+        object.dram->read(
+            dataAddress + (iter->setIdx * waySize + iter->wayIdx) * lineSize,
+            lineSize, eventWriteDRAMDone, iter->id);
+
+        iter = evictQueue.erase(iter);
+      }
+      else {
+        ++iter;
+      }
+    }
+  }
+  else {
+    uint32_t setIdx;
+    uint32_t wayIdx;
+    uint64_t now = getTick();
+
+    // We need to make empty way at set
+    // 1. Select victim way
+    wayIdx = chooseLine(set);
+
+    // 2. Make page list to create # evictPages count of pages
+    LPN begin = (getLine(set, wayIdx)->tag / evictPages) * evictPages;
+    LPN end = begin + evictPages;
+
+    // 3. Collect pages
+    for (LPN i = begin; i < end; i++) {
+      setIdx = getSetIndex(i);
+
+      if (getValidWay(i, setIdx, wayIdx)) {
+        // We have valid data
+        auto line = getLine(setIdx, wayIdx);
+
+        if (line->dirty) {
+          // We need to evict this data
+          markEvict(line->tag, setIdx, wayIdx);
+        }
+        else {
+          // Clear line
+          line->valid = false;
+          line->dirty = false;
+          line->rpending = false;
+          line->wpending = false;
+        }
+      }
+      else if (getEmptyWay(setIdx, wayIdx)) {
+        // Empty way exists, skip
+      }
+      else {
+        // No empty way, evict this set
+        wayIdx = chooseLine(setIdx);
+
+        auto line = getLine(setIdx, wayIdx);
+
+        markEvict(line->tag, setIdx, wayIdx);
+      }
+    }
+
+    // 4. Evict begin
+    for (auto &iter : evictFTLQueue) {
+      // DRAM -> NVM latency
+      object.dram->read(
+          dataAddress + (iter.setIdx * waySize + iter.wayIdx) * lineSize,
+          lineSize, eventWriteDRAMDone, iter.id);
+    }
+  }
+}
+
+void SetAssociative::markEvict(LPN i, uint32_t setIdx, uint32_t wayIdx) {
+  // Make request
+  CacheContext ctx;
+
+  ctx.id = requestCounter++;
+  ctx.req.address = i;
+  ctx.setIdx = setIdx;
+  ctx.wayIdx = wayIdx;
+  ctx.status = LineStatus::Eviction;
+  ctx.submittedAt = getTick();
+
+  evictFTLQueue.emplace_back(ctx);
+}
+
+void SetAssociative::evict_doftl(uint64_t tag) {
+  auto ctx = findRequest(evictFTLQueue, tag);
+
+  // Perform write
+  pFTL->submit(FTL::Request(ctx.req.id, eventEvictFTLDone, ctx.id,
+                            FTL::Operation::Write, ctx.req.address,
+                            ctx.req.buffer));
+
+  evictFTLQueue.emplace_back(ctx);
+}
+
+void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
+  auto ctx = findRequest(evictFTLQueue, tag);
+
+  // Write done
+  ctx.finishedAt = now;
+
+  if (ctx.status == LineStatus::Eviction) {
+    auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+    line->wpending = false;
+
+    // We will not transfer this request to host (complete here)
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "WRITE | EVICTION    | Cache (%u, %u) | %" PRIu64 " - %" PRIu64
+               "(%" PRIu64 ")",
+               ctx.setIdx, ctx.wayIdx, ctx.submittedAt, ctx.finishedAt,
+               ctx.finishedAt - ctx.submittedAt);
+  }
+  else if (ctx.status == LineStatus::WriteNVM) {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "WRITE | REQ %7u | FUA | %" PRIu64 " - %" PRIu64 "(%" PRIu64 ")",
+               ctx.req.id, ctx.submittedAt, ctx.finishedAt,
+               ctx.finishedAt - ctx.submittedAt);
+
+    scheduleNow(ctx.req.eid, ctx.req.data);
+
+    return;
+  }
+  else {
+    panic("Unexpected line status.");
+  }
+
+  // At this point, we can handle pending request
+  for (auto iter = evictQueue.begin(); iter != evictQueue.end(); ++iter) {
+    auto line = getLine(iter->setIdx, iter->wayIdx);
+
+    if (line->wpending == false) {
+      // Now this request can complete
+      if (iter->status == LineStatus::WriteHitWritePending) {
+        iter->status = LineStatus::WriteCache;
+
+        line->tag = iter->req.address;
+        line->valid = true;
+        line->dirty = true;
+
+        if (evictPolicy == Config::EvictModeType::LRU) {
+          // Update clock at access
+          line->clock = clock;
+        }
+
+        scheduleNow(eventWriteMetaDone, iter->id);
+
+        writeMetaQueue.emplace_back(*iter);
+      }
+      else {
+        panic("Unexpected line status.");
+      }
+
+      evictQueue.erase(iter);
+
+      break;
     }
   }
 }

@@ -57,6 +57,7 @@ class SetAssociative : public AbstractCache {
     WriteCache,            // Cold Miss + Hit
     WriteEvict,            // Capacity/Conflict Miss
     WriteNVM,              // No cache
+    Eviction,              // In eviction
   };
 
   struct CacheContext {
@@ -144,12 +145,13 @@ class SetAssociative : public AbstractCache {
   std::list<CacheContext> writeDRAMQueue;
 
   std::list<CacheContext> evictQueue;
+  std::list<CacheContext> evictFTLQueue;
 
   CacheContext findRequest(std::list<CacheContext> &, uint64_t);
 
   // Helper
   inline uint32_t getSetIndex(LPN);
-  inline bool getValidWay(uint32_t, uint32_t &);
+  inline bool getValidWay(LPN, uint32_t, uint32_t &);
   inline bool getEmptyWay(uint32_t, uint32_t &);
   inline Line *getLine(uint32_t, uint32_t);
 
@@ -183,11 +185,19 @@ class SetAssociative : public AbstractCache {
   Event eventWriteDRAMDone;
   void write_done(uint64_t, uint64_t);
 
+  // Eviction
+  void evict(uint32_t, bool = false);
+  void markEvict(LPN, uint32_t, uint32_t);
+
+  Event eventEvictDRAMDone;
+  void evict_doftl(uint64_t);
+
+  Event eventEvictFTLDone;
+  void evict_done(uint64_t, uint64_t);
+
   void invalidate_find(Request &&);
 
   void flush_find(Request &&);
-
-  void evict(uint32_t, bool = false);
 
   void prefetch(LPN, LPN);
 
