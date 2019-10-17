@@ -92,7 +92,46 @@ ICL::~ICL() {
 }
 
 void ICL::submit(Request &&req) {
-  pCache->enqueue(std::move(req));
+  if (LIKELY(enabled)) {
+    pCache->enqueue(std::move(req));
+  }
+  else {
+    // Bypass request to FTL
+    FTL::Operation opcode;
+
+    switch (req.opcode) {
+      case Operation::Read:
+        opcode = FTL::Operation::Read;
+
+        break;
+      case Operation::Write:
+        opcode = FTL::Operation::Write;
+
+        break;
+      case Operation::Trim:
+        opcode = FTL::Operation::Trim;
+
+        break;
+      case Operation::Format:
+        opcode = FTL::Operation::Format;
+
+        break;
+      case Operation::Flush:
+        // No flush operation
+        scheduleNow(req.eid, req.data);
+
+        return;
+    }
+
+    if (opcode == FTL::Operation::Read || opcode == FTL::Operation::Write) {
+      pFTL->submit(FTL::Request(req.id, req.eid, req.data, opcode, req.address,
+                                req.buffer));
+    }
+    else {
+      pFTL->submit(FTL::Request(req.id, req.eid, req.data, opcode, req.address,
+                                req.length));
+    }
+  }
 }
 
 LPN ICL::getPageUsage(LPN offset, LPN length) {
