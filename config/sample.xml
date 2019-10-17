@@ -442,61 +442,6 @@
         2: Virtually-Linked FTL (Extended version of FTL released with Amber)
      -->
     <config name="MappingMode">2</config>
-    <!--
-      <float> Overprovisioning Ratio
-
-      Select OP ratio (ratio between user-visible logical range and physical NVM
-      range). (1 - this value) * (total SSD size) become user-visible range.
-
-      This value will rounded to FTL mapping granularity.
-     -->
-    <config name="OverProvisioningRatio">0.2</config>
-    <!--
-      <int> Bad block threshold
-
-      Set P/E cycle threshold to mark block as bad.
-
-      TODO: Add error model and change this value to BER or ECC retry count.
-     -->
-    <config name="EraseThreshold">100k</config>
-    <!-- Filling/Warm-up configuration -->
-    <section name="warmup">
-      <!--
-        <int> Filling Mode
-
-        Here, we have two-pass filling algorithm to invoke GC in very beginning
-        of simulation. In first pass, FTL fills mapping - clean write. In second
-        pass, FTL overwrites pages written in first pass which makes invalid
-        pages.
-
-        Possible values:
-          0: Sequential filling + Sequential invalidation
-          1: Sequential filling + Random invalidation
-          2: Random filling + Random invalidation
-       -->
-      <config name="FillingMode">0</config>
-      <!--
-        <float> Range to fill in first pass
-
-        In sequential filling, LPN from 0 to (this config value) * (SSD size)
-        will be filled.
-        In random filling, (this config value) * (total physical page count)
-        physical pages will be filled in random fashion. Because of memory
-        requirement, we does not ensure unique random address - overwritten can
-        be occur in first pass.
-       -->
-      <config name="FillRatio">1.0</config>
-      <!--
-        <float> Range to fill in second pass
-
-        Try to overwrite page written in first pass. If you use random address,
-        some pages will not overwritten as we don't remember what addresses are
-        written.
-
-        This valud will clipped to make GC not occured in warm-up phase.
-       -->
-      <config name="InvalidFillRatio">0.0</config>
-    </section>
     <!-- Garbage Collection configuration -->
     <section name="gc">
       <!--
@@ -544,6 +489,23 @@
      -->
     <section name="common">
       <!--
+        <float> Overprovisioning Ratio
+
+        Select OP ratio (ratio between user-visible logical range and physical NVM
+        range). (1 - this value) * (total SSD size) become user-visible range.
+
+        This value will rounded to FTL mapping granularity.
+       -->
+      <config name="OverProvisioningRatio">0.2</config>
+      <!--
+        <int> Bad block threshold
+
+        Set P/E cycle threshold to mark block as bad.
+
+        TODO: Add error model and change this value to BER or ECC retry count.
+       -->
+      <config name="EraseThreshold">100k</config>
+      <!--
         <bool> Use superpage
 
         Superpage can be used to reduce size of mapping table by grouping pages
@@ -559,6 +521,44 @@
         channel.
        -->
       <config name="SuperpageAllocation">C</config>
+      <!-- Filling/Warm-up configuration -->
+      <section name="warmup">
+        <!--
+          <int> Filling Mode
+
+          Here, we have two-pass filling algorithm to invoke GC in very beginning
+          of simulation. In first pass, FTL fills mapping - clean write. In second
+          pass, FTL overwrites pages written in first pass which makes invalid
+          pages.
+
+          Possible values:
+            0: Sequential filling + Sequential invalidation
+            1: Sequential filling + Random invalidation
+            2: Random filling + Random invalidation
+         -->
+        <config name="FillingMode">0</config>
+        <!--
+          <float> Range to fill in first pass
+
+          In sequential filling, LPN from 0 to (this config value) * (SSD size)
+          will be filled.
+          In random filling, (this config value) * (total physical page count)
+          physical pages will be filled in random fashion. Because of memory
+          requirement, we does not ensure unique random address - overwritten can
+          be occur in first pass.
+         -->
+        <config name="FillRatio">1.0</config>
+        <!--
+          <float> Range to fill in second pass
+
+          Try to overwrite page written in first pass. If you use random address,
+          some pages will not overwritten as we don't remember what addresses are
+          written.
+
+          This valud will clipped to make GC not occured in warm-up phase.
+         -->
+        <config name="InvalidFillRatio">0.0</config>
+      </section>
     </section>
     <!-- VLFTL configuration -->
     <section name="vlftl">

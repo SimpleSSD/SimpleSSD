@@ -53,18 +53,8 @@ void Config::loadFrom(pugi::xml_node &section) {
     auto name = node.attribute("name").value();
 
     LOAD_NAME_UINT_TYPE(node, NAME_MAPPING_MODE, MappingType, mappingMode);
-    LOAD_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
-    LOAD_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
 
-    if (strcmp(name, "warmup") == 0 && isSection(node)) {
-      for (auto node2 = node.first_child(); node2;
-           node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT_TYPE(node2, NAME_FILLING_MODE, FillingType, fillingMode);
-        LOAD_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
-        LOAD_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
-      }
-    }
-    else if (strcmp(name, "gc") == 0 && isSection(node)) {
+    if (strcmp(name, "gc") == 0 && isSection(node)) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
         LOAD_NAME_UINT_TYPE(node2, NAME_GC_EVICT_POLICY, VictimSelectionMode,
@@ -79,8 +69,22 @@ void Config::loadFrom(pugi::xml_node &section) {
     else if (strcmp(name, "common") == 0 && isSection(node)) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
+        auto name2 = node2.attribute("name").value();
+
+        LOAD_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
+        LOAD_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
         LOAD_NAME_BOOLEAN(node2, NAME_USE_SUPERPAGE, useSuperpage);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
+
+        if (strcmp(name2, "warmup") == 0 && isSection(node)) {
+          for (auto node3 = node2.first_child(); node3;
+               node3 = node3.next_sibling()) {
+            LOAD_NAME_UINT_TYPE(node3, NAME_FILLING_MODE, FillingType,
+                                fillingMode);
+            LOAD_NAME_FLOAT(node3, NAME_FILL_RATIO, fillRatio);
+            LOAD_NAME_FLOAT(node3, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
+          }
+        }
       }
     }
     else if (strcmp(name, "vlftl") == 0 && isSection(node)) {
@@ -95,16 +99,9 @@ void Config::loadFrom(pugi::xml_node &section) {
 }
 
 void Config::storeTo(pugi::xml_node &section) {
-  pugi::xml_node node;
+  pugi::xml_node node, node2;
 
   STORE_NAME_UINT(section, NAME_MAPPING_MODE, mappingMode);
-  STORE_NAME_FLOAT(section, NAME_OVERPROVISION_RATIO, overProvision);
-  STORE_NAME_UINT(section, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
-
-  STORE_SECTION(section, "warmup", node);
-  STORE_NAME_UINT(node, NAME_FILLING_MODE, fillingMode);
-  STORE_NAME_FLOAT(node, NAME_FILL_RATIO, fillRatio);
-  STORE_NAME_FLOAT(node, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
 
   STORE_SECTION(section, "gc", node);
   STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
@@ -115,8 +112,15 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
 
   STORE_SECTION(section, "common", node);
+  STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
+  STORE_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
   STORE_NAME_BOOLEAN(node, NAME_USE_SUPERPAGE, useSuperpage);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
+
+  STORE_SECTION(node, "warmup", node2);
+  STORE_NAME_UINT(node2, NAME_FILLING_MODE, fillingMode);
+  STORE_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
+  STORE_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
 
   STORE_SECTION(section, "vlftl", node);
   STORE_NAME_FLOAT(node, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
