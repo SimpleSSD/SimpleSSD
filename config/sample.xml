@@ -58,7 +58,7 @@
     <!-- SRAM -->
     <section name="sram">
       <!-- <int> Total size of SRAM -->
-      <config name="Size">32M</config>
+      <config name="Size">8M</config>
       <!-- <int> Access latency of SRAM in cycle -->
       <config name="Latency">20</config>
       <!-- <int> Access granularity in bytes (for latency calculation) -->
