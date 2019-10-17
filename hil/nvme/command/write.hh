@@ -14,6 +14,24 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
+/**
+ * \brief NVMe Write command
+ *
+ * Perform write access. To overlap PCIe DMA and DRAM access, it access in
+ * sector granularity (512B ~ 4K).
+ * If request has 16KB block size, we don't wait all 16KB is transfered through
+ * PCIe bus. After one sector (e.g., 4K) has been transfered, DRAM access begin.
+ *
+ * Before overlapping:
+ *   PCIe bus util. | [  4K  ][  4K  ][  4K  ][  4K  ]
+ *   DRAM access    |                                 [4K][4K][4K][4K]
+ *   NAND access    |                                                 [  16K  ]
+ *
+ * After overlapping:
+ *   PCIe bus util. | [  4K  ][  4K  ][  4K  ][  4K  ]
+ *   DRAM access    |         [4K]    [4K]    [4K]    [4K]
+ *   NAND access    |             [  4K  ][  4K  ][  4K  ][  4K  ]
+ */
 class Write : public Command {
  private:
   Event dmaInitEvent;

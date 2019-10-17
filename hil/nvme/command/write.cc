@@ -27,43 +27,67 @@ Write::Write(ObjectData &o, Subsystem *s) : Command(o, s) {
 void Write::dmaInitDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0,
-                       tag->size - tag->skipFront - tag->skipEnd,
+  // Perform first page DMA
+  tag->dmaEngine->read(tag->dmaTag, 0, tag->lpnSize - tag->skipFront,
                        tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
+}
+
+void Write::dmaComplete(uint64_t gcid) {
+  auto tag = findIOTag(gcid);
+  auto pHIL = subsystem->getHIL();
+  uint32_t skipFront = 0;
+  uint32_t skipEnd = 0;
+
+  tag->nlp_done_dma++;
+
+  if (tag->nlp == tag->nlp_done_dma) {
+    // We completed all DMA, handle disk access
+    auto nslist = subsystem->getNamespaceList();
+    auto ns = nslist.find(tag->sqc->getData()->namespaceID);
+
+    // Handle disk image
+    auto disk = ns->second->getDisk();
+
+    if (disk) {
+      disk->write(tag->_slba, tag->_nlb, tag->buffer + tag->skipFront);
+    }
+
+    // Handle page access
+    skipEnd = tag->skipEnd;
+  }
+  else {
+    // Start page access and request next DMA
+    tag->dmaEngine->read(
+        tag->dmaTag, tag->nlp_done_dma * tag->lpnSize - tag->skipFront,
+        tag->lpnSize, tag->buffer + tag->nlp_done_dma * tag->lpnSize,
+        dmaCompleteEvent, gcid);
+
+    if (tag->nlp_done_dma == 1) {
+      skipFront = tag->skipFront;
+    }
+  }
+
+  pHIL->writePage(tag->slpn + tag->nlp_done_hil,
+                  tag->buffer + tag->nlp_done_hil * tag->lpnSize,
+                  std::make_pair(skipFront, skipEnd), writeDoneEvent, gcid);
 }
 
 void Write::writeDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
 
-  auto now = getTick();
+  tag->nlp_done_hil++;
 
-  debugprint_command(tag,
-                     "NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64
-                     "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                     tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
-                     tag->beginAt, now, now - tag->beginAt);
+  if (tag->nlp == tag->nlp_done_hil) {
+    auto now = getTick();
 
-  subsystem->complete(tag);
-}
+    debugprint_command(tag,
+                       "NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64
+                       "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                       tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
+                       tag->beginAt, now, now - tag->beginAt);
 
-void Write::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
-
-  auto nslist = subsystem->getNamespaceList();
-  auto ns = nslist.find(tag->sqc->getData()->namespaceID);
-
-  // Handle disk image
-  auto disk = ns->second->getDisk();
-
-  if (disk) {
-    disk->write(tag->_slba, tag->_nlb, tag->buffer + tag->skipFront);
+    subsystem->complete(tag);
   }
-
-  auto pHIL = subsystem->getHIL();
-
-  pHIL->writePages(tag->slpn, tag->nlp, tag->buffer + tag->skipFront,
-                   std::make_pair(tag->skipFront, tag->skipEnd), writeDoneEvent,
-                   gcid);
 }
 
 void Write::setRequest(ControllerData *cdata, SQContext *req) {
@@ -122,6 +146,7 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   ns->second->write(nlb * info->lbaSize);
 
   // Make buffer
+  tag->lpnSize = info->lpnSize;
   tag->size = tag->nlp * info->lpnSize;
   tag->buffer = (uint8_t *)calloc(tag->size, 1);
 
