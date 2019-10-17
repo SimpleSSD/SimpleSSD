@@ -145,20 +145,25 @@ class SetAssociative : public AbstractCache {
   inline bool getEmptyWay(uint32_t, uint32_t &);
   inline Line *getLine(uint32_t, uint32_t);
 
-  // Event
-  Event eventReadPreCPUDone;
-  Event eventReadMetaDone;
-  Event eventReadFTLDone;
-  Event eventReadDRAMDone;
-  Event eventReadDMADone;
-
+  // Read
   void read_find(Request &&);
+
+  Event eventReadPreCPUDone;
   void read_findDone(uint64_t);
+
+  Event eventReadMetaDone;
   void read_doftl(uint64_t);
+
+  Event eventReadFTLDone;
   void read_dodram(uint64_t);
+
+  Event eventReadDRAMDone;
   void read_dodma(uint64_t, uint64_t);
+
+  Event eventReadDMADone;
   void read_done(uint64_t);
 
+  // Write
   void write_find(Request &&);
 
   void invalidate_find(Request &&);

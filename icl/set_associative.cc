@@ -180,6 +180,22 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
   }
 
   memset(&stat, 0, sizeof(stat));
+
+  // Make events
+  eventReadPreCPUDone =
+      createEvent([this](uint64_t, uint64_t d) { read_findDone(d); },
+                  "ICL::SetAssociative::eventReadPreCPUDone");
+  eventReadMetaDone =
+      createEvent([this](uint64_t, uint64_t d) { read_doftl(d); },
+                  "ICL::SetAssociative::eventReadMetaDone");
+  eventReadFTLDone =
+      createEvent([this](uint64_t, uint64_t d) { read_dodram(d); },
+                  "ICL::SetAssociative::eventReadFTLDone");
+  eventReadDRAMDone =
+      createEvent([this](uint64_t t, uint64_t d) { read_dodma(t, d); },
+                  "ICL::SetAssociative::eventReadDRAMDone");
+  eventReadDMADone = createEvent([this](uint64_t, uint64_t d) { read_done(d); },
+                                 "ICL::SetAssociative::eventReadDMADone");
 }
 
 SetAssociative::~SetAssociative() {
