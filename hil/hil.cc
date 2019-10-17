@@ -19,53 +19,19 @@ HIL::~HIL() {
   delete pICL;
 }
 
-void HIL::readPages(LPN offset, LPN length, uint8_t *buffer,
+void HIL::readPages(LPN address, uint8_t *buffer,
                     std::pair<uint32_t, uint32_t> &&unread, Event eid,
                     uint64_t data) {
-  uint32_t subID = 1;
-  uint32_t skipFirst = unread.first;
-  uint32_t skipEnd = 0;
-
-  // When reading, we don't need to care about skip bytes
-  // But for statistic (host read bytes), pass skip bytes to ICL
-  for (LPN i = 0; i < length; i++) {
-    if (i == length - 1) {
-      skipEnd = unread.second;
-    }
-
-    pICL->submit(ICL::Request(
-        requestCounter++, subID++, eid, data, ICL::Operation::Read, offset + i,
-        skipFirst, skipEnd,
-        buffer == nullptr ? nullptr : buffer + i * logicalPageSize));
-
-    if (i == 0) {
-      skipFirst = 0;
-    }
-  }
+  pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Read,
+                            address, unread.first, unread.second, buffer));
 }
 
-void HIL::writePages(LPN offset, LPN length, uint8_t *buffer,
+void HIL::writePages(LPN address, uint8_t *buffer,
                      std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
                      uint64_t data) {
-  uint32_t subID = 1;
-  uint32_t skipFirst = unwritten.first;
-  uint32_t skipEnd = 0;
-
-  // Only first/last request has skip bytes
-  for (LPN i = 0; i < length; i++) {
-    if (i == length - 1) {
-      skipEnd = unwritten.second;
-    }
-
-    pICL->submit(ICL::Request(
-        requestCounter++, subID++, eid, data, ICL::Operation::Write, offset + i,
-        skipFirst, skipEnd,
-        buffer == nullptr ? nullptr : buffer + i * logicalPageSize));
-
-    if (i == 0) {
-      skipFirst = 0;
-    }
-  }
+  pICL->submit(ICL::Request(requestCounter++, eid, data, ICL::Operation::Write,
+                            address, unwritten.first, unwritten.second,
+                            buffer));
 }
 
 void HIL::flushCache(LPN offset, LPN length, Event eid, uint64_t data) {

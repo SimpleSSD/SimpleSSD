@@ -44,7 +44,7 @@ class HIL : public Object {
  private:
   ICL::ICL *pICL;
 
-  uint32_t requestCounter;
+  uint64_t requestCounter;
 
   uint32_t logicalPageSize;
 
@@ -60,14 +60,13 @@ class HIL : public Object {
   /**
    * \brief Read logical pages
    *
-   * \param[in]  offset   Offset in LPN to read
-   * \param[in]  length   # of logical pages to read
-   * \param[out] buffer   Array for retrived data (length * logical page size)
-   * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
+   * \param[in]  address  Offset in LPN to read
+   * \param[out] buffer   Array for retrived data (logical page size)
+   * \param[in]  unread   Byte offset to exclude <first bytes, last bytes>
    * \param[in]  eid      Completion event
    * \param[in]  data     Data for event
    */
-  void readPages(LPN offset, LPN length, uint8_t *buffer,
+  void readPages(LPN address, uint8_t *buffer,
                  std::pair<uint32_t, uint32_t> &&unread, Event eid,
                  uint64_t data = 0);
 
@@ -78,14 +77,13 @@ class HIL : public Object {
    * logical page may contains unwritten area. Then specify unwritten area using
    * unwritten parameter.
    *
-   * \param[in] offset    Offset in LPN to write
-   * \param[in] length    # of logical pages to write
-   * \param[in] buffer    Array for data to write (length * logical page size)
+   * \param[in] address   Offset in LPN to write
+   * \param[in] buffer    Array for data to write (logical page size)
    * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
    * \param[in] eid       Completion event
    * \param[in] data      Data for event
    */
-  void writePages(LPN offset, LPN length, uint8_t *buffer,
+  void writePages(LPN address, uint8_t *buffer,
                   std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
                   uint64_t data = 0);
 

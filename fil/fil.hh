@@ -24,8 +24,7 @@ enum class Operation : uint8_t {
 };
 
 struct Request {
-  uint32_t id;
-  uint32_t sid;
+  uint64_t id;
 
   Event eid;
   uint64_t data;
