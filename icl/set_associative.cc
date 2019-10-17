@@ -290,6 +290,8 @@ void SetAssociative::read_find(Request &&req) {
   ctx.id = requestCounter++;
   ctx.submittedAt = getTick();
 
+  stat.request[0]++;
+
   debugprint(Log::DebugID::ICL_SetAssociative,
              "READ   | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
@@ -299,6 +301,8 @@ void SetAssociative::read_find(Request &&req) {
 
     if (getValidWay(ctx.req.address, ctx.setIdx, ctx.wayIdx)) {  // Hit
       auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+      stat.cache[0]++;
 
       if (line->rpending) {
         // Request is pending
@@ -540,6 +544,8 @@ void SetAssociative::write_find(Request &&req) {
   ctx.id = requestCounter++;
   ctx.submittedAt = getTick();
 
+  stat.request[1]++;
+
   debugprint(Log::DebugID::ICL_SetAssociative,
              "WRITE  | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
@@ -551,6 +557,8 @@ void SetAssociative::write_find(Request &&req) {
     if (getValidWay(ctx.req.address, ctx.setIdx, ctx.wayIdx)) {
       // Hit (Update line)
       auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+      stat.cache[1]++;
 
       if (line->rpending) {
         // Request is read pending
@@ -575,6 +583,8 @@ void SetAssociative::write_find(Request &&req) {
     }
     else if (getEmptyWay(ctx.setIdx, ctx.wayIdx)) {  // Cold miss
       auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+      stat.cache[1]++;
 
       line->tag = ctx.req.address;
       line->clock = clock;
@@ -1107,7 +1117,8 @@ void SetAssociative::backupQueue(std::ostream &out,
   }
 }
 
-void SetAssociative::restoreQueue(std::istream &in, std::list<CacheContext> *queue) {
+void SetAssociative::restoreQueue(std::istream &in,
+                                  std::list<CacheContext> *queue) {
   uint64_t size;
 
   RESTORE_SCALAR(in, size);
@@ -1207,6 +1218,7 @@ void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dataAddress);
   BACKUP_SCALAR(out, clock);
   BACKUP_SCALAR(out, evictPolicy);
+  BACKUP_BLOB(out, &stat, sizeof(stat));
 
   backupQueue(out, &readPendingQueue);
   backupQueue(out, &readMetaQueue);
@@ -1277,6 +1289,7 @@ void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, dataAddress);
   RESTORE_SCALAR(in, clock);
   RESTORE_SCALAR(in, evictPolicy);
+  RESTORE_BLOB(in, &stat, sizeof(stat));
 
   restoreQueue(in, &readPendingQueue);
   restoreQueue(in, &readMetaQueue);
