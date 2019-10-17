@@ -291,6 +291,8 @@ void SetAssociative::read_find(Request &&req) {
     ctx.setIdx = (ctx.id / waySize) % setSize;
 
     scheduleNow(eventReadMetaDone, ctx.id);
+
+    readMetaQueue.emplace_back(ctx);
   }
 }
 
