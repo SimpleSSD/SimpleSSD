@@ -49,11 +49,14 @@ class SetAssociative : public AbstractCache {
     None,
     ReadHit,
     ReadHitPending,
-    ReadColdMiss,  // Cold Miss
-    ReadMiss,      // Capacity/Conflict Mis
-    Prefetch,      // Prefetch/Read-ahead
-    WriteCache,    // Cold Miss + Hit
-    WriteNVM,      // Capacity/Conflict Miss
+    ReadColdMiss,          // Cold Miss
+    ReadMiss,              // Capacity/Conflict Mis
+    Prefetch,              // Prefetch/Read-ahead
+    WriteHitReadPending,   // Hit but line is reading
+    WriteHitWritePending,  // Hit but line is writing
+    WriteCache,            // Cold Miss + Hit
+    WriteEvict,            // Capacity/Conflict Miss
+    WriteNVM,              // No cache
   };
 
   struct CacheContext {
@@ -131,11 +134,16 @@ class SetAssociative : public AbstractCache {
 
   // Queue between states
   std::list<CacheContext> readPendingQueue;
-  std::list<CacheContext> readEvictQueue;
   std::list<CacheContext> readMetaQueue;
   std::list<CacheContext> readFTLQueue;
   std::list<CacheContext> readDRAMQueue;
   std::list<CacheContext> readDMAQueue;
+
+  std::list<CacheContext> writePendingQueue;
+  std::list<CacheContext> writeMetaQueue;
+  std::list<CacheContext> writeDRAMQueue;
+
+  std::list<CacheContext> evictQueue;
 
   CacheContext findRequest(std::list<CacheContext> &, uint64_t);
 
@@ -166,11 +174,20 @@ class SetAssociative : public AbstractCache {
   // Write
   void write_find(Request &&);
 
+  Event eventWritePreCPUDone;
+  void write_findDone(uint64_t);
+
+  Event eventWriteMetaDone;
+  void write_dodram(uint64_t);
+
+  Event eventWriteDRAMDone;
+  void write_done(uint64_t, uint64_t);
+
   void invalidate_find(Request &&);
 
   void flush_find(Request &&);
 
-  void evict(uint32_t);
+  void evict(uint32_t, bool = false);
 
   void prefetch(LPN, LPN);
 

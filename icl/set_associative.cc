@@ -320,7 +320,7 @@ void SetAssociative::read_doftl(uint64_t tag) {
       return;
     case LineStatus::ReadMiss:
       // Evict first
-      readEvictQueue.emplace_back(ctx);
+      evictQueue.emplace_back(ctx);
 
       // We should not push to readFTLQueue
       return;
@@ -411,6 +411,9 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         iter->status = LineStatus::ReadHit;
         iter->finishedAt = now;
 
+        line->tag = iter->req.address;
+        line->valid = true;
+
         debugprint(Log::DebugID::ICL_SetAssociative,
                    "READ  | REQ %7u | Cache hit delayed (%u, %u) | %" PRIu64
                    " - %" PRIu64 "(%" PRIu64 ")",
@@ -425,7 +428,20 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         readDMAQueue.emplace_back(*iter);
       }
       else {
-        // TODO: write pending
+        iter->status = LineStatus::WriteCache;
+
+        line->tag = iter->req.address;
+        line->valid = true;
+        line->dirty = true;
+
+        scheduleNow(eventWriteMetaDone, iter->id);
+
+        writeMetaQueue.emplace_back(*iter);
+      }
+
+      if (evictPolicy == Config::EvictModeType::LRU) {
+        // Update clock at access
+        line->clock = clock;
       }
 
       readPendingQueue.erase(iter);
@@ -441,7 +457,134 @@ void SetAssociative::read_done(uint64_t tag) {
   scheduleNow(ctx.req.eid, ctx.req.data);
 }
 
-void SetAssociative::write_find(Request &&req) {}
+void SetAssociative::write_find(Request &&req) {
+  CPU::Function fstat = CPU::initFunction();
+  CacheContext ctx(req);
+  ctx.id = requestCounter++;
+  ctx.submittedAt = getTick();
+
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "WRITE | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
+
+  if (LIKELY(writeEnabled)) {
+    ctx.setIdx = getSetIndex(ctx.req.address);
+
+    if (getValidWay(ctx.setIdx, ctx.wayIdx)) {  // Hit (Update line)
+      auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+      if (line->rpending) {
+        // Request is read pending
+        ctx.status = LineStatus::WriteHitReadPending;
+      }
+      else if (line->wpending) {
+        // Request is write pending
+        ctx.status = LineStatus::WriteHitWritePending;
+      }
+      else {
+        line->tag = ctx.req.address;
+        line->valid = true;
+        line->dirty = true;
+
+        if (evictPolicy == Config::EvictModeType::LRU) {
+          // Update clock at access
+          line->clock = clock;
+        }
+
+        ctx.status = LineStatus::WriteCache;
+      }
+    }
+    else if (getEmptyWay(ctx.setIdx, ctx.wayIdx)) {  // Cold miss
+      auto line = getLine(ctx.setIdx, ctx.wayIdx);
+
+      line->tag = ctx.req.address;
+      line->clock = clock;
+      line->valid = true;
+      line->dirty = false;
+      line->rpending = false;
+      line->wpending = false;
+
+      ctx.status = LineStatus::WriteCache;
+    }
+    else {  // Conflict miss
+      ctx.status = LineStatus::WriteEvict;
+    }
+
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, ctx.id,
+                     fstat);
+  }
+  else {
+    ctx.status = LineStatus::WriteNVM;
+
+    // Set arbitraray set ID to pervent DRAM write queue hit
+    ctx.wayIdx = ctx.id % waySize;
+    ctx.setIdx = (ctx.id / waySize) % setSize;
+
+    scheduleNow(eventWriteMetaDone, ctx.id);
+  }
+
+  writeMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::write_findDone(uint64_t tag) {
+  auto ctx = findRequest(writeMetaQueue, tag);
+
+  // Add metadata access latency (for one set - all way lines)
+  object.sram->read(metaAddress + ctx.setIdx * waySize * metaLineSize,
+                    metaLineSize * waySize, eventWriteMetaDone, tag);
+
+  writeMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::write_dodram(uint64_t tag) {
+  auto ctx = findRequest(writeMetaQueue, tag);
+
+  switch (ctx.status) {
+    case LineStatus::WriteHitReadPending:
+      scheduleNow(eventWriteDRAMDone, tag);
+
+      readPendingQueue.emplace_back(ctx);
+
+      return;
+    case LineStatus::WriteHitWritePending:
+      scheduleNow(eventWriteDRAMDone, tag);
+
+      writePendingQueue.emplace_back(ctx);
+
+      return;
+    case LineStatus::WriteCache:
+      break;
+    case LineStatus::WriteEvict:
+    case LineStatus::WriteNVM:
+      // Evict first
+      evictQueue.emplace_back(ctx);
+
+      evict(ctx.setIdx, ctx.status == LineStatus::WriteNVM);
+
+      return;
+  }
+
+  // PCIe -> DRAM latency
+  object.dram->write(
+      dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
+      eventWriteDRAMDone, tag);
+
+  writeDRAMQueue.emplace_back(ctx);
+}
+
+void SetAssociative::write_done(uint64_t now, uint64_t tag) {
+  auto ctx = findRequest(writeDRAMQueue, tag);
+
+  ctx.finishedAt = now;
+
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "WRITE | REQ %7u | Cache hit (%u, %u) | %" PRIu64 " - %" PRIu64
+             "(%" PRIu64 ")",
+             ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
+             ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
+
+  scheduleNow(ctx.req.eid, ctx.req.data);
+}
 
 void SetAssociative::prefetch(LPN begin, LPN end) {
   CPU::Function fstat = CPU::initFunction();
