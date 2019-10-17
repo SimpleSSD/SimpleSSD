@@ -24,12 +24,8 @@ class AbstractMapping;
 namespace BlockAllocator {
 
 class AbstractAllocator : public Object {
- protected:
-  Mapping::AbstractMapping *mapper;
-
  public:
-  AbstractAllocator(ObjectData &o, Mapping::AbstractMapping *m)
-      : Object(o), mapper(m) {}
+  AbstractAllocator(ObjectData &o) : Object(o) {}
   AbstractAllocator(const AbstractAllocator &) = delete;
   AbstractAllocator(AbstractAllocator &&) noexcept = default;
   ~AbstractAllocator() {}
@@ -37,9 +33,13 @@ class AbstractAllocator : public Object {
   AbstractAllocator &operator=(const AbstractAllocator &) = delete;
   AbstractAllocator &operator=(AbstractAllocator &&) = default;
 
+  virtual void initialize(Parameter *) = 0;
+
   // For AbstractMapping
+  virtual void allocatePage(FTLContext &, Event) = 0;
 
   // For FTL
+  virtual void reclaimBlock(FTLContext &, Event) = 0;
 };
 
 }  // namespace BlockAllocator

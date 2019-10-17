@@ -11,6 +11,7 @@
 #define __SIMPLESSD_FTL_DEF_HH__
 
 #include <cinttypes>
+#include <unordered_map>
 
 #include "sim/event.hh"
 
@@ -49,6 +50,23 @@ struct Request {
   Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
   Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint64_t);
 };
+
+struct FTLContext {
+  Request req;
+
+  PPN address;
+
+  uint64_t submittedAt;
+  uint64_t finishedAt;
+
+  std::vector<uint8_t> spare;
+
+  FTLContext() : submittedAt(0), finishedAt(0) {}
+  FTLContext(Request &r, uint32_t s)
+      : req(std::move(r)), submittedAt(0), finishedAt(0), spare(s, 0) {}
+};
+
+using FTLQueue = std::unordered_map<uint64_t, FTLContext>;
 
 }  // namespace SimpleSSD::FTL
 

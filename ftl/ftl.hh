@@ -31,6 +31,22 @@ class FTL : public Object {
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
 
+  void read_find(Request &&);
+
+  Event eventReadMappingDone;
+  void read_dofil(uint64_t);
+
+  Event eventReadFILDone;
+  void read_done(uint64_t);
+
+  void write_find(Request &&);
+
+  Event eventWriteMappingDone;
+  void write_dofil(uint64_t);
+
+  Event eventWriteFILDone;
+  void write_done(uint64_t);
+
  public:
   FTL(ObjectData &);
   FTL(const FTL &) = delete;

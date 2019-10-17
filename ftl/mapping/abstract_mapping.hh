@@ -57,6 +57,8 @@ class AbstractMapping : public Object {
         case FIL::PageAllocation::Plane:
           param.parallelismLevel[i] = filparam->plane;
           break;
+        default:
+          break;
       }
     }
 
@@ -101,13 +103,17 @@ class AbstractMapping : public Object {
   AbstractMapping &operator=(const AbstractMapping &) = delete;
   AbstractMapping &operator=(AbstractMapping &&) = default;
 
-  // For AbstractAllocator
-
-  // For FTL
-  virtual void initialize(BlockAllocator::AbstractAllocator *) = 0;
   Parameter *getInfo() { return &param; };
 
-  LPN getPageUsage(LPN, LPN);
+  virtual void initialize(BlockAllocator::AbstractAllocator *) = 0;
+
+  virtual LPN getPageUsage(LPN, LPN) = 0;
+
+  virtual FTLContext &getContext(uint64_t) = 0;
+  virtual void releaseContext(uint64_t) = 0;
+
+  virtual void readMapping(Request &&, Event) = 0;
+  virtual void writeMapping(Request &&, Event) = 0;
 };
 
 }  // namespace Mapping

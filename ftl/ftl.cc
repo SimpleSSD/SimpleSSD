@@ -43,6 +43,66 @@ FTL::~FTL() {
   delete pAllocator;
 }
 
+void FTL::read_find(Request &&req) {
+  pMapper->readMapping(std::move(req), eventReadMappingDone);
+}
+
+void FTL::read_dofil(uint64_t tag) {
+  auto &ctx = pMapper->getContext(tag);
+
+  // Now we have PPN
+  pFIL->submit(FIL::Request(ctx.req.id, eventReadFILDone, tag,
+                            FIL::Operation::Read, ctx.address, ctx.req.buffer,
+                            ctx.spare));
+}
+
+void FTL::read_done(uint64_t tag) {
+  auto &ctx = pMapper->getContext(tag);
+
+  scheduleNow(ctx.req.eid, ctx.req.data);
+
+  pMapper->releaseContext(tag);
+}
+
+void FTL::write_find(Request &&req) {
+  pMapper->writeMapping(std::move(req), eventWriteMappingDone);
+}
+
+void FTL::write_dofil(uint64_t tag) {
+  auto &ctx = pMapper->getContext(tag);
+
+  // Now we have PPN
+  pFIL->submit(FIL::Request(ctx.req.id, eventReadFILDone, tag,
+                            FIL::Operation::Program, ctx.address,
+                            ctx.req.buffer, ctx.spare));
+}
+
+void FTL::write_done(uint64_t tag) {
+  auto &ctx = pMapper->getContext(tag);
+
+  scheduleNow(ctx.req.eid, ctx.req.data);
+
+  pMapper->releaseContext(tag);
+
+  // Check GC threshold for On-demand GC
+  // TODO: FILL HERE
+}
+
+void FTL::submit(Request &&req) {
+  switch (req.opcode) {
+    case Operation::Read:
+      read_find(std::move(req));
+
+      break;
+    case Operation::Write:
+      write_find(std::move(req));
+
+      break;
+    case Operation::Trim:
+    case Operation::Format:
+  }
+}
+
 Parameter *FTL::getInfo() {
   return pMapper->getInfo();
 }
