@@ -106,7 +106,8 @@ class IOCommandData : public CommandData {
   DMATag dmaTag;
 
   uint64_t slpn;
-  uint64_t nlp;
+  uint32_t nlp;
+  uint32_t nlp_done;
   uint32_t skipFront;
   uint32_t skipEnd;
 

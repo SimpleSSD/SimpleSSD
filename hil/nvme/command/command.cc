@@ -108,6 +108,7 @@ IOCommandData::IOCommandData(ObjectData &o, Command *p, ControllerData *c)
       dmaTag(InvalidDMATag),
       slpn(0),
       nlp(0),
+      nlp_done(0),
       skipFront(0),
       skipEnd(0),
       _slba(0),
