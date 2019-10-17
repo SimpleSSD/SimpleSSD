@@ -232,6 +232,39 @@ SetAssociative::~SetAssociative() {
   free(cacheMetadata);
 }
 
+uint32_t SetAssociative::getSetIndex(LPN lpn) {
+  return lpn % setSize;
+}
+
+bool SetAssociative::getValidWay(LPN lpn, uint32_t setIdx, uint32_t &wayIdx) {
+  auto line = getLine(setIdx, 0);
+
+  for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
+    if (line[wayIdx].tag == lpn) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool SetAssociative::getEmptyWay(uint32_t setIdx, uint32_t &wayIdx) {
+  auto line = getLine(setIdx, 0);
+
+  for (wayIdx = 0; wayIdx < waySize; wayIdx++) {
+    if (!line[wayIdx].valid) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+SetAssociative::Line *SetAssociative::getLine(uint32_t setIdx,
+                                              uint32_t wayIdx) {
+  return cacheMetadata + (setIdx * waySize + wayIdx);
+}
+
 SetAssociative::CacheContext SetAssociative::findRequest(
     std::list<CacheContext> &queue, uint64_t tag) {
   for (auto iter = queue.begin(); iter != queue.end(); ++iter) {
