@@ -13,6 +13,8 @@
 #include <cinttypes>
 #include <cstring>
 
+#include "util/algorithm.hh"
+
 namespace SimpleSSD::HIL::NVMe {
 
 #define NSID_NONE 0x00000000
@@ -24,10 +26,10 @@ namespace SimpleSSD::HIL::NVMe {
 #define OCSSD_SSVID_2_0 0x0200
 
 // Controller-wide Unique Command ID
-#define MAKE_CCID(qid, cid) (((uint32_t)qid << 16) | cid)
+#define MAKE_CCID(qid, cid) MAKE32(qid, cid)
 
 // Global (SSD-wide) Unique Command ID
-#define MAKE_GCID(ctrlid, ccid) (((uint64_t)ctrlid << 32) | ccid)
+#define MAKE_GCID(ctrlid, ccid) MAKE64(ctrlid, ccid)
 
 const uint32_t nLBAFormat = 4;
 const uint32_t lbaFormat[nLBAFormat] = {

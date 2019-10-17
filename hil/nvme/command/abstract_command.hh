@@ -16,6 +16,7 @@
 #include "hil/common/interrupt_manager.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
+#include "util/algorithm.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -24,8 +25,8 @@ namespace SimpleSSD::HIL::NVMe {
     uint64_t _uid = tag->getGCID();                                            \
                                                                                \
     debugprint(Log::DebugID::HIL_NVMe_Command,                                 \
-               "CTRL %-3u | SQ %2u:%-5u | " format, (uint16_t)(_uid >> 32),    \
-               (uint16_t)(_uid >> 16), (uint16_t)_uid, ##__VA_ARGS__);         \
+               "CTRL %-3u | SQ %2u:%-5u | " format, HIGH32(_uid),              \
+               HIGH16(_uid), LOW16(_uid), ##__VA_ARGS__);                      \
   }
 
 class Subsystem;
