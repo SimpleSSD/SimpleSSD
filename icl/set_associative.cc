@@ -246,7 +246,7 @@ void SetAssociative::read_find(Request &&req) {
   ctx.submittedAt = getTick();
 
   debugprint(Log::DebugID::ICL_SetAssociative,
-             "READ  | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             "READ   | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
 
   if (LIKELY(readEnabled)) {
@@ -382,8 +382,8 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
   if (ctx.status == LineStatus::Prefetch) {
     // We will not transfer this request to host (complete here)
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "READ  | PREFETCH    | LPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
-               "(%" PRIu64 ")",
+               "READ   | PREFETCH    | LPN %" PRIx64 "h | %" PRIu64
+               " - %" PRIu64 "(%" PRIu64 ")",
                ctx.req.address, ctx.submittedAt, ctx.finishedAt,
                ctx.finishedAt - ctx.submittedAt);
   }
@@ -391,7 +391,7 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
     switch (ctx.status) {
       case LineStatus::ReadHit:
         debugprint(Log::DebugID::ICL_SetAssociative,
-                   "READ  | REQ %7u | Cache hit (%u, %u) | %" PRIu64
+                   "READ   | REQ %7u | Cache hit (%u, %u) | %" PRIu64
                    " - %" PRIu64 "(%" PRIu64 ")",
                    ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
                    ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
@@ -400,7 +400,7 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
       case LineStatus::ReadColdMiss:
       case LineStatus::ReadMiss:
         debugprint(Log::DebugID::ICL_SetAssociative,
-                   "READ  | REQ %7u | Cache miss (%u, %u) | %" PRIu64
+                   "READ   | REQ %7u | Cache miss (%u, %u) | %" PRIu64
                    " - %" PRIu64 "(%" PRIu64 ")",
                    ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
                    ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
@@ -437,7 +437,7 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         line->valid = true;
 
         debugprint(Log::DebugID::ICL_SetAssociative,
-                   "READ  | REQ %7u | Cache hit delayed (%u, %u) | %" PRIu64
+                   "READ   | REQ %7u | Cache hit delayed (%u, %u) | %" PRIu64
                    " - %" PRIu64 "(%" PRIu64 ")",
                    iter->req.id, iter->setIdx, iter->wayIdx, iter->submittedAt,
                    iter->finishedAt, iter->finishedAt - iter->submittedAt);
@@ -489,7 +489,7 @@ void SetAssociative::write_find(Request &&req) {
   ctx.submittedAt = getTick();
 
   debugprint(Log::DebugID::ICL_SetAssociative,
-             "WRITE | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             "WRITE  | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
 
   // Update this if statement to support FUA
@@ -605,7 +605,7 @@ void SetAssociative::write_done(uint64_t now, uint64_t tag) {
   ctx.finishedAt = now;
 
   debugprint(Log::DebugID::ICL_SetAssociative,
-             "WRITE | REQ %7u | Cache hit (%u, %u) | %" PRIu64 " - %" PRIu64
+             "WRITE  | REQ %7u | Cache hit (%u, %u) | %" PRIu64 " - %" PRIu64
              "(%" PRIu64 ")",
              ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
              ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
@@ -772,7 +772,7 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 
     // We will not transfer this request to host (complete here)
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "WRITE | EVICTION    | Cache (%u, %u) | %" PRIu64 " - %" PRIu64
+               "WRITE  | EVICTION    | Cache (%u, %u) | %" PRIu64 " - %" PRIu64
                "(%" PRIu64 ")",
                ctx.setIdx, ctx.wayIdx, ctx.submittedAt, ctx.finishedAt,
                ctx.finishedAt - ctx.submittedAt);
@@ -786,6 +786,11 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 
           if (iter->finishedAt == 0) {
             // Complete flush request if every pages are evicted
+            debugprint(
+                Log::DebugID::ICL_SetAssociative,
+                "FLUSH  | REQ %7u | %" PRIu64 " - %" PRIu64 "(%" PRIu64 ")",
+                iter->req.id, iter->submittedAt, now, now - iter->submittedAt);
+
             scheduleNow(iter->req.eid, iter->req.data);
 
             flushQueue.erase(iter);
@@ -850,7 +855,7 @@ void SetAssociative::flush_find(Request &&req) {
   ctx.submittedAt = getTick();
 
   debugprint(Log::DebugID::ICL_SetAssociative,
-             "FLUSH | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             "FLUSH  | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
              ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
 
   if (LIKELY(writeEnabled)) {
