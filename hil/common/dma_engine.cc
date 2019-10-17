@@ -64,7 +64,11 @@ PhysicalRegion::PhysicalRegion(uint64_t a, uint32_t s)
 PhysicalRegion::PhysicalRegion(uint64_t a, uint32_t s, bool i)
     : address(a), size(s), ignore(i) {}
 
-DMAData::DMAData() {}
+DMAData::DMAData() : inited(false) {}
+
+bool DMAData::isInited() noexcept {
+  return inited;
+}
 
 DMAEngine::DMASession::DMASession(DMATag t, Event e)
     : parent(t),
@@ -180,6 +184,7 @@ void DMAEngine::prdt_readDone() {
   }
 
   session.deallocateBuffer();
+  session.parent->inited = true;
 
   scheduleNow(session.eid, session.data);
 }
@@ -230,6 +235,8 @@ void DMAEngine::getPRPListFromPRP_readDone() {
     getPRPListFromPRP(std::move(session), listPRP);
   }
   else {
+    session.parent->inited = true;
+
     scheduleNow(session.eid, session.data);
   }
 }
@@ -303,6 +310,8 @@ void DMAEngine::parseSGLSegment_readDone() {
     parseSGLSegment(std::move(session), desc->address, desc->length);
   }
   else {
+    session.parent->inited = true;
+
     scheduleNow(session.eid, session.data);
   }
 }
@@ -404,6 +413,8 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   }
 
   if (immediate) {
+    session.parent->inited = true;
+
     scheduleNow(eid, data);
   }
 
@@ -428,6 +439,8 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
     // This is entire buffer
     parseSGLDescriptor(session, &desc);
 
+    session.parent->inited = true;
+
     scheduleNow(eid, data);
   }
   else if (desc.getType() == SGLDescriptorType::Segment ||
@@ -445,6 +458,7 @@ DMATag DMAEngine::initRaw(uint64_t base, uint32_t size) noexcept {
   auto ret = createTag();
 
   ret->prList.push_back(PhysicalRegion(base, size));
+  ret->inited = true;
 
   return ret;
 }

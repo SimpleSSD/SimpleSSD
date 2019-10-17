@@ -107,9 +107,12 @@ class IOCommandData : public CommandData {
 
   uint64_t slpn;
   uint32_t nlp;
-  uint32_t nlp_done;
   uint32_t skipFront;
   uint32_t skipEnd;
+
+  uint32_t nlp_done_hil;
+  uint32_t nlp_done_dma;
+  uint32_t lpnSize;
 
   uint64_t _slba;
   uint16_t _nlb;

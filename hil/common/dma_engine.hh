@@ -35,6 +35,7 @@ class DMAData {
  private:
   friend DMAEngine;
 
+  bool inited;
   std::vector<PhysicalRegion> prList;
 
  public:
@@ -44,6 +45,8 @@ class DMAData {
 
   DMAData &operator=(const DMAData &&) = delete;
   DMAData &operator=(DMAData &&) = delete;
+
+  bool isInited() noexcept;
 };
 
 using DMATag = DMAData *;
