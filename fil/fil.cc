@@ -7,7 +7,7 @@
 
 #include "fil/fil.hh"
 
-#include "fil/pal/pal_wrapper.hh"
+#include "fil/nvm/pal/pal_wrapper.hh"
 
 namespace SimpleSSD::FIL {
 
@@ -48,7 +48,7 @@ FIL::FIL(ObjectData &o) : Object(o) {
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
     case Config::NVMType::PAL:
-      pFIL = new PALOLD(object);
+      pFIL = new NVM::PALOLD(object);
 
       break;
     // case Config::NVMType::GenericNAND:

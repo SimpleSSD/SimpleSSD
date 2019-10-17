@@ -965,7 +965,7 @@ void PAL2::backup(std::ostream &out) const {
 
   uint64_t size2 = 0;
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     auto &slot = ChFreeSlots[i];
 
     size = slot.size();
@@ -989,7 +989,7 @@ void PAL2::backup(std::ostream &out) const {
   size = sizeof(uint64_t) * channel;
   BACKUP_BLOB(out, ChStartPoint, size);
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     auto &slot = DieFreeSlots[i];
 
     size = slot.size();
@@ -1021,12 +1021,11 @@ void PAL2::restore(std::istream &in) {
   MergedTimeSlots.clear();
 
   for (uint64_t i = 0; i < size; i++) {
-    uint64_t f, s;
+    TimeSlot slot;
 
-    RESTORE_SCALAR(in, f);
-    RESTORE_SCALAR(in, s);
+    slot.restore(in);
 
-    MergedTimeSlots.emplace_back(std::make_pair(f, s));
+    MergedTimeSlots.emplace_back(slot);
   }
 
   RESTORE_SCALAR(in, totalDie);
@@ -1048,7 +1047,7 @@ void PAL2::restore(std::istream &in) {
 
   uint64_t size2 = 0;
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     auto &slot = ChFreeSlots[i];
 
     RESTORE_SCALAR(in, size);
@@ -1081,7 +1080,7 @@ void PAL2::restore(std::istream &in) {
   size = sizeof(uint64_t) * channel;
   RESTORE_BLOB(in, ChStartPoint, size);
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     auto &slot = DieFreeSlots[i];
 
     RESTORE_SCALAR(in, size);

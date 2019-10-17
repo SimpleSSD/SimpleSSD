@@ -5,22 +5,22 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "fil/pal/pal_wrapper.hh"
+#include "fil/nvm/pal/pal_wrapper.hh"
 
 #include <sstream>
 
-#include "fil/pal/Latency.h"
-#include "fil/pal/LatencyMLC.h"
-#include "fil/pal/LatencySLC.h"
-#include "fil/pal/LatencyTLC.h"
-#include "fil/pal/PAL2.h"
-#include "fil/pal/PALStatistics.h"
+#include "fil/nvm/pal/Latency.h"
+#include "fil/nvm/pal/LatencyMLC.h"
+#include "fil/nvm/pal/LatencySLC.h"
+#include "fil/nvm/pal/LatencyTLC.h"
+#include "fil/nvm/pal/PAL2.h"
+#include "fil/nvm/pal/PALStatistics.h"
 #include "util/algorithm.hh"
 
 #define FLUSH_PERIOD 100000000000ull  // 0.1sec
 #define FLUSH_RANGE 10000000000ull    // 0.01sec
 
-namespace SimpleSSD::FIL {
+namespace SimpleSSD::FIL::NVM {
 
 PALOLD::PALOLD(ObjectData &o) : AbstractNVM(o), lastResetTick(0) {
   param = object.config->getNANDStructure();

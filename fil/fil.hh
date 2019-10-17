@@ -11,37 +11,9 @@
 #define __SIMPLESSD_FIL_FIL_HH__
 
 #include "fil/def.hh"
-#include "sim/object.hh"
+#include "fil/nvm/abstract_nvm.hh"
 
 namespace SimpleSSD::FIL {
-
-class AbstractNVM;
-
-enum class Operation : uint8_t {
-  Read,
-  Program,
-  Erase,
-  Copyback,
-};
-
-struct Request {
-  uint64_t id;
-
-  Event eid;
-  uint64_t data;
-
-  Operation opcode;
-
-  uint64_t address;
-  uint8_t *buffer;
-
-  std::vector<uint8_t> spare;
-
-  Request();
-  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
-  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *,
-          std::vector<uint8_t> &);
-};
 
 /**
  * \brief FIL (Flash Interface Layer) class
@@ -50,7 +22,7 @@ struct Request {
  */
 class FIL : public Object {
  private:
-  AbstractNVM *pFIL;
+  NVM::AbstractNVM *pFIL;
 
  public:
   FIL(ObjectData &);

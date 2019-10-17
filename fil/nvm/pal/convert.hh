@@ -15,6 +15,8 @@
 #include <type_traits>
 
 #include "SimpleSSD_types.h"
+#include "fil/def.hh"
+#include "sim/object.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::FIL {
@@ -82,6 +84,6 @@ class Convert : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::HIL
+}  // namespace SimpleSSD::FIL
 
 #endif

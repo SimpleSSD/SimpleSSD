@@ -12,9 +12,9 @@
 
 #include <cinttypes>
 
-#include "fil/fil.hh"
+#include "sim/object.hh"
 
-namespace SimpleSSD::FIL {
+namespace SimpleSSD::FIL::NVM {
 
 class AbstractNVM : public Object {
  public:
@@ -24,6 +24,6 @@ class AbstractNVM : public Object {
   virtual void enqueue(Request &&) = 0;
 };
 
-}  // namespace SimpleSSD::FIL
+}  // namespace SimpleSSD::FIL::NVM
 
 #endif

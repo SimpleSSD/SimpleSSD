@@ -1146,11 +1146,11 @@ void PALStatistics::backup(std::ostream &out) const {
     PPN_requested_pagetype[i].backup(out);
   }
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     PPN_requested_ch[i].backup(out);
   }
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     PPN_requested_die[i].backup(out);
   }
 
@@ -1181,11 +1181,11 @@ void PALStatistics::backup(std::ostream &out) const {
 
   Ticks_TotalOpti.backup(out);
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     Ticks_Active_ch[i].backup(out);
   }
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     Ticks_Active_die[i].backup(out);
   }
 
@@ -1230,11 +1230,11 @@ void PALStatistics::restore(std::istream &in) {
     PPN_requested_pagetype[i].restore(in);
   }
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     PPN_requested_ch[i].restore(in);
   }
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     PPN_requested_die[i].restore(in);
   }
 
@@ -1278,11 +1278,11 @@ void PALStatistics::restore(std::istream &in) {
 
   Ticks_TotalOpti.restore(in);
 
-  for (int i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     Ticks_Active_ch[i].restore(in);
   }
 
-  for (int i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     Ticks_Active_die[i].restore(in);
   }
 

@@ -14,14 +14,14 @@
 #include <vector>
 
 #include "SimpleSSD_types.h"
-#include "fil/abstract_nvm.hh"
-#include "fil/pal/convert.hh"
+#include "fil/nvm/abstract_nvm.hh"
+#include "fil/nvm/pal/convert.hh"
 
 class PAL2;
 class PALStatistics;
 class Latency;
 
-namespace SimpleSSD::FIL {
+namespace SimpleSSD::FIL::NVM {
 
 class PALOLD : public AbstractNVM {
  private:

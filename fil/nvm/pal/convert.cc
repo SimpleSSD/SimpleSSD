@@ -5,7 +5,7 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "fil/pal/convert.hh"
+#include "fil/nvm/pal/convert.hh"
 
 namespace SimpleSSD::FIL {
 
@@ -61,6 +61,8 @@ ConvertFunction Convert::getConvertion() {
           sum += popcount32(maskPlane);
 
           break;
+        default:
+          break;
       }
     }
 
@@ -102,6 +104,8 @@ ConvertFunction Convert::getConvertion() {
           level[i] = plane;
           offset[i] = 3;
 
+          break;
+        default:
           break;
       }
     }
