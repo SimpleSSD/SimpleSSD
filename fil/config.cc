@@ -316,7 +316,8 @@ void Config::update() {
     }
   }
 
-  panic_if(check != PageAllocation::All, "Invalid page allocation string");
+  panic_if(check != PageAllocation::All || fail,
+           "Invalid page allocation string");
 }
 
 uint64_t Config::readUint(uint32_t idx) {

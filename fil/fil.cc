@@ -7,6 +7,8 @@
 
 #include "fil/fil.hh"
 
+#include "fil/pal/pal_wrapper.hh"
+
 namespace SimpleSSD::FIL {
 
 FIL::FIL(ObjectData &o) : Object(o) {
@@ -24,8 +26,13 @@ FIL::FIL(ObjectData &o) : Object(o) {
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
     case Config::NVMType::PAL:
+      pFIL = new PALOLD(object, this);
+
       break;
-    case Config::NVMType::GenericNAND:
+    // case Config::NVMType::GenericNAND:
+    default:
+      panic("Unexpected FIL model.");
+
       break;
   }
 }
@@ -34,15 +41,19 @@ FIL::~FIL() {
   delete pFIL;
 }
 
-void FIL::getStatList(std::vector<Stat> &list, std::string prefix) {
+void FIL::submit(Request &&req) {
+  pFIL->enqueue(std::move(req));
+}
+
+void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   pFIL->getStatList(list, prefix + "fil.");
 }
 
-void FIL::getStatValues(std::vector<double> &values) {
+void FIL::getStatValues(std::vector<double> &values) noexcept {
   pFIL->getStatValues(values);
 }
 
-void FIL::resetStatValues() {
+void FIL::resetStatValues() noexcept {
   pFIL->resetStatValues();
 }
 
