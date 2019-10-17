@@ -94,6 +94,13 @@ inline uint64_t ffs64(uint64_t val) {
 
 #define DIVCEIL(x, y) (((x)-1) / (y) + 1)
 
+#define MAKE64(h32, l32) (((uint64_t)h32 << 32) | l32)
+#define MAKE32(h16, l16) (((uint32_t)h16 << 16) | l16)
+#define HIGH32(v64) ((uint32_t)(v64 >> 32))
+#define HIGH16(v32) ((uint16_t)(v32 >> 16))
+#define LOW32(v64) ((uint32_t)v64)
+#define LOW16(v32) ((uint16_t)v32)
+
 namespace SimpleSSD {
 
 inline uint64_t generateMask(uint32_t val, uint32_t &count) {
