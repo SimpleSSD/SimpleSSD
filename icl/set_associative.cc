@@ -303,6 +303,7 @@ void SetAssociative::read_doftl(uint64_t tag) {
 void SetAssociative::read_dodram(uint64_t tag) {
   auto ctx = findRequest(readFTLQueue, tag);
 
+  // Add NVM -> DRAM DMA latency
   object.dram->write(
       dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
       eventReadDRAMDone, ctx.req.id);
@@ -318,7 +319,10 @@ void SetAssociative::read_dodma(uint64_t tag) {
 
   line->rpending = false;
 
-  // Request DMA
+  // Add DRAM -> PCIe DMA latency
+  // Actually, this should be performed in HIL layer -- but they don't know
+  // which memory address to read. All read to memory will hit in write queue
+  // of DRAM controller (It should be negliegible).
   object.dram->read(
       dataAddress + (ctx.setIdx * waySize + ctx.wayIdx) * lineSize, lineSize,
       eventReadDMADone, ctx.req.id);
@@ -332,6 +336,7 @@ void SetAssociative::read_dodma(uint64_t tag) {
       if (iter->status == LineStatus::ReadHitPending) {
         iter->status = LineStatus::ReadHit;
 
+        // Add DRAM -> PCIe DMA latency
         object.dram->read(
             dataAddress + (iter->setIdx * waySize + iter->wayIdx) * lineSize,
             lineSize, eventReadDMADone, iter->req.id);
