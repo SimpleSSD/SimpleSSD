@@ -71,22 +71,6 @@ class ICL : public Object {
 
   bool enabled;
 
-  enum Key : uint8_t {
-    StatRead,
-    StatWrite,
-    StatAll,
-  };
-
-  struct {
-    uint64_t request[2];
-    uint64_t busy[3];
-    uint64_t iosize[2];
-    uint64_t lastBusyAt[3];
-  } stat;
-
-  void beginRequest(Key);
-  void endRequest(Key);
-
  public:
   ICL(ObjectData &);
   ICL(const ICL &) = delete;

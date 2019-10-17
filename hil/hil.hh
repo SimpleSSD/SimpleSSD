@@ -48,6 +48,16 @@ class HIL : public Object {
 
   uint32_t logicalPageSize;
 
+  enum Key : uint8_t {
+    StatRead,
+    StatWrite,
+  };
+
+  struct {
+    uint64_t request[2];
+    uint64_t iosize[2];
+  } stat;
+
  public:
   HIL(ObjectData &);
   HIL(const HIL &) = delete;
