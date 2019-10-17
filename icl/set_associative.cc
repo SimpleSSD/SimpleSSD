@@ -211,6 +211,12 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
   eventEvictFTLDone =
       createEvent([this](uint64_t t, uint64_t d) { evict_done(t, d); },
                   "ICL::SetAssociative::eventEvictFTLDone");
+  eventFlushPreCPUDone =
+      createEvent([this](uint64_t, uint64_t d) { flush_findDone(d); },
+                  "ICL::SetAssociative::eventFlushPreCPUDone");
+  eventFlushMetaDone =
+      createEvent([this](uint64_t, uint64_t d) { flush_doevict(d); },
+                  "ICL::SetAssociative::eventFlushMetaDone");
 }
 
 SetAssociative::~SetAssociative() {
@@ -770,6 +776,25 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
                "(%" PRIu64 ")",
                ctx.setIdx, ctx.wayIdx, ctx.submittedAt, ctx.finishedAt,
                ctx.finishedAt - ctx.submittedAt);
+
+    if (UNLIKELY(flushQueue.size() > 0)) {
+      // Find which flush request
+      for (auto iter = flushQueue.begin(); iter != flushQueue.end(); ++iter) {
+        if (ctx.req.address >= iter->req.address &&
+            ctx.req.address < iter->req.address + iter->req.length) {
+          iter->finishedAt--;
+
+          if (iter->finishedAt == 0) {
+            // Complete flush request if every pages are evicted
+            scheduleNow(iter->req.eid, iter->req.data);
+
+            flushQueue.erase(iter);
+          }
+
+          break;
+        }
+      }
+    }
   }
   else if (ctx.status == LineStatus::WriteNVM) {
     debugprint(Log::DebugID::ICL_SetAssociative,
@@ -815,6 +840,83 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 
       break;
     }
+  }
+}
+
+void SetAssociative::flush_find(Request &&req) {
+  CPU::Function fstat = CPU::initFunction();
+  CacheContext ctx(req);
+  ctx.id = requestCounter++;
+  ctx.submittedAt = getTick();
+
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "FLUSH | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
+
+  if (LIKELY(writeEnabled)) {
+    uint32_t setIdx;
+    uint32_t wayIdx;
+    bool found = false;
+
+    for (LPN i = ctx.req.address; i < ctx.req.address + ctx.req.length; i++) {
+      setIdx = getSetIndex(i);
+
+      if (getValidWay(i, setIdx, wayIdx)) {
+        auto line = getLine(setIdx, wayIdx);
+
+        if (line->dirty && !line->wpending) {
+          line->wpending = true;
+          line->dirty = false;
+
+          markEvict(i, setIdx, wayIdx);
+
+          found = true;
+          ctx.finishedAt++;  // Use this variable as total pages to flush
+        }
+      }
+    }
+
+    ctx.status = found ? LineStatus::Flush : LineStatus::FlushNone;
+
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventFlushPreCPUDone, ctx.id,
+                     fstat);
+  }
+  else {
+    // Nothing to flush - no dirty lines!
+    ctx.status = LineStatus::FlushNone;
+
+    scheduleNow(eventFlushMetaDone, ctx.id);
+  }
+
+  flushMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::flush_findDone(uint64_t tag) {
+  auto ctx = findRequest(flushMetaQueue, tag);
+
+  // Add metadata access latency (for all set/way)
+  object.sram->read(metaAddress, metaLineSize * setSize * waySize,
+                    eventFlushMetaDone, tag);
+
+  flushMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::flush_doevict(uint64_t tag) {
+  auto ctx = findRequest(flushMetaQueue, tag);
+
+  switch (ctx.status) {
+    case LineStatus::Flush:
+      // flush requests in evictQueue
+      evict(0, true);
+
+      flushQueue.emplace_back(ctx);
+
+      return;
+    case LineStatus::FlushNone:
+      // Completion
+      scheduleNow(ctx.req.eid, ctx.req.data);
+
+      return;
   }
 }
 

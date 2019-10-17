@@ -58,6 +58,8 @@ class SetAssociative : public AbstractCache {
     WriteEvict,            // Capacity/Conflict Miss
     WriteNVM,              // No cache
     Eviction,              // In eviction
+    FlushNone,             // Nothing to flush
+    Flush,                 // Flush in progress
   };
 
   struct CacheContext {
@@ -147,6 +149,9 @@ class SetAssociative : public AbstractCache {
   std::list<CacheContext> evictQueue;
   std::list<CacheContext> evictFTLQueue;
 
+  std::list<CacheContext> flushMetaQueue;
+  std::list<CacheContext> flushQueue;
+
   CacheContext findRequest(std::list<CacheContext> &, uint64_t);
 
   // Helper
@@ -195,9 +200,16 @@ class SetAssociative : public AbstractCache {
   Event eventEvictFTLDone;
   void evict_done(uint64_t, uint64_t);
 
-  void invalidate_find(Request &&);
-
+  // Flush
   void flush_find(Request &&);
+
+  Event eventFlushPreCPUDone;
+  void flush_findDone(uint64_t);
+
+  Event eventFlushMetaDone;
+  void flush_doevict(uint64_t);
+
+  void invalidate_find(Request &&);
 
   void prefetch(LPN, LPN);
 
