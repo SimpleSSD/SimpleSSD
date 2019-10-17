@@ -208,6 +208,10 @@ void SetAssociative::read_find(Request &&req) {
   ctx.id = requestCounter++;
   ctx.submittedAt = getTick();
 
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "READ  | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64, ctx.req.id,
+             ctx.req.address, lineSize - ctx.req.skipFront - ctx.req.skipEnd);
+
   if (LIKELY(readEnabled)) {
     ctx.setIdx = getSetIndex(ctx.req.address);
 
@@ -326,7 +330,7 @@ void SetAssociative::read_dodram(uint64_t tag) {
   readDRAMQueue.emplace_back(ctx);
 }
 
-void SetAssociative::read_dodma(uint64_t tag) {
+void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
   auto ctx = findRequest(readDRAMQueue, tag);
 
   // Read done
@@ -334,10 +338,40 @@ void SetAssociative::read_dodma(uint64_t tag) {
 
   line->rpending = false;
 
+  ctx.finishedAt = now;
+
   if (ctx.status == LineStatus::Prefetch) {
     // We will not transfer this request to host (complete here)
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "READ  | PREFETCH    | LPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
+               "(%" PRIu64 ")",
+               ctx.req.address, ctx.submittedAt, ctx.finishedAt,
+               ctx.finishedAt - ctx.submittedAt);
   }
   else {
+    switch (ctx.status) {
+      case LineStatus::ReadHit:
+        debugprint(Log::DebugID::ICL_SetAssociative,
+                   "READ  | REQ %7u | Cache hit (%u, %u) | %" PRIu64
+                   " - %" PRIu64 "(%" PRIu64 ")",
+                   ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
+                   ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
+
+        break;
+      case LineStatus::ReadColdMiss:
+      case LineStatus::ReadMiss:
+        debugprint(Log::DebugID::ICL_SetAssociative,
+                   "READ  | REQ %7u | Cache miss (%u, %u) | %" PRIu64
+                   " - %" PRIu64 "(%" PRIu64 ")",
+                   ctx.req.id, ctx.setIdx, ctx.wayIdx, ctx.submittedAt,
+                   ctx.finishedAt, ctx.finishedAt - ctx.submittedAt);
+
+        break;
+      default:
+        // No log here (Prefetch and ReadHitPending)
+        break;
+    }
+
     // Add DRAM -> PCIe DMA latency
     // Actually, this should be performed in HIL layer -- but they don't know
     // which memory address to read. All read to memory will hit in write queue
@@ -357,6 +391,13 @@ void SetAssociative::read_dodma(uint64_t tag) {
       // Now this request can complete
       if (iter->status == LineStatus::ReadHitPending) {
         iter->status = LineStatus::ReadHit;
+        iter->finishedAt = now;
+
+        debugprint(Log::DebugID::ICL_SetAssociative,
+                   "READ  | REQ %7u | Cache hit delayed (%u, %u) | %" PRIu64
+                   " - %" PRIu64 "(%" PRIu64 ")",
+                   iter->req.id, iter->setIdx, iter->wayIdx, iter->submittedAt,
+                   iter->finishedAt, iter->finishedAt - iter->submittedAt);
 
         // Add DRAM -> PCIe DMA latency
         object.dram->read(
@@ -416,6 +457,7 @@ void SetAssociative::prefetch(LPN begin, LPN end) {
       ctx.setIdx = setIdx;
       ctx.wayIdx = wayIdx;
       ctx.status = LineStatus::Prefetch;
+      ctx.submittedAt = getTick();
 
       readMetaQueue.emplace_back(ctx);
 

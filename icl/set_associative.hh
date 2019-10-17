@@ -156,7 +156,7 @@ class SetAssociative : public AbstractCache {
   void read_findDone(uint64_t);
   void read_doftl(uint64_t);
   void read_dodram(uint64_t);
-  void read_dodma(uint64_t);
+  void read_dodma(uint64_t, uint64_t);
   void read_done(uint64_t);
 
   void write_find(Request &&);
