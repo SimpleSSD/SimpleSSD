@@ -138,6 +138,10 @@ class Object {
                                const CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, 0, f);
   }
+  inline void scheduleFunction(CPU::CPUGroup g, Event e, uint64_t d,
+                               const CPU::Function &f) noexcept {
+    object.cpu->schedule(g, e, d, f);
+  }
   inline void scheduleNow(Event e, uint64_t c = 0) noexcept {
     object.cpu->schedule(e, c);
   }
