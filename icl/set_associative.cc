@@ -53,11 +53,11 @@ bool SetAssociative::PrefetchTrigger::trigger(Request &req) {
 
 SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
     : AbstractCache(o, p),
+      requestCounter(0),
       trigger(
           readConfigUint(Section::InternalCache, Config::Key::PrefetchCount),
           readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio)),
-      clock(0),
-      requestCounter(0) {
+      clock(0) {
   auto param = pFTL->getInfo();
   auto cacheSize =
       readConfigUint(Section::InternalCache, Config::Key::CacheSize);
@@ -224,7 +224,7 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
       createEvent([this](uint64_t, uint64_t d) { invalidate_doftl(d); },
                   "ICL::SetAssociative::eventInvalidateMetaDone");
   eventInvalidateFTLDone =
-      createEvent([this](uint64_t, uint64_t d) { invalidate_done(d); },
+      createEvent([this](uint64_t t, uint64_t d) { invalidate_done(t, d); },
                   "ICL::SetAssociative::eventInvalidateFTLDone");
 }
 
@@ -232,8 +232,8 @@ SetAssociative::~SetAssociative() {
   free(cacheMetadata);
 }
 
-CacheContext SetAssociative::findRequest(std::list<CacheContext> &queue,
-                                         uint64_t tag) {
+SetAssociative::CacheContext SetAssociative::findRequest(
+    std::list<CacheContext> &queue, uint64_t tag) {
   for (auto iter = queue.begin(); iter != queue.end(); ++iter) {
     if (iter->id == tag) {
       auto ret = std::move(*iter);
@@ -245,6 +245,9 @@ CacheContext SetAssociative::findRequest(std::list<CacheContext> &queue,
   }
 
   panic("Failed to find request in queue.");
+
+  // Not reached
+  return CacheContext();
 }
 
 void SetAssociative::read_find(Request &&req) {
@@ -360,6 +363,10 @@ void SetAssociative::read_doftl(uint64_t tag) {
       pFTL->submit(FTL::Request(ctx.req.id, eventReadFTLDone, ctx.id,
                                 FTL::Operation::Read, ctx.req.address,
                                 ctx.req.buffer));
+
+      break;
+    default:
+      panic("Unexpected line status.");
 
       break;
   }
@@ -601,6 +608,10 @@ void SetAssociative::write_dodram(uint64_t tag) {
       evict(ctx.setIdx, ctx.status == LineStatus::WriteNVM);
 
       return;
+    default:
+      panic("Unexpected line status.");
+
+      break;
   }
 
   // PCIe -> DRAM latency
@@ -693,7 +704,6 @@ void SetAssociative::evict(uint32_t set, bool fua) {
   else {
     uint32_t setIdx;
     uint32_t wayIdx;
-    uint64_t now = getTick();
 
     // We need to make empty way at set
     // 1. Select victim way
@@ -938,6 +948,10 @@ void SetAssociative::flush_doevict(uint64_t tag) {
       scheduleNow(ctx.req.eid, ctx.req.data);
 
       return;
+    default:
+      panic("Unexpected line status.");
+
+      break;
   }
 }
 
