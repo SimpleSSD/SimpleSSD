@@ -43,7 +43,6 @@ class PALOLD : public AbstractFIL {
 
   struct Complete {
     uint64_t id;
-    uint64_t sid;
 
     Event eid;
     uint64_t data;

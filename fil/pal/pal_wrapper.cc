@@ -54,11 +54,10 @@ PALOLD::PALOLD(ObjectData &o, FIL *p) : AbstractFIL(o, p), lastResetTick(0) {
         pal->FlushFreeSlots(tick - FLUSH_RANGE);
         pal->FlushTimeSlots(tick - FLUSH_RANGE);
 
-        schedule(flushEvent, tick + FLUSH_PERIOD);
+        scheduleRel(flushEvent, 0ull, FLUSH_PERIOD);
       },
       "FIL::PALOLD::flushEvent");
-
-  schedule(flushEvent, getTick() + FLUSH_PERIOD);
+  scheduleRel(flushEvent, 0ull, FLUSH_PERIOD);
 }
 
 PALOLD::~PALOLD() {
@@ -72,7 +71,6 @@ void PALOLD::enqueue(Request &&req) {
   ::CPDPBP addr;
 
   cplt.id = req.id;
-  cplt.sid = req.sid;
   cplt.eid = req.eid;
   cplt.data = req.data;
   cplt.beginAt = getTick();
@@ -137,17 +135,17 @@ void PALOLD::reschedule(Complete &&cplt) {
 
   completionQueue.emplace(iter, cplt);
 
-  schedule(completeEvent, completionQueue.front().finishedAt - getTick());
+  scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
 }
 
-void PALOLD::completion(uint64_t now) {
+void PALOLD::completion(uint64_t) {
   Complete cplt = std::move(completionQueue.front());
   completionQueue.pop_front();
 
-  schedule(cplt.eid, cplt.data);
+  scheduleNow(cplt.eid, cplt.data);
 
   if (completionQueue.size() > 0) {
-    schedule(completeEvent, completionQueue.front().finishedAt - now);
+    scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
   }
 }
 
@@ -355,7 +353,6 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : completionQueue) {
     BACKUP_SCALAR(out, iter.id);
-    BACKUP_SCALAR(out, iter.sid);
     BACKUP_EVENT(out, iter.eid);
     BACKUP_SCALAR(out, iter.data);
     BACKUP_SCALAR(out, iter.beginAt);
@@ -380,7 +377,6 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     Complete tmp;
 
     RESTORE_SCALAR(in, tmp.id);
-    RESTORE_SCALAR(in, tmp.sid);
     RESTORE_EVENT(in, tmp.eid);
     RESTORE_SCALAR(in, tmp.data);
     RESTORE_SCALAR(in, tmp.beginAt);
