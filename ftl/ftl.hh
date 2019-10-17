@@ -30,7 +30,8 @@ typedef struct {
 enum class Operation : uint8_t {
   Read,
   Write,
-  Invalidate,
+  Trim,
+  Format,
 };
 
 struct Request {
@@ -42,10 +43,14 @@ struct Request {
   Operation opcode;
 
   uint64_t address;
-  uint8_t *buffer;
+  union {
+    uint8_t *buffer;
+    uint64_t length;  // Used for Trim/Format
+  };
 
   Request();
   Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint8_t *);
+  Request(uint64_t, Event, uint64_t, Operation, uint64_t, uint64_t);
 };
 
 /**

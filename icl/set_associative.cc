@@ -217,6 +217,15 @@ SetAssociative::SetAssociative(ObjectData &o, FTL::FTL *p)
   eventFlushMetaDone =
       createEvent([this](uint64_t, uint64_t d) { flush_doevict(d); },
                   "ICL::SetAssociative::eventFlushMetaDone");
+  eventInvalidatePreCPUDone =
+      createEvent([this](uint64_t, uint64_t d) { invalidate_findDone(d); },
+                  "ICL::SetAssociative::eventInvalidatePreCPUDone");
+  eventInvalidateMetaDone =
+      createEvent([this](uint64_t, uint64_t d) { invalidate_doftl(d); },
+                  "ICL::SetAssociative::eventInvalidateMetaDone");
+  eventInvalidateFTLDone =
+      createEvent([this](uint64_t, uint64_t d) { invalidate_done(d); },
+                  "ICL::SetAssociative::eventInvalidateFTLDone");
 }
 
 SetAssociative::~SetAssociative() {
@@ -423,8 +432,7 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
   }
 
   // At this point, we can handle pending request
-  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();
-       ++iter) {
+  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
     auto line = getLine(iter->setIdx, iter->wayIdx);
 
     if (line->rpending == false) {
@@ -460,6 +468,9 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
 
         writeMetaQueue.emplace_back(*iter);
       }
+      else if (iter->status == LineStatus::Invalidate) {
+        // This line is invalidated by TRIM or Fomrat
+      }
       else {
         panic("Unexpected line status.");
       }
@@ -469,9 +480,10 @@ void SetAssociative::read_dodma(uint64_t now, uint64_t tag) {
         line->clock = clock;
       }
 
-      readPendingQueue.erase(iter);
-
-      break;
+      iter = readPendingQueue.erase(iter);
+    }
+    else {
+      ++iter;
     }
   }
 }
@@ -816,7 +828,7 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
   }
 
   // At this point, we can handle pending request
-  for (auto iter = evictQueue.begin(); iter != evictQueue.end(); ++iter) {
+  for (auto iter = evictQueue.begin(); iter != evictQueue.end();) {
     auto line = getLine(iter->setIdx, iter->wayIdx);
 
     if (line->wpending == false) {
@@ -837,13 +849,17 @@ void SetAssociative::evict_done(uint64_t now, uint64_t tag) {
 
         writeMetaQueue.emplace_back(*iter);
       }
+      else if (iter->status == LineStatus::Invalidate) {
+        // This line is invalidated by TRIM or Fomrat
+      }
       else {
         panic("Unexpected line status.");
       }
 
-      evictQueue.erase(iter);
-
-      break;
+      iter = evictQueue.erase(iter);
+    }
+    else {
+      ++iter;
     }
   }
 }
@@ -923,6 +939,108 @@ void SetAssociative::flush_doevict(uint64_t tag) {
 
       return;
   }
+}
+
+void SetAssociative::invalidate_find(Request &&req) {
+  CPU::Function fstat = CPU::initFunction();
+  CacheContext ctx(req);
+  ctx.id = requestCounter++;
+  ctx.submittedAt = getTick();
+
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "%s | REQ %7u | LPN %" PRIx64 "h | SIZE %" PRIu64,
+             ctx.req.opcode == Operation::Trim ? "TRIM  " : "FORMAT",
+             ctx.req.id, ctx.req.address,
+             lineSize - ctx.req.skipFront - ctx.req.skipEnd);
+
+  if (LIKELY(writeEnabled)) {
+    uint32_t setIdx;
+    uint32_t wayIdx;
+
+    for (LPN i = ctx.req.address; i < ctx.req.address + ctx.req.length; i++) {
+      setIdx = getSetIndex(i);
+
+      if (getValidWay(i, setIdx, wayIdx)) {
+        auto line = getLine(setIdx, wayIdx);
+
+        // Invalidate line
+        line->valid = false;
+        line->dirty = false;
+
+        if (line->rpending) {
+          CacheContext ctx2;
+
+          ctx2.id = requestCounter++;
+          ctx2.req.address = i;
+          ctx2.setIdx = setIdx;
+          ctx2.wayIdx = wayIdx;
+          ctx2.status = LineStatus::Invalidate;
+          ctx2.submittedAt = getTick();
+
+          readPendingQueue.emplace_back(ctx2);
+        }
+        else if (line->wpending) {
+          CacheContext ctx2;
+
+          ctx2.id = requestCounter++;
+          ctx2.req.address = i;
+          ctx2.setIdx = setIdx;
+          ctx2.wayIdx = wayIdx;
+          ctx2.status = LineStatus::Invalidate;
+          ctx2.submittedAt = getTick();
+
+          writePendingQueue.emplace_back(ctx2);
+        }
+        else {
+          line->rpending = false;
+          line->wpending = false;
+        }
+      }
+    }
+
+    scheduleFunction(CPU::CPUGroup::InternalCache, eventInvalidatePreCPUDone,
+                     ctx.id, fstat);
+  }
+  else {
+    scheduleNow(eventInvalidateMetaDone, ctx.id);
+  }
+
+  ctx.status = LineStatus::Invalidate;
+
+  invalidateMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::invalidate_findDone(uint64_t tag) {
+  auto ctx = findRequest(invalidateMetaQueue, tag);
+
+  // Add metadata access latency (for all set/way)
+  object.sram->read(metaAddress, metaLineSize * setSize * waySize,
+                    eventFlushMetaDone, tag);
+
+  invalidateMetaQueue.emplace_back(ctx);
+}
+
+void SetAssociative::invalidate_doftl(uint64_t tag) {
+  auto ctx = findRequest(invalidateMetaQueue, tag);
+  auto opcode = ctx.req.opcode == Operation::Trim ? FTL::Operation::Trim
+                                                  : FTL::Operation::Format;
+
+  // Perform invalidate
+  pFTL->submit(FTL::Request(ctx.req.id, eventInvalidateFTLDone, ctx.id, opcode,
+                            ctx.req.address, ctx.req.length));
+
+  invalidateFTLQueue.emplace_back(ctx);
+}
+
+void SetAssociative::invalidate_done(uint64_t now, uint64_t tag) {
+  auto ctx = findRequest(invalidateFTLQueue, tag);
+
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "%s | REQ %7u | %" PRIu64 " - %" PRIu64 "(%" PRIu64 ")",
+             ctx.req.opcode == Operation::Trim ? "TRIM  " : "FORMAT",
+             ctx.req.id, ctx.submittedAt, now, now - ctx.submittedAt);
+
+  scheduleNow(ctx.req.eid, ctx.req.data);
 }
 
 void SetAssociative::enqueue(Request &&req) {
