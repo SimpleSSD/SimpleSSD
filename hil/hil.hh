@@ -12,6 +12,7 @@
 
 #include <utility>
 
+#include "hil/command_manager.hh"
 #include "icl/icl.hh"
 #include "sim/object.hh"
 
@@ -44,19 +45,10 @@ class HIL : public Object {
  private:
   ICL::ICL *pICL;
 
+  CommandManager commandManager;
+
   uint64_t requestCounter;
-
   uint32_t logicalPageSize;
-
-  enum Key : uint8_t {
-    StatRead,
-    StatWrite,
-  };
-
-  struct {
-    uint64_t request[2];
-    uint64_t iosize[2];
-  } stat;
 
  public:
   HIL(ObjectData &);
@@ -68,72 +60,14 @@ class HIL : public Object {
   HIL &operator=(HIL &&) = default;
 
   /**
-   * \brief Read logical pages
+   * \brief Submit command
    *
-   * \param[in]  address  Offset in LPN to read
-   * \param[out] buffer   Array for retrived data (logical page size)
-   * \param[in]  unread   Byte offset to exclude <first bytes, last bytes>
-   * \param[in]  eid      Completion event
-   * \param[in]  data     Data for event
+   * Command should be inserted through CommandManager before call this
+   * function.
+   *
+   * \param[in] tag Unique command tag
    */
-  void readPage(LPN address, uint8_t *buffer,
-                std::pair<uint32_t, uint32_t> &&unread, Event eid,
-                uint64_t data = 0);
-
-  /**
-   * \brief Write logical pages
-   *
-   * If logical block is smaller than logical page, first loglcal page and last
-   * logical page may contains unwritten area. Then specify unwritten area using
-   * unwritten parameter.
-   *
-   * \param[in] address   Offset in LPN to write
-   * \param[in] buffer    Array for data to write (logical page size)
-   * \param[in] unwritten Byte offset to exclude <first bytes, last bytes>
-   * \param[in] eid       Completion event
-   * \param[in] data      Data for event
-   */
-  void writePage(LPN address, uint8_t *buffer,
-                 std::pair<uint32_t, uint32_t> &&unwritten, Event eid,
-                 uint64_t data = 0);
-
-  /**
-   * \brief Flush cache
-   *
-   * To implement per-namespace cache flush, this function requires offset and
-   * length.
-   *
-   * \param[in] offset  Offset in LPN to flush
-   * \param[in] length  # of logical pages to flush
-   * \param[in] eid     Completion event
-   * \param[in] data    Data for event
-   */
-  void flushCache(LPN offset, LPN length, Event eid, uint64_t data = 0);
-
-  /**
-   * \brief Trim logical pages
-   *
-   * \param[in] offset  Offset in LPN to trim
-   * \param[in] length  # of logical pages to trim
-   * \param[in] eid     Completion event
-   * \param[in] data    Data for event
-   */
-  void trimPages(LPN offset, LPN length, Event eid, uint64_t data = 0);
-
-  /**
-   * \brief Format logical pages
-   *
-   * To implement per-namespace format, this function requires offset and
-   * length.
-   *
-   * \param[in] offset  Offset in LPN to format
-   * \param[in] length  # of logical pages to format
-   * \param[in] option  Format method to use
-   * \param[in] eid     Completion event
-   * \param[in] data    Data for event
-   */
-  void formatPages(LPN offset, LPN length, FormatOption option, Event eid,
-                   uint64_t data = 0);
+  void submitCommand(uint64_t tag);
 
   /**
    * \brief Get logical pages contains data
@@ -154,6 +88,9 @@ class HIL : public Object {
 
   //! Get cache enabled
   bool getCache();
+
+  //! Get command manager
+  CommandManager &getCommandManager();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
