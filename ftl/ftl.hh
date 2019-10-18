@@ -27,14 +27,8 @@ namespace SimpleSSD::FTL {
 class FTL : public Object {
  private:
   struct FormatContext {
-    LPN begin;
-    LPN end;
     Event eid;
     uint64_t data;
-  };
-
-  struct CopyContext {
-
   };
 
   FIL::FIL *pFIL;
@@ -48,7 +42,7 @@ class FTL : public Object {
   uint32_t nextCopyIndex;
   uint8_t *gcBuffer;
 
-  uint8_t formatInProgress;  // 0 ~ 100
+  uint8_t formatInProgress;
   FormatContext fctx;
 
   void read_find(Request &&);

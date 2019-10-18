@@ -116,6 +116,7 @@ class AbstractMapping : public Object {
   virtual void readMapping(Request &&, Event) = 0;
   virtual void writeMapping(Request &&, Event) = 0;
   virtual void invalidateMapping(Request &&, Event) = 0;
+  virtual void getBlocks(LPN, LPN, std::deque<PPN> &, Event) = 0;
 
   // GC interfaces
   virtual bool checkGCThreshold() = 0;

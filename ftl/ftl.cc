@@ -90,7 +90,7 @@ void FTL::write_done(uint64_t tag) {
   pMapper->releaseContext(tag);
 
   // Check GC threshold for On-demand GC
-  if (pMapper->checkGCThreshold() && !gcInProgress) {
+  if (pMapper->checkGCThreshold() && formatInProgress == 0) {
     scheduleNow(eventGCBegin);
   }
 }
@@ -106,15 +106,19 @@ void FTL::invalidate_dofil(uint64_t tag) {
     // Complete here (not erasing blocks)
     scheduleNow(ctx.req.eid, ctx.req.data);
   }
-  else {
+  else if (formatInProgress == 0) {
     // Erase block here
     formatInProgress = 100;  // 100% remain
-    fctx.begin = ctx.req.address;
-    fctx.end = ctx.req.address + ctx.req.length;
     fctx.eid = ctx.req.eid;
     fctx.data = ctx.req.data;
 
-    // TODO: Fill here
+    // Make list
+    pMapper->getBlocks(ctx.req.address, ctx.req.length, gcList,
+                       eventGCListDone);
+  }
+  else {
+    // TODO: Handle this case
+    scheduleNow(ctx.req.eid, ctx.req.data);
   }
 
   pMapper->releaseContext(tag);
@@ -122,6 +126,7 @@ void FTL::invalidate_dofil(uint64_t tag) {
 
 void FTL::gc_trigger() {
   gcInProgress = true;
+  formatInProgress = 100;
 
   // Get block list from allocator
   pAllocator->getVictimBlocks(gcList, eventGCListDone);
@@ -181,6 +186,13 @@ void FTL::gc_erase() {
 }
 
 void FTL::gc_done() {
+  formatInProgress = 0;
+
+  if (!gcInProgress) {
+    // This was format
+    scheduleNow(fctx.eid, fctx.data);
+  }
+
   gcInProgress = false;
 }
 
@@ -214,7 +226,12 @@ bool FTL::isGC() {
 }
 
 uint8_t FTL::isFormat() {
-  return formatInProgress;
+  if (gcInProgress) {
+    return 0;
+  }
+  else {
+    return formatInProgress;
+  }
 }
 
 void FTL::bypass(FIL::Request &&req) {
