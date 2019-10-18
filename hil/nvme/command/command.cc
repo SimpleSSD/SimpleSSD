@@ -106,17 +106,8 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
 IOCommandData::IOCommandData(ObjectData &o, Command *p, ControllerData *c)
     : CommandData(o, p, c),
       dmaTag(InvalidDMATag),
-      slpn(0),
-      nlp(0),
-      skipFront(0),
-      skipEnd(0),
-      nlp_done_hil(0),
-      nlp_done_dma(0),
-      lpnSize(0),
       _slba(0),
       _nlb(0),
-      size(0),
-      buffer(nullptr),
       beginAt(0) {}
 
 /**
@@ -149,26 +140,9 @@ void IOCommandData::createCheckpoint(std::ostream &out) const noexcept {
   CommandData::createCheckpoint(out);
 
   BACKUP_DMATAG(out, dmaTag);
-  BACKUP_SCALAR(out, slpn);
-  BACKUP_SCALAR(out, nlp);
-  BACKUP_SCALAR(out, skipFront);
-  BACKUP_SCALAR(out, skipEnd);
-  BACKUP_SCALAR(out, nlp_done_hil);
-  BACKUP_SCALAR(out, nlp_done_dma);
-  BACKUP_SCALAR(out, lpnSize);
   BACKUP_SCALAR(out, _slba);
   BACKUP_SCALAR(out, _nlb);
-  BACKUP_SCALAR(out, size);
   BACKUP_SCALAR(out, beginAt);
-
-  exist = buffer != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    BACKUP_BLOB(out, buffer, size);
-
-    object.bufmgr->registerPointer(out, buffer, size);
-  }
 }
 
 void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
@@ -177,64 +151,42 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
   CommandData::restoreCheckpoint(in);
 
   RESTORE_DMATAG(dmaEngine, in, dmaTag);
-  RESTORE_SCALAR(in, slpn);
-  RESTORE_SCALAR(in, nlp);
-  RESTORE_SCALAR(in, skipFront);
-  RESTORE_SCALAR(in, skipEnd);
-  RESTORE_SCALAR(in, nlp_done_hil);
-  RESTORE_SCALAR(in, nlp_done_dma);
-  RESTORE_SCALAR(in, lpnSize);
   RESTORE_SCALAR(in, _slba);
   RESTORE_SCALAR(in, _nlb);
-  RESTORE_SCALAR(in, size);
   RESTORE_SCALAR(in, beginAt);
 
   RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    buffer = (uint8_t *)malloc(size);
-
-    RESTORE_BLOB(in, buffer, size);
-
-    object.bufmgr->updatePointer(in, buffer, size);
-  }
 }
 
 CompareCommandData::CompareCommandData(ObjectData &o, Command *p,
                                        ControllerData *c)
-    : IOCommandData(o, p, c), complete(0), subBuffer(nullptr) {}
+    : IOCommandData(o, p, c), complete(0) {}
 
 void CompareCommandData::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   IOCommandData::createCheckpoint(out);
 
   BACKUP_SCALAR(out, complete);
 
-  exist = subBuffer != nullptr;
-  BACKUP_SCALAR(out, exist);
+  uint64_t size = buffer.size();
+  BACKUP_SCALAR(out, size);
 
-  if (exist) {
-    BACKUP_BLOB(out, subBuffer, size);
-
-    object.bufmgr->registerPointer(out, buffer, size);
+  if (size > 0) {
+    BACKUP_BLOB(out, buffer.data(), size);
   }
 }
 
 void CompareCommandData::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
+  uint64_t size;
 
   IOCommandData::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, complete);
+  RESTORE_SCALAR(in, size);
 
-  exist = subBuffer != nullptr;
-  RESTORE_SCALAR(in, exist);
+  if (size > 0) {
+    buffer.resize(size);
 
-  if (exist) {
-    RESTORE_BLOB(in, subBuffer, size);
-
-    object.bufmgr->updatePointer(in, buffer, size);
+    RESTORE_BLOB(in, buffer.data(), size);
   }
 }
 

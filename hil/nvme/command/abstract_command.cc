@@ -81,6 +81,12 @@ void Command::addTagToList(CommandTag tag) {
 }
 
 void Command::completeRequest(CommandTag tag) {
+  if (auto iotag = dynamic_cast<IOCommandData *>(tag)) {
+    if (iotag->dmaTag != InvalidDMATag) {
+      iotag->dmaEngine->deinit(iotag->dmaTag);
+    }
+  }
+
   destroyTag(tag);
 }
 

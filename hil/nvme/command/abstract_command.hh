@@ -79,7 +79,7 @@ class Command : public Object {
   Command(Command &&) noexcept = delete;
 
   virtual void setRequest(ControllerData *, SQContext *) = 0;
-  virtual void completeRequest(CommandTag);
+  void completeRequest(CommandTag);
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

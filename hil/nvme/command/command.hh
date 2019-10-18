@@ -105,20 +105,8 @@ class IOCommandData : public CommandData {
 
   DMATag dmaTag;
 
-  uint64_t slpn;
-  uint32_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
-
-  uint32_t nlp_done_hil;
-  uint32_t nlp_done_dma;
-  uint32_t lpnSize;
-
   uint64_t _slba;
   uint16_t _nlb;
-
-  uint64_t size;
-  uint8_t *buffer;
 
   uint64_t beginAt;  // For log
 
@@ -139,7 +127,7 @@ class CompareCommandData : public IOCommandData {
   FRIEND_LIST
 
   uint8_t complete;
-  uint8_t *subBuffer;
+  std::vector<uint8_t> buffer;
 
   CompareCommandData(ObjectData &, Command *, ControllerData *);
 

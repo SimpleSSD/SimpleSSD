@@ -25,65 +25,62 @@ Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void Read::dmaInitDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
   auto pHIL = subsystem->getHIL();
 
-  // Perform first page read
-  pHIL->readPage(tag->slpn, tag->buffer + tag->skipFront,
-                 std::make_pair(tag->skipFront, 0), readDoneEvent,
-                 tag->getGCID());
+  // Perform read
+  pHIL->submitCommand(gcid);
 }
 
 void Read::readDone(uint64_t gcid) {
   auto tag = findIOTag(gcid);
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto &cmd = mgr->getCommand(gcid);
 
-  tag->nlp_done_hil++;
+  uint64_t offset = 0;
+  uint32_t size = 0;
+  uint32_t skipFront = cmd.subCommandList.front().skipFront;
+  uint32_t skipEnd = cmd.subCommandList.back().skipEnd;
+  uint32_t completed = 0;
 
-  if (tag->nlp == tag->nlp_done_hil) {
-    // We completed all page access, Handle last DMA
-    tag->dmaEngine->write(
-        tag->dmaTag, (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront,
-        tag->lpnSize - tag->skipEnd,
-        tag->buffer + (tag->nlp_done_hil - 1) * tag->lpnSize, dmaCompleteEvent,
-        gcid);
+  // Find completed subcommand
+  for (auto &iter : cmd.subCommandList) {
+    if (iter.status == Status::Complete) {
+      completed++;
+    }
+    else if (iter.status == Status::Done) {
+      iter.status = Status::Complete;
+
+      offset = (iter.lpn - cmd.offset) * iter.buffer.size() - skipFront;
+      size = iter.buffer.size();
+
+      if (iter.lpn == cmd.offset) {
+        offset = 0;
+        size = iter.buffer.size() - skipFront;
+      }
+      else if (iter.lpn + 1 == cmd.offset + cmd.length) {
+        size = iter.buffer.size() - skipEnd;
+      }
+
+      // Start DMA for current subcommand
+      tag->dmaEngine->write(tag->dmaTag, offset, size,
+                            iter.buffer.data() + iter.skipFront,
+                            dmaCompleteEvent, gcid);
+    }
   }
-  else {
-    // Start DMA for current page and request HIL for next page
-    uint64_t offset = 0;
-    uint32_t size = tag->lpnSize - tag->skipFront;
 
-    if (tag->nlp_done_hil > 1) {
-      // We need to consider skipFront
-      offset = (tag->nlp_done_hil - 1) * tag->lpnSize - tag->skipFront;
-      size = tag->lpnSize;
-    }
-
-    // DMA current page
-    tag->dmaEngine->write(tag->dmaTag, offset, size,
-                          tag->buffer + offset + tag->skipFront,
-                          dmaCompleteEvent, gcid);
-
-    uint32_t skipEnd = 0;
-    auto pHIL = subsystem->getHIL();
-
-    if (tag->nlp == tag->nlp_done_hil + 1) {
-      // Last request
-      skipEnd = tag->skipEnd;
-    }
-
-    // Read next page
-    pHIL->readPage(tag->slpn + tag->nlp_done_hil,
-                   tag->buffer + tag->nlp_done_hil * tag->lpnSize,
-                   std::make_pair(0, skipEnd), readDoneEvent, gcid);
+  if (completed == cmd.subCommandList.size()) {
+    cmd.status = Status::Complete;
   }
 }
 
 void Read::dmaComplete(uint64_t gcid) {
   auto tag = findIOTag(gcid);
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto &cmd = mgr->getCommand(gcid);
 
-  tag->nlp_done_dma++;
-
-  if (tag->nlp == tag->nlp_done_dma) {
+  if (cmd.status == Status::Complete) {
     // Done
     auto now = getTick();
 
@@ -93,6 +90,7 @@ void Read::dmaComplete(uint64_t gcid) {
                        tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
                        tag->beginAt, now, now - tag->beginAt);
 
+    mgr->destroyCommand(gcid);
     subsystem->complete(tag);
   }
 }
@@ -130,14 +128,18 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   // Convert unit
-  ns->second->getConvertFunction()(slba, nlb, tag->slpn, tag->nlp,
-                                   &tag->skipFront, &tag->skipEnd);
+  LPN slpn;
+  uint32_t nlp;
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
+  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
 
   // Check range
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(tag->slpn + tag->nlp > range.second)) {
+  if (UNLIKELY(slpn + nlp > range.second)) {
     tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                          GenericCommandStatusCode::Invalid_Field);
 
@@ -146,38 +148,46 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  tag->slpn += info->namespaceRange.first;
+  slpn += info->namespaceRange.first;
 
   ns->second->read(nlb * info->lbaSize);
 
-  // Make buffer
-  tag->lpnSize = info->lpnSize;
-  tag->size = tag->nlp * info->lpnSize;
-  tag->buffer = (uint8_t *)calloc(tag->size, 1);
+  // Make command
+  auto disk = ns->second->getDisk();
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto gcid = tag->getGCID();
+
+  mgr->createCommand(gcid, readDoneEvent);
+  auto &cmd = mgr->getCommand(gcid);
+
+  cmd.offset = slpn;
+  cmd.length = nlp;
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = mgr->createSubCommand(gcid);
+
+    scmd.opcode = Operation::Read;
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    else if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+
+    scmd.buffer.resize(info->lpnSize);
+
+    disk->read((i - slpn) * info->lpnSize + skipFront, info->lpnSize - skipEnd,
+               scmd.buffer.data() + skipFront);
+  }
 
   tag->_slba = slba;
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
-
-  // Handle disk image
-  auto disk = ns->second->getDisk();
-
-  if (disk) {
-    disk->read(slba, nlb, tag->buffer + tag->skipFront);
-  }
-}
-
-void Read::completeRequest(CommandTag tag) {
-  if (((IOCommandData *)tag)->buffer) {
-    free(((IOCommandData *)tag)->buffer);
-  }
-  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
+  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}

@@ -9,7 +9,6 @@
 
 #include <iostream>
 
-#include "hil/buffer_manager.hh"
 #include "hil/nvme/subsystem.hh"
 #include "mem/dram/gem5.hh"
 #include "mem/dram/simple.hh"
@@ -129,7 +128,6 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   // Initialize hardware
   object.cpu = new CPU::CPU(e, c, &log);
   object.sram = new Memory::SRAM::SRAM(object);
-  object.bufmgr = new HIL::BufferManager(object);
 
   switch ((Memory::Config::Model)c->readUint(Section::Memory,
                                              Memory::Config::Key::DRAMModel)) {
@@ -175,7 +173,6 @@ void SimpleSSD::deinit() noexcept {
     delete subsystem;
 
     // Deinitialize hardware
-    delete object.bufmgr;
     delete object.sram;
     delete object.dram;
     delete object.cpu;

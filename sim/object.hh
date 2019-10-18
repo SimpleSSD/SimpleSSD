@@ -78,12 +78,6 @@ class AbstractSRAM;
 
 }
 
-namespace HIL {
-
-class BufferManager;
-
-}
-
 /**
  * \brief Common data for Object
  *
@@ -99,7 +93,6 @@ using ObjectData = struct _ObjectData {
   /* Simulation utilities */
   ConfigReader *config;
   Log *log;
-  HIL::BufferManager *bufmgr;
 
   _ObjectData()
       : cpu(nullptr),
@@ -108,9 +101,8 @@ using ObjectData = struct _ObjectData {
         config(nullptr),
         log(nullptr) {}
   _ObjectData(CPU::CPU *e, Memory::DRAM::AbstractDRAM *d,
-              Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l,
-              HIL::BufferManager *b)
-      : cpu(e), dram(d), sram(s), config(c), log(l), bufmgr(b) {}
+              Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
+      : cpu(e), dram(d), sram(s), config(c), log(l) {}
 };
 
 //! Logical Page Number definition
@@ -236,7 +228,6 @@ class Object {
 
 }  // namespace SimpleSSD
 
-#include "hil/buffer_manager.hh"
 #include "mem/abstract_ram.hh"
 #include "mem/dram/abstract_dram.hh"
 #include "mem/sram/abstract_sram.hh"
