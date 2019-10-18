@@ -18,10 +18,10 @@
 namespace SimpleSSD::HIL {
 
 enum class Status : uint8_t {
-  Prepare,   // Sub command created
-  DMA,       // Sub command is in DMA
-  Submit,    // Sub command issued to HIL
-  Done,      // Sub command completed by HIL
+  Prepare,  // Sub command created
+  DMA,      // Sub command is in DMA
+  Submit,   // Sub command issued to HIL
+  Done,     // Sub command completed by HIL
 };
 
 enum class Operation : uint8_t {
@@ -88,7 +88,7 @@ class CommandManager : public Object {
   Command &getCommand(uint64_t);
   std::vector<SubCommand> &getSubCommand(uint64_t);
 
-  void createCommand(uint64_t, Event);
+  Command &createCommand(uint64_t, Event);
   SubCommand &createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
 

@@ -29,10 +29,12 @@ std::vector<SubCommand> &CommandManager::getSubCommand(uint64_t tag) {
   return iter->second.subCommandList;
 }
 
-void CommandManager::createCommand(uint64_t tag, Event eid) {
+Command &CommandManager::createCommand(uint64_t tag, Event eid) {
   auto iter = commandList.emplace(std::make_pair(tag, Command(eid)));
 
   panic_if(!iter.second, "Command with tag %" PRIu64 " already exists.", tag);
+
+  return iter.first->second;
 }
 
 SubCommand &CommandManager::createSubCommand(uint64_t tag) {
