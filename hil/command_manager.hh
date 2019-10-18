@@ -83,7 +83,7 @@ class CommandManager : public Object {
   std::vector<SubCommand> &getSubCommand(uint64_t);
 
   void createCommand(uint64_t, Event);
-  uint32_t createSubCommand(uint64_t);
+  SubCommand &createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

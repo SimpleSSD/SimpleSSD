@@ -27,16 +27,12 @@ void CommandManager::createCommand(uint64_t tag, Event eid) {
   panic_if(!iter.second, "Command with tag %" PRIu64 " already exists.", tag);
 }
 
-uint32_t CommandManager::createSubCommand(uint64_t tag) {
+SubCommand &CommandManager::createSubCommand(uint64_t tag) {
   auto iter = commandList.find(tag);
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  uint32_t ret = iter->second.subCommandList.size();
-
-  iter->second.subCommandList.emplace_back(SubCommand());
-
-  return ret;
+  return iter->second.subCommandList.emplace_back(SubCommand());
 }
 
 void CommandManager::destroyCommand(uint64_t tag) {
