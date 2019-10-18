@@ -10,16 +10,30 @@
 namespace SimpleSSD::HIL {
 
 HIL::HIL(ObjectData &o)
-    : Object(o), icl(object), commandManager(object), requestCounter(0) {
+    : Object(o),
+      commandManager(object),
+      icl(object, &commandManager),
+      requestCounter(0) {
   logicalPageSize = icl.getLPNSize();
 }
 
 HIL::~HIL() {}
 
 void HIL::submitCommand(uint64_t tag) {
+  auto &cmd = commandManager.getCommand(tag);
+  uint32_t size = cmd.subCommandList.size();
+
+  cmd.status = Status::Submit;
+
+  for (uint32_t i = 0; i < size; i++) {
+    icl.submit(tag, i);
+  }
+}
+
+void HIL::submitSubcommand(uint64_t tag, uint32_t id) {
   commandManager.getCommand(tag).status = Status::Submit;
 
-  icl.submit(tag);
+  icl.submit(tag, id);
 }
 
 LPN HIL::getPageUsage(LPN offset, LPN length) {

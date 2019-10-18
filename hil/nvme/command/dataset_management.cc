@@ -74,12 +74,13 @@ void DatasetManagement::dmaComplete(uint64_t gcid) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto &first = trimList.front();
-
-  mgr->createCommand(gcid, trimDoneEvent);
-  auto &cmd = mgr->getCommand(gcid);
+  auto &cmd = mgr->createCommand(gcid, trimDoneEvent);
 
   cmd.offset = first.first;
   cmd.length = first.second;
+
+  auto &scmd = mgr->createSubCommand(gcid);
+  scmd.opcode = Operation::Trim;
 
   pHIL->submitCommand(gcid);
 }

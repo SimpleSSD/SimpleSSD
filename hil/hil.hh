@@ -43,8 +43,8 @@ enum class FormatOption {
  */
 class HIL : public Object {
  private:
-  ICL::ICL icl;
   CommandManager commandManager;
+  ICL::ICL icl;
 
   uint64_t requestCounter;
   uint32_t logicalPageSize;

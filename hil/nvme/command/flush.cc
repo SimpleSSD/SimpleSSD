@@ -18,7 +18,7 @@ Flush::Flush(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void Flush::flushDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
   auto now = getTick();
 
   debugprint_command(
@@ -30,7 +30,7 @@ void Flush::flushDone(uint64_t gcid) {
 }
 
 void Flush::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createDMATag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -42,11 +42,20 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
   tag->createResponse();
   tag->beginAt = getTick();
 
+  // Make command
+  auto gcid = tag->getGCID();
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto &cmd = mgr->createCommand(gcid, flushDoneEvent);
+
+  auto &scmd = mgr->createSubCommand(gcid);
+  scmd.opcode = Operation::Flush;
+
   if (nsid == NSID_ALL) {
     auto last = subsystem->getTotalPages();
-    auto pHIL = subsystem->getHIL();
 
-    pHIL->flushCache(0, last, flushDoneEvent, tag->getGCID());
+    cmd.offset = 0;
+    cmd.length = last;
   }
   else {
     auto nslist = subsystem->getNamespaceList();
@@ -56,16 +65,19 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
       tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                            GenericCommandStatusCode::Invalid_Field);
 
+      mgr->destroyCommand(gcid);
       subsystem->complete(tag);
 
       return;
     }
 
     auto range = ns->second->getInfo()->namespaceRange;
-    auto pHIL = subsystem->getHIL();
 
-    pHIL->flushCache(range.first, range.second, flushDoneEvent, tag->getGCID());
+    cmd.offset = range.first;
+    cmd.length = range.second;
   }
+
+  pHIL->submitCommand(gcid);
 }
 
 void Flush::getStatList(std::vector<Stat> &, std::string) noexcept {}

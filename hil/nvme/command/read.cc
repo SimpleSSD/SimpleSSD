@@ -153,9 +153,7 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto gcid = tag->getGCID();
-
-  mgr->createCommand(gcid, readDoneEvent);
-  auto &cmd = mgr->getCommand(gcid);
+  auto &cmd = mgr->createCommand(gcid, readDoneEvent);
 
   cmd.offset = slpn;
   cmd.length = nlp;

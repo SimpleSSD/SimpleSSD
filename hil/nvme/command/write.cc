@@ -171,9 +171,7 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto gcid = tag->getGCID();
-
-  mgr->createCommand(gcid, writeDoneEvent);
-  auto &cmd = mgr->getCommand(gcid);
+  auto &cmd = mgr->createCommand(gcid, writeDoneEvent);
 
   cmd.offset = slpn;
   cmd.length = nlp;

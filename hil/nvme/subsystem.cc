@@ -45,7 +45,7 @@ Subsystem::~Subsystem() {
     delete iter.second;
   }
 
-  std::visit([](auto &&hil) { delete hil; }, pHIL);
+  delete pHIL;
 
   delete commandDeleteSQ;
   delete commandCreateSQ;
@@ -333,12 +333,8 @@ void Subsystem::init() {
       readConfigUint(Section::HostInterface, Config::Key::NVMeDefaultNamespace);
   uint64_t totalByteSize;
 
-  std::visit(
-      [this](auto &&hil) {
-        totalLogicalPages = hil->getTotalPages();
-        logicalPageSize = hil->getLPNSize();
-      },
-      pHIL);
+  totalLogicalPages = pHIL->getTotalPages();
+  logicalPageSize = pHIL->getLPNSize();
 
   totalByteSize = totalLogicalPages * logicalPageSize;
 
@@ -664,12 +660,16 @@ uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
   ns->second->format();
 
   // Do format
-  std::visit(
-      [info, ses, eid, gcid](auto &&hil) {
-        hil->formatPages(info->namespaceRange.first,
-                         info->namespaceRange.second, ses, eid, gcid);
-      },
-      pHIL);
+  auto mgr = pHIL->getCommandManager();
+  auto &cmd = mgr->createCommand(gcid, eid);
+
+  cmd.offset = info->namespaceRange.first;
+  cmd.length = info->namespaceRange.second;
+
+  auto &scmd = mgr->createSubCommand(gcid);
+  scmd.opcode = ses == FormatOption::None ? Operation::Trim : Operation::Format;
+
+  pHIL->submitCommand(gcid);
 
   return 0;
 }
