@@ -82,7 +82,7 @@ class CommandManager : public Object {
 
   std::vector<SubCommand> &getSubCommand(uint64_t);
 
-  void createCommand(uint64_t, Event);
+  void createCommand(uint64_t, Event, LPN, LPN);
   SubCommand &createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
 
