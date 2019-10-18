@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include "sim/event.hh"
+#include "util/bitset.hh"
 
 namespace SimpleSSD::FTL {
 
@@ -67,6 +68,16 @@ struct FTLContext {
 };
 
 using FTLQueue = std::unordered_map<uint64_t, FTLContext>;
+
+struct BlockInfo {
+  PPN blockID;
+
+  Bitset valid;
+  std::vector<std::pair<LPN, PPN>> lpnList;
+
+  BlockInfo(ObjectData &o, uint32_t s)
+      : valid(o, s), lpnList(s, std::make_pair(0, 0)) {}
+};
 
 }  // namespace SimpleSSD::FTL
 

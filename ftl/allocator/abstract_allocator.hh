@@ -39,7 +39,8 @@ class AbstractAllocator : public Object {
   virtual void allocatePage(FTLContext &, Event) = 0;
 
   // For FTL
-  virtual void reclaimBlock(FTLContext &, Event) = 0;
+  virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
+  virtual void reclaimBlocks(std::deque<PPN> &, Event) = 0;
 };
 
 }  // namespace BlockAllocator

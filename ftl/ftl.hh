@@ -26,10 +26,30 @@ namespace SimpleSSD::FTL {
  */
 class FTL : public Object {
  private:
+  struct FormatContext {
+    LPN begin;
+    LPN end;
+    Event eid;
+    uint64_t data;
+  };
+
+  struct CopyContext {
+
+  };
+
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
+
+  bool gcInProgress;
+  std::deque<PPN> gcList;
+  BlockInfo gcBlock;
+  uint32_t nextCopyIndex;
+  uint8_t *gcBuffer;
+
+  uint8_t formatInProgress;  // 0 ~ 100
+  FormatContext fctx;
 
   void read_find(Request &&);
 
@@ -47,6 +67,32 @@ class FTL : public Object {
   Event eventWriteFILDone;
   void write_done(uint64_t);
 
+  void invalidate_find(Request &&);
+
+  Event eventInvalidateMappingDone;
+  void invalidate_dofil(uint64_t);
+
+  Event eventGCBegin;
+  void gc_trigger();
+
+  Event eventGCListDone;
+  void gc_blockinfo();
+
+  Event eventGCRead;
+  void gc_read();
+
+  Event eventGCWriteMapping;
+  void gc_write();
+
+  Event eventGCWrite;
+  void gc_writeDofil();
+
+  Event eventGCErase;
+  void gc_erase();
+
+  Event eventGCDone;
+  void gc_done();
+
  public:
   FTL(ObjectData &);
   FTL(const FTL &) = delete;
@@ -61,6 +107,10 @@ class FTL : public Object {
   Parameter *getInfo();
 
   LPN getPageUsage(LPN, LPN);
+  bool isGC();
+  uint8_t isFormat();
+
+  void bypass(FIL::Request &&);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

@@ -112,8 +112,15 @@ class AbstractMapping : public Object {
   virtual FTLContext &getContext(uint64_t) = 0;
   virtual void releaseContext(uint64_t) = 0;
 
+  // I/O interfaces
   virtual void readMapping(Request &&, Event) = 0;
   virtual void writeMapping(Request &&, Event) = 0;
+  virtual void invalidateMapping(Request &&, Event) = 0;
+
+  // GC interfaces
+  virtual bool checkGCThreshold() = 0;
+  virtual void getBlockInfo(BlockInfo &, Event) = 0;
+  virtual void writeMapping(std::pair<LPN, PPN> &, Event) = 0;
 };
 
 }  // namespace Mapping
