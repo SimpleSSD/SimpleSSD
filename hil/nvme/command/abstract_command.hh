@@ -36,8 +36,8 @@ class SQContext;
 class CQContext;
 class ControllerData;
 class CommandData;
-class IOCommandData;
-class CompareCommandData;
+class DMACommandData;
+class BufferCommandData;
 
 using CommandTag = CommandData *;
 
@@ -63,12 +63,12 @@ class Command : public Object {
   std::unordered_map<uint64_t, CommandTag> tagList;
 
   CommandTag createTag(ControllerData *, SQContext *);
-  IOCommandData *createIOTag(ControllerData *, SQContext *);
-  CompareCommandData *createCompareTag(ControllerData *, SQContext *);
+  DMACommandData *createDMATag(ControllerData *, SQContext *);
+  BufferCommandData *createBufferTag(ControllerData *, SQContext *);
 
   CommandTag findTag(uint64_t);
-  IOCommandData *findIOTag(uint64_t);
-  CompareCommandData *findCompareTag(uint64_t);
+  DMACommandData *findDMATag(uint64_t);
+  BufferCommandData *findBufferTag(uint64_t);
 
   void destroyTag(CommandTag);
   void addTagToList(CommandTag);

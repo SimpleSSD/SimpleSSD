@@ -23,8 +23,8 @@ CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
-IOCommandData *Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
-  auto ret = new IOCommandData(object, this, cdata);
+DMACommandData *Command::createDMATag(ControllerData *cdata, SQContext *sqc) {
+  auto ret = new DMACommandData(object, this, cdata);
 
   ret->sqc = sqc;
 
@@ -33,9 +33,9 @@ IOCommandData *Command::createIOTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
-CompareCommandData *Command::createCompareTag(ControllerData *cdata,
-                                              SQContext *sqc) {
-  auto ret = new CompareCommandData(object, this, cdata);
+BufferCommandData *Command::createBufferTag(ControllerData *cdata,
+                                            SQContext *sqc) {
+  auto ret = new BufferCommandData(object, this, cdata);
 
   ret->sqc = sqc;
 
@@ -53,12 +53,12 @@ CommandTag Command::findTag(uint64_t gcid) {
   return iter->second;
 }
 
-IOCommandData *Command::findIOTag(uint64_t gcid) {
-  return (IOCommandData *)findTag(gcid);
+DMACommandData *Command::findDMATag(uint64_t gcid) {
+  return (DMACommandData *)findTag(gcid);
 }
 
-CompareCommandData *Command::findCompareTag(uint64_t gcid) {
-  return (CompareCommandData *)findTag(gcid);
+BufferCommandData *Command::findBufferTag(uint64_t gcid) {
+  return (BufferCommandData *)findTag(gcid);
 }
 
 void Command::destroyTag(CommandTag tag) {
@@ -81,7 +81,7 @@ void Command::addTagToList(CommandTag tag) {
 }
 
 void Command::completeRequest(CommandTag tag) {
-  if (auto iotag = dynamic_cast<IOCommandData *>(tag)) {
+  if (auto iotag = dynamic_cast<DMACommandData *>(tag)) {
     if (iotag->dmaTag != InvalidDMATag) {
       iotag->dmaEngine->deinit(iotag->dmaTag);
     }
@@ -100,10 +100,10 @@ void Command::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.first);
 
     // Store type of CommandData
-    if (dynamic_cast<CompareCommandData *>(iter.second)) {
+    if (dynamic_cast<BufferCommandData *>(iter.second)) {
       type = 3;
     }
-    else if (dynamic_cast<IOCommandData *>(iter.second)) {
+    else if (dynamic_cast<DMACommandData *>(iter.second)) {
       type = 2;
     }
     else if (dynamic_cast<CommandData *>(iter.second)) {
@@ -147,10 +147,10 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
         newTag = new CommandData(object, this, cdata);
         break;
       case 2:
-        newTag = new IOCommandData(object, this, cdata);
+        newTag = new DMACommandData(object, this, cdata);
         break;
       case 3:
-        newTag = new CompareCommandData(object, this, cdata);
+        newTag = new BufferCommandData(object, this, cdata);
         break;
       default:
         panic("Unexpected CommandTag type.");

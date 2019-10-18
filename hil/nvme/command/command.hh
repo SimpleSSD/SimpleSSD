@@ -97,7 +97,7 @@ class CommandData : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-class IOCommandData : public CommandData {
+class DMACommandData : public CommandData {
  protected:
   friend Command;
 
@@ -110,7 +110,7 @@ class IOCommandData : public CommandData {
 
   uint64_t beginAt;  // For log
 
-  IOCommandData(ObjectData &, Command *, ControllerData *);
+  DMACommandData(ObjectData &, Command *, ControllerData *);
 
   void createDMAEngine(uint32_t, Event);
   void destroyDMAEngine();
@@ -120,7 +120,7 @@ class IOCommandData : public CommandData {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-class CompareCommandData : public IOCommandData {
+class BufferCommandData : public DMACommandData {
  protected:
   friend Command;
 
@@ -129,7 +129,7 @@ class CompareCommandData : public IOCommandData {
   uint8_t complete;
   std::vector<uint8_t> buffer;
 
-  CompareCommandData(ObjectData &, Command *, ControllerData *);
+  BufferCommandData(ObjectData &, Command *, ControllerData *);
 
  public:
   void createCheckpoint(std::ostream &) const noexcept override;

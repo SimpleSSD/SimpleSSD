@@ -103,7 +103,7 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-IOCommandData::IOCommandData(ObjectData &o, Command *p, ControllerData *c)
+DMACommandData::DMACommandData(ObjectData &o, Command *p, ControllerData *c)
     : CommandData(o, p, c),
       dmaTag(InvalidDMATag),
       _slba(0),
@@ -116,7 +116,7 @@ IOCommandData::IOCommandData(ObjectData &o, Command *p, ControllerData *c)
  * \param[in] size  Expected data size (for PRPEngine)
  * \param[in] eid   DMA init callback
  */
-void IOCommandData::createDMAEngine(uint32_t size, Event eid) {
+void DMACommandData::createDMAEngine(uint32_t size, Event eid) {
   auto entry = sqc->getData();
 
   if (sqc->isSGL()) {
@@ -129,12 +129,12 @@ void IOCommandData::createDMAEngine(uint32_t size, Event eid) {
   }
 }
 
-void IOCommandData::destroyDMAEngine() {
+void DMACommandData::destroyDMAEngine() {
   dmaEngine->deinit(dmaTag);
   dmaTag = InvalidDMATag;
 }
 
-void IOCommandData::createCheckpoint(std::ostream &out) const noexcept {
+void DMACommandData::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
   CommandData::createCheckpoint(out);
@@ -145,7 +145,7 @@ void IOCommandData::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, beginAt);
 }
 
-void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
+void DMACommandData::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
   CommandData::restoreCheckpoint(in);
@@ -158,12 +158,12 @@ void IOCommandData::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, exist);
 }
 
-CompareCommandData::CompareCommandData(ObjectData &o, Command *p,
-                                       ControllerData *c)
-    : IOCommandData(o, p, c), complete(0) {}
+BufferCommandData::BufferCommandData(ObjectData &o, Command *p,
+                                     ControllerData *c)
+    : DMACommandData(o, p, c), complete(0) {}
 
-void CompareCommandData::createCheckpoint(std::ostream &out) const noexcept {
-  IOCommandData::createCheckpoint(out);
+void BufferCommandData::createCheckpoint(std::ostream &out) const noexcept {
+  DMACommandData::createCheckpoint(out);
 
   BACKUP_SCALAR(out, complete);
 
@@ -175,10 +175,10 @@ void CompareCommandData::createCheckpoint(std::ostream &out) const noexcept {
   }
 }
 
-void CompareCommandData::restoreCheckpoint(std::istream &in) noexcept {
+void BufferCommandData::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
 
-  IOCommandData::restoreCheckpoint(in);
+  DMACommandData::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, complete);
   RESTORE_SCALAR(in, size);

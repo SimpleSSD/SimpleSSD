@@ -32,7 +32,7 @@ void Read::dmaInitDone(uint64_t gcid) {
 }
 
 void Read::readDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
@@ -75,7 +75,7 @@ void Read::readDone(uint64_t gcid) {
 }
 
 void Read::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
@@ -96,7 +96,7 @@ void Read::dmaComplete(uint64_t gcid) {
 }
 
 void Read::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createDMATag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
