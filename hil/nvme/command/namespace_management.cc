@@ -22,18 +22,19 @@ NamespaceManagement::NamespaceManagement(ObjectData &o, Subsystem *s)
 }
 
 void NamespaceManagement::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
+  uint8_t *buffer = tag->buffer.data();
 
   // Make namespace information
   NamespaceInformation info;
 
-  info.size = *(uint64_t *)(tag->buffer);
-  info.capacity = *(uint64_t *)(tag->buffer + 8);
-  info.lbaFormatIndex = tag->buffer[26];
-  info.dataProtectionSettings = tag->buffer[29];
-  info.namespaceSharingCapabilities = tag->buffer[30];
-  info.anaGroupIdentifier = *(uint32_t *)(tag->buffer + 92);
-  info.nvmSetIdentifier = *(uint16_t *)(tag->buffer + 100);
+  info.size = *(uint64_t *)(buffer);
+  info.capacity = *(uint64_t *)(buffer + 8);
+  info.lbaFormatIndex = buffer[26];
+  info.dataProtectionSettings = buffer[29];
+  info.namespaceSharingCapabilities = buffer[30];
+  info.anaGroupIdentifier = *(uint32_t *)(buffer + 92);
+  info.nvmSetIdentifier = *(uint16_t *)(buffer + 100);
 
   // Execute
   uint32_t nsid = NSID_NONE;
@@ -67,14 +68,14 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
 }
 
 void NamespaceManagement::dmaInitDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer, dmaCompleteEvent,
-                       gcid);
+  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer.data(),
+                       dmaCompleteEvent, gcid);
 }
 
 void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createBufferTag(cdata, req);
   auto entry = req->getData();
 
   bool sendAEN = false;
@@ -91,7 +92,7 @@ void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
 
   if (sel == 0) {
     // Make buffer
-    tag->buffer = (uint8_t *)calloc(4096, 1);
+    tag->buffer.resize(4096);
 
     // Make DMA engine
     tag->createDMAEngine(4096, dmaInitEvent);
@@ -122,17 +123,6 @@ void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
                            (uint8_t)NoticeCode::NamespaceAttributeChanged,
                            LogPageID::None);
   }
-}
-
-void NamespaceManagement::completeRequest(CommandTag tag) {
-  if (((IOCommandData *)tag)->buffer) {
-    free(((IOCommandData *)tag)->buffer);
-  }
-  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
 }
 
 void NamespaceManagement::getStatList(std::vector<Stat> &,

@@ -22,14 +22,14 @@ NamespaceAttachment::NamespaceAttachment(ObjectData &o, Subsystem *s)
 }
 
 void NamespaceAttachment::dmaInitDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer, dmaCompleteEvent,
-                       gcid);
+  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer.data(),
+                       dmaCompleteEvent, gcid);
 }
 
 void NamespaceAttachment::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
   auto entry = tag->sqc->getData();
 
   // Get parameters
@@ -40,13 +40,14 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
   bool bad = false;
   uint8_t ret = 0;
 
-  uint16_t count = *(uint16_t *)tag->buffer;
+  uint8_t *buffer = tag->buffer.data();
+  uint16_t count = *(uint16_t *)buffer;
   std::vector<uint16_t> list;
 
   list.resize(count);
 
   for (uint16_t i = 1; i <= count; i++) {
-    list.at(i - 1) = *(uint16_t *)(tag->buffer + i * 2);
+    list.at(i - 1) = *(uint16_t *)(buffer + i * 2);
 
     if (i > 1 && list.at(i - 2) >= list.at(i - 1)) {
       bad = true;
@@ -133,7 +134,7 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
 }
 
 void NamespaceAttachment::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createBufferTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -156,21 +157,10 @@ void NamespaceAttachment::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   // Make buffer
-  tag->buffer = (uint8_t *)calloc(4096, 1);
+  tag->buffer.resize(4096);
 
   // Make DMA engine
   tag->createDMAEngine(4096, dmaInitEvent);
-}
-
-void NamespaceAttachment::completeRequest(CommandTag tag) {
-  if (((IOCommandData *)tag)->buffer) {
-    free(((IOCommandData *)tag)->buffer);
-  }
-  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
 }
 
 void NamespaceAttachment::getStatList(std::vector<Stat> &,

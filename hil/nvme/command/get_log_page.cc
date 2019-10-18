@@ -21,21 +21,21 @@ GetLogPage::GetLogPage(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void GetLogPage::dmaInitDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
 
   // Write buffer to host
-  tag->dmaEngine->write(tag->dmaTag, 0, tag->size, tag->buffer,
+  tag->dmaEngine->write(tag->dmaTag, 0, tag->buffer.size(), tag->buffer.data(),
                         dmaCompleteEvent, gcid);
 }
 
 void GetLogPage::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findBufferTag(gcid);
 
   subsystem->complete(tag);
 }
 
 void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createBufferTag(cdata, req);
   auto entry = req->getData();
 
   bool immediate = false;
@@ -53,26 +53,26 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
   uint8_t uuid = entry->dword14 & 0x7F;
 
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
-  tag->size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
+  uint64_t size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
 
   debugprint_command(
       tag, "ADMIN   | Get Log Page | Log %d | Size %d | NSID %u | UUID %u", lid,
-      tag->size, nsid, uuid);
+      size, nsid, uuid);
 
   // Make response
   tag->createResponse();
 
   // Make buffer
-  tag->buffer = (uint8_t *)calloc(tag->size, 1);
+  tag->buffer.resize(size);
 
   switch ((LogPageID)lid) {
     case LogPageID::SMARTInformation: {
       auto health = subsystem->getHealth(nsid);
 
       if (LIKELY(health && offset <= 0x1FC)) {
-        tag->size = MIN(tag->size, 0x200 - offset);  // At least 4 bytes
+        size = MIN(size, 0x200 - offset);  // At least 4 bytes
 
-        memcpy(tag->buffer, health->data + offset, tag->size);
+        memcpy(tag->buffer.data(), health->data + offset, size);
       }
       else {
         immediate = true;
@@ -83,8 +83,8 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
       }
     } break;
     case LogPageID::ChangedNamespaceList:
-      tag->controller->getLogPage()->cnl.makeResponse(offset, tag->size,
-                                                      tag->buffer);
+      tag->controller->getLogPage()->cnl.makeResponse(offset, size,
+                                                      tag->buffer.data());
 
       break;
     default:
@@ -101,19 +101,8 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
   }
   else {
     // Data is ready
-    tag->createDMAEngine(tag->size, dmaInitEvent);
+    tag->createDMAEngine(size, dmaInitEvent);
   }
-}
-
-void GetLogPage::completeRequest(CommandTag tag) {
-  if (((IOCommandData *)tag)->buffer) {
-    free(((IOCommandData *)tag)->buffer);
-  }
-  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
 }
 
 void GetLogPage::getStatList(std::vector<Stat> &, std::string) noexcept {}

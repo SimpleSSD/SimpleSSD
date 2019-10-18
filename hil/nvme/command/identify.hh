@@ -21,10 +21,10 @@ class Identify : public Command {
   Event dmaInitEvent;
   Event dmaCompleteEvent;
 
-  void makeNamespaceStructure(IOCommandData *, uint32_t, bool = false);
-  void makeNamespaceList(IOCommandData *, uint32_t, bool = false);
-  void makeControllerStructure(IOCommandData *);
-  void makeControllerList(IOCommandData *, ControllerID, uint32_t = NSID_ALL);
+  void makeNamespaceStructure(BufferCommandData *, uint32_t, bool = false);
+  void makeNamespaceList(BufferCommandData *, uint32_t, bool = false);
+  void makeControllerStructure(BufferCommandData *);
+  void makeControllerList(BufferCommandData *, ControllerID, uint32_t = NSID_ALL);
 
   void dmaInitDone(uint64_t);
   void dmaComplete(uint64_t);
@@ -33,7 +33,6 @@ class Identify : public Command {
   Identify(ObjectData &, Subsystem *);
 
   void setRequest(ControllerData *, SQContext *) override;
-  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

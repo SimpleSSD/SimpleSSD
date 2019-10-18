@@ -26,7 +26,6 @@ class NamespaceAttachment : public Command {
   NamespaceAttachment(ObjectData &, Subsystem *);
 
   void setRequest(ControllerData *, SQContext *) override;
-  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
