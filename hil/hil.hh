@@ -43,8 +43,7 @@ enum class FormatOption {
  */
 class HIL : public Object {
  private:
-  ICL::ICL *pICL;
-
+  ICL::ICL icl;
   CommandManager commandManager;
 
   uint64_t requestCounter;
@@ -90,7 +89,7 @@ class HIL : public Object {
   bool getCache();
 
   //! Get command manager
-  CommandManager &getCommandManager();
+  CommandManager *getCommandManager();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

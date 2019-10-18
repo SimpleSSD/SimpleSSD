@@ -9,26 +9,23 @@
 
 namespace SimpleSSD::HIL {
 
-HIL::HIL(ObjectData &o) : Object(o), commandManager(object), requestCounter(0) {
-  pICL = new ICL::ICL(object);
-
-  logicalPageSize = pICL->getLPNSize();
+HIL::HIL(ObjectData &o)
+    : Object(o), icl(object), commandManager(object), requestCounter(0) {
+  logicalPageSize = icl.getLPNSize();
 }
 
-HIL::~HIL() {
-  delete pICL;
-}
+HIL::~HIL() {}
 
 void HIL::submitCommand(uint64_t tag) {
-  pICL->submit(tag);
+  icl.submit(tag);
 }
 
 LPN HIL::getPageUsage(LPN offset, LPN length) {
-  return pICL->getPageUsage(offset, length);
+  return icl.getPageUsage(offset, length);
 }
 
 LPN HIL::getTotalPages() {
-  return pICL->getTotalPages();
+  return icl.getTotalPages();
 }
 
 uint64_t HIL::getLPNSize() {
@@ -36,40 +33,44 @@ uint64_t HIL::getLPNSize() {
 }
 
 void HIL::setCache(bool set) {
-  pICL->setCache(set);
+  icl.setCache(set);
 }
 
 bool HIL::getCache() {
-  return pICL->getCache();
+  return icl.getCache();
+}
+
+CommandManager *HIL::getCommandManager() {
+  return &commandManager;
 }
 
 void HIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  pICL->getStatList(list, prefix);
+  icl.getStatList(list, prefix);
 }
 
 void HIL::getStatValues(std::vector<double> &values) noexcept {
-  pICL->getStatValues(values);
+  icl.getStatValues(values);
 }
 
 void HIL::resetStatValues() noexcept {
-  pICL->resetStatValues();
+  icl.resetStatValues();
 }
 
 void HIL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, requestCounter);
 
   commandManager.createCheckpoint(out);
-  pICL->createCheckpoint(out);
+  icl.createCheckpoint(out);
 }
 
 void HIL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, requestCounter);
 
   commandManager.restoreCheckpoint(in);
-  pICL->restoreCheckpoint(in);
+  icl.restoreCheckpoint(in);
 
   // Just update this value here
-  logicalPageSize = pICL->getLPNSize();
+  logicalPageSize = icl.getLPNSize();
 }
 
 }  // namespace SimpleSSD::HIL
