@@ -18,9 +18,10 @@
 namespace SimpleSSD::HIL {
 
 enum class Status : uint8_t {
-  Submit,
-  Done,
-  Complete,
+  Prepare,   // Sub command created
+  Submit,    // Sub command issued to HIL
+  Done,      // Sub command completed by HIL
+  Complete,  // Marked as completed
 
 };
 
@@ -48,7 +49,7 @@ struct SubCommand {
   std::vector<uint8_t> spare;
 
   SubCommand()
-      : status(Status::Complete),
+      : status(Status::Prepare),
         opcode(Operation::None),
         lpn(0),
         ppn(0),
@@ -59,12 +60,14 @@ struct SubCommand {
 struct Command {
   Event eid;
 
+  Status status;
+
   LPN offset;
   LPN length;
 
   std::vector<SubCommand> subCommandList;
 
-  Command(Event e) : eid(e) {}
+  Command(Event e) : eid(e), status(Status::Prepare) {}
 };
 
 class CommandManager : public Object {
@@ -80,9 +83,10 @@ class CommandManager : public Object {
   CommandManager &operator=(const CommandManager &) = delete;
   CommandManager &operator=(CommandManager &&) = default;
 
+  Command &getCommand(uint64_t);
   std::vector<SubCommand> &getSubCommand(uint64_t);
 
-  void createCommand(uint64_t, Event, LPN, LPN);
+  void createCommand(uint64_t, Event);
   SubCommand &createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
 

@@ -13,6 +13,14 @@ CommandManager::CommandManager(ObjectData &o) : Object(o) {}
 
 CommandManager::~CommandManager() {}
 
+Command &CommandManager::getCommand(uint64_t tag) {
+  auto iter = commandList.find(tag);
+
+  panic_if(iter == commandList.end(), "No such command exists.");
+
+  return iter->second;
+}
+
 std::vector<SubCommand> &CommandManager::getSubCommand(uint64_t tag) {
   auto iter = commandList.find(tag);
 
@@ -21,13 +29,10 @@ std::vector<SubCommand> &CommandManager::getSubCommand(uint64_t tag) {
   return iter->second.subCommandList;
 }
 
-void CommandManager::createCommand(uint64_t tag, Event eid, LPN o, LPN l) {
+void CommandManager::createCommand(uint64_t tag, Event eid) {
   auto iter = commandList.emplace(std::make_pair(tag, Command(eid)));
 
   panic_if(!iter.second, "Command with tag %" PRIu64 " already exists.", tag);
-
-  iter.first->second.offset = o;
-  iter.first->second.length = l;
 }
 
 SubCommand &CommandManager::createSubCommand(uint64_t tag) {
@@ -61,6 +66,7 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.first);
 
     BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.status);
     BACKUP_SCALAR(out, iter.second.offset);
     BACKUP_SCALAR(out, iter.second.length);
 
@@ -106,6 +112,7 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
 
     Command cmd(eid);
 
+    RESTORE_SCALAR(in, cmd.status);
     RESTORE_SCALAR(in, cmd.offset);
     RESTORE_SCALAR(in, cmd.length);
 
