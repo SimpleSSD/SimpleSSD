@@ -41,14 +41,26 @@ struct SubCommand {
   LPN lpn;
   PPN ppn;
 
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
   std::vector<uint8_t> buffer;
   std::vector<uint8_t> spare;
 
-  SubCommand() : status(Status::Complete), opcode(Operation::None) {}
+  SubCommand()
+      : status(Status::Complete),
+        opcode(Operation::None),
+        lpn(0),
+        ppn(0),
+        skipFront(0),
+        skipEnd(0) {}
 };
 
 struct Command {
   Event eid;
+
+  LPN offset;
+  LPN length;
 
   std::vector<SubCommand> subCommandList;
 
@@ -68,8 +80,7 @@ class CommandManager : public Object {
   CommandManager &operator=(const CommandManager &) = delete;
   CommandManager &operator=(CommandManager &&) = default;
 
-  SubCommand &getSubCommand(uint64_t, Status);
-  SubCommand &getSubCommand(uint64_t, uint32_t);
+  std::vector<SubCommand> &getSubCommand(uint64_t);
 
   void createCommand(uint64_t, Event);
   uint32_t createSubCommand(uint64_t);

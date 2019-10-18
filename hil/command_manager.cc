@@ -13,29 +13,12 @@ CommandManager::CommandManager(ObjectData &o) : Object(o) {}
 
 CommandManager::~CommandManager() {}
 
-SubCommand &CommandManager::getSubCommand(uint64_t tag, Status status) {
+std::vector<SubCommand> &CommandManager::getSubCommand(uint64_t tag) {
   auto iter = commandList.find(tag);
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  auto &cmd = iter->second;
-  auto scmd = cmd.subCommandList.begin();
-
-  for (; scmd != cmd.subCommandList.end(); ++scmd) {
-    if (scmd->status == status) {
-      break;
-    }
-  }
-
-  return *scmd;
-}
-
-SubCommand &CommandManager::getSubCommand(uint64_t tag, uint32_t id) {
-  auto iter = commandList.find(tag);
-
-  panic_if(iter == commandList.end(), "No such command exists.");
-
-  return iter->second.subCommandList.at(id);
+  return iter->second.subCommandList;
 }
 
 void CommandManager::createCommand(uint64_t tag, Event eid) {
@@ -79,6 +62,8 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.first);
 
     BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.offset);
+    BACKUP_SCALAR(out, iter.second.length);
 
     size = iter.second.subCommandList.size();
     BACKUP_SCALAR(out, size);
@@ -88,6 +73,8 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, scmd.opcode);
       BACKUP_SCALAR(out, scmd.lpn);
       BACKUP_SCALAR(out, scmd.ppn);
+      BACKUP_SCALAR(out, scmd.skipFront);
+      BACKUP_SCALAR(out, scmd.skipEnd);
 
       size = scmd.buffer.size();
       BACKUP_SCALAR(out, size);
@@ -120,6 +107,9 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
 
     Command cmd(eid);
 
+    RESTORE_SCALAR(in, cmd.offset);
+    RESTORE_SCALAR(in, cmd.length);
+
     RESTORE_SCALAR(in, size2);
 
     for (uint64_t j = 0; j < size2; j++) {
@@ -129,6 +119,9 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, scmd.opcode);
       RESTORE_SCALAR(in, scmd.lpn);
       RESTORE_SCALAR(in, scmd.ppn);
+      RESTORE_SCALAR(in, scmd.skipFront);
+      RESTORE_SCALAR(in, scmd.skipEnd);
+
       RESTORE_SCALAR(in, size3);
 
       if (size3 > 0) {
