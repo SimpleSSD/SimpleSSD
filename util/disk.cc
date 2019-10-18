@@ -22,18 +22,18 @@
 #include <cstring>
 #include <filesystem>
 
+#define SECTOR_SIZE 512
+
 namespace SimpleSSD {
 
-Disk::Disk(ObjectData &o) : Object(o), diskSize(0), sectorSize(0) {}
+Disk::Disk(ObjectData &o) : Object(o), diskSize(0) {}
 
 Disk::~Disk() {
   close();
 }
 
-uint64_t Disk::open(std::string path, uint64_t desiredSize,
-                    uint32_t lbaSize) noexcept {
+uint64_t Disk::open(std::string path, uint64_t desiredSize) noexcept {
   filename = path;
-  sectorSize = lbaSize;
 
   // Validate size
   std::filesystem::path fspath(path);
@@ -75,70 +75,72 @@ void Disk::close() noexcept {
   }
 }
 
-uint16_t Disk::read(uint64_t slba, uint16_t nlblk, uint8_t *buffer) noexcept {
+uint32_t Disk::read(uint64_t offset, uint32_t size, uint8_t *buffer) noexcept {
   uint16_t ret = 0;
 
   if (disk.is_open()) {
-    uint64_t avail;
-
-    slba *= sectorSize;
-    avail = nlblk * sectorSize;
-
-    if (slba + avail > diskSize) {
-      if (slba >= diskSize) {
-        avail = 0;
+    if (offset + size > diskSize) {
+      if (offset >= diskSize) {
+        size = 0;
       }
       else {
-        avail = diskSize - slba;
+        size = diskSize - offset;
       }
     }
 
-    if (avail > 0) {
-      disk.seekg(slba, std::ios::beg);
+    if (size > 0) {
+      disk.seekg(offset, std::ios::beg);
+
       if (!disk.good()) {
         // panic("nvme_disk: Fail to seek to %" PRIu64 "\n", slba);
       }
 
-      disk.read((char *)buffer, avail);
+      disk.read((char *)buffer, size);
     }
-
-    memset(buffer + avail, 0, nlblk * sectorSize - avail);
 
     // DPRINTF(NVMeDisk, "DISK    | READ  | BYTE %016" PRIX64 " + %X\n",
     //         slba, nlblk * sectorSize);
 
-    ret = nlblk;
+    ret = size;
   }
 
   return ret;
 }
 
-uint16_t Disk::write(uint64_t slba, uint16_t nlblk, uint8_t *buffer) noexcept {
+uint32_t Disk::write(uint64_t offset, uint32_t size, uint8_t *buffer) noexcept {
   uint16_t ret = 0;
 
   if (disk.is_open()) {
-    slba *= sectorSize;
+    disk.seekp(offset, std::ios::beg);
 
-    disk.seekp(slba, std::ios::beg);
     if (!disk.good()) {
       // panic("nvme_disk: Fail to seek to %" PRIu64 "\n", slba);
     }
 
-    uint64_t offset = disk.tellp();
-    disk.write((char *)buffer, sectorSize * nlblk);
-    offset = (uint64_t)disk.tellp() - offset;
+    if (offset + size > diskSize) {
+      if (offset >= diskSize) {
+        size = 0;
+      }
+      else {
+        size = diskSize - offset;
+      }
+    }
+
+    if (size > 0) {
+      disk.write((char *)buffer, size);
+    }
 
     // DPRINTF(NVMeDisk, "DISK    | WRITE | BYTE %016" PRIX64 " + %X\n", slba,
     //         offset);
 
-    ret = offset / sectorSize;
+    ret = size;
   }
 
   return ret;
 }
 
-uint16_t Disk::erase(uint64_t, uint16_t nlblk) noexcept {
-  return nlblk;
+uint32_t Disk::erase(uint64_t, uint32_t size) noexcept {
+  return size;
 }
 
 void Disk::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -149,7 +151,6 @@ void Disk::resetStatValues() noexcept {}
 
 void Disk::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, diskSize);
-  BACKUP_SCALAR(out, sectorSize);
 
   uint64_t size = filename.size();
   BACKUP_SCALAR(out, size);
@@ -158,7 +159,6 @@ void Disk::createCheckpoint(std::ostream &out) const noexcept {
 
 void Disk::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, diskSize);
-  RESTORE_SCALAR(in, sectorSize);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
@@ -168,7 +168,7 @@ void Disk::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_BLOB(in, filename.c_str(), size);
 
   // Okay, try to open.
-  open(filename, diskSize, sectorSize);
+  open(filename, diskSize);
 }
 
 CoWDisk::CoWDisk(ObjectData &o) : Disk(o) {}
@@ -183,48 +183,56 @@ void CoWDisk::close() noexcept {
   Disk::close();
 }
 
-uint16_t CoWDisk::read(uint64_t slba, uint16_t nlblk,
+uint32_t CoWDisk::read(uint64_t offset, uint32_t size,
                        uint8_t *buffer) noexcept {
   uint16_t read = 0;
 
-  for (uint64_t i = 0; i < nlblk; i++) {
-    auto block = table.find(slba + i);
+  panic_if(size % SECTOR_SIZE, "Read to disk is not aligned.");
+
+  for (uint64_t i = 0; i < size / SECTOR_SIZE; i++) {
+    auto lba = offset / SECTOR_SIZE + i;
+    auto block = table.find(lba);
 
     if (block != table.end()) {
-      memcpy(buffer + i * sectorSize, block->second.data(), sectorSize);
+      memcpy(buffer + i * SECTOR_SIZE, block->second.data(), SECTOR_SIZE);
       read++;
     }
     else {
-      read += Disk::read(slba + i, 1, buffer + i * sectorSize);
+      read +=
+          Disk::read(lba * SECTOR_SIZE, SECTOR_SIZE, buffer + i * SECTOR_SIZE) /
+          SECTOR_SIZE;
     }
   }
 
-  return read;
+  return read * SECTOR_SIZE;
 }
 
-uint16_t CoWDisk::write(uint64_t slba, uint16_t nlblk,
+uint32_t CoWDisk::write(uint64_t offset, uint32_t size,
                         uint8_t *buffer) noexcept {
   uint16_t write = 0;
 
-  for (uint64_t i = 0; i < nlblk; i++) {
-    auto block = table.find(slba + i);
+  panic_if(size % SECTOR_SIZE, "Write to disk is not aligned.");
+
+  for (uint64_t i = 0; i < size / SECTOR_SIZE; i++) {
+    auto lba = offset / SECTOR_SIZE + i;
+    auto block = table.find(lba);
 
     if (block != table.end()) {
-      memcpy(block->second.data(), buffer + i * sectorSize, sectorSize);
+      memcpy(block->second.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
     }
     else {
       std::vector<uint8_t> data;
 
-      data.resize(sectorSize);
-      memcpy(data.data(), buffer + i * sectorSize, sectorSize);
+      data.resize(SECTOR_SIZE);
+      memcpy(data.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
 
-      table.insert({slba + i, data});
+      table.emplace(std::make_pair(lba, data));
     }
 
     write++;
   }
 
-  return write;
+  return write * SECTOR_SIZE;
 }
 
 void CoWDisk::createCheckpoint(std::ostream &out) const noexcept {
@@ -269,9 +277,8 @@ MemDisk::~MemDisk() {
   close();
 }
 
-uint64_t MemDisk::open(std::string, uint64_t size, uint32_t lbaSize) noexcept {
+uint64_t MemDisk::open(std::string, uint64_t size) noexcept {
   diskSize = size;
-  sectorSize = lbaSize;
 
   return size;
 }
@@ -280,56 +287,65 @@ void MemDisk::close() noexcept {
   table.clear();
 }
 
-uint16_t MemDisk::read(uint64_t slba, uint16_t nlblk,
+uint32_t MemDisk::read(uint64_t offset, uint32_t size,
                        uint8_t *buffer) noexcept {
   uint16_t read = 0;
 
-  for (uint64_t i = 0; i < nlblk; i++) {
-    auto block = table.find(slba + i);
+  panic_if(size % SECTOR_SIZE, "Read to disk is not aligned.");
+
+  for (uint64_t i = 0; i < size / SECTOR_SIZE; i++) {
+    auto lba = offset / SECTOR_SIZE + i;
+    auto block = table.find(lba);
 
     if (block != table.end()) {
-      memcpy(buffer + i * sectorSize, block->second.data(), sectorSize);
+      memcpy(buffer + i * SECTOR_SIZE, block->second.data(), SECTOR_SIZE);
     }
     else {
-      memset(buffer + i * sectorSize, 0, sectorSize);
+      memset(buffer + i * SECTOR_SIZE, 0, SECTOR_SIZE);
     }
 
     read++;
   }
 
-  return read;
+  return read * SECTOR_SIZE;
 }
 
-uint16_t MemDisk::write(uint64_t slba, uint16_t nlblk,
+uint32_t MemDisk::write(uint64_t offset, uint32_t size,
                         uint8_t *buffer) noexcept {
   uint16_t write = 0;
 
-  for (uint64_t i = 0; i < nlblk; i++) {
-    auto block = table.find(slba + i);
+  panic_if(size % SECTOR_SIZE, "Write to disk is not aligned.");
+
+  for (uint64_t i = 0; i < size / SECTOR_SIZE; i++) {
+    auto lba = offset / SECTOR_SIZE + i;
+    auto block = table.find(lba);
 
     if (block != table.end()) {
-      memcpy(block->second.data(), buffer + i * sectorSize, sectorSize);
+      memcpy(block->second.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
     }
     else {
       std::vector<uint8_t> data;
 
-      data.resize(sectorSize);
-      memcpy(data.data(), buffer + i * sectorSize, sectorSize);
+      data.resize(SECTOR_SIZE);
+      memcpy(data.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
 
-      table.insert({slba + i, data});
+      table.emplace(std::make_pair(lba, data));
     }
 
     write++;
   }
 
-  return write;
+  return write * SECTOR_SIZE;
 }
 
-uint16_t MemDisk::erase(uint64_t slba, uint16_t nlblk) noexcept {
+uint32_t MemDisk::erase(uint64_t offset, uint32_t size) noexcept {
   uint16_t erase = 0;
 
-  for (uint64_t i = 0; i < nlblk; i++) {
-    auto block = table.find(slba + i);
+  panic_if(size % SECTOR_SIZE, "Erase to disk is not aligned.");
+
+  for (uint64_t i = 0; i < size / SECTOR_SIZE; i++) {
+    auto lba = offset / SECTOR_SIZE + i;
+    auto block = table.find(lba);
 
     if (block != table.end()) {
       table.erase(block);
@@ -338,7 +354,7 @@ uint16_t MemDisk::erase(uint64_t slba, uint16_t nlblk) noexcept {
     erase++;
   }
 
-  return erase;
+  return erase * SECTOR_SIZE;
 }
 
 }  // namespace SimpleSSD
