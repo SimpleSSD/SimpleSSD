@@ -45,13 +45,12 @@ class Compare : public Command {
   void dmaInitDone(uint64_t);
   void dmaComplete(uint64_t);
   void readNVMDone(uint64_t);
-  void compare(CompareCommandData *);
+  void compare(BufferCommandData *);
 
  public:
   Compare(ObjectData &, Subsystem *);
 
   void setRequest(ControllerData *, SQContext *) override;
-  void completeRequest(CommandTag) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

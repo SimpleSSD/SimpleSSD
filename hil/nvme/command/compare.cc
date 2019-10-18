@@ -8,6 +8,7 @@
 #include "hil/nvme/command/compare.hh"
 
 #include "hil/nvme/command/internal.hh"
+#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -24,48 +25,42 @@ Compare::Compare(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void Compare::dmaInitDone(uint64_t gcid) {
-  auto tag = findCompareTag(gcid);
+  auto tag = findBufferTag(gcid);
   auto pHIL = subsystem->getHIL();
+  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
+  auto &first = cmd.subCommandList.front();
+  auto &last = cmd.subCommandList.back();
 
-  // Read first page
-  pHIL->readPage(tag->slpn, tag->buffer + tag->skipFront,
-                 std::make_pair(tag->skipFront, 0), readNVMDoneEvent,
-                 tag->getGCID());
-
-  // Read first DMA
-  tag->dmaEngine->read(tag->dmaTag, 0, tag->lpnSize - tag->skipFront,
-                       tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
+  // DMA
+  tag->dmaEngine->read(
+      tag->dmaTag, 0, tag->buffer.size() - first.skipFront - last.skipEnd,
+      tag->buffer.data() + first.skipFront, dmaCompleteEvent, gcid);
 }
 
 void Compare::dmaComplete(uint64_t gcid) {
-  auto tag = findCompareTag(gcid);
+  auto tag = findBufferTag(gcid);
 
-  tag->nlp_done_dma++;
+  tag->complete |= 0x01;
 
-  if (tag->nlp == tag->nlp_done_dma) {
-    // We completed all DMA
-    tag->complete |= 0x01;
-
-    if (tag->complete == 0x03) {
-      compare(tag);
-    }
-  }
-  else {
-    // Handle next access
-    tag->dmaEngine->read(
-        tag->dmaTag, tag->nlp_done_dma * tag->lpnSize - tag->skipFront,
-        tag->lpnSize, tag->buffer + tag->nlp_done_dma * tag->lpnSize,
-        dmaCompleteEvent, gcid);
+  if (tag->complete == 0x03) {
+    compare(tag);
   }
 }
 
 void Compare::readNVMDone(uint64_t gcid) {
-  auto tag = findCompareTag(gcid);
+  auto tag = findBufferTag(gcid);
   auto pHIL = subsystem->getHIL();
+  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
 
-  tag->nlp_done_hil++;
+  uint32_t completed = 0;
 
-  if (tag->nlp == tag->nlp_done_dma) {
+  for (auto &iter : cmd.subCommandList) {
+    if (iter.status == Status::Done) {
+      completed++;
+    }
+  }
+
+  if (completed == cmd.subCommandList.size()) {
     // We completed all page access
     tag->complete |= 0x02;
 
@@ -73,26 +68,24 @@ void Compare::readNVMDone(uint64_t gcid) {
       compare(tag);
     }
   }
-  else {
-    uint32_t skipEnd = 0;
-
-    if (tag->nlp == tag->nlp_done_hil + 1) {
-      // Last request
-      skipEnd = tag->skipEnd;
-    }
-
-    // Handle next page access
-    pHIL->readPage(tag->slpn + tag->nlp_done_hil,
-                   tag->buffer + tag->nlp_done_hil * tag->lpnSize,
-                   std::make_pair(0, skipEnd), readNVMDoneEvent, gcid);
-  }
 }
 
-void Compare::compare(CompareCommandData *tag) {
+void Compare::compare(BufferCommandData *tag) {
+  auto pHIL = subsystem->getHIL();
+  auto &cmd = pHIL->getCommandManager()->getCommand(tag->getGCID());
+
   auto now = getTick();
 
   // Compare contents
-  bool same = memcmp(tag->buffer, tag->subBuffer, tag->size) == 0;
+  bool same = true;
+  uint64_t offset = 0;
+
+  for (auto &iter : cmd.subCommandList) {
+    same &= memcmp(tag->buffer.data() + offset, iter.buffer.data(),
+                   iter.buffer.size()) == 0;
+
+    offset += iter.buffer.size();
+  }
 
   if (!same) {
     tag->cqc->makeStatus(false, false, StatusType::MediaAndDataIntegrityErrors,
@@ -110,7 +103,7 @@ void Compare::compare(CompareCommandData *tag) {
 }
 
 void Compare::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createCompareTag(cdata, req);
+  auto tag = createBufferTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -142,14 +135,18 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   // Convert unit
-  ns->second->getConvertFunction()(slba, nlb, tag->slpn, tag->nlp,
-                                   &tag->skipFront, &tag->skipEnd);
+  LPN slpn;
+  uint32_t nlp;
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
+  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
 
   // Check range
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(tag->slpn + tag->nlp > range.second)) {
+  if (UNLIKELY(slpn + nlp > range.second)) {
     tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                          GenericCommandStatusCode::Invalid_Field);
 
@@ -158,33 +155,47 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  tag->slpn += info->namespaceRange.first;
+  slpn += info->namespaceRange.first;
 
   // Make buffer
-  tag->lpnSize = info->lpnSize;
-  tag->size = tag->nlp * info->lpnSize;
-  tag->buffer = (uint8_t *)calloc(tag->size, 1);
-  tag->subBuffer = (uint8_t *)calloc(tag->size, 1);
+  auto disk = ns->second->getDisk();
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto gcid = tag->getGCID();
 
+  mgr->createCommand(gcid, readNVMDoneEvent);
+  auto &cmd = mgr->getCommand(gcid);
+
+  cmd.offset = slpn;
+  cmd.length = nlp;
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = mgr->createSubCommand(gcid);
+
+    scmd.opcode = Operation::Read;
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    else if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+
+    scmd.buffer.resize(info->lpnSize);
+
+    if (disk) {
+      disk->read((i - slpn) * info->lpnSize + skipFront,
+                 info->lpnSize - skipEnd, scmd.buffer.data() + skipFront);
+    }
+  }
+
+  tag->buffer.resize(info->lpnSize * nlp);
   tag->_slba = slba;
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
-}
-
-void Compare::completeRequest(CommandTag tag) {
-  if (((CompareCommandData *)tag)->buffer) {
-    free(((CompareCommandData *)tag)->buffer);
-  }
-  if (((CompareCommandData *)tag)->subBuffer) {
-    free(((CompareCommandData *)tag)->subBuffer);
-  }
-  if (((CompareCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((CompareCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
+  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
 }
 
 void Compare::getStatList(std::vector<Stat> &, std::string) noexcept {}

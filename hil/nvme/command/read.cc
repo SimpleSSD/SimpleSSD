@@ -44,11 +44,8 @@ void Read::readDone(uint64_t gcid) {
 
   // Find completed subcommand
   for (auto &iter : cmd.subCommandList) {
-    if (iter.status == Status::Complete) {
+    if (iter.status == Status::Done) {
       completed++;
-    }
-    else if (iter.status == Status::Done) {
-      iter.status = Status::Complete;
 
       offset = (iter.lpn - cmd.offset) * iter.buffer.size() - skipFront;
       size = iter.buffer.size();
@@ -69,7 +66,7 @@ void Read::readDone(uint64_t gcid) {
   }
 
   if (completed == cmd.subCommandList.size()) {
-    cmd.status = Status::Complete;
+    cmd.status = Status::Done;
   }
 }
 
@@ -79,7 +76,7 @@ void Read::dmaComplete(uint64_t gcid) {
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
 
-  if (cmd.status == Status::Complete) {
+  if (cmd.status == Status::Done) {
     // Done
     auto now = getTick();
 
@@ -178,8 +175,10 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
 
     scmd.buffer.resize(info->lpnSize);
 
-    disk->read((i - slpn) * info->lpnSize + skipFront, info->lpnSize - skipEnd,
-               scmd.buffer.data() + skipFront);
+    if (disk) {
+      disk->read((i - slpn) * info->lpnSize + skipFront,
+                 info->lpnSize - skipEnd, scmd.buffer.data() + skipFront);
+    }
   }
 
   tag->_slba = slba;

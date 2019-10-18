@@ -22,8 +22,6 @@ enum class Status : uint8_t {
   DMA,       // Sub command is in DMA
   Submit,    // Sub command issued to HIL
   Done,      // Sub command completed by HIL
-  Complete,  // Marked as completed
-
 };
 
 enum class Operation : uint8_t {
