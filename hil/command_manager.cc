@@ -18,9 +18,10 @@ SubCommand &CommandManager::getSubCommand(uint64_t tag, Status status) {
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  auto scmd = iter->second.begin();
+  auto &cmd = iter->second;
+  auto scmd = cmd.subCommandList.begin();
 
-  for (; scmd != iter->second.end(); ++scmd) {
+  for (; scmd != cmd.subCommandList.end(); ++scmd) {
     if (scmd->status == status) {
       break;
     }
@@ -34,12 +35,11 @@ SubCommand &CommandManager::getSubCommand(uint64_t tag, uint32_t id) {
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  return iter->second.at(id);
+  return iter->second.subCommandList.at(id);
 }
 
-void CommandManager::createCommand(uint64_t tag) {
-  auto iter =
-      commandList.emplace(std::make_pair(tag, std::vector<SubCommand>()));
+void CommandManager::createCommand(uint64_t tag, Event eid) {
+  auto iter = commandList.emplace(std::make_pair(tag, Command(eid)));
 
   panic_if(!iter.second, "Command with tag %" PRIu64 " already exists.", tag);
 }
@@ -49,9 +49,9 @@ uint32_t CommandManager::createSubCommand(uint64_t tag) {
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  uint32_t ret = iter->second.size();
+  uint32_t ret = iter->second.subCommandList.size();
 
-  iter->second.emplace_back(SubCommand());
+  iter->second.subCommandList.emplace_back(SubCommand());
 
   return ret;
 }
@@ -78,10 +78,12 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
   for (auto &iter : commandList) {
     BACKUP_SCALAR(out, iter.first);
 
-    size = iter.second.size();
+    BACKUP_EVENT(out, iter.second.eid);
+
+    size = iter.second.subCommandList.size();
     BACKUP_SCALAR(out, size);
 
-    for (auto &scmd : iter.second) {
+    for (auto &scmd : iter.second.subCommandList) {
       BACKUP_SCALAR(out, scmd.status);
       BACKUP_SCALAR(out, scmd.opcode);
       BACKUP_SCALAR(out, scmd.lpn);
@@ -111,9 +113,13 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
-    std::vector<SubCommand> list;
+    Event eid;
 
     RESTORE_SCALAR(in, tag);
+    RESTORE_EVENT(in, eid);
+
+    Command cmd(eid);
+
     RESTORE_SCALAR(in, size2);
 
     for (uint64_t j = 0; j < size2; j++) {
@@ -139,10 +145,10 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
         RESTORE_BLOB(in, scmd.spare.data(), size);
       }
 
-      list.emplace_back(scmd);
+      cmd.subCommandList.emplace_back(scmd);
     }
 
-    commandList.emplace(std::make_pair(tag, list));
+    commandList.emplace(std::make_pair(tag, cmd));
   }
 }
 

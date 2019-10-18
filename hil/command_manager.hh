@@ -47,9 +47,17 @@ struct SubCommand {
   SubCommand() : status(Status::Complete), opcode(Operation::None) {}
 };
 
+struct Command {
+  Event eid;
+
+  std::vector<SubCommand> subCommandList;
+
+  Command(Event e) : eid(e) {}
+};
+
 class CommandManager : public Object {
  private:
-  std::unordered_map<uint64_t, std::vector<SubCommand>> commandList;
+  std::unordered_map<uint64_t, Command> commandList;
 
  public:
   CommandManager(ObjectData &);
@@ -63,7 +71,7 @@ class CommandManager : public Object {
   SubCommand &getSubCommand(uint64_t, Status);
   SubCommand &getSubCommand(uint64_t, uint32_t);
 
-  void createCommand(uint64_t);
+  void createCommand(uint64_t, Event);
   uint32_t createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
 
