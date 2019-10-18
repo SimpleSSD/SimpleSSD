@@ -69,6 +69,17 @@ class HIL : public Object {
   void submitCommand(uint64_t tag);
 
   /**
+   * \brief Submit command
+   *
+   * Command should be inserted through CommandManager before call this
+   * function. Only begins specified subcommad.
+   *
+   * \param[in] tag Unique command tag
+   * \param[in] id  Unique subcommand id
+   */
+  void submitSubcommand(uint64_t tag, uint32_t id);
+
+  /**
    * \brief Get logical pages contains data
    *
    * To implement per-namespace bases utilization, this function requires offset

@@ -34,8 +34,7 @@ void Read::dmaInitDone(uint64_t gcid) {
 void Read::readDone(uint64_t gcid) {
   auto tag = findDMATag(gcid);
   auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto &cmd = mgr->getCommand(gcid);
+  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
 
   uint64_t offset = 0;
   uint32_t size = 0;

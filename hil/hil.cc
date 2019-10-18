@@ -17,6 +17,8 @@ HIL::HIL(ObjectData &o)
 HIL::~HIL() {}
 
 void HIL::submitCommand(uint64_t tag) {
+  commandManager.getCommand(tag).status = Status::Submit;
+
   icl.submit(tag);
 }
 

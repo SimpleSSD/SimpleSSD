@@ -25,59 +25,75 @@ Write::Write(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void Write::dmaInitDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
+  auto pHIL = subsystem->getHIL();
+  auto &scmd = pHIL->getCommandManager()->getSubCommand(gcid).front();
+
+  scmd.status = Status::DMA;
 
   // Perform first page DMA
-  tag->dmaEngine->read(tag->dmaTag, 0, tag->lpnSize - tag->skipFront,
-                       tag->buffer + tag->skipFront, dmaCompleteEvent, gcid);
+  tag->dmaEngine->read(tag->dmaTag, 0, scmd.buffer.size() - scmd.skipFront,
+                       scmd.buffer.data() + scmd.skipFront, dmaCompleteEvent,
+                       gcid);
 }
 
 void Write::dmaComplete(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
   auto pHIL = subsystem->getHIL();
-  uint32_t skipFront = 0;
-  uint32_t skipEnd = 0;
+  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
+  auto nslist = subsystem->getNamespaceList();
+  auto ns = nslist.find(tag->sqc->getData()->namespaceID);
+  auto disk = ns->second->getDisk();
 
-  tag->nlp_done_dma++;
+  // Find dma subcommand
+  uint32_t i = 0;
+  uint32_t scmds = cmd.subCommandList.size();
 
-  if (tag->nlp == tag->nlp_done_dma) {
-    // We completed all DMA, handle disk access
-    auto nslist = subsystem->getNamespaceList();
-    auto ns = nslist.find(tag->sqc->getData()->namespaceID);
+  for (i = 0; i < scmds; i++) {
+    auto &iter = cmd.subCommandList.at(i);
 
-    // Handle disk image
-    auto disk = ns->second->getDisk();
+    if (iter.status == Status::DMA) {
+      pHIL->submitSubcommand(gcid, i);
 
-    if (disk) {
-      disk->write(tag->_slba, tag->_nlb, tag->buffer + tag->skipFront);
+      // Handle disk
+      if (disk) {
+        disk->write(i * iter.buffer.size() + iter.skipFront,
+                    iter.buffer.size() - iter.skipEnd,
+                    iter.buffer.data() + iter.skipFront);
+      }
+
+      break;
     }
-
-    // Handle page access
-    skipEnd = tag->skipEnd;
   }
-  else {
-    // Start page access and request next DMA
+
+  // Start next DMA
+  if (LIKELY(i < scmds)) {
+    auto &scmd = cmd.subCommandList.at(i);
+
+    scmd.status = Status::DMA;
+
     tag->dmaEngine->read(
-        tag->dmaTag, tag->nlp_done_dma * tag->lpnSize - tag->skipFront,
-        tag->lpnSize, tag->buffer + tag->nlp_done_dma * tag->lpnSize,
-        dmaCompleteEvent, gcid);
-
-    if (tag->nlp_done_dma == 1) {
-      skipFront = tag->skipFront;
-    }
+        tag->dmaTag,
+        i * scmd.buffer.size() - cmd.subCommandList.front().skipFront,
+        scmd.buffer.size() - scmd.skipEnd, scmd.buffer.data(), dmaCompleteEvent,
+        gcid);
   }
-
-  pHIL->writePage(tag->slpn + tag->nlp_done_hil,
-                  tag->buffer + tag->nlp_done_hil * tag->lpnSize,
-                  std::make_pair(skipFront, skipEnd), writeDoneEvent, gcid);
 }
 
 void Write::writeDone(uint64_t gcid) {
-  auto tag = findIOTag(gcid);
+  auto tag = findDMATag(gcid);
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto &cmd = mgr->getCommand(gcid);
+  uint32_t completed = 0;
 
-  tag->nlp_done_hil++;
+  for (auto &iter : cmd.subCommandList) {
+    if (iter.status == Status::Done) {
+      completed++;
+    }
+  }
 
-  if (tag->nlp == tag->nlp_done_hil) {
+  if (completed == cmd.subCommandList.size()) {
     auto now = getTick();
 
     debugprint_command(tag,
@@ -86,12 +102,13 @@ void Write::writeDone(uint64_t gcid) {
                        tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
                        tag->beginAt, now, now - tag->beginAt);
 
+    mgr->destroyCommand(gcid);
     subsystem->complete(tag);
   }
 }
 
 void Write::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createIOTag(cdata, req);
+  auto tag = createDMATag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -125,14 +142,18 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   // Convert unit
-  ns->second->getConvertFunction()(slba, nlb, tag->slpn, tag->nlp,
-                                   &tag->skipFront, &tag->skipEnd);
+  LPN slpn;
+  uint32_t nlp;
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
+  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
 
   // Check range
   auto info = ns->second->getInfo();
   auto range = info->namespaceRange;
 
-  if (UNLIKELY(tag->slpn + tag->nlp > range.second)) {
+  if (UNLIKELY(slpn + nlp > range.second)) {
     tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                          GenericCommandStatusCode::Invalid_Field);
 
@@ -141,31 +162,43 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  tag->slpn += info->namespaceRange.first;
+  slpn += info->namespaceRange.first;
 
   ns->second->write(nlb * info->lbaSize);
 
-  // Make buffer
-  tag->lpnSize = info->lpnSize;
-  tag->size = tag->nlp * info->lpnSize;
-  tag->buffer = (uint8_t *)calloc(tag->size, 1);
+  // Make command
+  auto disk = ns->second->getDisk();
+  auto pHIL = subsystem->getHIL();
+  auto mgr = pHIL->getCommandManager();
+  auto gcid = tag->getGCID();
+
+  mgr->createCommand(gcid, writeDoneEvent);
+  auto &cmd = mgr->getCommand(gcid);
+
+  cmd.offset = slpn;
+  cmd.length = nlp;
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = mgr->createSubCommand(gcid);
+
+    scmd.opcode = Operation::Write;
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    else if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+
+    scmd.buffer.resize(info->lpnSize);
+  }
 
   tag->_slba = slba;
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(tag->size - tag->skipFront - tag->skipEnd, dmaInitEvent);
-}
-
-void Write::completeRequest(CommandTag tag) {
-  if (((IOCommandData *)tag)->buffer) {
-    free(((IOCommandData *)tag)->buffer);
-  }
-  if (((IOCommandData *)tag)->dmaTag != InvalidDMATag) {
-    tag->dmaEngine->deinit(((IOCommandData *)tag)->dmaTag);
-  }
-
-  destroyTag(tag);
+  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
 }
 
 void Write::getStatList(std::vector<Stat> &, std::string) noexcept {}

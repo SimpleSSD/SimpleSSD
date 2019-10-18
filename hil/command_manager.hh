@@ -19,6 +19,7 @@ namespace SimpleSSD::HIL {
 
 enum class Status : uint8_t {
   Prepare,   // Sub command created
+  DMA,       // Sub command is in DMA
   Submit,    // Sub command issued to HIL
   Done,      // Sub command completed by HIL
   Complete,  // Marked as completed
@@ -36,6 +37,8 @@ enum class Operation : uint8_t {
 };
 
 struct SubCommand {
+  const uint64_t tag;
+
   Status status;
   Operation opcode;
 
@@ -48,8 +51,9 @@ struct SubCommand {
   std::vector<uint8_t> buffer;
   std::vector<uint8_t> spare;
 
-  SubCommand()
-      : status(Status::Prepare),
+  SubCommand(uint64_t t)
+      : tag(t),
+        status(Status::Prepare),
         opcode(Operation::None),
         lpn(0),
         ppn(0),
