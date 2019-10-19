@@ -21,9 +21,14 @@ namespace SimpleSSD::ICL {
 class RingBuffer : public AbstractCache {
  private:
   struct SubEntry {
-    uint8_t dirty : 1;
-    uint8_t wpending : 1;  // Wait for NVM Write done
-    uint8_t rsvd : 6;
+    union {
+      uint8_t data;
+      struct {
+        uint8_t dirty : 1;
+        uint8_t wpending : 1;  // Wait for NVM Write done
+        uint8_t rsvd : 6;
+      };
+    };
 
     Bitset valid;
 

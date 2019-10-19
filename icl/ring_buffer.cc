@@ -940,40 +940,107 @@ void RingBuffer::resetStatValues() noexcept {
 }
 
 void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, totalCapacity);
-  BACKUP_SCALAR(out, prefetchPages);
-  BACKUP_SCALAR(out, evictPages);
-  BACKUP_SCALAR(out, evictPolicy);
+  LPN invalid = std::numeric_limits<LPN>::max();
 
+  BACKUP_SCALAR(out, totalCapacity);
   BACKUP_SCALAR(out, usedCapacity);
+  BACKUP_SCALAR(out, dirtyCapacity);
   BACKUP_SCALAR(out, enabled);
   BACKUP_SCALAR(out, prefetchEnabled);
+  BACKUP_SCALAR(out, noPageLimit);
+  BACKUP_SCALAR(out, minPages);
+
+  uint64_t size = cacheEntry.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : cacheEntry) {
+    BACKUP_SCALAR(out, iter.offset);
+    BACKUP_SCALAR(out, iter.accessedAt);
+
+    for (auto &sentry : iter.list) {
+      BACKUP_SCALAR(out, sentry.data);
+      sentry.valid.createCheckpoint(out);
+    }
+  }
+
   BACKUP_SCALAR(out, trigger.lastRequestID);
   BACKUP_SCALAR(out, trigger.requestCounter);
   BACKUP_SCALAR(out, trigger.requestCapacity);
   BACKUP_SCALAR(out, trigger.lastAddress);
   BACKUP_SCALAR(out, trigger.trigger);
-  BACKUP_SCALAR(out, minPages);
+  BACKUP_SCALAR(out, prefetchPages);
+  BACKUP_SCALAR(out, triggerThreshold);
+  BACKUP_SCALAR(out, evictPages);
   BACKUP_SCALAR(out, clock);
+  BACKUP_SCALAR(out, evictPolicy);
   BACKUP_BLOB(out, &stat, sizeof(stat));
 
-  // backupQueue(out, &queue);
+  BACKUP_SCALAR(out, readTriggered);
+  BACKUP_SCALAR(out, writeTriggered);
 
+  size = readWorkerTag.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : readWorkerTag) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  size = writeWorkerTag.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writeWorkerTag) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  size = flushEvents.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : flushEvents) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  size = readPendingQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : readPendingQueue) {
+    BACKUP_SCALAR(out, iter.status);
+    BACKUP_SCALAR(out, iter.scmd->tag);
+    BACKUP_SCALAR(out, iter.scmd->id);
+
+    if (iter.entry != cacheEntry.end()) {
+      BACKUP_SCALAR(out, iter.entry->offset);
+    }
+    else {
+      BACKUP_SCALAR(out, invalid);
+    }
+  }
+
+  size = writeWaitingQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writeWaitingQueue) {
+    BACKUP_SCALAR(out, iter.status);
+    BACKUP_SCALAR(out, iter.scmd->tag);
+    BACKUP_SCALAR(out, iter.scmd->id);
+
+    if (iter.entry != cacheEntry.end()) {
+      BACKUP_SCALAR(out, iter.entry->offset);
+    }
+    else {
+      BACKUP_SCALAR(out, invalid);
+    }
+  }
+
+  BACKUP_EVENT(out, eventReadWorker);
+  BACKUP_EVENT(out, eventReadWorkerDoFTL);
+  BACKUP_EVENT(out, eventReadWorkerDone);
+  BACKUP_EVENT(out, eventWriteWorker);
+  BACKUP_EVENT(out, eventWriteWorkerDoFTL);
+  BACKUP_EVENT(out, eventWriteWorkerDone);
   BACKUP_EVENT(out, eventReadPreCPUDone);
-  BACKUP_EVENT(out, eventReadMetaDone);
-  BACKUP_EVENT(out, eventReadFTLDone);
   BACKUP_EVENT(out, eventReadDRAMDone);
-  BACKUP_EVENT(out, eventReadDMADone);
   BACKUP_EVENT(out, eventWritePreCPUDone);
-  BACKUP_EVENT(out, eventWriteMetaDone);
   BACKUP_EVENT(out, eventWriteDRAMDone);
-  BACKUP_EVENT(out, eventEvictDRAMDone);
-  BACKUP_EVENT(out, eventEvictFTLDone);
-  BACKUP_EVENT(out, eventFlushPreCPUDone);
-  BACKUP_EVENT(out, eventFlushMetaDone);
-  BACKUP_EVENT(out, eventInvalidatePreCPUDone);
-  BACKUP_EVENT(out, eventInvalidateMetaDone);
-  BACKUP_EVENT(out, eventInvalidateFTLDone);
 }
 
 void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
@@ -982,47 +1049,149 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   uint8_t tmp8;
 
   RESTORE_SCALAR(in, tmp64);
-  panic_if(tmp64 != totalCapacity, "Line size not matched while restore.");
-
-  RESTORE_SCALAR(in, tmp32);
-  panic_if(tmp32 != prefetchPages, "Way size not matched while restore.");
-
-  RESTORE_SCALAR(in, tmp32);
-  panic_if(tmp32 != evictPages, "readEnabled not matched while restore.");
-
-  RESTORE_SCALAR(in, tmp8);
-  panic_if(tmp8 != (uint8_t)evictPolicy,
-           "writeEnabled not matched while restore.");
+  panic_if(tmp64 != totalCapacity, "Cache size not matched while restore.");
 
   RESTORE_SCALAR(in, usedCapacity);
+  RESTORE_SCALAR(in, dirtyCapacity);
   RESTORE_SCALAR(in, enabled);
   RESTORE_SCALAR(in, prefetchEnabled);
+
+  RESTORE_SCALAR(in, tmp8);
+  panic_if((bool)tmp8 != noPageLimit, "FTL not matched while restore.");
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != minPages, "FTL not matched while restore.");
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (auto &iter : cacheEntry) {
+    LPN offset;
+
+    RESTORE_SCALAR(in, offset);
+
+    Entry entry(offset, minPages);
+
+    RESTORE_SCALAR(in, entry.accessedAt);
+
+    for (auto &sentry : iter.list) {
+      RESTORE_SCALAR(in, sentry.data);
+      sentry.valid.restoreCheckpoint(in);
+    }
+
+    cacheEntry.emplace_back(entry);
+  }
+
   RESTORE_SCALAR(in, trigger.lastRequestID);
   RESTORE_SCALAR(in, trigger.requestCounter);
   RESTORE_SCALAR(in, trigger.requestCapacity);
   RESTORE_SCALAR(in, trigger.lastAddress);
   RESTORE_SCALAR(in, trigger.trigger);
-  RESTORE_SCALAR(in, minPages);
+  RESTORE_SCALAR(in, prefetchPages);
+  RESTORE_SCALAR(in, triggerThreshold);
+  RESTORE_SCALAR(in, evictPages);
   RESTORE_SCALAR(in, clock);
+  RESTORE_SCALAR(in, evictPolicy);
   RESTORE_BLOB(in, &stat, sizeof(stat));
 
-  // restoreQueue(in, &queue);
+  RESTORE_SCALAR(in, readTriggered);
+  RESTORE_SCALAR(in, writeTriggered);
 
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+    readWorkerTag.emplace_back(tag);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+    writeWorkerTag.emplace_back(tag);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+    flushEvents.emplace_back(tag);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    CacheStatus cs;
+    uint64_t tag;
+    uint32_t id;
+    LPN offset;
+
+    RESTORE_SCALAR(in, cs);
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, offset);
+
+    auto &scmd = commandManager->getSubCommand(tag).at(id);
+
+    if (offset == std::numeric_limits<LPN>::max()) {
+      readPendingQueue.emplace_back(CacheContext(&scmd, cacheEntry.end(), cs));
+    }
+    else {
+      for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+        if (iter->offset == offset) {
+          readPendingQueue.emplace_back(CacheContext(&scmd, iter, cs));
+
+          break;
+        }
+      }
+    }
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    CacheStatus cs;
+    uint64_t tag;
+    uint32_t id;
+    LPN offset;
+
+    RESTORE_SCALAR(in, cs);
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, offset);
+
+    auto &scmd = commandManager->getSubCommand(tag).at(id);
+
+    if (offset == std::numeric_limits<LPN>::max()) {
+      writeWaitingQueue.emplace_back(CacheContext(&scmd, cacheEntry.end(), cs));
+    }
+    else {
+      for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+        if (iter->offset == offset) {
+          writeWaitingQueue.emplace_back(CacheContext(&scmd, iter, cs));
+
+          break;
+        }
+      }
+    }
+  }
+
+  RESTORE_EVENT(in, eventReadWorker);
+  RESTORE_EVENT(in, eventReadWorkerDoFTL);
+  RESTORE_EVENT(in, eventReadWorkerDone);
+  RESTORE_EVENT(in, eventWriteWorker);
+  RESTORE_EVENT(in, eventWriteWorkerDoFTL);
+  RESTORE_EVENT(in, eventWriteWorkerDone);
   RESTORE_EVENT(in, eventReadPreCPUDone);
-  RESTORE_EVENT(in, eventReadMetaDone);
-  RESTORE_EVENT(in, eventReadFTLDone);
   RESTORE_EVENT(in, eventReadDRAMDone);
-  RESTORE_EVENT(in, eventReadDMADone);
   RESTORE_EVENT(in, eventWritePreCPUDone);
-  RESTORE_EVENT(in, eventWriteMetaDone);
   RESTORE_EVENT(in, eventWriteDRAMDone);
-  RESTORE_EVENT(in, eventEvictDRAMDone);
-  RESTORE_EVENT(in, eventEvictFTLDone);
-  RESTORE_EVENT(in, eventFlushPreCPUDone);
-  RESTORE_EVENT(in, eventFlushMetaDone);
-  RESTORE_EVENT(in, eventInvalidatePreCPUDone);
-  RESTORE_EVENT(in, eventInvalidateMetaDone);
-  RESTORE_EVENT(in, eventInvalidateFTLDone);
 }
 
 }  // namespace SimpleSSD::ICL
