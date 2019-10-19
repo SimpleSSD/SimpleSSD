@@ -547,6 +547,11 @@ void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
 }
 
 void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
+  if (UNLIKELY(eid == InvalidEventID)) {
+    // No need to schedule
+    return;
+  }
+
   if (UNLIKELY(tick < engine->getTick())) {
     panic_log("Invalid tick %" PRIu64, tick);
   }
