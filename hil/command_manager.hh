@@ -21,7 +21,9 @@ enum class Status : uint8_t {
   Prepare,  // Sub command created
   DMA,      // Sub command is in DMA
   Submit,   // Sub command issued to HIL
-  Done,     // Sub command completed by HIL
+  Done,     // Sub command completed
+
+  ReadPending,
 };
 
 enum class Operation : uint8_t {
@@ -62,6 +64,8 @@ struct SubCommand {
 };
 
 struct Command {
+  const uint64_t tag;
+
   Event eid;
 
   Status status;
@@ -71,7 +75,7 @@ struct Command {
 
   std::vector<SubCommand> subCommandList;
 
-  Command(Event e) : eid(e), status(Status::Prepare) {}
+  Command(uint64_t t, Event e) : tag(t), eid(e), status(Status::Prepare) {}
 };
 
 class CommandManager : public Object {
