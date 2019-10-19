@@ -442,7 +442,10 @@ void CPU::dispatch(uint64_t now) {
 
       job = jobQueue.erase(job);
 
-      eptr->func(now, data);
+      // Event ID can be nullptr
+      if (eptr != InvalidEventID) {
+        eptr->func(now, data);
+      }
     }
     else {
       break;
