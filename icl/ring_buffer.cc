@@ -169,7 +169,7 @@ RingBuffer::RingBuffer(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
         else if (sel == SelectionMode::FullSized) {
           for (auto iter = cacheEntry.begin(); iter != cacheEntry.end();
                ++iter) {
-            if (iter->length == minPages && isDirty(iter->list)) {
+            if (isFullSizeDirty(iter->list)) {
               list.emplace_back(iter);
             }
           }
@@ -210,7 +210,7 @@ RingBuffer::RingBuffer(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
           auto iter = cacheEntry.begin();
 
           for (; iter != cacheEntry.end(); iter++) {
-            if (iter->length == minPages && isDirty(iter->list)) {
+            if (isFullSizeDirty(iter->list)) {
               break;
             }
           }
@@ -245,7 +245,7 @@ RingBuffer::RingBuffer(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
               }
             }
             else if (sel == SelectionMode::FullSized) {
-              if (iter->length != minPages || isDirty(iter->list)) {
+              if (!isFullSizeDirty(iter->list)) {
                 continue;
               }
             }
@@ -404,25 +404,19 @@ void RingBuffer::readWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   // Read done, prepare new entry
-  Entry entry(iobits);
+  Entry entry(cmd.offset, minPages);
 
-  // As we got data from FTL, skip is always 1
-  entry.skipFront.set();
-  entry.skipEnd.set();
-
-  // As we got data from FTL, we always have 'minPages' data
-  entry.offset = cmd.offset;
-  entry.length = cmd.length;
+  // As we got data from FTL, all SubEntries are valid
+  for (auto &iter : entry.list) {
+    iter.valid.set();
+  }
 
   // Apply NVM -> DRAM latency (No completion handler)
-  object.dram->write(getDRAMAddress(entry.offset), entry.length * pageSize,
+  object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
                      InvalidEventID);
 
   // Insert
   cacheEntry.emplace_back(entry);
-
-  // Make subentries
-  cacheEntry.back().list.resize(cmd.length);
 
   // Update capacity
   usedCapacity += cmd.length * pageSize;
@@ -473,43 +467,58 @@ void RingBuffer::writeWorker() {
   // Do we need to write?
   if ((float)dirtyCapacity / totalCapacity >= triggerThreshold) {
     bool notfound = true;
+    auto iter = cacheEntry.end();
 
     if (!noPageLimit) {
       // Collect full-sized request when FTL wants minPages write
-      auto iter = chooseEntry(SelectionMode::FullSized);
+      iter = chooseEntry(SelectionMode::FullSized);
 
       if (LIKELY(iter != cacheEntry.end())) {
-        panic_if(!isAligned(iter->offset) || iter->length != minPages,
-                 "Cache entry is not minPages aligned.");
-
-        // Mark as write pending
-        for (auto &sentry : iter->list) {
-          sentry.wpending = true;
-        }
-
-        writePendingQueue.emplace_back(
-            CacheContext(nullptr, iter, CacheStatus::WriteWait));
-
         notfound = false;
       }
     }
 
     if (notfound) {
-      auto iter = chooseEntry(SelectionMode::All);
+      iter = chooseEntry(SelectionMode::All);
 
-      if (LIKELY(iter != cacheEntry.end())) {
+      panic_if(iter == cacheEntry.end(),
+               "Why write worker is flushing entries?");
+    }
+
+    if (iter != cacheEntry.end()) {
         // Mark as write pending
         for (auto &sentry : iter->list) {
+        if (sentry.valid.any()) {
           sentry.wpending = true;
         }
-
-        writePendingQueue.emplace_back(
-            CacheContext(nullptr, iter, CacheStatus::WriteWait));
       }
+
+      // Create command(s)
+      LPN offset = 0;
+      uint32_t length = 0;
+
+      while (offset + length < iter->offset + minPages) {
+        // TODO: Consider partial pages
+        if (iter->list.at(offset).valid.none()) {
+          offset++;
+      }
+        else if (iter->list.at(offset + length).valid.any()) {
+          length++;
+        }
       else {
-        panic("Why write worker is flushing entries?");
+          auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
+                                                    eventWriteWorkerDone);
+          cmd.opcode = HIL::Operation::Write;
+          cmd.offset = offset;
+          cmd.length = length;
+
+          offset += length;
+          length = 0;
+
+          writeWorkerTag.emplace_back(cmd.tag);
       }
     }
+  }
   }
   else {
     // Just erase some clean entries
@@ -517,7 +526,7 @@ void RingBuffer::writeWorker() {
       auto iter = chooseEntry(SelectionMode::Clean);
 
       if (iter != cacheEntry.end()) {
-        usedCapacity -= iter->length * pageSize;
+        usedCapacity -= minPages * pageSize;
 
         cacheEntry.erase(iter);
       }
@@ -537,75 +546,34 @@ void RingBuffer::writeWorker() {
 
 void RingBuffer::writeWorker_doFTL() {
   // Issue writes in writePendingQueue
-  for (auto &ctx : writePendingQueue) {
-    ctx.status = CacheStatus::FTL;
-
-    // Create request
-    auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
-                                              eventWriteWorkerDone);
-    cmd.opcode = HIL::Operation::Write;
-
-    if (LIKELY(ctx.scmd == nullptr)) {
-      cmd.offset = ctx.entry->offset;
-      cmd.length = ctx.entry->length;
-    }
-    else {
-      cmd.offset = ctx.scmd->lpn;
-      cmd.length = 1;
+  for (auto &iter : writeWorkerTag) {
+    pFTL->submit(iter);
     }
 
-    // Submit
-    pFTL->submit(cmd.tag);
+  writeWorkerTag.clear();
   }
-}
 
 void RingBuffer::writeWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  // Find completed event
-  for (auto iter = writePendingQueue.begin(); iter != writePendingQueue.end();
-       ++iter) {
-    LPN offset;
-    uint32_t length;
+  // Find corresponding entry
+  for (auto &iter : cacheEntry) {
+    if (iter.offset <= cmd.offset &&
+        cmd.offset + cmd.length <= iter.offset + minPages) {
+      uint32_t i = cmd.offset - iter.offset;
+      uint32_t limit = cmd.length + i;
 
-    if (UNLIKELY(iter->scmd)) {
-      offset = iter->scmd->lpn;
-      length = 1;
-    }
-    else {
-      offset = iter->entry->offset;
-      length = iter->entry->length;
-    }
+      for (; i < limit; i++) {
+        auto &sentry = iter.list.at(i);
 
-    if (cmd.offset == offset && cmd.length == length &&
-        iter->status == CacheStatus::FTL) {
-      writePendingQueue.erase(iter);
-
-      if (UNLIKELY(iter->scmd)) {
-        // Cache is disabled and this is FUA request
-        auto &wcmd = commandManager->getCommand(iter->scmd->tag);
-
-        scheduleNow(wcmd.eid, wcmd.tag);
+        sentry.dirty = false;
+        sentry.wpending = false;
       }
-      else {
-        for (auto &iter : iter->entry->list) {
-          iter.dirty = false;
-          iter.wpending = false;
         }
       }
 
-      // Apply DRAM -> NVM latency
-      object.dram->read(getDRAMAddress(offset), length * pageSize,
-                        InvalidEventID);
-
-      break;
-    }
-  }
-
   commandManager->destroyCommand(tag);
 
-  // Done all requests
-  if (writePendingQueue.size() == 0) {
     // Retry requests in writeWaitingQueue
     std::vector<HIL::SubCommand *> list;
 
@@ -618,7 +586,6 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     for (auto &iter : list) {
       write_find(*iter);
     }
-  }
 
   // Schedule next worker
   writeTriggered = false;
@@ -643,7 +610,7 @@ void RingBuffer::read_find(HIL::Command &cmd) {
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       uint8_t bound = 0;
 
-      if (cmd.offset < iter->offset + iter->length) {
+      if (cmd.offset < iter->offset + minPages) {
         bound |= 1;
       }
       if (iter->offset < cmd.offset + cmd.length) {
@@ -656,17 +623,11 @@ void RingBuffer::read_find(HIL::Command &cmd) {
 
         // Mark as done
         for (auto &scmd : cmd.subCommandList) {
-          LPN offset = iter->offset;
+          if (iter->offset <= scmd.lpn && scmd.lpn < iter->offset + minPages) {
+            auto &sentry = iter->list.at(scmd.lpn - iter->offset);
 
-          if (iter->offset <= scmd.lpn &&
-              scmd.lpn < iter->offset + iter->length) {
             // Skip checking
-            if (iter->offset == scmd.lpn &&
-                !skipCheck(iter->skipFront, scmd.skipFront, true)) {
-              continue;
-            }
-            if (iter->offset + iter->length == scmd.lpn + 1 &&
-                !skipCheck(iter->skipEnd, scmd.skipEnd, false)) {
+            if (!skipCheck(sentry.valid, scmd.skipFront, scmd.skipEnd)) {
               continue;
             }
 
@@ -724,7 +685,7 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
     // Find entry including scmd
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       // Included existing entry
-      if (iter->offset <= scmd.lpn && scmd.lpn < iter->offset + iter->length) {
+      if (iter->offset <= scmd.lpn && scmd.lpn < iter->offset + minPages) {
         // Accessed
         iter->accessedAt = clock;
 
@@ -743,79 +704,31 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
           // Update entry
           sentry.dirty = true;
 
-          if (iter->offset == scmd.lpn) {
-            updateSkip(iter->skipFront, scmd.skipFront, true);
-          }
-          else if (iter->offset + iter->length == scmd.lpn + 1) {
-            updateSkip(iter->skipEnd, scmd.skipEnd, false);
-          }
-
+          updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
           updateCapacity(false, scmd.skipFront + scmd.skipEnd);
         }
 
         break;
       }
-
-      // Can be extend existing entry (front)
-      // !(current entry is aligned to minPages) && (consecutive request) &&
-      // Current entry's skipFront = 0 && we have place to write in cache
-      if (!isAligned(iter->offset) && iter->offset == scmd.lpn + 1 &&
-          iter->skipFront.all() && usedCapacity + pageSize < totalCapacity) {
-        // Add current entry to front of list
-        iter->offset--;
-        iter->length++;
-        iter->accessedAt = clock;
-        iter->list.emplace_front(SubEntry(true));
-
-        iter->skipFront.reset();
-        updateSkip(iter->skipFront, scmd.skipFront, true);
-
-        scmd.status = HIL::Status::InternalCacheDone;
-
-        updateCapacity(false, scmd.skipFront + scmd.skipEnd);
-
-        break;
       }
-
-      // Can be extend existing entry (back)
-      if (!isAligned(iter->offset + iter->length) &&
-          scmd.lpn == iter->offset + iter->length && iter->skipEnd.all() &&
-          usedCapacity + pageSize < totalCapacity) {
-        // Add current entry to back of list
-        iter->offset;
-        iter->length++;
-        iter->accessedAt = clock;
-        iter->list.emplace_back(SubEntry(true));
-
-        iter->skipEnd.reset();
-        updateSkip(iter->skipEnd, scmd.skipFront, false);
-
-        scmd.status = HIL::Status::InternalCacheDone;
-
-        updateCapacity(false, scmd.skipFront + scmd.skipEnd);
-
-        break;
-      }
-    }
 
     // Check done
     if (scmd.status == HIL::Status::Submit) {
       if (usedCapacity + pageSize < totalCapacity) {
-        // In this case, there was no entry (or not aligned) for this sub
-        // command
-        Entry entry(iobits);
+        // In this case, there was no entry for this sub command
+        LPN aligned = alignToMinPage(scmd.lpn);
+        Entry entry(aligned, minPages);
 
-        updateSkip(entry.skipFront, scmd.skipFront, true);
-        updateSkip(entry.skipEnd, scmd.skipEnd, false);
+        entry.accessedAt = clock;
 
-        entry.offset = scmd.lpn;
-        entry.length = 1;
+        auto &sentry = entry.list.at(scmd.lpn - aligned);
+
+        sentry.dirty = true;
+
+        updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
 
         // Insert
         cacheEntry.emplace_back(entry);
-
-        // Make subentries
-        cacheEntry.back().list.emplace_back(SubEntry(true));
 
         updateCapacity(false, scmd.skipFront + scmd.skipEnd);
       }
@@ -830,8 +743,16 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
   else {
     scmd.status = HIL::Status::InternalCache;
 
-    writePendingQueue.emplace_back(
-        CacheContext(&scmd, cacheEntry.end(), CacheStatus::WriteWait));
+    auto &wcmd = commandManager->getCommand(scmd.tag);
+    auto &cmd = commandManager->createCommand(makeCacheCommandTag(), wcmd.eid);
+
+    cmd.opcode = HIL::Operation::Write;
+    cmd.offset = scmd.lpn;
+    cmd.length = 1;
+
+    writeWorkerTag.emplace_back(cmd.tag);
+
+    scheduleNow(eventWriteWorkerDoFTL);
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, scmd.tag,

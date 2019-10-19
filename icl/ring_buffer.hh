@@ -25,28 +25,24 @@ class RingBuffer : public AbstractCache {
     uint8_t wpending : 1;  // Wait for NVM Write done
     uint8_t rsvd : 6;
 
-    SubEntry() : dirty(false), wpending(false) {}
-    SubEntry(bool d) : dirty(d), wpending(false) {}
+    Bitset valid;
+
+    SubEntry(uint32_t s) : dirty(false), wpending(false), valid(s) {}
+    SubEntry(uint32_t s, bool d) : dirty(d), wpending(false), valid(s) {}
   };
 
   struct Entry {
-    LPN offset;
-    uint32_t length;
+    const LPN offset;     // minPages-aligned address
     uint16_t accessedAt;  // Clock
 
-    Bitset skipFront;  // 0 if no data exists (from LSB)
-    Bitset skipEnd;    // 0 if no data exists (from MSB)
+    std::vector<SubEntry> list;
 
-    std::deque<SubEntry> list;
-
-    Entry(uint32_t s)
-        : offset(0), length(0), accessedAt(0), skipFront(s), skipEnd(s) {}
+    Entry(LPN l, uint32_t s) : offset(l), accessedAt(0), list(s) {}
   };
 
   enum class CacheStatus {
     None,            // Invalid status
     ReadWait,        // Cache miss, we need to read data
-    WriteWait,       // We need to write data (cache disabled)
     WriteCacheWait,  // Need eviction
 
     FTL,  // Submitted to FTL, waiting for completion
@@ -133,7 +129,6 @@ class RingBuffer : public AbstractCache {
   } stat;
 
   std::list<CacheContext> readPendingQueue;
-  std::list<CacheContext> writePendingQueue;
   std::list<CacheContext> writeWaitingQueue;
 
   // Helper API
@@ -146,39 +141,37 @@ class RingBuffer : public AbstractCache {
     return dataAddress + lpn % totalCapacity;
   }
 
-  inline bool skipCheck(Bitset &bitset, uint32_t skip, bool front) {
-    uint32_t skipBit = skip / minIO;
+  inline bool skipCheck(Bitset &bitset, uint32_t skipFront, uint32_t skipEnd) {
+    uint32_t skipFrontBit = skipFront / minIO;
+    uint32_t skipEndBit = skipEnd / minIO;
 
-    panic_if(skip % minIO, "Skip bytes are not aligned to sector size.");
+    panic_if(skipFront % minIO || skipEnd % minIO,
+             "Skip bytes are not aligned to sector size.");
 
-    if (front && bitset.ffs() < skipBit) {
+    if (bitset.none()) {
       return false;
     }
-    else if (!front && bitset.clz() < skipBit) {
+    else if (bitset.ffs() < skipFrontBit) {
+      return false;
+    }
+    else if (bitset.clz() < skipEndBit) {
       return false;
     }
 
     return true;
   }
 
-  inline void updateSkip(Bitset &bitset, uint32_t skip, bool front) {
-    uint32_t skipBit = skip / minIO;
+  inline void updateSkip(Bitset &bitset, uint32_t skipFront, uint32_t skipEnd) {
+    uint32_t skipFrontBit = skipFront / minIO;
+    uint32_t skipEndBit = skipEnd / minIO;
 
-    panic_if(skip % minIO, "Skip bytes are not aligned to sector size.");
+    panic_if(skipFront % minIO || skipEnd % minIO,
+             "Skip bytes are not aligned to sector size.");
 
-    if (front) {
-      // Add bits
-      for (; skipBit < iobits; skipBit++) {
-        bitset.set(skipBit);
-      }
-    }
-    else {
-      // Add bits
-      skipBit = iobits - skipBit;
+    skipEndBit = iobits - skipEndBit;
 
-      for (uint32_t i = 0; i < skipBit; i++) {
-        bitset.set(i);
-      }
+    for (; skipFrontBit < skipEndBit; skipFrontBit++) {
+      bitset.set(skipFrontBit);
     }
   }
 
@@ -198,7 +191,7 @@ class RingBuffer : public AbstractCache {
 
   inline bool isAligned(LPN lpn) { return alignToMinPage(lpn) == lpn; }
 
-  inline bool isDirty(std::deque<SubEntry> &list) {
+  inline bool isDirty(std::vector<SubEntry> &list) {
     bool dirty = false;
 
     for (auto &iter : list) {
@@ -212,10 +205,25 @@ class RingBuffer : public AbstractCache {
     return dirty;
   }
 
+  inline bool isFullSizeDirty(std::vector<SubEntry> &list) {
+    bool good = true;
+
+    for (auto &iter : list) {
+      if (!iter.valid.all() || iter.dirty) {
+        good = false;
+
+        break;
+      }
+    }
+
+    return good;
+  }
+
   // Workers
   bool readTriggered;
   bool writeTriggered;
   std::vector<uint64_t> readWorkerTag;
+  std::vector<uint64_t> writeWorkerTag;
 
   void trigger_readWorker();
 
