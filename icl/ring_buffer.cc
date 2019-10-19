@@ -486,8 +486,8 @@ void RingBuffer::writeWorker() {
     }
 
     if (iter != cacheEntry.end()) {
-        // Mark as write pending
-        for (auto &sentry : iter->list) {
+      // Mark as write pending
+      for (auto &sentry : iter->list) {
         if (sentry.valid.any()) {
           sentry.wpending = true;
         }
@@ -501,11 +501,11 @@ void RingBuffer::writeWorker() {
         // TODO: Consider partial pages
         if (iter->list.at(offset).valid.none()) {
           offset++;
-      }
+        }
         else if (iter->list.at(offset + length).valid.any()) {
           length++;
         }
-      else {
+        else {
           auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
                                                     eventWriteWorkerDone);
           cmd.opcode = HIL::Operation::Write;
@@ -516,9 +516,9 @@ void RingBuffer::writeWorker() {
           length = 0;
 
           writeWorkerTag.emplace_back(cmd.tag);
+        }
       }
     }
-  }
   }
   else {
     // Just erase some clean entries
@@ -548,10 +548,10 @@ void RingBuffer::writeWorker_doFTL() {
   // Issue writes in writePendingQueue
   for (auto &iter : writeWorkerTag) {
     pFTL->submit(iter);
-    }
+  }
 
   writeWorkerTag.clear();
-  }
+}
 
 void RingBuffer::writeWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
@@ -572,8 +572,8 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
 
       dirtyCapacity -= cmd.length * pageSize;
       usedCapacity -= cmd.length * pageSize;
-        }
-      }
+    }
+  }
 
   commandManager->destroyCommand(tag);
 
@@ -588,18 +588,18 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     flushEvents.clear();
   }
 
-    // Retry requests in writeWaitingQueue
-    std::vector<HIL::SubCommand *> list;
+  // Retry requests in writeWaitingQueue
+  std::vector<HIL::SubCommand *> list;
 
-    for (auto &iter : writeWaitingQueue) {
-      list.emplace_back(iter.scmd);
-    }
+  for (auto &iter : writeWaitingQueue) {
+    list.emplace_back(iter.scmd);
+  }
 
-    writeWaitingQueue.clear();
+  writeWaitingQueue.clear();
 
-    for (auto &iter : list) {
-      write_find(*iter);
-    }
+  for (auto &iter : list) {
+    write_find(*iter);
+  }
 
   // Schedule next worker
   writeTriggered = false;
@@ -724,7 +724,7 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
 
         break;
       }
-      }
+    }
 
     // Check done
     if (scmd.status == HIL::Status::Submit) {
@@ -819,6 +819,36 @@ void RingBuffer::flush_find(HIL::Command &cmd) {
     // Nothing to flush - no dirty lines!
     cmd.status = HIL::Status::Done;
   }
+}
+
+void RingBuffer::invalidate_find(HIL::Command &cmd) {
+  CPU::Function fstat = CPU::initFunction();
+
+  if (LIKELY(enabled)) {
+    for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+      uint8_t bound = 0;
+
+      if (cmd.offset < iter->offset + minPages) {
+        bound |= 1;
+      }
+      if (iter->offset < cmd.offset + cmd.length) {
+        bound |= 2;
+      }
+
+      if (bound != 0) {
+        LPN from = MAX(cmd.offset, iter->offset);
+        LPN to = from + MIN(cmd.length, minPages);
+
+        for (LPN lpn = from; lpn < to; lpn++) {
+          auto &sentry = iter->list.at(lpn - from);
+
+          sentry.valid.reset();
+        }
+      }
+    }
+  }
+
+  pFTL->submit(cmd.tag);
 }
 
 void RingBuffer::enqueue(uint64_t tag, uint32_t id) {

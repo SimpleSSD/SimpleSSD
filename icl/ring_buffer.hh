@@ -269,6 +269,9 @@ class RingBuffer : public AbstractCache {
   // Flush
   void flush_find(HIL::Command &);
 
+  // Trim/Format
+  void invalidate_find(HIL::Command &);
+
  public:
   RingBuffer(ObjectData &, HIL::CommandManager *, FTL::FTL *);
 
