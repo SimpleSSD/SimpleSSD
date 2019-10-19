@@ -569,10 +569,24 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
         sentry.dirty = false;
         sentry.wpending = false;
       }
+
+      dirtyCapacity -= cmd.length * pageSize;
+      usedCapacity -= cmd.length * pageSize;
         }
       }
 
   commandManager->destroyCommand(tag);
+
+  // Flush?
+  if (UNLIKELY(dirtyCapacity == 0 && flushEvents.size() > 0)) {
+    for (auto &iter : flushEvents) {
+      auto &fcmd = commandManager->getCommand(iter);
+
+      scheduleNow(fcmd.eid, iter);
+    }
+
+    flushEvents.clear();
+  }
 
     // Retry requests in writeWaitingQueue
     std::vector<HIL::SubCommand *> list;
@@ -779,6 +793,32 @@ void RingBuffer::write_done(uint64_t tag) {
   scheduleNow(cmd.eid, tag);
 
   trigger_writeWorker();
+}
+
+void RingBuffer::flush_find(HIL::Command &cmd) {
+  if (LIKELY(enabled)) {
+    bool dirty = false;
+
+    // Find dirty entry
+    for (auto &iter : cacheEntry) {
+      if (isDirty(iter.list)) {
+        dirty = true;
+
+        break;
+      }
+    }
+
+    // Request worker to write all dirty pages
+    if (dirty) {
+      flushEvents.push_back(cmd.tag);
+
+      trigger_writeWorker();
+    }
+  }
+  else {
+    // Nothing to flush - no dirty lines!
+    cmd.status = HIL::Status::Done;
+  }
 }
 
 void RingBuffer::enqueue(uint64_t tag, uint32_t id) {

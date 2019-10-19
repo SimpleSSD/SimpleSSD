@@ -224,6 +224,7 @@ class RingBuffer : public AbstractCache {
   bool writeTriggered;
   std::vector<uint64_t> readWorkerTag;
   std::vector<uint64_t> writeWorkerTag;
+  std::vector<uint64_t> flushEvents;
 
   void trigger_readWorker();
 
@@ -264,6 +265,9 @@ class RingBuffer : public AbstractCache {
 
   Event eventWriteDRAMDone;
   void write_done(uint64_t);
+
+  // Flush
+  void flush_find(HIL::Command &);
 
  public:
   RingBuffer(ObjectData &, HIL::CommandManager *, FTL::FTL *);
