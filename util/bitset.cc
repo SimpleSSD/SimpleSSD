@@ -38,7 +38,7 @@ Bitset::~Bitset() {
 }
 
 bool Bitset::test(uint32_t idx) noexcept {
-  return data[idx / 8] & (0x01 << (idx % 8));
+  return const_cast<const Bitset *>(this)->test(idx);
 }
 
 bool Bitset::test(uint32_t idx) const noexcept {
@@ -46,16 +46,7 @@ bool Bitset::test(uint32_t idx) const noexcept {
 }
 
 bool Bitset::all() noexcept {
-  uint8_t ret = 0xFF;
-  uint8_t mask = 0xFF << (dataSize + 8 - allocSize * 8);
-
-  for (uint32_t i = 0; i < allocSize - 1; i++) {
-    ret &= data[i];
-  }
-
-  ret &= data[allocSize - 1] | mask;
-
-  return ret == 0xFF;
+  return const_cast<const Bitset *>(this)->all();
 }
 
 bool Bitset::all() const noexcept {
@@ -76,17 +67,11 @@ bool Bitset::any() noexcept {
 }
 
 bool Bitset::any() const noexcept {
-  return !none();
+  return const_cast<const Bitset *>(this)->any();
 }
 
 bool Bitset::none() noexcept {
-  uint8_t ret = 0x00;
-
-  for (uint32_t i = 0; i < allocSize; i++) {
-    ret |= data[i];
-  }
-
-  return ret == 0x00;
+  return const_cast<const Bitset *>(this)->none();
 }
 
 bool Bitset::none() const noexcept {
@@ -100,13 +85,7 @@ bool Bitset::none() const noexcept {
 }
 
 uint32_t Bitset::count() noexcept {
-  uint32_t count = 0;
-
-  for (uint32_t i = 0; i < allocSize; i++) {
-    count += popcount16(data[i]);
-  }
-
-  return count;
+  return const_cast<const Bitset *>(this)->count();
 }
 
 uint32_t Bitset::count() const noexcept {
@@ -120,7 +99,7 @@ uint32_t Bitset::count() const noexcept {
 }
 
 uint32_t Bitset::size() noexcept {
-  return dataSize;
+  return const_cast<const Bitset *>(this)->size();
 }
 
 uint32_t Bitset::size() const noexcept {
@@ -171,7 +150,7 @@ void Bitset::flip(uint32_t idx) noexcept {
 }
 
 bool Bitset::operator[](uint32_t idx) noexcept {
-  return test(idx);
+  return const_cast<const Bitset *>(this)->test(idx);
 }
 
 bool Bitset::operator[](uint32_t idx) const noexcept {
