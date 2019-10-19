@@ -17,13 +17,26 @@ namespace SimpleSSD::ICL {
 
 class AbstractCache : public Object {
  protected:
+  const uint64_t minIO = 512;
+
+  HIL::CommandManager *commandManager;
   FTL::FTL *pFTL;
 
+  uint64_t cacheCommandTag;
+
+  inline uint64_t makeCacheCommandTag() {
+    return cacheCommandTag++ | (uint64_t)0xFFFF000000000000ull;
+  }
+
  public:
-  AbstractCache(ObjectData &o, FTL::FTL *p) : Object(o), pFTL(p) {}
+  AbstractCache(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
+      : Object(o), commandManager(m), pFTL(p), cacheCommandTag(0) {}
   virtual ~AbstractCache() {}
 
-  virtual void enqueue(Request &&) = 0;
+  virtual void enqueue(uint64_t, uint32_t) = 0;
+
+  virtual void setCache(bool) = 0;
+  virtual bool getCache() = 0;
 };
 
 }  // namespace SimpleSSD::ICL

@@ -7,76 +7,22 @@
 
 #include "icl/icl.hh"
 
-#include "icl/set_associative.hh"
+#include "icl/ring_buffer.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
 
-Request::Request()
-    : id(0),
-      eid(InvalidEventID),
-      data(0),
-      address(0),
-      length(0),
-      buffer(nullptr) {}
-
-Request::Request(uint64_t i, Event e, uint64_t d, Operation o, LPN a,
-                 uint32_t sf, uint32_t se, uint8_t *b)
-    : id(i),
-      eid(e),
-      data(d),
-      opcode(o),
-      address(a),
-      skipFront(sf),
-      skipEnd(se),
-      buffer(b) {}
-
-Request::Request(uint64_t i, Event e, uint64_t d, Operation o, LPN a, LPN l)
-    : id(i),
-      eid(e),
-      data(d),
-      opcode(o),
-      address(a),
-      length(l),
-      buffer(nullptr) {}
-
-void Request::backup(std::ostream &out) const {
-  BACKUP_SCALAR(out, id);
-  BACKUP_EVENT(out, eid);
-  BACKUP_SCALAR(out, data);
-  BACKUP_SCALAR(out, opcode);
-  BACKUP_SCALAR(out, address);
-  BACKUP_SCALAR(out, length);
-  BACKUP_SCALAR(out, buffer);
-}
-
-void Request::restore(ObjectData &object, std::istream &in) {
-  RESTORE_SCALAR(in, id);
-  RESTORE_EVENT(in, eid);
-  RESTORE_SCALAR(in, data);
-  RESTORE_SCALAR(in, opcode);
-  RESTORE_SCALAR(in, address);
-  RESTORE_SCALAR(in, length);
-  RESTORE_SCALAR(in, buffer);
-
-  buffer = object.bufmgr->restorePointer(buffer);
-}
-
-ICL::ICL(ObjectData &o) : Object(o) {
+ICL::ICL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
   pFTL = new FTL::FTL(object);
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
   logicalPageSize = param->pageSize;
 
-  enabled =
-      readConfigBoolean(Section::InternalCache, Config::Key::EnableReadCache) |
-      readConfigBoolean(Section::InternalCache, Config::Key::EnableWriteCache);
-
   switch ((Config::Mode)readConfigUint(Section::InternalCache,
                                        Config::Key::CacheMode)) {
-    case Config::Mode::SetAssociative:
-      pCache = new SetAssociative(object, pFTL);
+    case Config::Mode::RingBuffer:
+      pCache = new RingBuffer(object, commandManager, pFTL);
 
       break;
     default:
@@ -91,47 +37,8 @@ ICL::~ICL() {
   delete pFTL;
 }
 
-void ICL::submit(Request &&req) {
-  if (LIKELY(enabled)) {
-    pCache->enqueue(std::move(req));
-  }
-  else {
-    // Bypass request to FTL
-    FTL::Operation opcode;
-
-    switch (req.opcode) {
-      case Operation::Read:
-        opcode = FTL::Operation::Read;
-
-        break;
-      case Operation::Write:
-        opcode = FTL::Operation::Write;
-
-        break;
-      case Operation::Trim:
-        opcode = FTL::Operation::Trim;
-
-        break;
-      case Operation::Format:
-        opcode = FTL::Operation::Format;
-
-        break;
-      case Operation::Flush:
-        // No flush operation
-        scheduleNow(req.eid, req.data);
-
-        return;
-    }
-
-    if (opcode == FTL::Operation::Read || opcode == FTL::Operation::Write) {
-      pFTL->submit(FTL::Request(req.id, req.eid, req.data, opcode, req.address,
-                                req.buffer));
-    }
-    else {
-      pFTL->submit(FTL::Request(req.id, req.eid, req.data, opcode, req.address,
-                                req.length));
-    }
-  }
+void ICL::submit(uint64_t tag, uint32_t id) {
+  pCache->enqueue(tag, id);
 }
 
 LPN ICL::getPageUsage(LPN offset, LPN length) {
@@ -147,11 +54,11 @@ uint64_t ICL::getLPNSize() {
 }
 
 void ICL::setCache(bool set) {
-  enabled = set;
+  pCache->setCache(set);
 }
 
 bool ICL::getCache() {
-  return enabled;
+  return pCache->getCache();
 }
 
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
@@ -172,7 +79,6 @@ void ICL::resetStatValues() noexcept {
 void ICL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, logicalPageSize);
-  BACKUP_SCALAR(out, enabled);
 
   pCache->createCheckpoint(out);
   pFTL->createCheckpoint(out);
@@ -181,7 +87,6 @@ void ICL::createCheckpoint(std::ostream &out) const noexcept {
 void ICL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, logicalPageSize);
-  RESTORE_SCALAR(in, enabled);
 
   pCache->restoreCheckpoint(in);
   pFTL->restoreCheckpoint(in);

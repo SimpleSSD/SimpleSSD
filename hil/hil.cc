@@ -20,14 +20,9 @@ HIL::HIL(ObjectData &o)
 HIL::~HIL() {}
 
 void HIL::submitCommand(uint64_t tag) {
-  auto &cmd = commandManager.getCommand(tag);
-  uint32_t size = cmd.subCommandList.size();
+  commandManager.getCommand(tag).status = Status::Submit;
 
-  cmd.status = Status::Submit;
-
-  for (uint32_t i = 0; i < size; i++) {
-    icl.submit(tag, i);
-  }
+  icl.submit(tag, std::numeric_limits<uint32_t>::max());
 }
 
 void HIL::submitSubcommand(uint64_t tag, uint32_t id) {
