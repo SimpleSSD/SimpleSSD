@@ -10,14 +10,14 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "sim/checkpoint.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD {
 
-Bitset::Bitset(ObjectData &o)
-    : Object(o), data(nullptr), dataSize(0), allocSize(0) {}
+Bitset::Bitset() : data(nullptr), dataSize(0), allocSize(0) {}
 
-Bitset::Bitset(ObjectData &o, uint32_t size) : Bitset(o) {
+Bitset::Bitset(uint32_t size) : Bitset() {
   if (size > 0) {
     dataSize = size;
     allocSize = DIVCEIL(dataSize, 8);
@@ -25,7 +25,7 @@ Bitset::Bitset(ObjectData &o, uint32_t size) : Bitset(o) {
   }
 }
 
-Bitset::Bitset(Bitset &&rhs) noexcept : Object(rhs.object) {
+Bitset::Bitset(Bitset &&rhs) noexcept {
   *this = std::move(rhs);
 }
 
@@ -179,7 +179,11 @@ bool Bitset::operator[](uint32_t idx) const noexcept {
 }
 
 Bitset &Bitset::operator&=(const Bitset &rhs) {
-  panic_if(dataSize != rhs.dataSize, "Size does not match");
+  if (UNLIKELY(dataSize != rhs.dataSize)) {
+    std::cerr << "Size does not match" << std::endl;
+
+    abort();
+  }
 
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] &= rhs.data[i];
@@ -189,7 +193,11 @@ Bitset &Bitset::operator&=(const Bitset &rhs) {
 }
 
 Bitset &Bitset::operator|=(const Bitset &rhs) {
-  panic_if(dataSize != rhs.dataSize, "Size does not match");
+  if (UNLIKELY(dataSize != rhs.dataSize)) {
+    std::cerr << "Size does not match" << std::endl;
+
+    abort();
+  }
 
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] |= rhs.data[i];
@@ -199,7 +207,11 @@ Bitset &Bitset::operator|=(const Bitset &rhs) {
 }
 
 Bitset &Bitset::operator^=(const Bitset &rhs) {
-  panic_if(dataSize != rhs.dataSize, "Size does not match");
+  if (UNLIKELY(dataSize != rhs.dataSize)) {
+    std::cerr << "Size does not match" << std::endl;
+
+    abort();
+  }
 
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] ^= rhs.data[i];
@@ -219,12 +231,6 @@ Bitset &Bitset::operator=(Bitset &&rhs) {
 
   return *this;
 }
-
-void Bitset::getStatList(std::vector<Stat> &, std::string) noexcept {}
-
-void Bitset::getStatValues(std::vector<double> &) noexcept {}
-
-void Bitset::resetStatValues() noexcept {}
 
 void Bitset::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dataSize);

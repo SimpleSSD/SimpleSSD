@@ -11,9 +11,8 @@
 #define __SIMPLESSD_UTIL_BITSET_HH__
 
 #include <cinttypes>
+#include <iostream>
 #include <vector>
-
-#include "sim/object.hh"
 
 namespace SimpleSSD {
 
@@ -22,15 +21,15 @@ namespace SimpleSSD {
  *
  * Same as std::vector<bool>, but size cannot changed.
  */
-class Bitset : public Object {
+class Bitset {
  private:
   uint8_t *data;
   uint32_t dataSize;
   uint32_t allocSize;
 
  public:
-  Bitset(ObjectData &);
-  Bitset(ObjectData &, uint32_t);
+  Bitset();
+  Bitset(uint32_t);
   Bitset(const Bitset &) = delete;
   Bitset(Bitset &&) noexcept;
   ~Bitset();
@@ -89,12 +88,8 @@ class Bitset : public Object {
     return !operator==(lhs, rhs);
   }
 
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 }  // namespace SimpleSSD
