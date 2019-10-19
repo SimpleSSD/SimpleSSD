@@ -27,6 +27,8 @@
 #define popcount32 __popcnt
 #define popcount64 __popcnt64
 
+#define clz16 clz32
+
 inline uint32_t clz32(uint32_t val) {
   unsigned long leadingZero = 0;
 
@@ -36,6 +38,18 @@ inline uint32_t clz32(uint32_t val) {
 
   return 32;
 }
+
+inline uint32_t clz64(uint32_t val) {
+  unsigned long leadingZero = 0;
+
+  if (_BitScanReverse64(&leadingZero, val)) {
+    return 63 - leadingZero;
+  }
+
+  return 64;
+}
+
+#define ffs16 ffs32
 
 inline uint32_t ffs32(uint32_t val) {
   unsigned long trailingZero = 0;

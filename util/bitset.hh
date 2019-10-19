@@ -19,7 +19,7 @@ namespace SimpleSSD {
 /**
  * \brief Bitset object
  *
- * Same as std::vector<bool>, but size cannot changed.
+ * Same as std::vector<bool>, but size cannot be changed.
  */
 class Bitset {
  private:
@@ -42,6 +42,11 @@ class Bitset {
   bool any() const noexcept;
   bool none() noexcept;
   bool none() const noexcept;
+
+  uint32_t clz() noexcept;  // Leading zero
+  uint32_t clz() const noexcept;
+  uint32_t ffs() noexcept;  // Trailing zero
+  uint32_t ffs() const noexcept;
 
   uint32_t count() noexcept;
   uint32_t count() const noexcept;

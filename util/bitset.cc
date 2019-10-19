@@ -74,6 +74,51 @@ bool Bitset::none() noexcept {
   return const_cast<const Bitset *>(this)->none();
 }
 
+uint32_t Bitset::clz() noexcept {
+  return const_cast<const Bitset *>(this)->clz();
+}
+
+uint32_t Bitset::clz() const noexcept {
+  uint32_t ret = 0;
+
+  // Count leading zero-byte
+  uint32_t i = 0;
+  for (; i < allocSize; i++) {
+    if (data[i] != 0) {
+      break;
+    }
+
+    ret++;
+  }
+
+  return (ret << 3) + clz16(data[i]);
+}
+
+uint32_t Bitset::ffs() noexcept {
+  return const_cast<const Bitset *>(this)->ffs();
+}
+
+uint32_t Bitset::ffs() const noexcept {
+  uint32_t ret = 0;
+
+  // Count trailing zero-byte
+  uint32_t i = allocSize - 1;
+
+  for (; i > 0; i--) {
+    if (data[i] != 0) {
+      break;
+    }
+
+    ret++;
+  }
+
+  if (UNLIKELY(i == 0 && data[i] == 0)) {
+    return dataSize;
+  }
+
+  return (ret << 3) + ffs16(data[i]);
+}
+
 bool Bitset::none() const noexcept {
   uint8_t ret = 0x00;
 
