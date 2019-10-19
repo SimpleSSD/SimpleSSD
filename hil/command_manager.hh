@@ -36,6 +36,7 @@ enum class Operation : uint8_t {
 
 struct SubCommand {
   const uint64_t tag;
+  const uint32_t id;
 
   Status status;
   Operation opcode;
@@ -49,8 +50,9 @@ struct SubCommand {
   std::vector<uint8_t> buffer;
   std::vector<uint8_t> spare;
 
-  SubCommand(uint64_t t)
+  SubCommand(uint64_t t, uint32_t i)
       : tag(t),
+        id(i),
         status(Status::Prepare),
         opcode(Operation::None),
         lpn(0),

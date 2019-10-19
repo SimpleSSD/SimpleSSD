@@ -42,7 +42,9 @@ SubCommand &CommandManager::createSubCommand(uint64_t tag) {
 
   panic_if(iter == commandList.end(), "No such command exists.");
 
-  return iter->second.subCommandList.emplace_back(SubCommand(tag));
+  uint32_t id = iter->second.subCommandList.size();
+
+  return iter->second.subCommandList.emplace_back(SubCommand(tag, id));
 }
 
 void CommandManager::destroyCommand(uint64_t tag) {
@@ -121,7 +123,7 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, size2);
 
     for (uint64_t j = 0; j < size2; j++) {
-      SubCommand scmd(tag);
+      SubCommand scmd(tag, (uint32_t)j);
 
       RESTORE_SCALAR(in, scmd.status);
       RESTORE_SCALAR(in, scmd.opcode);
