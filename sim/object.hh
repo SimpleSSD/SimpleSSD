@@ -19,7 +19,7 @@
 
 namespace SimpleSSD {
 
-#if !defined(NO_LOG_MACRO) && !defined(DISABLE_LOG)
+#if !defined(NO_LOG_MACRO) && !defined(EXCLUDE_CPU)
 
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \
@@ -57,7 +57,7 @@ namespace SimpleSSD {
 
 #endif
 
-#ifdef DISABLE_LOG
+#ifdef EXCLUDE_CPU
 #define panic_if(cond, format, ...)
 #define panic(format, ...)
 #define warn_if(cond, format, ...)
