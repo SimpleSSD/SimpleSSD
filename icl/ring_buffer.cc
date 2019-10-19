@@ -379,15 +379,9 @@ void RingBuffer::readWorker() {
     // Create request
     auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
                                               eventReadWorkerDone);
-
+    cmd.opcode = HIL::Operation::Read;
     cmd.offset = iter;
     cmd.length = minPages;
-
-    // We need at least one subcommand
-    auto &scmd = commandManager->createSubCommand(cmd.tag);
-
-    scmd.opcode = HIL::Operation::Read;
-    scmd.lpn = iter;
 
     // Store for CPU latency
     readWorkerTag.emplace_back(cmd.tag);
@@ -549,6 +543,7 @@ void RingBuffer::writeWorker_doFTL() {
     // Create request
     auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
                                               eventWriteWorkerDone);
+    cmd.opcode = HIL::Operation::Write;
 
     if (LIKELY(ctx.scmd == nullptr)) {
       cmd.offset = ctx.entry->offset;
@@ -558,12 +553,6 @@ void RingBuffer::writeWorker_doFTL() {
       cmd.offset = ctx.scmd->lpn;
       cmd.length = 1;
     }
-
-    // We need at least one subcommand
-    auto &scmd = commandManager->createSubCommand(cmd.tag);
-
-    scmd.opcode = HIL::Operation::Write;
-    scmd.lpn = cmd.offset;
 
     // Submit
     pFTL->submit(cmd.tag);
@@ -878,18 +867,16 @@ void RingBuffer::enqueue(uint64_t tag, uint32_t id) {
   clock++;
 
   if (id != std::numeric_limits<uint32_t>::max()) {
-    auto &scmd = cmd.subCommandList.at(id);
-
-    if (LIKELY(scmd.opcode == HIL::Operation::Write)) {
+    if (LIKELY(cmd.opcode == HIL::Operation::Write)) {
       // As we can start write only if PCIe DMA done, write is always partial.
-      write_find(scmd);
+      write_find(cmd.subCommandList.at(id));
     }
     else {
       panic("Unexpected opcode.");
     }
   }
   else {
-    switch (cmd.subCommandList.front().opcode) {
+    switch (cmd.opcode) {
       case HIL::Operation::Read:
         read_find(cmd);
 
