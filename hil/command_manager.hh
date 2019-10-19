@@ -23,7 +23,8 @@ enum class Status : uint8_t {
   Submit,   // Sub command issued to HIL
   Done,     // Sub command completed
 
-  ReadPending,
+  InternalCache,      // Sub command is in ICL
+  InternalCacheDone,  // Sub command is completed in ICL
 };
 
 enum class Operation : uint8_t {
@@ -41,7 +42,6 @@ struct SubCommand {
   const uint32_t id;
 
   Status status;
-  Operation opcode;
 
   LPN lpn;
   PPN ppn;
@@ -56,7 +56,6 @@ struct SubCommand {
       : tag(t),
         id(i),
         status(Status::Prepare),
-        opcode(Operation::None),
         lpn(0),
         ppn(0),
         skipFront(0),
@@ -69,13 +68,15 @@ struct Command {
   Event eid;
 
   Status status;
+  Operation opcode;
 
   LPN offset;
   LPN length;
 
   std::vector<SubCommand> subCommandList;
 
-  Command(uint64_t t, Event e) : tag(t), eid(e), status(Status::Prepare) {}
+  Command(uint64_t t, Event e)
+      : tag(t), eid(e), status(Status::Prepare), opcode(Operation::None) {}
 };
 
 class CommandManager : public Object {

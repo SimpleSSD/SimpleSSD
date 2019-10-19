@@ -663,11 +663,9 @@ uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->createCommand(gcid, eid);
 
+  cmd.opcode = ses == FormatOption::None ? Operation::Trim : Operation::Format;
   cmd.offset = info->namespaceRange.first;
   cmd.length = info->namespaceRange.second;
-
-  auto &scmd = mgr->createSubCommand(gcid);
-  scmd.opcode = ses == FormatOption::None ? Operation::Trim : Operation::Format;
 
   pHIL->submitCommand(gcid);
 

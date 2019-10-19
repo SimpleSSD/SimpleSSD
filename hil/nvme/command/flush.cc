@@ -26,6 +26,7 @@ void Flush::flushDone(uint64_t gcid) {
       "NVM     | Flush | NSID %u | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
       tag->sqc->getData()->namespaceID, tag->beginAt, now, now - tag->beginAt);
 
+  subsystem->getHIL()->getCommandManager()->destroyCommand(gcid);
   subsystem->complete(tag);
 }
 
@@ -48,8 +49,7 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->createCommand(gcid, flushDoneEvent);
 
-  auto &scmd = mgr->createSubCommand(gcid);
-  scmd.opcode = Operation::Flush;
+  cmd.opcode = Operation::Flush;
 
   if (nsid == NSID_ALL) {
     auto last = subsystem->getTotalPages();

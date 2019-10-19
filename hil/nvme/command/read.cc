@@ -155,13 +155,13 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   auto gcid = tag->getGCID();
   auto &cmd = mgr->createCommand(gcid, readDoneEvent);
 
+  cmd.opcode = Operation::Read;
   cmd.offset = slpn;
   cmd.length = nlp;
 
   for (LPN i = slpn; i < slpn + nlp; i++) {
     auto &scmd = mgr->createSubCommand(gcid);
 
-    scmd.opcode = Operation::Read;
     scmd.lpn = i;
 
     if (i == slpn) {

@@ -20,6 +20,7 @@ FormatNVM::FormatNVM(ObjectData &o, Subsystem *s) : Command(o, s) {
 void FormatNVM::formatDone(uint64_t gcid) {
   auto tag = findTag(gcid);
 
+  subsystem->getHIL()->getCommandManager()->destroyCommand(gcid);
   subsystem->complete(tag);
 }
 

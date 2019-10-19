@@ -71,6 +71,7 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
 
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.status);
+    BACKUP_SCALAR(out, iter.second.opcode);
     BACKUP_SCALAR(out, iter.second.offset);
     BACKUP_SCALAR(out, iter.second.length);
 
@@ -79,7 +80,6 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
 
     for (auto &scmd : iter.second.subCommandList) {
       BACKUP_SCALAR(out, scmd.status);
-      BACKUP_SCALAR(out, scmd.opcode);
       BACKUP_SCALAR(out, scmd.lpn);
       BACKUP_SCALAR(out, scmd.ppn);
       BACKUP_SCALAR(out, scmd.skipFront);
@@ -117,6 +117,7 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
     Command cmd(tag, eid);
 
     RESTORE_SCALAR(in, cmd.status);
+    RESTORE_SCALAR(in, cmd.opcode);
     RESTORE_SCALAR(in, cmd.offset);
     RESTORE_SCALAR(in, cmd.length);
 
@@ -126,7 +127,6 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
       SubCommand scmd(tag, (uint32_t)j);
 
       RESTORE_SCALAR(in, scmd.status);
-      RESTORE_SCALAR(in, scmd.opcode);
       RESTORE_SCALAR(in, scmd.lpn);
       RESTORE_SCALAR(in, scmd.ppn);
       RESTORE_SCALAR(in, scmd.skipFront);
