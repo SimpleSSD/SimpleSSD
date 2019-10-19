@@ -390,42 +390,31 @@
       <int> Cache algorithm
 
       Possible values:
-        0: Set-associative Cache (released with Amber)
+        0: Ring buffer
      -->
     <config name="CacheMode">0</config>
-    <!-- Set-associatve cache configuration  -->
-    <section name="amber">
-      <!-- <int> Cache size in bytes -->
-      <config name="CacheSize">512M</config>
-      <!--
-        <int> Cache way count
+    <!-- <int> Cache size in bytes -->
+    <config name="CacheSize">512M</config>
+    <!--
+      <int> Cache eviction policy
 
-        Set count will be automatically calculated.
-        To configure cache as directed-map, set way as 1.
-        To configure cache as fully-associative, set way as 0.
-       -->
-      <config name="CacheWaySize">8</config>
-      <!--
-        <int> Cache eviction policy
+      Possible values:
+        0: RANDOM: Evict random entry
+        1: FIFO: Evict least recently added entry
+        2: LRU: Evict least recently used entry
+     -->
+    <config name="EvictPolicy">2</config>
+    <!--
+      <int> Eviction granularity
 
-        Possible values:
-          0: RANDOM: Evict random entry
-          1: FIFO: Evict least recently added entry
-          2: LRU: Evict least recently used entry
-       -->
-      <config name="EvictPolicy">2</config>
-      <!--
-        <int> Eviction granularity
+      Set quantity of data to evict when capacity/confilct miss occurs.
+      Cache will try to collect as many pages as it can.
 
-        Set quantity of data to evict when capacity/confilct miss occurs.
-        Cache will try to collect as many pages as it can.
-
-        Possible values:
-          0: Superpage granularity
-          1: Each page in all parallelism group
-       -->
-      <config name="EvictMode">1</config>
-    </section>
+      Possible values:
+        0: Superpage granularity
+        1: Each page in all parallelism group
+     -->
+    <config name="EvictMode">1</config>
   </section>
   <!--
     Flash Translation Layer configuration

@@ -25,15 +25,12 @@ class Config : public BaseConfig {
     PrefetchRatio,
     CacheMode,
     CacheSize,
-
-    // Set-associative Cache
-    WaySize,
     EvictPolicy,
     EvictMode,
   };
 
   enum class Mode : uint8_t {
-    SetAssociative,
+    RingBuffer,
   };
 
   enum class EvictModeType : uint8_t {
@@ -56,7 +53,6 @@ class Config : public BaseConfig {
   uint64_t prefetchRatio;
   Mode mode;
   uint64_t cacheSize;
-  uint64_t cacheWaySize;
   EvictModeType evictPolicy;
   Granularity evictMode;
 

@@ -17,7 +17,6 @@ const char NAME_PREFETCH_COUNT[] = "PrefetchCount";
 const char NAME_PREFETCH_RATIO[] = "PrefetchRatio";
 const char NAME_CACHE_MODE[] = "CacheMode";
 const char NAME_CACHE_SIZE[] = "CacheSize";
-const char NAME_WAY_SIZE[] = "CacheWaySize";
 const char NAME_EVICT_POLICY[] = "EvictPolicy";
 const char NAME_EVICT_MODE[] = "EvictMode";
 
@@ -30,7 +29,6 @@ Config::Config() {
   prefetchMode = Granularity::AllLevel;
   mode = Mode::SetAssociative;
   cacheSize = 33554432;
-  cacheWaySize = 1;
   evictPolicy = EvictModeType::LRU;
   evictMode = Granularity::AllLevel;
 }
@@ -46,36 +44,23 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_BOOLEAN(node, NAME_PREFETCH_COUNT, prefetchRatio);
     LOAD_NAME_UINT_TYPE(node, NAME_PREFETCH_MODE, Granularity, prefetchMode);
     LOAD_NAME_UINT_TYPE(node, NAME_CACHE_MODE, Mode, mode);
-
-    if (strcmp(name, "amber") == 0 && isSection(node)) {
-      for (auto node2 = node.first_child(); node2;
-           node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT(node2, NAME_CACHE_SIZE, cacheSize);
-        LOAD_NAME_UINT(node2, NAME_WAY_SIZE, cacheWaySize);
-        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_POLICY, EvictModeType,
-                            evictPolicy);
-        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_MODE, Granularity, evictMode);
-      }
-    }
+    LOAD_NAME_UINT(node, NAME_CACHE_SIZE, cacheSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_EVICT_POLICY, EvictModeType, evictPolicy);
+    LOAD_NAME_UINT_TYPE(node, NAME_EVICT_MODE, Granularity, evictMode);
   }
-}
+}  // namespace SimpleSSD::ICL
 
 void Config::storeTo(pugi::xml_node &section) {
-  pugi::xml_node node;
-
-  STORE_NAME_BOOLEAN(node, NAME_USE_READ_CACHE, readCaching);
-  STORE_NAME_BOOLEAN(node, NAME_USE_READ_PREFETCH, writeCaching);
-  STORE_NAME_BOOLEAN(node, NAME_USE_WRITE_CACHE, readPrefetch);
-  STORE_NAME_BOOLEAN(node, NAME_PREFETCH_RATIO, prefetchCount);
-  STORE_NAME_BOOLEAN(node, NAME_PREFETCH_COUNT, prefetchRatio);
-  STORE_NAME_UINT(node, NAME_PREFETCH_MODE, prefetchMode);
-  STORE_NAME_UINT(node, NAME_CACHE_MODE, mode);
-
-  STORE_SECTION(section, "amber", node);
-  STORE_NAME_UINT(node, NAME_CACHE_SIZE, cacheSize);
-  STORE_NAME_UINT(node, NAME_WAY_SIZE, cacheWaySize);
-  STORE_NAME_UINT(node, NAME_EVICT_POLICY, evictPolicy);
-  STORE_NAME_UINT(node, NAME_EVICT_MODE, evictMode);
+  STORE_NAME_BOOLEAN(section, NAME_USE_READ_CACHE, readCaching);
+  STORE_NAME_BOOLEAN(section, NAME_USE_READ_PREFETCH, writeCaching);
+  STORE_NAME_BOOLEAN(section, NAME_USE_WRITE_CACHE, readPrefetch);
+  STORE_NAME_BOOLEAN(section, NAME_PREFETCH_RATIO, prefetchCount);
+  STORE_NAME_BOOLEAN(section, NAME_PREFETCH_COUNT, prefetchRatio);
+  STORE_NAME_UINT(section, NAME_PREFETCH_MODE, prefetchMode);
+  STORE_NAME_UINT(section, NAME_CACHE_MODE, mode);
+  STORE_NAME_UINT(section, NAME_CACHE_SIZE, cacheSize);
+  STORE_NAME_UINT(section, NAME_EVICT_POLICY, evictPolicy);
+  STORE_NAME_UINT(section, NAME_EVICT_MODE, evictMode);
 }
 
 void Config::update() {
@@ -102,9 +87,6 @@ uint64_t Config::readUint(uint32_t idx) {
       break;
     case CacheSize:
       ret = cacheSize;
-      break;
-    case WaySize:
-      ret = cacheWaySize;
       break;
     case EvictPolicy:
       ret = (uint64_t)evictPolicy;
@@ -153,9 +135,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case CacheSize:
       cacheSize = value;
-      break;
-    case WaySize:
-      cacheWaySize = value;
       break;
     case EvictPolicy:
       evictPolicy = (EvictModeType)value;
