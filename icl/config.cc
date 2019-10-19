@@ -18,6 +18,7 @@ const char NAME_CACHE_MODE[] = "CacheMode";
 const char NAME_CACHE_SIZE[] = "CacheSize";
 const char NAME_EVICT_POLICY[] = "EvictPolicy";
 const char NAME_EVICT_MODE[] = "EvictMode";
+const char NAME_EVICT_THRESHOLD[] = "EvictThreshold";
 
 Config::Config() {
   enable = false;
@@ -29,6 +30,7 @@ Config::Config() {
   cacheSize = 33554432;
   evictPolicy = EvictModeType::LRU;
   evictMode = Granularity::AllLevel;
+  evictThreshold = 0.7;
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -44,6 +46,7 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_UINT(node, NAME_CACHE_SIZE, cacheSize);
     LOAD_NAME_UINT_TYPE(node, NAME_EVICT_POLICY, EvictModeType, evictPolicy);
     LOAD_NAME_UINT_TYPE(node, NAME_EVICT_MODE, Granularity, evictMode);
+    LOAD_NAME_FLOAT(node, NAME_EVICT_THRESHOLD, evictThreshold);
   }
 }  // namespace SimpleSSD::ICL
 
@@ -57,12 +60,15 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_CACHE_SIZE, cacheSize);
   STORE_NAME_UINT(section, NAME_EVICT_POLICY, evictPolicy);
   STORE_NAME_UINT(section, NAME_EVICT_MODE, evictMode);
+  STORE_NAME_FLOAT(section, NAME_EVICT_THRESHOLD, evictThreshold);
 }
 
 void Config::update() {
   panic_if(prefetchCount == 0, "Invalid PrefetchCount.");
   panic_if(prefetchRatio == 0, "Invalid PrefetchRatio.");
   panic_if((uint8_t)prefetchMode > 1, "Invalid PrefetchMode.");
+  panic_if(evictThreshold < 0.f || evictThreshold >= 1.f,
+           "Invalid EvictThreshold.");
 }
 
 uint64_t Config::readUint(uint32_t idx) {
@@ -93,6 +99,16 @@ uint64_t Config::readUint(uint32_t idx) {
   }
 
   return ret;
+}
+
+float Config::readFloat(uint32_t idx) {
+  switch (idx) {
+    case EvictThreshold:
+      return evictThreshold;
+      break;
+  }
+
+  return 0.f;
 }
 
 bool Config::readBoolean(uint32_t idx) {
@@ -134,6 +150,21 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case EvictMode:
       evictMode = (Granularity)value;
+      break;
+    default:
+      ret = false;
+      break;
+  }
+
+  return ret;
+}
+
+bool Config::writeFloat(uint32_t idx, float value) {
+  bool ret = true;
+
+  switch (idx) {
+    case EvictThreshold:
+      evictThreshold = value;
       break;
     default:
       ret = false;

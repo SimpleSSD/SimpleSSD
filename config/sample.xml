@@ -413,6 +413,13 @@
         1: Each page in all parallelism group
      -->
     <config name="EvictMode">1</config>
+    <!--
+      <float> On-demand evicition trigger
+
+      In ring buffer, if current cache utilization / cache size >= this value,
+      background write worker will triggered to evict pages to FTL.
+     -->
+    <config name="EvictThreshold">0.8</config>
   </section>
   <!--
     Flash Translation Layer configuration

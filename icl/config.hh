@@ -26,6 +26,7 @@ class Config : public BaseConfig {
     CacheSize,
     EvictPolicy,
     EvictMode,
+    EvictThreshold,
   };
 
   enum class Mode : uint8_t {
@@ -53,6 +54,7 @@ class Config : public BaseConfig {
   uint64_t cacheSize;
   EvictModeType evictPolicy;
   Granularity evictMode;
+  float evictThreshold;
 
  public:
   Config();
@@ -65,8 +67,10 @@ class Config : public BaseConfig {
   void update() override;
 
   uint64_t readUint(uint32_t) override;
+  float readFloat(uint32_t) override;
   bool readBoolean(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
+  bool writeFloat(uint32_t, float) override;
   bool writeBoolean(uint32_t, bool) override;
 };
 
