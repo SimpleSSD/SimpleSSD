@@ -355,12 +355,10 @@
     Internal Cache Layer configuration
    -->
   <section name="icl">
-    <!-- <bool> Enable read caching -->
-    <config name="EnableReadCache">true</config>
+    <!-- <bool> Enable caching -->
+    <config name="EnableCache">true</config>
     <!-- <bool> Enable read prefetching / read-ahead -->
     <config name="EnableReadPrefetch">true</config>
-    <!-- <bool> Enable write caching -->
-    <config name="EnableWriteCache">true</config>
     <!--
       <int> Prefetch/Read-ahead granularity
 

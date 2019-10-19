@@ -17,9 +17,8 @@ namespace SimpleSSD::ICL {
 class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
-    EnableReadCache,
+    EnableCache,
     EnablePrefetch,
-    EnableWriteCache,
     PrefetchMode,
     PrefetchCount,
     PrefetchRatio,
@@ -45,9 +44,8 @@ class Config : public BaseConfig {
   };
 
  private:
-  bool readCaching;
+  bool enable;
   bool readPrefetch;
-  bool writeCaching;
   Granularity prefetchMode;
   uint64_t prefetchCount;
   uint64_t prefetchRatio;

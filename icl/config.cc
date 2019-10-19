@@ -9,9 +9,8 @@
 
 namespace SimpleSSD::ICL {
 
-const char NAME_USE_READ_CACHE[] = "EnableReadCache";
+const char NAME_USE_CACHE[] = "EnableCache";
 const char NAME_USE_READ_PREFETCH[] = "EnableReadPrefetch";
-const char NAME_USE_WRITE_CACHE[] = "EnableWriteCache";
 const char NAME_PREFETCH_MODE[] = "PrefetchMode";
 const char NAME_PREFETCH_COUNT[] = "PrefetchCount";
 const char NAME_PREFETCH_RATIO[] = "PrefetchRatio";
@@ -21,13 +20,12 @@ const char NAME_EVICT_POLICY[] = "EvictPolicy";
 const char NAME_EVICT_MODE[] = "EvictMode";
 
 Config::Config() {
-  readCaching = false;
-  writeCaching = true;
+  enable = false;
   readPrefetch = false;
   prefetchCount = 1;
   prefetchRatio = 0.5;
   prefetchMode = Granularity::AllLevel;
-  mode = Mode::SetAssociative;
+  mode = Mode::RingBuffer;
   cacheSize = 33554432;
   evictPolicy = EvictModeType::LRU;
   evictMode = Granularity::AllLevel;
@@ -37,9 +35,8 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    LOAD_NAME_BOOLEAN(node, NAME_USE_READ_CACHE, readCaching);
-    LOAD_NAME_BOOLEAN(node, NAME_USE_READ_PREFETCH, writeCaching);
-    LOAD_NAME_BOOLEAN(node, NAME_USE_WRITE_CACHE, readPrefetch);
+    LOAD_NAME_BOOLEAN(node, NAME_USE_CACHE, enable);
+    LOAD_NAME_BOOLEAN(node, NAME_USE_READ_PREFETCH, readPrefetch);
     LOAD_NAME_BOOLEAN(node, NAME_PREFETCH_RATIO, prefetchCount);
     LOAD_NAME_BOOLEAN(node, NAME_PREFETCH_COUNT, prefetchRatio);
     LOAD_NAME_UINT_TYPE(node, NAME_PREFETCH_MODE, Granularity, prefetchMode);
@@ -51,9 +48,8 @@ void Config::loadFrom(pugi::xml_node &section) {
 }  // namespace SimpleSSD::ICL
 
 void Config::storeTo(pugi::xml_node &section) {
-  STORE_NAME_BOOLEAN(section, NAME_USE_READ_CACHE, readCaching);
-  STORE_NAME_BOOLEAN(section, NAME_USE_READ_PREFETCH, writeCaching);
-  STORE_NAME_BOOLEAN(section, NAME_USE_WRITE_CACHE, readPrefetch);
+  STORE_NAME_BOOLEAN(section, NAME_USE_CACHE, enable);
+  STORE_NAME_BOOLEAN(section, NAME_USE_READ_PREFETCH, readPrefetch);
   STORE_NAME_BOOLEAN(section, NAME_PREFETCH_RATIO, prefetchCount);
   STORE_NAME_BOOLEAN(section, NAME_PREFETCH_COUNT, prefetchRatio);
   STORE_NAME_UINT(section, NAME_PREFETCH_MODE, prefetchMode);
@@ -103,14 +99,11 @@ bool Config::readBoolean(uint32_t idx) {
   bool ret = false;
 
   switch (idx) {
-    case EnableReadCache:
-      ret = readCaching;
+    case EnableCache:
+      ret = enable;
       break;
     case EnablePrefetch:
       ret = readPrefetch;
-      break;
-    case EnableWriteCache:
-      ret = writeCaching;
       break;
   }
 
@@ -154,14 +147,11 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   bool ret = true;
 
   switch (idx) {
-    case EnableReadCache:
-      readCaching = value;
+    case EnableCache:
+      enable = value;
       break;
     case EnablePrefetch:
       readPrefetch = value;
-      break;
-    case EnableWriteCache:
-      writeCaching = value;
       break;
     default:
       ret = false;
