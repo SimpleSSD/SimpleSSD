@@ -18,14 +18,12 @@ namespace SimpleSSD::ICL {
 RingBuffer::PrefetchTrigger::PrefetchTrigger(const uint64_t c, const uint64_t r)
     : prefetchCount(c),
       prefetchRatio(r),
-      lastRequestID(std::numeric_limits<uint64_t>::max()),
       requestCounter(0),
       requestCapacity(0),
       lastAddress(0),
       trigger(false) {}
 
-void RingBuffer::PrefetchTrigger::update(uint64_t tag, LPN addr,
-                                         uint32_t size) {
+void RingBuffer::PrefetchTrigger::update(LPN addr, uint32_t size) {
   // New request arrived, check sequential
   if (addr == lastAddress + 1) {
     requestCounter++;
@@ -404,7 +402,8 @@ void RingBuffer::readWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   // Read done, prepare new entry
-  Entry entry(cmd.offset, minPages);
+  cacheEntry.emplace_back(Entry(cmd.offset, minPages, iobits));
+  auto &entry = cacheEntry.back();
 
   // As we got data from FTL, all SubEntries are valid
   for (auto &iter : entry.list) {
@@ -414,9 +413,6 @@ void RingBuffer::readWorker_done(uint64_t tag) {
   // Apply NVM -> DRAM latency (No completion handler)
   object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
                      InvalidEventID);
-
-  // Insert
-  cacheEntry.emplace_back(entry);
 
   // Update capacity
   usedCapacity += cmd.length * pageSize;
@@ -617,7 +613,7 @@ void RingBuffer::read_find(HIL::Command &cmd) {
   if (LIKELY(enabled)) {
     // Update prefetch trigger
     if (prefetchEnabled) {
-      trigger.update(cmd.tag, cmd.offset, cmd.length);
+      trigger.update(cmd.offset, cmd.length);
     }
 
     // Find entry including range
@@ -676,7 +672,7 @@ void RingBuffer::read_findDone(uint64_t tag) {
   // Apply DRAM -> PCIe latency
   for (auto &scmd : cmd.subCommandList) {
     if (scmd.status == HIL::Status::InternalCacheDone) {
-      scmd.status == HIL::Status::Done;
+      scmd.status = HIL::Status::Done;
 
       object.dram->read(getDRAMAddress(scmd.lpn), pageSize, eventReadDRAMDone,
                         tag);
@@ -731,7 +727,9 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
       if (usedCapacity + pageSize < totalCapacity) {
         // In this case, there was no entry for this sub command
         LPN aligned = alignToMinPage(scmd.lpn);
-        Entry entry(aligned, minPages);
+
+        cacheEntry.emplace_back(Entry(aligned, minPages, iobits));
+        auto &entry = cacheEntry.back();
 
         entry.accessedAt = clock;
 
@@ -740,10 +738,6 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
         sentry.dirty = true;
 
         updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
-
-        // Insert
-        cacheEntry.emplace_back(entry);
-
         updateCapacity(false, scmd.skipFront + scmd.skipEnd);
       }
       else {
@@ -779,7 +773,7 @@ void RingBuffer::write_findDone(uint64_t tag) {
   // Apply PCIe -> DRAM latency
   for (auto &scmd : cmd.subCommandList) {
     if (scmd.status == HIL::Status::InternalCacheDone) {
-      scmd.status == HIL::Status::Done;
+      scmd.status = HIL::Status::Done;
 
       object.dram->write(getDRAMAddress(scmd.lpn), pageSize, eventWriteDRAMDone,
                          tag);
@@ -822,8 +816,6 @@ void RingBuffer::flush_find(HIL::Command &cmd) {
 }
 
 void RingBuffer::invalidate_find(HIL::Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
-
   if (LIKELY(enabled)) {
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       uint8_t bound = 0;
@@ -963,7 +955,6 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  BACKUP_SCALAR(out, trigger.lastRequestID);
   BACKUP_SCALAR(out, trigger.requestCounter);
   BACKUP_SCALAR(out, trigger.requestCapacity);
   BACKUP_SCALAR(out, trigger.lastAddress);
@@ -1070,7 +1061,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, offset);
 
-    Entry entry(offset, minPages);
+    cacheEntry.emplace_back(Entry(offset, minPages, iobits));
+    auto &entry = cacheEntry.back();
 
     RESTORE_SCALAR(in, entry.accessedAt);
 
@@ -1078,11 +1070,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, sentry.data);
       sentry.valid.restoreCheckpoint(in);
     }
-
-    cacheEntry.emplace_back(entry);
   }
 
-  RESTORE_SCALAR(in, trigger.lastRequestID);
   RESTORE_SCALAR(in, trigger.requestCounter);
   RESTORE_SCALAR(in, trigger.requestCapacity);
   RESTORE_SCALAR(in, trigger.lastAddress);

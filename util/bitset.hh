@@ -75,7 +75,9 @@ class Bitset {
     bool ret = true;
 
     if (lhs.dataSize != rhs.dataSize) {
-      panic("Size does not match");
+      std::cerr << "Size does not match" << std::endl;
+
+      abort();
     }
 
     for (uint32_t i = 0; i < lhs.allocSize; i++) {
