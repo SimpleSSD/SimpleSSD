@@ -171,26 +171,9 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto gcid = tag->getGCID();
-  auto &cmd = mgr->createCommand(gcid, writeDoneEvent);
 
-  cmd.opcode = Operation::Write;
-  cmd.offset = slpn;
-  cmd.length = nlp;
-
-  for (LPN i = slpn; i < slpn + nlp; i++) {
-    auto &scmd = mgr->createSubCommand(gcid);
-
-    scmd.lpn = i;
-
-    if (i == slpn) {
-      scmd.skipFront = skipFront;
-    }
-    else if (i + 1 == slpn + nlp) {
-      scmd.skipEnd = skipEnd;
-    }
-
-    scmd.buffer.resize(info->lpnSize);
-  }
+  mgr->createHILWrite(gcid, writeDoneEvent, slpn, nlp, skipFront, skipEnd,
+                      info->lpnSize);
 
   tag->_slba = slba;
   tag->_nlb = nlb;

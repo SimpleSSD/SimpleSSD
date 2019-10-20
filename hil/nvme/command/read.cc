@@ -153,29 +153,15 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto gcid = tag->getGCID();
-  auto &cmd = mgr->createCommand(gcid, readDoneEvent);
 
-  cmd.opcode = Operation::Read;
-  cmd.offset = slpn;
-  cmd.length = nlp;
+  mgr->createHILRead(gcid, readDoneEvent, slpn, nlp, skipFront, skipEnd,
+                     info->lpnSize);
 
-  for (LPN i = slpn; i < slpn + nlp; i++) {
-    auto &scmd = mgr->createSubCommand(gcid);
+  if (disk) {
+    auto &cmd = mgr->getCommand(gcid);
 
-    scmd.lpn = i;
-
-    if (i == slpn) {
-      scmd.skipFront = skipFront;
-    }
-    else if (i + 1 == slpn + nlp) {
-      scmd.skipEnd = skipEnd;
-    }
-
-    scmd.buffer.resize(info->lpnSize);
-
-    if (disk) {
-      disk->read((i - slpn) * info->lpnSize + skipFront,
-                 info->lpnSize - skipEnd, scmd.buffer.data() + skipFront);
+    for (auto &iter : cmd.subCommandList) {
+      disk->read(iter.lpn * info->lpnSize, info->lpnSize, iter.buffer.data());
     }
   }
 

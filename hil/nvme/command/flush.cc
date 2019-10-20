@@ -47,15 +47,15 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
   auto gcid = tag->getGCID();
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
-  auto &cmd = mgr->createCommand(gcid, flushDoneEvent);
 
-  cmd.opcode = Operation::Flush;
+  LPN offset = 0;
+  LPN length = 0;
 
   if (nsid == NSID_ALL) {
     auto last = subsystem->getTotalPages();
 
-    cmd.offset = 0;
-    cmd.length = last;
+    offset = 0;
+    length = last;
   }
   else {
     auto nslist = subsystem->getNamespaceList();
@@ -65,7 +65,6 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
       tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                            GenericCommandStatusCode::Invalid_Field);
 
-      mgr->destroyCommand(gcid);
       subsystem->complete(tag);
 
       return;
@@ -73,9 +72,11 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
 
     auto range = ns->second->getInfo()->namespaceRange;
 
-    cmd.offset = range.first;
-    cmd.length = range.second;
+    offset = range.first;
+    length = range.second;
   }
+
+  mgr->createHILFlush(gcid, flushDoneEvent, offset, length);
 
   pHIL->submitCommand(gcid);
 }

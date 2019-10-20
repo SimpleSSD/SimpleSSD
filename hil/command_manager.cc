@@ -7,7 +7,7 @@
 
 #include "hil/command_manager.hh"
 
-namespace SimpleSSD::HIL {
+namespace SimpleSSD {
 
 CommandManager::CommandManager(ObjectData &o) : Object(o) {}
 
@@ -53,6 +53,82 @@ void CommandManager::destroyCommand(uint64_t tag) {
   panic_if(iter == commandList.end(), "No such command exists.");
 
   commandList.erase(iter);
+}
+
+void CommandManager::createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                                   uint32_t skipFront, uint32_t skipEnd,
+                                   uint32_t lpnSize) {
+  auto &cmd = createCommand(tag, eid);
+
+  cmd.opcode = Operation::Read;
+  cmd.offset = slpn;
+  cmd.length = nlp;
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = createSubCommand(tag);
+
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    else if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+
+    scmd.buffer.resize(lpnSize);
+  }
+}
+
+void CommandManager::createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                                    uint32_t skipFront, uint32_t skipEnd,
+                                    uint32_t lpnSize) {
+  auto &cmd = createCommand(tag, eid);
+
+  cmd.opcode = Operation::Write;
+  cmd.offset = slpn;
+  cmd.length = nlp;
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = createSubCommand(tag);
+
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    else if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+
+    scmd.buffer.resize(lpnSize);
+  }
+}
+
+void CommandManager::createHILFlush(uint64_t tag, Event eid, LPN slpn,
+                                    LPN nlp) {
+  auto &cmd = createCommand(tag, eid);
+
+  cmd.opcode = Operation::Flush;
+  cmd.offset = slpn;
+  cmd.length = nlp;
+}
+
+void CommandManager::createHILTrim(uint64_t tag, Event eid, LPN slpn, LPN nlp) {
+  auto &cmd = createCommand(tag, eid);
+
+  cmd.opcode = Operation::Trim;
+  cmd.offset = slpn;
+  cmd.length = nlp;
+}
+
+void CommandManager::createHILFormat(uint64_t tag, Event eid, LPN slpn,
+                                     LPN nlp) {
+  auto &cmd = createCommand(tag, eid);
+
+  cmd.opcode = Operation::Format;
+  cmd.offset = slpn;
+  cmd.length = nlp;
 }
 
 void CommandManager::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -155,4 +231,4 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-}  // namespace SimpleSSD::HIL
+}  // namespace SimpleSSD

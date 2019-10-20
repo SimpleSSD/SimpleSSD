@@ -661,11 +661,15 @@ uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
 
   // Do format
   auto mgr = pHIL->getCommandManager();
-  auto &cmd = mgr->createCommand(gcid, eid);
 
-  cmd.opcode = ses == FormatOption::None ? Operation::Trim : Operation::Format;
-  cmd.offset = info->namespaceRange.first;
-  cmd.length = info->namespaceRange.second;
+  if (ses == FormatOption::None) {
+    mgr->createHILTrim(gcid, eid, info->namespaceRange.first,
+                       info->namespaceRange.second);
+  }
+  else {
+    mgr->createHILFormat(gcid, eid, info->namespaceRange.first,
+                         info->namespaceRange.second);
+  }
 
   pHIL->submitCommand(gcid);
 

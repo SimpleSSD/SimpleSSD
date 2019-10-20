@@ -15,7 +15,7 @@
 
 #include "sim/object.hh"
 
-namespace SimpleSSD::HIL {
+namespace SimpleSSD {
 
 enum class Status : uint8_t {
   Prepare,  // Sub command created
@@ -43,8 +43,8 @@ enum class Operation : uint8_t {
  * Each field is 16bit (MSB -> LSB)
  * [ Layer prefix ][ Controller ID ][ Queue ID ][ Command ID / Queue entry ID ]
  */
-#define ICL_TAG_PREFIX  ((uint64_t)0xFFFF000000000000ull)
-#define FTL_TAG_PREFIX  ((uint64_t)0xFFEE000000000000ull)
+#define ICL_TAG_PREFIX ((uint64_t)0xFFFF000000000000ull)
+#define FTL_TAG_PREFIX ((uint64_t)0xFFEE000000000000ull)
 
 struct SubCommand {
   const uint64_t tag;
@@ -92,6 +92,9 @@ class CommandManager : public Object {
  private:
   std::unordered_map<uint64_t, Command> commandList;
 
+  Command &createCommand(uint64_t, Event);
+  SubCommand &createSubCommand(uint64_t);
+
  public:
   CommandManager(ObjectData &);
   CommandManager(const CommandManager &) = delete;
@@ -104,9 +107,16 @@ class CommandManager : public Object {
   Command &getCommand(uint64_t);
   std::vector<SubCommand> &getSubCommand(uint64_t);
 
-  Command &createCommand(uint64_t, Event);
-  SubCommand &createSubCommand(uint64_t);
   void destroyCommand(uint64_t);
+
+  // Helper APIs
+  void createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                     uint32_t skipFront, uint32_t skipEnd, uint32_t lpnSize);
+  void createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                      uint32_t skipFront, uint32_t skipEnd, uint32_t lpnSize);
+  void createHILFlush(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+  void createHILTrim(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+  void createHILFormat(uint64_t tag, Event eid, LPN slpn, LPN nlp);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -116,6 +126,6 @@ class CommandManager : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::HIL
+}  // namespace SimpleSSD
 
 #endif
