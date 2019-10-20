@@ -14,7 +14,7 @@ namespace SimpleSSD {
 namespace FTL {
 
 FTL::FTL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
-  pFIL = new FIL::FIL(object);
+  pFIL = new FIL::FIL(object, commandManager);
 
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
                                               Config::Key::MappingMode)) {
@@ -69,30 +69,35 @@ uint8_t FTL::isFormat() {
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  pFTL->getStatList(list, prefix + "ftl.");
   pMapper->getStatList(list, prefix + "ftl.mapper.");
   pAllocator->getStatList(list, prefix + "ftl.allocator.");
   pFIL->getStatList(list, prefix);
 }
 
 void FTL::getStatValues(std::vector<double> &values) noexcept {
+  pFTL->getStatValues(values);
   pMapper->getStatValues(values);
   pAllocator->getStatValues(values);
   pFIL->getStatValues(values);
 }
 
 void FTL::resetStatValues() noexcept {
+  pFTL->resetStatValues();
   pMapper->resetStatValues();
   pAllocator->resetStatValues();
   pFIL->resetStatValues();
 }
 
 void FTL::createCheckpoint(std::ostream &out) const noexcept {
+  pFTL->createCheckpoint(out);
   pMapper->createCheckpoint(out);
   pAllocator->createCheckpoint(out);
   pFIL->createCheckpoint(out);
 }
 
 void FTL::restoreCheckpoint(std::istream &in) noexcept {
+  pFTL->restoreCheckpoint(in);
   pMapper->restoreCheckpoint(in);
   pAllocator->restoreCheckpoint(in);
   pFIL->restoreCheckpoint(in);
