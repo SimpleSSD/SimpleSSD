@@ -40,6 +40,8 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                              "FTL::BasicFTL::eventGCWrite");
   eventGCErase = createEvent([this](uint64_t, uint64_t) { gc_erase(); },
                              "FTL::BasicFTL::eventGCErase");
+  eventGCEraseDone = createEvent([this](uint64_t, uint64_t) { gc_eraseDone(); },
+                                 "FTL::BasicFTL::EventGCEraseDone");
   eventGCDone = createEvent([this](uint64_t, uint64_t) { gc_done(); },
                             "FTL::BasicFTL::eventGCDone");
 }
@@ -76,7 +78,7 @@ void BasicFTL::write_done(uint64_t tag) {
   scheduleNow(cmd.eid, tag);
 
   // Check GC threshold for On-demand GC
-  if (pMapper->checkGCThreshold() && formatInProgress == 0) {
+  if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
     scheduleNow(eventGCTrigger);
   }
 }
@@ -145,7 +147,11 @@ void BasicFTL::gc_read() {
     return;
   }
 
-  // Prepare erase
+  // Do erase
+  auto &cmd = commandManager->getCommand(gcCopyList.eraseTag);
+
+  cmd.eid = eventGCErase;
+
   pFIL->submit(gcCopyList.eraseTag);
 }
 
@@ -169,6 +175,12 @@ void BasicFTL::gc_writeDoFIL() {
 }
 
 void BasicFTL::gc_erase() {
+  auto &cmd = commandManager->getCommand(gcCopyList.eraseTag);
+
+  pAllocator->reclaimBlocks(cmd.subCommandList, eventGCEraseDone);
+}
+
+void BasicFTL::gc_eraseDone() {
   scheduleNow(eventGCGetBlockList);
 
   pMapper->releaseCopyList(gcCopyList);
@@ -256,6 +268,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventGCWriteMapping);
   BACKUP_EVENT(out, eventGCWrite);
   BACKUP_EVENT(out, eventGCErase);
+  BACKUP_EVENT(out, eventGCEraseDone);
   BACKUP_EVENT(out, eventGCDone);
 }
 
@@ -291,6 +304,7 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventGCWriteMapping);
   RESTORE_EVENT(in, eventGCWrite);
   RESTORE_EVENT(in, eventGCErase);
+  RESTORE_EVENT(in, eventGCEraseDone);
   RESTORE_EVENT(in, eventGCDone);
 }
 

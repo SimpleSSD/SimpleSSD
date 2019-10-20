@@ -68,6 +68,9 @@ class BasicFTL : public AbstractFTL {
   Event eventGCErase;
   void gc_erase();
 
+  Event eventGCEraseDone;
+  void gc_eraseDone();
+
   Event eventGCDone;
   void gc_done();
 
