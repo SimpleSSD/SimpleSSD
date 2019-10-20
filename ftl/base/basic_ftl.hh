@@ -22,39 +22,39 @@ class BasicFTL : public AbstractFTL {
   };
 
   bool gcInProgress;
-  std::deque<PPN> gcList;
-  BlockInfo gcBlock;
+  std::deque<PPN> gcBlockList;
+  CopyList gcCopyList;
   uint32_t nextCopyIndex;
-  uint8_t *gcBuffer;
+  uint64_t eraseTag;
 
   uint8_t formatInProgress;
   FormatContext fctx;
 
-  void read_find(uint64_t);
+  void read_find(HIL::Command &);
 
-  Event eventReadMappingDone;
-  void read_dofil(uint64_t);
+  Event eventReadDoFIL;
+  void read_doFIL(uint64_t);
 
   Event eventReadFILDone;
   void read_done(uint64_t);
 
-  void write_find(uint64_t);
+  void write_find(HIL::Command &);
 
-  Event eventWriteMappingDone;
-  void write_dofil(uint64_t);
+  Event eventWriteDoFIL;
+  void write_doFIL(uint64_t);
 
   Event eventWriteFILDone;
   void write_done(uint64_t);
 
-  void invalidate_find(uint64_t);
+  void invalidate_find(HIL::Command &);
 
-  Event eventInvalidateMappingDone;
-  void invalidate_dofil(uint64_t);
+  Event eventInvalidateDoFIL;
+  void invalidate_doFIL(uint64_t);
 
-  Event eventGCBegin;
+  Event eventGCTrigger;
   void gc_trigger();
 
-  Event eventGCListDone;
+  Event eventGCGetBlockList;
   void gc_blockinfo();
 
   Event eventGCRead;
@@ -64,7 +64,7 @@ class BasicFTL : public AbstractFTL {
   void gc_write();
 
   Event eventGCWrite;
-  void gc_writeDofil();
+  void gc_writeDoFIL();
 
   Event eventGCErase;
   void gc_erase();

@@ -15,6 +15,8 @@
 
 namespace SimpleSSD::FTL {
 
+class AbstractFTL;
+
 namespace BlockAllocator {
 
 class AbstractAllocator;
@@ -26,6 +28,7 @@ namespace Mapping {
 class AbstractMapping : public Object {
  protected:
   Parameter param;
+  AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
  public:
@@ -105,22 +108,21 @@ class AbstractMapping : public Object {
 
   Parameter *getInfo() { return &param; };
 
-  virtual void initialize(BlockAllocator::AbstractAllocator *) = 0;
+  virtual void initialize(AbstractFTL *,
+                          BlockAllocator::AbstractAllocator *) = 0;
 
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  virtual FTLContext &getContext(uint64_t) = 0;
-  virtual void releaseContext(uint64_t) = 0;
-
   // I/O interfaces
-  virtual void readMapping(Request &&, Event) = 0;
-  virtual void writeMapping(Request &&, Event) = 0;
-  virtual void invalidateMapping(Request &&, Event) = 0;
+  virtual void readMapping(HIL::Command &, Event) = 0;
+  virtual void writeMapping(HIL::Command &, Event) = 0;
+  virtual void invalidateMapping(HIL::Command &, Event) = 0;
   virtual void getBlocks(LPN, LPN, std::deque<PPN> &, Event) = 0;
 
   // GC interfaces
   virtual bool checkGCThreshold() = 0;
-  virtual void getBlockInfo(BlockInfo &, Event) = 0;
+  virtual void getCopyList(CopyList &, Event) = 0;
+  virtual void releaseCopyList(CopyList &) = 0;
   virtual void writeMapping(std::pair<LPN, PPN> &, Event) = 0;
 };
 

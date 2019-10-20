@@ -26,13 +26,47 @@ typedef struct {
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
 
-struct BlockInfo {
+struct CopyList {
   PPN blockID;
 
-  Bitset valid;
-  std::vector<std::pair<LPN, PPN>> lpnList;
+  std::vector<uint64_t>::iterator iter;
+  std::vector<uint64_t> commandList;
 
-  BlockInfo(uint32_t s) : valid(s), lpnList(s, std::make_pair(0, 0)) {}
+  void resetIterator() { iter = commandList.begin(); }
+
+  bool isEnd() { return iter == commandList.end(); }
+
+  void createCheckpoint(std::ostream &out) const {
+    BACKUP_SCALAR(out, blockID);
+
+    uint64_t size = commandList.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : commandList) {
+      BACKUP_SCALAR(out, iter);
+    }
+
+    size = iter - commandList.begin();
+    BACKUP_SCALAR(out, size);
+  }
+
+  void restoreCheckpoint(std::istream &in) {
+    RESTORE_SCALAR(in, blockID);
+
+    uint64_t size;
+    RESTORE_SCALAR(in, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      uint64_t tag;
+
+      RESTORE_SCALAR(in, tag);
+
+      commandList.emplace_back(tag);
+    }
+
+    RESTORE_SCALAR(in, size);
+    iter = commandList.begin() + size;
+  }
 };
 
 }  // namespace SimpleSSD::FTL

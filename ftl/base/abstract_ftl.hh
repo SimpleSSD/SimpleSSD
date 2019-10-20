@@ -49,6 +49,8 @@ class AbstractFTL : public Object {
   virtual void submit(uint64_t) = 0;
   virtual bool isGC() = 0;
   virtual uint8_t isFormat() = 0;
+
+  void submitToFIL(uint64_t tag) { pFIL->submit(tag); }
 };
 
 }  // namespace SimpleSSD::FTL
