@@ -23,7 +23,7 @@
 namespace SimpleSSD::FIL::NVM {
 
 PALOLD::PALOLD(ObjectData &o, HIL::CommandManager *m)
-    : AbstractNVM(o, m), lastResetTick(0) {
+    : AbstractNVM(o, m), lastResetTick(0), convertObject(o) {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));
@@ -40,8 +40,7 @@ PALOLD::PALOLD(ObjectData &o, HIL::CommandManager *m)
       break;
   }
 
-  Convert convert(object);
-  convertCPDPBP = convert.getConvertion();
+  convertCPDPBP = convertObject.getConvertion();
 
   stats = new PALStatistics(object.config, lat);
   pal = new PAL2(stats, object.config, lat);
@@ -69,6 +68,7 @@ PALOLD::~PALOLD() {
 
 void PALOLD::enqueue(uint64_t tag, uint32_t id) {
   auto &cmd = commandManager->getCommand(tag);
+  auto &scmd = cmd.subCommandList.at(id);
   Complete cplt;
   ::CPDPBP addr;
 
@@ -76,38 +76,44 @@ void PALOLD::enqueue(uint64_t tag, uint32_t id) {
   cplt.eid = cmd.eid;
   cplt.beginAt = getTick();
 
-  convertCPDPBP(cmd.subCommandList.at(id), addr);
+  convertCPDPBP(scmd, addr);
 
   switch (cmd.opcode) {
     case HIL::Operation::Read: {
-      ::Command cmd(getTick(), 0, OPER_READ, param->pageSize);
+      ::Command pcmd(getTick(), 0, OPER_READ, param->pageSize);
 
       printCPDPBP(addr, "READ");
 
-      pal->submit(cmd, addr);
+      readSpare(scmd.ppn, scmd.spare);
+
+      pal->submit(pcmd, addr);
       stat.readCount++;
 
-      cplt.finishedAt = cmd.finished;
+      cplt.finishedAt = pcmd.finished;
     } break;
     case HIL::Operation::Write: {
-      ::Command cmd(getTick(), 0, OPER_WRITE, param->pageSize);
+      ::Command pcmd(getTick(), 0, OPER_WRITE, param->pageSize);
 
       printCPDPBP(addr, "WRITE");
 
-      pal->submit(cmd, addr);
+      writeSpare(scmd.ppn, scmd.spare);
+
+      pal->submit(pcmd, addr);
       stat.writeCount++;
 
-      cplt.finishedAt = cmd.finished;
+      cplt.finishedAt = pcmd.finished;
     } break;
     case HIL::Operation::Erase: {
-      ::Command cmd(getTick(), 0, OPER_ERASE, param->pageSize);
+      ::Command pcmd(getTick(), 0, OPER_ERASE, param->pageSize);
 
       printCPDPBP(addr, "ERASE");
 
-      pal->submit(cmd, addr);
+      eraseSpare(scmd.ppn);
+
+      pal->submit(pcmd, addr);
       stat.eraseCount++;
 
-      cplt.finishedAt = cmd.finished;
+      cplt.finishedAt = pcmd.finished;
     } break;
     default:
       panic("Copyback not supported in PAL.");
@@ -147,6 +153,50 @@ void PALOLD::completion(uint64_t) {
 
   if (completionQueue.size() > 0) {
     scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
+  }
+}
+
+void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
+  if (list.size() == 0) {
+    return;
+  }
+
+  panic_if(list.size() != param->spareSize, "Unexpected size of spare data.");
+
+  // Find PPN
+  auto iter = spareList.find(ppn);
+
+  if (iter != spareList.end()) {
+    memcpy(list.data(), iter->second.data(), param->spareSize);
+  }
+}
+
+void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
+  if (list.size() == 0) {
+    return;
+  }
+
+  panic_if(list.size() != param->spareSize, "Unexpected size of spare data.");
+
+  // Find PPN
+  auto iter = spareList.find(ppn);
+
+  if (iter != spareList.end()) {
+    memcpy(iter->second.data(), list.data(), param->spareSize);
+  }
+}
+
+void PALOLD::eraseSpare(PPN ppn) {
+  convertObject.getBlockAlignedPPN(ppn);
+
+  for (uint32_t i = 0; i < param->page; i++) {
+    auto iter = spareList.find(ppn);
+
+    if (iter != spareList.end()) {
+      spareList.erase(iter);
+    }
+
+    convertObject.increasePage(ppn);
   }
 }
 

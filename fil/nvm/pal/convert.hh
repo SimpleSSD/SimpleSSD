@@ -77,6 +77,9 @@ class Convert : public Object {
 
   ConvertFunction getConvertion();
 
+  void getBlockAlignedPPN(PPN &);
+  void increasePage(PPN &);
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

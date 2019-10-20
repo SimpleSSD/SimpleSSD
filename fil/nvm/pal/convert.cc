@@ -129,6 +129,32 @@ ConvertFunction Convert::getConvertion() {
   }
 }
 
+void Convert::getBlockAlignedPPN(PPN &ppn) {
+  if (isPowerOfTwo) {
+    uint64_t mask = std::numeric_limits<uint64_t>::max() << shiftPage;
+
+    ppn &= ~mask;
+  }
+  else {
+    uint64_t div = channel * way * die * plane * block;
+
+    ppn = ppn / div * div;
+  }
+}
+
+void Convert::increasePage(PPN &ppn) {
+  if (isPowerOfTwo) {
+    uint64_t add = (uint64_t)1ull << shiftPage;
+
+    ppn += add;
+  }
+  else {
+    uint64_t add = channel * way * die * plane * block;
+
+    ppn += add;
+  }
+}
+
 void Convert::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void Convert::getStatValues(std::vector<double> &) noexcept {}

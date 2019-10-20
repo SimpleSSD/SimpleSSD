@@ -53,11 +53,21 @@ class PALOLD : public AbstractNVM {
   Event completeEvent;
   std::list<Complete> completionQueue;
 
+  Convert convertObject;
   ConvertFunction convertCPDPBP;
 
   void printCPDPBP(::CPDPBP &, const char *);
   void reschedule(Complete &&);
   void completion(uint64_t);
+
+  /*
+   * As PALOLD does not support spare area, we need to store spare data here.
+   */
+  std::unordered_map<PPN, std::vector<uint8_t>> spareList;
+
+  void readSpare(PPN, std::vector<uint8_t> &);
+  void writeSpare(PPN, std::vector<uint8_t> &);
+  void eraseSpare(PPN);
 
  public:
   PALOLD(ObjectData &, HIL::CommandManager *);
