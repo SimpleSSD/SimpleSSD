@@ -22,7 +22,8 @@
 
 namespace SimpleSSD::FIL::NVM {
 
-PALOLD::PALOLD(ObjectData &o) : AbstractNVM(o), lastResetTick(0) {
+PALOLD::PALOLD(ObjectData &o, HIL::CommandManager *m)
+    : AbstractNVM(o, m), lastResetTick(0) {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));
@@ -66,19 +67,19 @@ PALOLD::~PALOLD() {
   delete lat;
 }
 
-void PALOLD::enqueue(Request &&req) {
+void PALOLD::enqueue(uint64_t tag) {
+  auto &cmd = commandManager->getCommand(tag);
   Complete cplt;
   ::CPDPBP addr;
 
-  cplt.id = req.id;
-  cplt.eid = req.eid;
-  cplt.data = req.data;
+  cplt.id = tag;
+  cplt.eid = cmd.eid;
   cplt.beginAt = getTick();
 
-  convertCPDPBP(req, addr);
+  convertCPDPBP(cmd, addr);
 
-  switch (req.opcode) {
-    case Operation::Read: {
+  switch (cmd.opcode) {
+    case HIL::Operation::Read: {
       ::Command cmd(getTick(), 0, OPER_READ, param->pageSize);
 
       printCPDPBP(addr, "READ");
@@ -88,7 +89,7 @@ void PALOLD::enqueue(Request &&req) {
 
       cplt.finishedAt = cmd.finished;
     } break;
-    case Operation::Program: {
+    case HIL::Operation::Write: {
       ::Command cmd(getTick(), 0, OPER_WRITE, param->pageSize);
 
       printCPDPBP(addr, "WRITE");
@@ -98,7 +99,7 @@ void PALOLD::enqueue(Request &&req) {
 
       cplt.finishedAt = cmd.finished;
     } break;
-    case Operation::Erase: {
+    case HIL::Operation::Erase: {
       ::Command cmd(getTick(), 0, OPER_ERASE, param->pageSize);
 
       printCPDPBP(addr, "ERASE");
@@ -142,7 +143,7 @@ void PALOLD::completion(uint64_t) {
   Complete cplt = std::move(completionQueue.front());
   completionQueue.pop_front();
 
-  scheduleNow(cplt.eid, cplt.data);
+  scheduleNow(cplt.eid, cplt.id);
 
   if (completionQueue.size() > 0) {
     scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
@@ -390,4 +391,4 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
   pal->restore(in);
 }
 
-}  // namespace SimpleSSD::FIL
+}  // namespace SimpleSSD::FIL::NVM

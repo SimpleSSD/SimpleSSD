@@ -12,6 +12,7 @@
 
 #include "fil/def.hh"
 #include "fil/nvm/abstract_nvm.hh"
+#include "hil/command_manager.hh"
 
 namespace SimpleSSD::FIL {
 
@@ -22,10 +23,11 @@ namespace SimpleSSD::FIL {
  */
 class FIL : public Object {
  private:
+  HIL::CommandManager *commandManager;
   NVM::AbstractNVM *pFIL;
 
  public:
-  FIL(ObjectData &);
+  FIL(ObjectData &, HIL::CommandManager *);
   FIL(const FIL &) = delete;
   FIL(FIL &&) noexcept = default;
   ~FIL();
@@ -33,7 +35,7 @@ class FIL : public Object {
   FIL &operator=(const FIL &) = delete;
   FIL &operator=(FIL &&) = default;
 
-  void submit(Request &&);
+  void submit(uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

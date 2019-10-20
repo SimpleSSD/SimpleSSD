@@ -16,6 +16,7 @@
 
 #include "SimpleSSD_types.h"
 #include "fil/def.hh"
+#include "hil/command_manager.hh"
 #include "sim/object.hh"
 #include "util/algorithm.hh"
 
@@ -24,10 +25,10 @@ namespace SimpleSSD::FIL {
 /**
  * \brief Convert PPN -> CPDPBP
  *
- * \param[in]  req  FIL::Request
+ * \param[in]  req  Request
  * \param[out] addr CPDPBP
  */
-using ConvertFunction = std::function<void(Request &, ::CPDPBP &)>;
+using ConvertFunction = std::function<void(HIL::Command &, ::CPDPBP &)>;
 
 /**
  * \brief Convert class

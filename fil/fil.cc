@@ -11,29 +11,7 @@
 
 namespace SimpleSSD::FIL {
 
-Request::Request()
-    : id(0),
-      eid(InvalidEventID),
-      data(0),
-      opcode(Operation::Read),
-      address(0),
-      buffer(nullptr) {}
-
-Request::Request(uint64_t i, Event e, uint64_t d, Operation o, uint64_t a,
-                 uint8_t *b)
-    : id(i), eid(e), data(d), opcode(o), address(a), buffer(b) {}
-
-Request::Request(uint64_t i, Event e, uint64_t d, Operation o, uint64_t a,
-                 uint8_t *b, std::vector<uint8_t> &s)
-    : id(i),
-      eid(e),
-      data(d),
-      opcode(o),
-      address(a),
-      buffer(b),
-      spare(std::move(s)) {}
-
-FIL::FIL(ObjectData &o) : Object(o) {
+FIL::FIL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
   auto channel = readConfigUint(Section::FlashInterface, Config::Key::Channel);
   auto way = readConfigUint(Section::FlashInterface, Config::Key::Way);
   auto param = object.config->getNANDStructure();
@@ -48,7 +26,7 @@ FIL::FIL(ObjectData &o) : Object(o) {
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
     case Config::NVMType::PAL:
-      pFIL = new NVM::PALOLD(object);
+      pFIL = new NVM::PALOLD(object, commandManager);
 
       break;
     // case Config::NVMType::GenericNAND:
@@ -63,8 +41,8 @@ FIL::~FIL() {
   delete pFIL;
 }
 
-void FIL::submit(Request &&req) {
-  pFIL->enqueue(std::move(req));
+void FIL::submit(uint64_t tag) {
+  pFIL->enqueue(tag);
 }
 
 void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

@@ -70,13 +70,13 @@ ConvertFunction Convert::getConvertion() {
     sum += popcount32(shiftBlock);
     shiftPage = sum;
 
-    return [this](Request &req, ::CPDPBP &addr) {
-      addr.Channel = (req.address >> shiftChannel) & maskChannel;
-      addr.Package = (req.address >> shiftWay) & maskWay;
-      addr.Die = (req.address >> shiftDie) & maskDie;
-      addr.Plane = (req.address >> shiftPlane) & maskPlane;
-      addr.Block = (req.address >> shiftBlock) & maskBlock;
-      addr.Page = (req.address >> shiftPage) & maskPage;
+    return [this](HIL::Command &req, ::CPDPBP &addr) {
+      addr.Channel = (req.offset >> shiftChannel) & maskChannel;
+      addr.Package = (req.offset >> shiftWay) & maskWay;
+      addr.Die = (req.offset >> shiftDie) & maskDie;
+      addr.Plane = (req.offset >> shiftPlane) & maskPlane;
+      addr.Block = (req.offset >> shiftBlock) & maskBlock;
+      addr.Page = (req.offset >> shiftPage) & maskPage;
     };
   }
   else {
@@ -111,20 +111,20 @@ ConvertFunction Convert::getConvertion() {
     }
 
     return [level, offset, block = this->block, page = this->page](
-               Request &req, ::CPDPBP &addr) {
+               HIL::Command &req, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
-      values[offset[0]] = req.address % level[0];
-      req.address /= level[0];
-      values[offset[1]] = req.address % level[1];
-      req.address /= level[1];
-      values[offset[2]] = req.address % level[2];
-      req.address /= level[2];
-      values[offset[3]] = req.address % level[3];
-      req.address /= level[3];
-      values[4] = req.address % block;
-      req.address /= block;
-      values[5] = req.address % page;
+      values[offset[0]] = req.offset % level[0];
+      req.offset /= level[0];
+      values[offset[1]] = req.offset % level[1];
+      req.offset /= level[1];
+      values[offset[2]] = req.offset % level[2];
+      req.offset /= level[2];
+      values[offset[3]] = req.offset % level[3];
+      req.offset /= level[3];
+      values[4] = req.offset % block;
+      req.offset /= block;
+      values[5] = req.offset % page;
     };
   }
 }

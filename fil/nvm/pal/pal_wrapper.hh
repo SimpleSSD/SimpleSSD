@@ -45,7 +45,6 @@ class PALOLD : public AbstractNVM {
     uint64_t id;
 
     Event eid;
-    uint64_t data;
 
     uint64_t beginAt;
     uint64_t finishedAt;
@@ -61,10 +60,10 @@ class PALOLD : public AbstractNVM {
   void completion(uint64_t);
 
  public:
-  PALOLD(ObjectData &);
+  PALOLD(ObjectData &, HIL::CommandManager *);
   ~PALOLD();
 
-  void enqueue(Request &&) override;
+  void enqueue(uint64_t) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

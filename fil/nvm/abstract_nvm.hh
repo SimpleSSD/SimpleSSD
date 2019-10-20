@@ -12,16 +12,21 @@
 
 #include <cinttypes>
 
+#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FIL::NVM {
 
 class AbstractNVM : public Object {
+ protected:
+  HIL::CommandManager *commandManager;
+
  public:
-  AbstractNVM(ObjectData &o) : Object(o) {}
+  AbstractNVM(ObjectData &o, HIL::CommandManager *m)
+      : Object(o), commandManager(m) {}
   virtual ~AbstractNVM() {}
 
-  virtual void enqueue(Request &&) = 0;
+  virtual void enqueue(uint64_t) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM
