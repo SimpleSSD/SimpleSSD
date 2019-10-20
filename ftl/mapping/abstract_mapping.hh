@@ -118,11 +118,19 @@ class AbstractMapping : public Object {
 
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  virtual uint64_t getLogicalBlockIndex(LPN lpn) {
+  virtual LPN getLogicalBlockIndex(LPN lpn) {
     return lpn % param.totalLogicalBlocks;
   }
-  virtual uint64_t getLogicalPageIndex(LPN lpn) {
+  virtual LPN getLogicalPageIndex(LPN lpn) {
     return lpn / param.totalLogicalBlocks;
+  }
+
+  virtual LPN getLogicalSuperBlockIndex(LPN lpn) {
+    return (lpn % param.totalLogicalBlocks) / param.superpage;
+  }
+
+  virtual LPN getLogicalSuperPageIndex(LPN lpn) {
+    return (lpn / param.totalLogicalBlocks) / param.superpage;
   }
 
   // I/O interfaces
@@ -132,7 +140,6 @@ class AbstractMapping : public Object {
   virtual void getBlocks(LPN, LPN, std::deque<PPN> &, Event) = 0;
 
   // GC interfaces
-  virtual bool checkGCThreshold() = 0;
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
   virtual void writeMapping(std::pair<LPN, PPN> &, Event) = 0;

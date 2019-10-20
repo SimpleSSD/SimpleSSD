@@ -11,6 +11,7 @@
 #define __SIMPLESSD_FTL_ALLOCATOR_ABSTRACT_ALLOCATOR_HH__
 
 #include "ftl/def.hh"
+#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {
@@ -24,6 +25,9 @@ class AbstractMapping;
 namespace BlockAllocator {
 
 class AbstractAllocator : public Object {
+ protected:
+  Parameter *param;
+
  public:
   AbstractAllocator(ObjectData &o) : Object(o) {}
   AbstractAllocator(const AbstractAllocator &) = delete;
@@ -33,14 +37,29 @@ class AbstractAllocator : public Object {
   AbstractAllocator &operator=(const AbstractAllocator &) = delete;
   AbstractAllocator &operator=(AbstractAllocator &&) = default;
 
-  virtual void initialize(Parameter *) = 0;
+  virtual void initialize(Parameter *p) { param = p; };
 
   // For AbstractMapping
-  virtual PPN allocateBlock(PPN, Event) = 0;
+  virtual void allocateBlock(PPN &, Event) = 0;
 
   // For FTL
+  virtual bool checkGCThreshold() = 0;
   virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
-  virtual void reclaimBlocks(std::deque<PPN> &, Event) = 0;
+  virtual void reclaimBlocks(std::vector<SubCommand> &, Event) = 0;
+
+  virtual PPN getPhysicalSuperBlockIndex(PPN ppn) {
+    return (ppn % param->parallelism) / param->superpage;
+  }
+
+  virtual PPN getPhysicalSuperPageIndex(PPN ppn) {
+    return (ppn / param->parallelism) / param->superpage;
+  }
+
+  virtual PPN getPhysicalBlockIndex(PPN ppn) {
+    return ppn % param->parallelism;
+  }
+
+  virtual PPN getPhysicalPageIndex(PPN ppn) { return ppn / param->parallelism; }
 };
 
 }  // namespace BlockAllocator
