@@ -36,7 +36,7 @@ class AbstractAllocator : public Object {
   virtual void initialize(Parameter *) = 0;
 
   // For AbstractMapping
-  virtual void allocateBlock(PPN, Event) = 0;
+  virtual PPN allocateBlock(PPN, Event) = 0;
 
   // For FTL
   virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
