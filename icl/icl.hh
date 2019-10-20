@@ -27,7 +27,7 @@ class AbstractCache;
  */
 class ICL : public Object {
  private:
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
   FTL::FTL *pFTL;
   AbstractCache *pCache;
 
@@ -35,7 +35,7 @@ class ICL : public Object {
   uint32_t logicalPageSize;
 
  public:
-  ICL(ObjectData &, HIL::CommandManager *);
+  ICL(ObjectData &, CommandManager *);
   ICL(const ICL &) = delete;
   ICL(ICL &&) noexcept = default;
   ~ICL();

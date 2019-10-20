@@ -70,11 +70,10 @@ class RingBuffer : public AbstractCache {
   struct CacheContext {
     CacheStatus status;
 
-    HIL::SubCommand *scmd;
+    SubCommand *scmd;
     std::list<Entry>::iterator entry;
 
-    CacheContext(HIL::SubCommand *c, std::list<Entry>::iterator e,
-                 CacheStatus cs)
+    CacheContext(SubCommand *c, std::list<Entry>::iterator e, CacheStatus cs)
         : status(cs), scmd(c), entry(e) {}
   };
 
@@ -261,7 +260,7 @@ class RingBuffer : public AbstractCache {
   void writeWorker_done(uint64_t);
 
   // Read
-  void read_find(HIL::Command &);
+  void read_find(Command &);
 
   Event eventReadPreCPUDone;
   void read_findDone(uint64_t);
@@ -270,7 +269,7 @@ class RingBuffer : public AbstractCache {
   void read_done(uint64_t);
 
   // Write
-  void write_find(HIL::SubCommand &);
+  void write_find(SubCommand &);
 
   Event eventWritePreCPUDone;
   void write_findDone(uint64_t);
@@ -279,13 +278,13 @@ class RingBuffer : public AbstractCache {
   void write_done(uint64_t);
 
   // Flush
-  void flush_find(HIL::Command &);
+  void flush_find(Command &);
 
   // Trim/Format
-  void invalidate_find(HIL::Command &);
+  void invalidate_find(Command &);
 
  public:
-  RingBuffer(ObjectData &, HIL::CommandManager *, FTL::FTL *);
+  RingBuffer(ObjectData &, CommandManager *, FTL::FTL *);
 
   void enqueue(uint64_t, uint32_t) override;
 

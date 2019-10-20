@@ -19,7 +19,7 @@ class AbstractCache : public Object {
  protected:
   const uint64_t minIO = 512;
 
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
   FTL::FTL *pFTL;
 
   uint64_t cacheCommandTag;
@@ -29,7 +29,7 @@ class AbstractCache : public Object {
   }
 
  public:
-  AbstractCache(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
+  AbstractCache(ObjectData &o, CommandManager *m, FTL::FTL *p)
       : Object(o), commandManager(m), pFTL(p), cacheCommandTag(0) {}
   virtual ~AbstractCache() {}
 

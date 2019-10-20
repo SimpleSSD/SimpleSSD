@@ -109,7 +109,7 @@ class CommandManager : public Object {
 
   void destroyCommand(uint64_t);
 
-  // Helper APIs
+  // Helper APIs for HIL -> ICL
   void createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
                      uint32_t skipFront, uint32_t skipEnd, uint32_t lpnSize);
   void createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
@@ -117,6 +117,10 @@ class CommandManager : public Object {
   void createHILFlush(uint64_t tag, Event eid, LPN slpn, LPN nlp);
   void createHILTrim(uint64_t tag, Event eid, LPN slpn, LPN nlp);
   void createHILFormat(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+
+  // Helper APIs for ICL -> FTL
+  void createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+  void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

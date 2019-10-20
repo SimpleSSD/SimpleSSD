@@ -12,7 +12,7 @@
 
 namespace SimpleSSD::ICL {
 
-ICL::ICL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
+ICL::ICL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   pFTL = new FTL::FTL(object, commandManager);
   auto *param = pFTL->getInfo();
 

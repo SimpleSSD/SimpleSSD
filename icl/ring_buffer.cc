@@ -48,7 +48,7 @@ bool RingBuffer::PrefetchTrigger::triggered() {
   return trigger;
 }
 
-RingBuffer::RingBuffer(ObjectData &o, HIL::CommandManager *m, FTL::FTL *p)
+RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
     : AbstractCache(o, m, p),
       pageSize(p->getInfo()->pageSize),
       iobits(pageSize / minIO),
@@ -375,14 +375,12 @@ void RingBuffer::readWorker() {
   // Submit
   for (auto &iter : alignedLPN) {
     // Create request
-    auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
-                                              eventReadWorkerDone);
-    cmd.opcode = HIL::Operation::Read;
-    cmd.offset = iter;
-    cmd.length = minPages;
+    uint64_t tag = makeCacheCommandTag();
+
+    commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages);
 
     // Store for CPU latency
-    readWorkerTag.emplace_back(cmd.tag);
+    readWorkerTag.emplace_back(tag);
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventReadWorkerDoFTL, fstat);
@@ -427,7 +425,7 @@ void RingBuffer::readWorker_done(uint64_t tag) {
     if (iter->status == CacheStatus::FTL && cmd.offset <= iter->scmd->lpn &&
         iter->scmd->lpn < cmd.offset + cmd.length) {
       // This pending read is completed
-      iter->scmd->status = HIL::Status::Done;
+      iter->scmd->status = Status::Done;
 
       // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
       object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
@@ -502,16 +500,15 @@ void RingBuffer::writeWorker() {
           length++;
         }
         else {
-          auto &cmd = commandManager->createCommand(makeCacheCommandTag(),
-                                                    eventWriteWorkerDone);
-          cmd.opcode = HIL::Operation::Write;
-          cmd.offset = offset;
-          cmd.length = length;
+          uint64_t tag = makeCacheCommandTag();
+
+          commandManager->createICLWrite(tag, eventWriteWorkerDone, offset,
+                                         length);
 
           offset += length;
           length = 0;
 
-          writeWorkerTag.emplace_back(cmd.tag);
+          writeWorkerTag.emplace_back(tag);
         }
       }
     }
@@ -585,7 +582,7 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
   }
 
   // Retry requests in writeWaitingQueue
-  std::vector<HIL::SubCommand *> list;
+  std::vector<SubCommand *> list;
 
   for (auto &iter : writeWaitingQueue) {
     list.emplace_back(iter.scmd);
@@ -603,7 +600,7 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
   trigger_writeWorker();
 }
 
-void RingBuffer::read_find(HIL::Command &cmd) {
+void RingBuffer::read_find(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
   stat.request[0] += cmd.length * pageSize -
@@ -641,7 +638,7 @@ void RingBuffer::read_find(HIL::Command &cmd) {
               continue;
             }
 
-            scmd.status = HIL::Status::InternalCacheDone;
+            scmd.status = Status::InternalCacheDone;
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
           }
@@ -652,8 +649,8 @@ void RingBuffer::read_find(HIL::Command &cmd) {
 
   // Check we have scmd.status == Submit
   for (auto &scmd : cmd.subCommandList) {
-    if (scmd.status == HIL::Status::Submit) {
-      scmd.status = HIL::Status::InternalCache;
+    if (scmd.status == Status::Submit) {
+      scmd.status = Status::InternalCache;
 
       readPendingQueue.emplace_back(
           CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
@@ -671,8 +668,8 @@ void RingBuffer::read_findDone(uint64_t tag) {
 
   // Apply DRAM -> PCIe latency
   for (auto &scmd : cmd.subCommandList) {
-    if (scmd.status == HIL::Status::InternalCacheDone) {
-      scmd.status = HIL::Status::Done;
+    if (scmd.status == Status::InternalCacheDone) {
+      scmd.status = Status::Done;
 
       object.dram->read(getDRAMAddress(scmd.lpn), pageSize, eventReadDRAMDone,
                         tag);
@@ -686,7 +683,7 @@ void RingBuffer::read_done(uint64_t tag) {
   scheduleNow(cmd.eid, tag);
 }
 
-void RingBuffer::write_find(HIL::SubCommand &scmd) {
+void RingBuffer::write_find(SubCommand &scmd) {
   CPU::Function fstat = CPU::initFunction();
 
   stat.request[1] += pageSize - scmd.skipFront - scmd.skipEnd;
@@ -709,7 +706,7 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
         }
         else {
           // Mark as done
-          scmd.status = HIL::Status::InternalCacheDone;
+          scmd.status = Status::InternalCacheDone;
 
           // Update entry
           sentry.dirty = true;
@@ -723,7 +720,7 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
     }
 
     // Check done
-    if (scmd.status == HIL::Status::Submit) {
+    if (scmd.status == Status::Submit) {
       if (usedCapacity + pageSize < totalCapacity) {
         // In this case, there was no entry for this sub command
         LPN aligned = alignToMinPage(scmd.lpn);
@@ -741,7 +738,7 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
         updateCapacity(false, scmd.skipFront + scmd.skipEnd);
       }
       else {
-        scmd.status = HIL::Status::InternalCache;
+        scmd.status = Status::InternalCache;
 
         writeWaitingQueue.emplace_back(
             CacheContext(&scmd, cacheEntry.end(), CacheStatus::WriteCacheWait));
@@ -749,16 +746,14 @@ void RingBuffer::write_find(HIL::SubCommand &scmd) {
     }
   }
   else {
-    scmd.status = HIL::Status::InternalCache;
+    scmd.status = Status::InternalCache;
+    uint64_t tag = makeCacheCommandTag();
 
     auto &wcmd = commandManager->getCommand(scmd.tag);
-    auto &cmd = commandManager->createCommand(makeCacheCommandTag(), wcmd.eid);
 
-    cmd.opcode = HIL::Operation::Write;
-    cmd.offset = scmd.lpn;
-    cmd.length = 1;
+    commandManager->createICLWrite(tag, wcmd.eid, scmd.lpn, 1);
 
-    writeWorkerTag.emplace_back(cmd.tag);
+    writeWorkerTag.emplace_back(tag);
 
     scheduleNow(eventWriteWorkerDoFTL);
   }
@@ -772,8 +767,8 @@ void RingBuffer::write_findDone(uint64_t tag) {
 
   // Apply PCIe -> DRAM latency
   for (auto &scmd : cmd.subCommandList) {
-    if (scmd.status == HIL::Status::InternalCacheDone) {
-      scmd.status = HIL::Status::Done;
+    if (scmd.status == Status::InternalCacheDone) {
+      scmd.status = Status::Done;
 
       object.dram->write(getDRAMAddress(scmd.lpn), pageSize, eventWriteDRAMDone,
                          tag);
@@ -789,7 +784,7 @@ void RingBuffer::write_done(uint64_t tag) {
   trigger_writeWorker();
 }
 
-void RingBuffer::flush_find(HIL::Command &cmd) {
+void RingBuffer::flush_find(Command &cmd) {
   if (LIKELY(enabled)) {
     bool dirty = false;
 
@@ -811,11 +806,11 @@ void RingBuffer::flush_find(HIL::Command &cmd) {
   }
   else {
     // Nothing to flush - no dirty lines!
-    cmd.status = HIL::Status::Done;
+    cmd.status = Status::Done;
   }
 }
 
-void RingBuffer::invalidate_find(HIL::Command &cmd) {
+void RingBuffer::invalidate_find(Command &cmd) {
   if (LIKELY(enabled)) {
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       uint8_t bound = 0;
@@ -850,7 +845,7 @@ void RingBuffer::enqueue(uint64_t tag, uint32_t id) {
   clock++;
 
   if (id != std::numeric_limits<uint32_t>::max()) {
-    if (LIKELY(cmd.opcode == HIL::Operation::Write)) {
+    if (LIKELY(cmd.opcode == Operation::Write)) {
       // As we can start write only if PCIe DMA done, write is always partial.
       write_find(cmd.subCommandList.at(id));
     }
@@ -860,16 +855,16 @@ void RingBuffer::enqueue(uint64_t tag, uint32_t id) {
   }
   else {
     switch (cmd.opcode) {
-      case HIL::Operation::Read:
+      case Operation::Read:
         read_find(cmd);
 
         break;
-      case HIL::Operation::Flush:
+      case Operation::Flush:
         flush_find(cmd);
 
         break;
-      case HIL::Operation::Trim:
-      case HIL::Operation::Format:
+      case Operation::Trim:
+      case Operation::Format:
         invalidate_find(cmd);
 
         break;
