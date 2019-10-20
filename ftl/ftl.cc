@@ -37,12 +37,13 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   pAllocator = new BlockAllocator::BasicAllocator(object);
 
   // Currently, we only have default FTL
-  pFTL = new BasicFTL(object, commandManager, pFIL);
+  pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
 
   // Initialize all
   pAllocator->initialize(pMapper->getInfo());
   pMapper->initialize(pFTL, pAllocator);
-  pFTL->initialize(pMapper, pAllocator);
+
+  pFTL->initialize();
 }
 
 FTL::~FTL() {

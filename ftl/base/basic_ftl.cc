@@ -9,8 +9,10 @@
 
 namespace SimpleSSD::FTL {
 
-BasicFTL::BasicFTL(ObjectData &o, CommandManager *m, FIL::FIL *f)
-    : AbstractFTL(o, m, f), gcInProgress(false), formatInProgress(0) {
+BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
+                   Mapping::AbstractMapping *m,
+                   BlockAllocator::AbstractAllocator *a)
+    : AbstractFTL(o, c, f, m, a), gcInProgress(false), formatInProgress(0) {
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
