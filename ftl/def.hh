@@ -19,10 +19,13 @@
 namespace SimpleSSD::FTL {
 
 typedef struct {
+  uint64_t totalPhysicalBlocks;
   uint64_t totalPhysicalPages;
+  uint64_t totalLogicalBlocks;
   uint64_t totalLogicalPages;
   uint32_t pageSize;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
+  uint64_t parallelism;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
 

@@ -38,13 +38,16 @@ class AbstractMapping : public Object {
         readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
     auto way = readConfigUint(Section::FlashInterface, FIL::Config::Key::Way);
 
-    param.totalPhysicalPages = channel * way * filparam->die * filparam->plane *
-                               filparam->block * filparam->plane;
-    param.totalLogicalPages =
-        param.totalPhysicalPages /
+    param.totalPhysicalBlocks =
+        channel * way * filparam->die * filparam->plane * filparam->block;
+    param.totalLogicalBlocks =
+        param.totalPhysicalBlocks /
         (1.f - readConfigFloat(Section::FlashTranslation,
                                Config::Key::OverProvisioningRatio));
+    param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
+    param.totalLogicalPages = param.totalLogicalBlocks * filparam->page;
     param.pageSize = filparam->pageSize;
+    param.parallelism = channel * way * filparam->die * filparam->plane;
 
     for (uint8_t i = 0; i < 4; i++) {
       switch (filparam->pageAllocation[i]) {
@@ -113,10 +116,17 @@ class AbstractMapping : public Object {
 
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
+  virtual uint64_t getLogicalBlockIndex(LPN lpn) {
+    return lpn % param.totalLogicalBlocks;
+  }
+  virtual uint64_t getLogicalPageIndex(LPN lpn) {
+    return lpn / param.totalLogicalBlocks;
+  }
+
   // I/O interfaces
-  virtual void readMapping(HIL::Command &, Event) = 0;
-  virtual void writeMapping(HIL::Command &, Event) = 0;
-  virtual void invalidateMapping(HIL::Command &, Event) = 0;
+  virtual void readMapping(Command &, Event) = 0;
+  virtual void writeMapping(Command &, Event) = 0;
+  virtual void invalidateMapping(Command &, Event) = 0;
   virtual void getBlocks(LPN, LPN, std::deque<PPN> &, Event) = 0;
 
   // GC interfaces
