@@ -37,6 +37,15 @@ enum class Operation : uint8_t {
   Format,
 };
 
+/*
+ * Tag (64bit)
+ *
+ * Each field is 16bit (MSB -> LSB)
+ * [ Layer prefix ][ Controller ID ][ Queue ID ][ Command ID / Queue entry ID ]
+ */
+#define ICL_TAG_PREFIX  ((uint64_t)0xFFFF000000000000ull)
+#define FTL_TAG_PREFIX  ((uint64_t)0xFFEE000000000000ull)
+
 struct SubCommand {
   const uint64_t tag;
   const uint32_t id;

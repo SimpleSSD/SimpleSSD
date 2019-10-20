@@ -25,7 +25,7 @@ class AbstractCache : public Object {
   uint64_t cacheCommandTag;
 
   inline uint64_t makeCacheCommandTag() {
-    return cacheCommandTag++ | (uint64_t)0xFFFF000000000000ull;
+    return cacheCommandTag++ | ICL_TAG_PREFIX;
   }
 
  public:
