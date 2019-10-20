@@ -27,9 +27,11 @@ namespace BlockAllocator {
 class AbstractAllocator : public Object {
  protected:
   Parameter *param;
+  Mapping::AbstractMapping *pMapper;
 
  public:
-  AbstractAllocator(ObjectData &o) : Object(o) {}
+  AbstractAllocator(ObjectData &o, Mapping::AbstractMapping *m)
+      : Object(o), pMapper(m) {}
   AbstractAllocator(const AbstractAllocator &) = delete;
   AbstractAllocator(AbstractAllocator &&) noexcept = default;
   ~AbstractAllocator() {}

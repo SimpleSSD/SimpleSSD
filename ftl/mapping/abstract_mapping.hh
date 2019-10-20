@@ -133,6 +133,10 @@ class AbstractMapping : public Object {
     return (lpn / param.totalLogicalBlocks) / param.superpage;
   }
 
+
+  // Allocator
+  virtual uint32_t getValidPages(PPN) = 0;
+
   // I/O interfaces
   virtual void readMapping(Command &, Event) = 0;
   virtual void writeMapping(Command &, Event) = 0;
