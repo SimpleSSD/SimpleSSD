@@ -11,8 +11,6 @@ namespace SimpleSSD::FTL {
 
 BasicFTL::BasicFTL(ObjectData &o, HIL::CommandManager *m, FIL::FIL *f)
     : AbstractFTL(o, m, f), gcInProgress(false), formatInProgress(0) {
-  auto pageSize = object.config->getNANDStructure()->pageSize;
-
   pMapper->initialize(this, pAllocator);
 
   // Create events
@@ -209,6 +207,11 @@ void BasicFTL::submit(uint64_t tag) {
     case HIL::Operation::Trim:
     case HIL::Operation::Format:
       invalidate_find(cmd);
+
+      break;
+    default:
+      panic("Unexpected opcode.");
+
       break;
   }
 }
