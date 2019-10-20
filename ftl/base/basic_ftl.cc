@@ -9,7 +9,7 @@
 
 namespace SimpleSSD::FTL {
 
-BasicFTL::BasicFTL(ObjectData &o, HIL::CommandManager *m, FIL::FIL *f)
+BasicFTL::BasicFTL(ObjectData &o, CommandManager *m, FIL::FIL *f)
     : AbstractFTL(o, m, f), gcInProgress(false), formatInProgress(0) {
   pMapper->initialize(this, pAllocator);
 
@@ -46,7 +46,7 @@ BasicFTL::BasicFTL(ObjectData &o, HIL::CommandManager *m, FIL::FIL *f)
 
 BasicFTL::~BasicFTL() {}
 
-void BasicFTL::read_find(HIL::Command &cmd) {
+void BasicFTL::read_find(Command &cmd) {
   pMapper->readMapping(cmd, eventReadDoFIL);
 }
 
@@ -61,7 +61,7 @@ void BasicFTL::read_done(uint64_t tag) {
   scheduleNow(cmd.eid, tag);
 }
 
-void BasicFTL::write_find(HIL::Command &cmd) {
+void BasicFTL::write_find(Command &cmd) {
   pMapper->writeMapping(cmd, eventWriteDoFIL);
 }
 
@@ -81,14 +81,14 @@ void BasicFTL::write_done(uint64_t tag) {
   }
 }
 
-void BasicFTL::invalidate_find(HIL::Command &cmd) {
+void BasicFTL::invalidate_find(Command &cmd) {
   pMapper->invalidateMapping(cmd, eventInvalidateDoFIL);
 }
 
 void BasicFTL::invalidate_doFIL(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  if (cmd.opcode == HIL::Operation::Trim) {
+  if (cmd.opcode == Operation::Trim) {
     // Complete here (not erasing blocks)
     scheduleNow(cmd.eid, tag);
   }
@@ -138,7 +138,7 @@ void BasicFTL::gc_read() {
     auto &cmd = commandManager->getCommand(*gcCopyList.iter);
 
     cmd.eid = eventGCWriteMapping;
-    cmd.opcode = HIL::Operation::Read;
+    cmd.opcode = Operation::Read;
 
     pFIL->submit(cmd.tag);
 
@@ -146,16 +146,7 @@ void BasicFTL::gc_read() {
   }
 
   // Prepare erase
-  eraseTag = makeFTLCommandTag();
-  auto &cmd = commandManager->createCommand(eraseTag, eventGCErase);
-
-  cmd.opcode = HIL::Operation::Erase;
-
-  auto &scmd = commandManager->createSubCommand(eraseTag);
-  scmd.ppn = gcCopyList.blockID;
-
-  pMapper->releaseCopyList(gcCopyList);
-  pFIL->submit(eraseTag);
+  pFIL->submit(gcCopyList.eraseTag);
 }
 
 void BasicFTL::gc_write() {
@@ -169,7 +160,7 @@ void BasicFTL::gc_writeDoFIL() {
   auto &cmd = commandManager->getCommand(*gcCopyList.iter);
 
   cmd.eid = eventGCRead;
-  cmd.opcode = HIL::Operation::Write;
+  cmd.opcode = Operation::Write;
 
   pFIL->submit(cmd.tag);
 
@@ -178,9 +169,9 @@ void BasicFTL::gc_writeDoFIL() {
 }
 
 void BasicFTL::gc_erase() {
-  commandManager->destroyCommand(eraseTag);
-
   scheduleNow(eventGCGetBlockList);
+
+  pMapper->releaseCopyList(gcCopyList);
 }
 
 void BasicFTL::gc_done() {
@@ -198,16 +189,16 @@ void BasicFTL::submit(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   switch (cmd.opcode) {
-    case HIL::Operation::Read:
+    case Operation::Read:
       read_find(cmd);
 
       break;
-    case HIL::Operation::Write:
+    case Operation::Write:
       write_find(cmd);
 
       break;
-    case HIL::Operation::Trim:
-    case HIL::Operation::Format:
+    case Operation::Trim:
+    case Operation::Format:
       invalidate_find(cmd);
 
       break;
@@ -240,7 +231,6 @@ void BasicFTL::resetStatValues() noexcept {}
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, gcInProgress);
   BACKUP_SCALAR(out, nextCopyIndex);
-  BACKUP_SCALAR(out, eraseTag);
 
   BACKUP_SCALAR(out, formatInProgress);
   BACKUP_EVENT(out, fctx.eid);
@@ -272,7 +262,6 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, gcInProgress);
   RESTORE_SCALAR(in, nextCopyIndex);
-  RESTORE_SCALAR(in, eraseTag);
 
   RESTORE_SCALAR(in, formatInProgress);
   RESTORE_EVENT(in, fctx.eid);

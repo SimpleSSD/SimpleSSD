@@ -25,12 +25,11 @@ class BasicFTL : public AbstractFTL {
   std::deque<PPN> gcBlockList;
   CopyList gcCopyList;
   uint32_t nextCopyIndex;
-  uint64_t eraseTag;
 
   uint8_t formatInProgress;
   FormatContext fctx;
 
-  void read_find(HIL::Command &);
+  void read_find(Command &);
 
   Event eventReadDoFIL;
   void read_doFIL(uint64_t);
@@ -38,7 +37,7 @@ class BasicFTL : public AbstractFTL {
   Event eventReadFILDone;
   void read_done(uint64_t);
 
-  void write_find(HIL::Command &);
+  void write_find(Command &);
 
   Event eventWriteDoFIL;
   void write_doFIL(uint64_t);
@@ -46,7 +45,7 @@ class BasicFTL : public AbstractFTL {
   Event eventWriteFILDone;
   void write_done(uint64_t);
 
-  void invalidate_find(HIL::Command &);
+  void invalidate_find(Command &);
 
   Event eventInvalidateDoFIL;
   void invalidate_doFIL(uint64_t);
@@ -73,7 +72,7 @@ class BasicFTL : public AbstractFTL {
   void gc_done();
 
  public:
-  BasicFTL(ObjectData &, HIL::CommandManager *, FIL::FIL *);
+  BasicFTL(ObjectData &, CommandManager *, FIL::FIL *);
   ~BasicFTL();
 
   void initialize(Mapping::AbstractMapping *,

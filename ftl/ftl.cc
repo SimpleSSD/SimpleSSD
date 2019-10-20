@@ -13,7 +13,7 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-FTL::FTL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
+FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   pFIL = new FIL::FIL(object, commandManager);
 
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,

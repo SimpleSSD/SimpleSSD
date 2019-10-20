@@ -31,7 +31,7 @@ class FTL : public Object {
     uint64_t data;
   };
 
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
@@ -39,7 +39,7 @@ class FTL : public Object {
   AbstractFTL *pFTL;
 
  public:
-  FTL(ObjectData &, HIL::CommandManager *);
+  FTL(ObjectData &, CommandManager *);
   FTL(const FTL &) = delete;
   FTL(FTL &&) noexcept = default;
   ~FTL();

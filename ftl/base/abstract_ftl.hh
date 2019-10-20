@@ -21,7 +21,7 @@ namespace SimpleSSD::FTL {
 
 class AbstractFTL : public Object {
  protected:
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
@@ -34,7 +34,7 @@ class AbstractFTL : public Object {
   }
 
  public:
-  AbstractFTL(ObjectData &o, HIL::CommandManager *m, FIL::FIL *f)
+  AbstractFTL(ObjectData &o, CommandManager *m, FIL::FIL *f)
       : Object(o), commandManager(m), pFIL(f) {}
   AbstractFTL(const AbstractFTL &) = delete;
   AbstractFTL(AbstractFTL &&) noexcept = default;

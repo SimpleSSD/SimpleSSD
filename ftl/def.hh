@@ -28,6 +28,7 @@ typedef struct {
 
 struct CopyList {
   PPN blockID;
+  uint64_t eraseTag;
 
   std::vector<uint64_t>::iterator iter;
   std::vector<uint64_t> commandList;
