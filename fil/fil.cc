@@ -42,7 +42,11 @@ FIL::~FIL() {
 }
 
 void FIL::submit(uint64_t tag) {
-  pFIL->enqueue(tag);
+  auto &list = commandManager->getSubCommand(tag);
+
+  for (auto &scmd : list) {
+    pFIL->enqueue(scmd);
+  }
 }
 
 void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

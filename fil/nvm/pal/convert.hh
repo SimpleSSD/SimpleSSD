@@ -28,7 +28,7 @@ namespace SimpleSSD::FIL {
  * \param[in]  req  Request
  * \param[out] addr CPDPBP
  */
-using ConvertFunction = std::function<void(HIL::Command &, ::CPDPBP &)>;
+using ConvertFunction = std::function<void(HIL::SubCommand &, ::CPDPBP &)>;
 
 /**
  * \brief Convert class

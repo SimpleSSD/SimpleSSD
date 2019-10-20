@@ -70,39 +70,39 @@ ConvertFunction Convert::getConvertion() {
     sum += popcount32(shiftBlock);
     shiftPage = sum;
 
-    return [this](HIL::Command &req, ::CPDPBP &addr) {
-      addr.Channel = (req.offset >> shiftChannel) & maskChannel;
-      addr.Package = (req.offset >> shiftWay) & maskWay;
-      addr.Die = (req.offset >> shiftDie) & maskDie;
-      addr.Plane = (req.offset >> shiftPlane) & maskPlane;
-      addr.Block = (req.offset >> shiftBlock) & maskBlock;
-      addr.Page = (req.offset >> shiftPage) & maskPage;
+    return [this](HIL::SubCommand &req, ::CPDPBP &addr) {
+      addr.Channel = (req.ppn >> shiftChannel) & maskChannel;
+      addr.Package = (req.ppn >> shiftWay) & maskWay;
+      addr.Die = (req.ppn >> shiftDie) & maskDie;
+      addr.Plane = (req.ppn >> shiftPlane) & maskPlane;
+      addr.Block = (req.ppn >> shiftBlock) & maskBlock;
+      addr.Page = (req.ppn >> shiftPage) & maskPage;
     };
   }
   else {
     uint64_t level[4] = {0, 0, 0, 0};
-    uint8_t offset[4] = {0, 0, 0, 0};
+    uint8_t ppn[4] = {0, 0, 0, 0};
 
     for (uint8_t i = 0; i < 4; i++) {
       switch (nand->pageAllocation[i]) {
         case PageAllocation::Channel:
           level[i] = channel;
-          offset[i] = 0;
+          ppn[i] = 0;
 
           break;
         case PageAllocation::Way:
           level[i] = way;
-          offset[i] = 1;
+          ppn[i] = 1;
 
           break;
         case PageAllocation::Die:
           level[i] = die;
-          offset[i] = 2;
+          ppn[i] = 2;
 
           break;
         case PageAllocation::Plane:
           level[i] = plane;
-          offset[i] = 3;
+          ppn[i] = 3;
 
           break;
         default:
@@ -110,21 +110,21 @@ ConvertFunction Convert::getConvertion() {
       }
     }
 
-    return [level, offset, block = this->block, page = this->page](
-               HIL::Command &req, ::CPDPBP &addr) {
+    return [level, ppn, block = this->block, page = this->page](
+               HIL::SubCommand &req, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
-      values[offset[0]] = req.offset % level[0];
-      req.offset /= level[0];
-      values[offset[1]] = req.offset % level[1];
-      req.offset /= level[1];
-      values[offset[2]] = req.offset % level[2];
-      req.offset /= level[2];
-      values[offset[3]] = req.offset % level[3];
-      req.offset /= level[3];
-      values[4] = req.offset % block;
-      req.offset /= block;
-      values[5] = req.offset % page;
+      values[ppn[0]] = req.ppn % level[0];
+      req.ppn /= level[0];
+      values[ppn[1]] = req.ppn % level[1];
+      req.ppn /= level[1];
+      values[ppn[2]] = req.ppn % level[2];
+      req.ppn /= level[2];
+      values[ppn[3]] = req.ppn % level[3];
+      req.ppn /= level[3];
+      values[4] = req.ppn % block;
+      req.ppn /= block;
+      values[5] = req.ppn % page;
     };
   }
 }

@@ -26,7 +26,7 @@ class AbstractNVM : public Object {
       : Object(o), commandManager(m) {}
   virtual ~AbstractNVM() {}
 
-  virtual void enqueue(uint64_t) = 0;
+  virtual void enqueue(HIL::SubCommand &) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM

@@ -67,16 +67,16 @@ PALOLD::~PALOLD() {
   delete lat;
 }
 
-void PALOLD::enqueue(uint64_t tag) {
-  auto &cmd = commandManager->getCommand(tag);
+void PALOLD::enqueue(HIL::SubCommand &scmd) {
+  auto &cmd = commandManager->getCommand(scmd.tag);
   Complete cplt;
   ::CPDPBP addr;
 
-  cplt.id = tag;
+  cplt.id = scmd.tag;
   cplt.eid = cmd.eid;
   cplt.beginAt = getTick();
 
-  convertCPDPBP(cmd, addr);
+  convertCPDPBP(scmd, addr);
 
   switch (cmd.opcode) {
     case HIL::Operation::Read: {
@@ -355,7 +355,6 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
   for (auto &iter : completionQueue) {
     BACKUP_SCALAR(out, iter.id);
     BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.data);
     BACKUP_SCALAR(out, iter.beginAt);
     BACKUP_SCALAR(out, iter.finishedAt);
   }
@@ -379,7 +378,6 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, tmp.id);
     RESTORE_EVENT(in, tmp.eid);
-    RESTORE_SCALAR(in, tmp.data);
     RESTORE_SCALAR(in, tmp.beginAt);
     RESTORE_SCALAR(in, tmp.finishedAt);
 
