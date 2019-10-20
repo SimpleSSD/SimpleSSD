@@ -150,7 +150,9 @@ void BasicFTL::gc_read() {
   auto &cmd = commandManager->createCommand(eraseTag, eventGCErase);
 
   cmd.opcode = HIL::Operation::Erase;
-  cmd.offset = gcCopyList.blockID;
+
+  auto &scmd = commandManager->createSubCommand(eraseTag);
+  scmd.ppn = gcCopyList.blockID;
 
   pMapper->releaseCopyList(gcCopyList);
   pFIL->submit(eraseTag);
