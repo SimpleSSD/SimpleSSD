@@ -44,6 +44,8 @@ FIL::~FIL() {
 void FIL::submit(uint64_t tag) {
   auto &list = commandManager->getSubCommand(tag);
 
+  panic_if(list.size() == 0, "Unexpected empty subcommands.");
+
   for (auto &scmd : list) {
     pFIL->enqueue(tag, scmd.id);
   }
