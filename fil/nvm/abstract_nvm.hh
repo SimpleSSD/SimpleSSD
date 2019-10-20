@@ -26,7 +26,15 @@ class AbstractNVM : public Object {
       : Object(o), commandManager(m) {}
   virtual ~AbstractNVM() {}
 
-  virtual void enqueue(HIL::SubCommand &) = 0;
+  /**
+   * \brief Handle HIL::SubCommand
+   *
+   * This HIL::SubCommand must have valid ppn field.
+   *
+   * \param[in] tag HIL::Command tag
+   * \param[in] id  HIL::SubCommand id
+   */
+  virtual void enqueue(uint64_t tag, uint32_t id) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM

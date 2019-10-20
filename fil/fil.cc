@@ -45,7 +45,7 @@ void FIL::submit(uint64_t tag) {
   auto &list = commandManager->getSubCommand(tag);
 
   for (auto &scmd : list) {
-    pFIL->enqueue(scmd);
+    pFIL->enqueue(tag, scmd.id);
   }
 }
 

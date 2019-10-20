@@ -35,7 +35,14 @@ class FIL : public Object {
   FIL &operator=(const FIL &) = delete;
   FIL &operator=(FIL &&) = default;
 
-  void submit(uint64_t);
+  /**
+   * \brief Submit HIL::Command to FIL
+   *
+   * This command must have SubCommands with valid ppn field.
+   *
+   * \param[in] tag HIL::Command tag
+   */
+  void submit(uint64_t tag);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

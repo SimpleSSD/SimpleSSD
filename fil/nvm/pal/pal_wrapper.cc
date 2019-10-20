@@ -67,16 +67,16 @@ PALOLD::~PALOLD() {
   delete lat;
 }
 
-void PALOLD::enqueue(HIL::SubCommand &scmd) {
-  auto &cmd = commandManager->getCommand(scmd.tag);
+void PALOLD::enqueue(uint64_t tag, uint32_t id) {
+  auto &cmd = commandManager->getCommand(tag);
   Complete cplt;
   ::CPDPBP addr;
 
-  cplt.id = scmd.tag;
+  cplt.id = tag;
   cplt.eid = cmd.eid;
   cplt.beginAt = getTick();
 
-  convertCPDPBP(scmd, addr);
+  convertCPDPBP(cmd.subCommandList.at(id), addr);
 
   switch (cmd.opcode) {
     case HIL::Operation::Read: {

@@ -63,7 +63,7 @@ class PALOLD : public AbstractNVM {
   PALOLD(ObjectData &, HIL::CommandManager *);
   ~PALOLD();
 
-  void enqueue(HIL::SubCommand &) override;
+  void enqueue(uint64_t, uint32_t) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
