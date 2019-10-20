@@ -12,10 +12,10 @@
 
 #include <deque>
 
-#include "fil/fil.hh"
-#include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/base/abstract_ftl.hh"
+#include "ftl/base/basic_ftl.hh"
 #include "ftl/def.hh"
-#include "ftl/mapping/abstract_mapping.hh"
+#include "hil/command_manager.hh"
 
 namespace SimpleSSD::FTL {
 
@@ -31,64 +31,15 @@ class FTL : public Object {
     uint64_t data;
   };
 
+  HIL::CommandManager *commandManager;
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
-
-  bool gcInProgress;
-  std::deque<PPN> gcList;
-  BlockInfo gcBlock;
-  uint32_t nextCopyIndex;
-  uint8_t *gcBuffer;
-
-  uint8_t formatInProgress;
-  FormatContext fctx;
-
-  void read_find(Request &&);
-
-  Event eventReadMappingDone;
-  void read_dofil(uint64_t);
-
-  Event eventReadFILDone;
-  void read_done(uint64_t);
-
-  void write_find(Request &&);
-
-  Event eventWriteMappingDone;
-  void write_dofil(uint64_t);
-
-  Event eventWriteFILDone;
-  void write_done(uint64_t);
-
-  void invalidate_find(Request &&);
-
-  Event eventInvalidateMappingDone;
-  void invalidate_dofil(uint64_t);
-
-  Event eventGCBegin;
-  void gc_trigger();
-
-  Event eventGCListDone;
-  void gc_blockinfo();
-
-  Event eventGCRead;
-  void gc_read();
-
-  Event eventGCWriteMapping;
-  void gc_write();
-
-  Event eventGCWrite;
-  void gc_writeDofil();
-
-  Event eventGCErase;
-  void gc_erase();
-
-  Event eventGCDone;
-  void gc_done();
+  AbstractFTL *pFTL;
 
  public:
-  FTL(ObjectData &);
+  FTL(ObjectData &, HIL::CommandManager *);
   FTL(const FTL &) = delete;
   FTL(FTL &&) noexcept = default;
   ~FTL();
@@ -96,15 +47,13 @@ class FTL : public Object {
   FTL &operator=(const FTL &) = delete;
   FTL &operator=(FTL &&) = default;
 
-  void submit(Request &&);
+  void submit(uint64_t);
 
   Parameter *getInfo();
 
   LPN getPageUsage(LPN, LPN);
   bool isGC();
   uint8_t isFormat();
-
-  void bypass(FIL::Request &&);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

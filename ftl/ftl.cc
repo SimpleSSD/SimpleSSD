@@ -7,15 +7,14 @@
 
 #include "ftl/ftl.hh"
 
+#include "ftl/base/basic_ftl.hh"
+
 namespace SimpleSSD {
 
 namespace FTL {
 
-FTL::FTL(ObjectData &o) : Object(o), gcInProgress(false), formatInProgress(0) {
+FTL::FTL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
   pFIL = new FIL::FIL(object);
-
-  auto pageSize = object.config->getNANDStructure()->pageSize;
-  gcBuffer = (uint8_t *)calloc(pageSize, 1);
 
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
                                               Config::Key::MappingMode)) {
@@ -36,181 +35,21 @@ FTL::FTL(ObjectData &o) : Object(o), gcInProgress(false), formatInProgress(0) {
   // Currently, we only have default block allocator
   // pAllocator = new BlockAllocator::Default(object, pMapper);
 
+  // Currently, we only have default FTL
+  pFTL = new BasicFTL(object, commandManager, pFIL);
+
   // Initialize pFTL
-  pMapper->initialize(pAllocator);
+  pFTL->initialize(pMapper, pAllocator);
 }
 
 FTL::~FTL() {
-  free(gcBuffer);
-
   delete pFIL;
   delete pMapper;
   delete pAllocator;
 }
 
-void FTL::read_find(Request &&req) {
-  pMapper->readMapping(std::move(req), eventReadMappingDone);
-}
-
-void FTL::read_dofil(uint64_t tag) {
-  auto &ctx = pMapper->getContext(tag);
-
-  // Now we have PPN
-  pFIL->submit(FIL::Request(ctx.req.id, eventReadFILDone, tag,
-                            FIL::Operation::Read, ctx.address, ctx.req.buffer,
-                            ctx.spare));
-}
-
-void FTL::read_done(uint64_t tag) {
-  auto &ctx = pMapper->getContext(tag);
-
-  scheduleNow(ctx.req.eid, ctx.req.data);
-
-  pMapper->releaseContext(tag);
-}
-
-void FTL::write_find(Request &&req) {
-  pMapper->writeMapping(std::move(req), eventWriteMappingDone);
-}
-
-void FTL::write_dofil(uint64_t tag) {
-  auto &ctx = pMapper->getContext(tag);
-
-  // Now we have PPN
-  pFIL->submit(FIL::Request(ctx.req.id, eventReadFILDone, tag,
-                            FIL::Operation::Program, ctx.address,
-                            ctx.req.buffer, ctx.spare));
-}
-
-void FTL::write_done(uint64_t tag) {
-  auto &ctx = pMapper->getContext(tag);
-
-  scheduleNow(ctx.req.eid, ctx.req.data);
-
-  pMapper->releaseContext(tag);
-
-  // Check GC threshold for On-demand GC
-  if (pMapper->checkGCThreshold() && formatInProgress == 0) {
-    scheduleNow(eventGCBegin);
-  }
-}
-
-void FTL::invalidate_find(Request &&req) {
-  pMapper->invalidateMapping(std::move(req), eventInvalidateMappingDone);
-}
-
-void FTL::invalidate_dofil(uint64_t tag) {
-  auto &ctx = pMapper->getContext(tag);
-
-  if (ctx.req.opcode == Operation::Trim) {
-    // Complete here (not erasing blocks)
-    scheduleNow(ctx.req.eid, ctx.req.data);
-  }
-  else if (formatInProgress == 0) {
-    // Erase block here
-    formatInProgress = 100;  // 100% remain
-    fctx.eid = ctx.req.eid;
-    fctx.data = ctx.req.data;
-
-    // Make list
-    pMapper->getBlocks(ctx.req.address, ctx.req.length, gcList,
-                       eventGCListDone);
-  }
-  else {
-    // TODO: Handle this case
-    scheduleNow(ctx.req.eid, ctx.req.data);
-  }
-
-  pMapper->releaseContext(tag);
-}
-
-void FTL::gc_trigger() {
-  gcInProgress = true;
-  formatInProgress = 100;
-
-  // Get block list from allocator
-  pAllocator->getVictimBlocks(gcList, eventGCListDone);
-}
-
-void FTL::gc_blockinfo() {
-  if (LIKELY(gcList.size() > 0)) {
-    PPN block = gcList.front();
-
-    gcList.pop_front();
-    gcBlock.blockID = block;
-    nextCopyIndex = 0;
-
-    pMapper->getBlockInfo(gcBlock, eventGCRead);
-  }
-  else {
-    scheduleNow(eventGCDone);
-  }
-}
-
-void FTL::gc_read() {
-  // Find valid page
-  if (LIKELY(nextCopyIndex < gcBlock.valid.size())) {
-    while (!gcBlock.valid.test(nextCopyIndex++))
-      ;
-
-    if (LIKELY(nextCopyIndex < gcBlock.valid.size())) {
-      auto &mapping = gcBlock.lpnList.at(nextCopyIndex);
-
-      pFIL->submit(FIL::Request(0, eventGCWriteMapping, 0, FIL::Operation::Read,
-                                mapping.second, gcBuffer));
-    }
-
-    return;
-  }
-
-  // Done copy
-  scheduleNow(eventGCErase);
-}
-
-void FTL::gc_write() {
-  auto &mapping = gcBlock.lpnList.at(nextCopyIndex);
-
-  pMapper->writeMapping(mapping, eventGCWrite);
-}
-
-void FTL::gc_writeDofil() {
-  auto &mapping = gcBlock.lpnList.at(nextCopyIndex++);
-
-  pFIL->submit(FIL::Request(0, eventGCRead, 0, FIL::Operation::Program,
-                            mapping.second, gcBuffer));
-}
-
-void FTL::gc_erase() {
-  pFIL->submit(FIL::Request(0, eventGCListDone, 0, FIL::Operation::Erase,
-                            gcBlock.blockID, nullptr));
-}
-
-void FTL::gc_done() {
-  formatInProgress = 0;
-
-  if (!gcInProgress) {
-    // This was format
-    scheduleNow(fctx.eid, fctx.data);
-  }
-
-  gcInProgress = false;
-}
-
-void FTL::submit(Request &&req) {
-  switch (req.opcode) {
-    case Operation::Read:
-      read_find(std::move(req));
-
-      break;
-    case Operation::Write:
-      write_find(std::move(req));
-
-      break;
-    case Operation::Trim:
-    case Operation::Format:
-      invalidate_find(std::move(req));
-      break;
-  }
+void FTL::submit(uint64_t tag) {
+  pFTL->submit(tag);
 }
 
 Parameter *FTL::getInfo() {
@@ -222,20 +61,11 @@ LPN FTL::getPageUsage(LPN lpnBegin, LPN lpnEnd) {
 }
 
 bool FTL::isGC() {
-  return gcInProgress;
+  return pFTL->isGC();
 }
 
 uint8_t FTL::isFormat() {
-  if (gcInProgress) {
-    return 0;
-  }
-  else {
-    return formatInProgress;
-  }
-}
-
-void FTL::bypass(FIL::Request &&req) {
-  pFIL->submit(std::move(req));
+  return pFTL->isFormat();
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
