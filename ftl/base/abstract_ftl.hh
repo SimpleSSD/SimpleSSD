@@ -35,7 +35,11 @@ class AbstractFTL : public Object {
 
  public:
   AbstractFTL(ObjectData &o, CommandManager *m, FIL::FIL *f)
-      : Object(o), commandManager(m), pFIL(f) {}
+      : Object(o),
+        commandManager(m),
+        pFIL(f),
+        pMapper(nullptr),
+        pAllocator(nullptr) {}
   AbstractFTL(const AbstractFTL &) = delete;
   AbstractFTL(AbstractFTL &&) noexcept = default;
   ~AbstractFTL() {}
@@ -43,8 +47,11 @@ class AbstractFTL : public Object {
   AbstractFTL &operator=(const AbstractFTL &) = delete;
   AbstractFTL &operator=(AbstractFTL &&) = default;
 
-  virtual void initialize(Mapping::AbstractMapping *,
-                          BlockAllocator::AbstractAllocator *) = 0;
+  virtual void initialize(Mapping::AbstractMapping *m,
+                          BlockAllocator::AbstractAllocator *a) {
+    pMapper = m;
+    pAllocator = a;
+  }
 
   virtual void submit(uint64_t) = 0;
   virtual bool isGC() = 0;

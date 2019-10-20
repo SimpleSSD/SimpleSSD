@@ -75,9 +75,6 @@ class BasicFTL : public AbstractFTL {
   BasicFTL(ObjectData &, CommandManager *, FIL::FIL *);
   ~BasicFTL();
 
-  void initialize(Mapping::AbstractMapping *,
-                  BlockAllocator::AbstractAllocator *) override;
-
   void submit(uint64_t) override;
   bool isGC() override;
   uint8_t isFormat() override;

@@ -11,8 +11,6 @@ namespace SimpleSSD::FTL {
 
 BasicFTL::BasicFTL(ObjectData &o, CommandManager *m, FIL::FIL *f)
     : AbstractFTL(o, m, f), gcInProgress(false), formatInProgress(0) {
-  pMapper->initialize(this, pAllocator);
-
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
