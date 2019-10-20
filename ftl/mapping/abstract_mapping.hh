@@ -79,10 +79,12 @@ class AbstractMapping : public Object {
 
     // Validate superpage level
     uint8_t mask = FIL::PageAllocation::None;
+    param.superpage = 1;
 
     for (uint8_t i = 0; i < 4; i++) {
-      if (param.superpageLevel | filparam->pageAllocation[i]) {
+      if (param.superpageLevel & filparam->pageAllocation[i]) {
         mask |= filparam->pageAllocation[i];
+        param.superpage *= param.parallelismLevel[i];
       }
       else {
         break;

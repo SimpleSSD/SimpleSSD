@@ -58,22 +58,19 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       readTriggered(false),
       writeTriggered(false) {
   auto param = pFTL->getInfo();
-  uint8_t limit = 0;
 
   triggerThreshold =
       readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold);
 
   // Make granularity
-  evictPages = 1;
-
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::EvictMode)) {
     case Config::Granularity::SuperpageLevel:
-      limit = param->superpageLevel;
+      evictPages = param->superpage;
 
       break;
     case Config::Granularity::AllLevel:
-      limit = 4;
+      evictPages = param->parallelism;
 
       break;
     default:
@@ -82,16 +79,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       break;
   }
 
-  for (uint8_t i = 0; i < limit; i++) {
-    evictPages *= param->parallelismLevel[i];
-  }
-
   // Calculate FTL's write granularity
-  minPages = 1;
-
-  for (uint8_t i = 0; i < param->superpageLevel; i++) {
-    minPages *= param->parallelismLevel[i];
-  }
+  minPages = param->superpage;
 
   if (minPages == 1) {
     noPageLimit = true;
@@ -102,26 +91,20 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
     noPageLimit = false;
   }
 
-  prefetchPages = 1;
-
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::PrefetchMode)) {
     case Config::Granularity::SuperpageLevel:
-      limit = param->superpageLevel;
+      prefetchPages = param->superpage;
 
       break;
     case Config::Granularity::AllLevel:
-      limit = 4;
+      prefetchPages = param->parallelism;
 
       break;
     default:
       panic("Invalid prefetch granularity.");
 
       break;
-  }
-
-  for (uint8_t i = 0; i < limit; i++) {
-    prefetchPages *= param->parallelismLevel[i];
   }
 
   enabled = readConfigBoolean(Section::InternalCache, Config::Key::EnableCache);

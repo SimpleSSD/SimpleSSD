@@ -27,6 +27,7 @@ typedef struct {
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
+  uint64_t superpage;
 } Parameter;
 
 struct CopyList {
