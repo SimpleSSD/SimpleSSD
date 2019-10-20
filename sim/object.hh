@@ -107,9 +107,11 @@ using ObjectData = struct _ObjectData {
 
 //! Logical Page Number definition
 using LPN = uint64_t;
+const LPN InvalidLPN = std::numeric_limits<LPN>::max();
 
 //! Physical Page Number definition
 using PPN = uint64_t;
+const PPN InvalidPPN = std::numeric_limits<PPN>::max();
 
 /**
  * \brief Object object declaration

@@ -927,8 +927,6 @@ void RingBuffer::resetStatValues() noexcept {
 }
 
 void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
-  LPN invalid = std::numeric_limits<LPN>::max();
-
   BACKUP_SCALAR(out, totalCapacity);
   BACKUP_SCALAR(out, usedCapacity);
   BACKUP_SCALAR(out, dirtyCapacity);
@@ -997,7 +995,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, iter.entry->offset);
     }
     else {
-      BACKUP_SCALAR(out, invalid);
+      BACKUP_SCALAR(out, InvalidLPN);
     }
   }
 
@@ -1013,7 +1011,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, iter.entry->offset);
     }
     else {
-      BACKUP_SCALAR(out, invalid);
+      BACKUP_SCALAR(out, InvalidLPN);
     }
   }
 
@@ -1123,7 +1121,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
     auto &scmd = commandManager->getSubCommand(tag).at(id);
 
-    if (offset == std::numeric_limits<LPN>::max()) {
+    if (offset == InvalidLPN) {
       readPendingQueue.emplace_back(CacheContext(&scmd, cacheEntry.end(), cs));
     }
     else {
