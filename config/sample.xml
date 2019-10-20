@@ -443,10 +443,8 @@
 
         Possible values:
           0: Greedy: Choose lease utilized block (lease number of valid pages).
-          1: Cost-Benefit: Choose block that has lowest value of equation:
-             utilization / ((1 - utilization) * age)
-          2: Random: Choose random block
-          3: D-Choice: Choose lease utilized block in randomly sampled blocks
+          1: Random: Choose random block
+          2: D-Choice: Choose lease utilized block in randomly sampled blocks
        -->
       <config name="VictimSelectionPolicy">0</config>
       <!--
