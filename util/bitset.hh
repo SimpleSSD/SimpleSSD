@@ -23,9 +23,22 @@ namespace SimpleSSD {
  */
 class Bitset {
  private:
-  uint8_t *data;
+  // Size optimization
+  union {
+    uint8_t *pointer;
+    uint8_t buffer[sizeof(uint8_t *)];
+  };
+
   uint32_t dataSize;
   uint32_t allocSize;
+
+  inline uint8_t *getBuffer() const {
+    if (allocSize > sizeof(buffer)) {
+      return pointer;
+    }
+
+    return (uint8_t *)buffer;
+  }
 
  public:
   Bitset();

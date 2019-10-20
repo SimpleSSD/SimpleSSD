@@ -15,13 +15,16 @@
 
 namespace SimpleSSD {
 
-Bitset::Bitset() : data(nullptr), dataSize(0), allocSize(0) {}
+Bitset::Bitset() : pointer(nullptr), dataSize(0), allocSize(0) {}
 
 Bitset::Bitset(uint32_t size) : Bitset() {
   if (size > 0) {
     dataSize = size;
     allocSize = DIVCEIL(dataSize, 8);
-    data = (uint8_t *)calloc(allocSize, 1);
+
+    if (allocSize > sizeof(buffer)) {
+      pointer = (uint8_t *)calloc(allocSize, 1);
+    }
   }
 }
 
@@ -30,9 +33,11 @@ Bitset::Bitset(Bitset &&rhs) noexcept {
 }
 
 Bitset::~Bitset() {
-  free(data);
+  if (allocSize > sizeof(buffer)) {
+    free(pointer);
+  }
 
-  data = nullptr;
+  pointer = nullptr;
   dataSize = 0;
   allocSize = 0;
 }
@@ -42,6 +47,8 @@ bool Bitset::test(uint32_t idx) noexcept {
 }
 
 bool Bitset::test(uint32_t idx) const noexcept {
+  auto data = getBuffer();
+
   return data[idx / 8] & (0x01 << (idx % 8));
 }
 
@@ -52,6 +59,7 @@ bool Bitset::all() noexcept {
 bool Bitset::all() const noexcept {
   uint8_t ret = 0xFF;
   uint8_t mask = 0xFF << (dataSize + 8 - allocSize * 8);
+  auto data = getBuffer();
 
   for (uint32_t i = 0; i < allocSize - 1; i++) {
     ret &= data[i];
@@ -80,6 +88,7 @@ uint32_t Bitset::clz() noexcept {
 
 uint32_t Bitset::clz() const noexcept {
   uint32_t ret = 0;
+  auto data = getBuffer();
 
   // Count leading zero-byte
   uint32_t i = 0;
@@ -100,6 +109,7 @@ uint32_t Bitset::ffs() noexcept {
 
 uint32_t Bitset::ffs() const noexcept {
   uint32_t ret = 0;
+  auto data = getBuffer();
 
   // Count trailing zero-byte
   uint32_t i = allocSize - 1;
@@ -121,6 +131,7 @@ uint32_t Bitset::ffs() const noexcept {
 
 bool Bitset::none() const noexcept {
   uint8_t ret = 0x00;
+  auto data = getBuffer();
 
   for (uint32_t i = 0; i < allocSize; i++) {
     ret |= data[i];
@@ -135,6 +146,7 @@ uint32_t Bitset::count() noexcept {
 
 uint32_t Bitset::count() const noexcept {
   uint32_t count = 0;
+  auto data = getBuffer();
 
   for (uint32_t i = 0; i < allocSize; i++) {
     count += popcount16(data[i]);
@@ -153,6 +165,7 @@ uint32_t Bitset::size() const noexcept {
 
 void Bitset::set() noexcept {
   uint8_t mask = 0xFF >> (allocSize * 8 - dataSize);
+  auto data = getBuffer();
 
   for (uint32_t i = 0; i < allocSize - 1; i++) {
     data[i] = 0xFF;
@@ -162,6 +175,8 @@ void Bitset::set() noexcept {
 }
 
 void Bitset::set(uint32_t idx, bool value) noexcept {
+  auto data = getBuffer();
+
   data[idx / 8] &= ~(0x01 << (idx % 8));
 
   if (value) {
@@ -170,17 +185,22 @@ void Bitset::set(uint32_t idx, bool value) noexcept {
 }
 
 void Bitset::reset() noexcept {
+  auto data = getBuffer();
+
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] = 0x00;
   }
 }
 
 void Bitset::reset(uint32_t idx) noexcept {
+  auto data = getBuffer();
+
   data[idx / 8] &= ~(0x01 << (idx % 8));
 }
 
 void Bitset::flip() noexcept {
   uint8_t mask = 0xFF >> (allocSize * 8 - dataSize);
+  auto data = getBuffer();
 
   for (uint32_t i = 0; i < allocSize; i++) {
     data[i] = ~data[i];
@@ -190,6 +210,8 @@ void Bitset::flip() noexcept {
 }
 
 void Bitset::flip(uint32_t idx) noexcept {
+  auto data = getBuffer();
+
   data[idx / 8] = (~data[idx / 8] & (0x01 << (idx % 8))) |
                   (data[idx / 8] & ~(0x01 << (idx % 8)));
 }
@@ -209,8 +231,11 @@ Bitset &Bitset::operator&=(const Bitset &rhs) {
     abort();
   }
 
+  auto data = getBuffer();
+  auto rdata = rhs.getBuffer();
+
   for (uint32_t i = 0; i < allocSize; i++) {
-    data[i] &= rhs.data[i];
+    data[i] &= rdata[i];
   }
 
   return *this;
@@ -223,8 +248,11 @@ Bitset &Bitset::operator|=(const Bitset &rhs) {
     abort();
   }
 
+  auto data = getBuffer();
+  auto rdata = rhs.getBuffer();
+
   for (uint32_t i = 0; i < allocSize; i++) {
-    data[i] |= rhs.data[i];
+    data[i] |= rdata[i];
   }
 
   return *this;
@@ -237,8 +265,11 @@ Bitset &Bitset::operator^=(const Bitset &rhs) {
     abort();
   }
 
+  auto data = getBuffer();
+  auto rdata = rhs.getBuffer();
+
   for (uint32_t i = 0; i < allocSize; i++) {
-    data[i] ^= rhs.data[i];
+    data[i] ^= rdata[i];
   }
 
   return *this;
@@ -246,9 +277,16 @@ Bitset &Bitset::operator^=(const Bitset &rhs) {
 
 Bitset &Bitset::operator=(Bitset &&rhs) {
   if (this != &rhs) {
-    free(this->data);
+    // We need to copy when using size optimization
+    if (allocSize < sizeof(buffer)) {
+      memcpy(this->buffer, rhs.buffer, sizeof(buffer));
+    }
+    else {
+      free(this->pointer);
 
-    this->data = std::exchange(rhs.data, nullptr);
+      this->pointer = std::exchange(rhs.pointer, nullptr);
+    }
+
     this->dataSize = std::exchange(rhs.dataSize, 0);
     this->allocSize = std::exchange(rhs.allocSize, 0);
   }
@@ -261,7 +299,12 @@ void Bitset::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, allocSize);
 
   if (allocSize > 0) {
-    BACKUP_BLOB(out, data, allocSize);
+    if (allocSize < sizeof(buffer)) {
+      BACKUP_BLOB(out, buffer, sizeof(buffer));
+    }
+    else {
+      BACKUP_BLOB(out, pointer, allocSize);
+    }
   }
 }
 
@@ -270,7 +313,12 @@ void Bitset::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, allocSize);
 
   if (allocSize > 0) {
-    RESTORE_BLOB(in, data, allocSize);
+    if (allocSize < sizeof(buffer)) {
+      RESTORE_BLOB(in, buffer, sizeof(buffer));
+    }
+    else {
+      RESTORE_BLOB(in, pointer, allocSize);
+    }
   }
 }
 
