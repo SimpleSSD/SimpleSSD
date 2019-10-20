@@ -7,6 +7,7 @@
 
 #include "ftl/ftl.hh"
 
+#include "ftl/allocator/basic_allocator.hh"
 #include "ftl/base/basic_ftl.hh"
 
 namespace SimpleSSD {
@@ -33,12 +34,14 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   }
 
   // Currently, we only have default block allocator
-  // pAllocator = new BlockAllocator::Default(object, pMapper);
+  pAllocator = new BlockAllocator::BasicAllocator(object);
 
   // Currently, we only have default FTL
   pFTL = new BasicFTL(object, commandManager, pFIL);
 
-  // Initialize pFTL
+  // Initialize all
+  pAllocator->initialize(pMapper->getInfo());
+  pMapper->initialize(pFTL, pAllocator);
   pFTL->initialize(pMapper, pAllocator);
 }
 
