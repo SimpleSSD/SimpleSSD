@@ -166,7 +166,20 @@ set(SRC_HIL_NVME_COMMAND
 set(SRC_ICL
   icl/config.cc
   icl/icl.cc
-  icl/set_associative.cc
+  icl/ring_buffer.cc
+)
+set(SRC_FTL
+  ftl/config.cc
+  ftl/ftl.cc
+)
+set(SRC_FTL_ALLOC
+  ftl/allocator/basic_allocator.cc
+)
+set(SRC_FTL_BASE
+  ftl/base/basic_ftl.cc
+)
+set(SRC_FTL_MAPPING
+  ftl/mapping/page_level.cc
 )
 set(SRC_FIL
   fil/config.cc
@@ -205,6 +218,10 @@ SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
 SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
+SOURCE_GROUP("Source Files\\ftl" FILES ${SRC_FTL})
+SOURCE_GROUP("Source Files\\ftl\\allocator" FILES ${SRC_FTL_ALLOC})
+SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
+SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\pal" FILES ${SRC_FIL_PAL})
 SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
@@ -219,9 +236,14 @@ add_library(simplessd STATIC
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
   ${SRC_ICL}
+  ${SRC_FTL}
+  ${SRC_FTL_ALLOC}
+  ${SRC_FTL_BASE}
+  ${SRC_FTL_MAPPING}
   ${SRC_FIL}
   ${SRC_FIL_PAL}
   ${SRC_SIM}
   ${SRC_UTIL}
 )
+
 target_link_libraries(simplessd mcpat pugixml)
