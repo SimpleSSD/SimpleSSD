@@ -245,9 +245,12 @@ class Rank : public Object {
 
   void startup(uint64_t);
   void suspend();
-  bool inRefIdleState();
-  bool inPwrIdleState();
-  bool forceSelfRefreshExit();
+  bool inRefIdleState() const { return refreshState == RefreshState::Idle; }
+  bool inPwrIdleState() const { return pwrState == PowerState::Idle; }
+  bool forceSelfRefreshExit() const {
+    return (readEntries != 0) ||
+           ((parent->busStateNext == BusState::Write) && (writeEntries != 0));
+  }
   bool isQueueEmpty() const;
   void checkDrainDone();
   void flushCmdList();
@@ -468,10 +471,14 @@ class TimingDRAM : public AbstractDRAM {
   void activateBank(Rank &, Bank &, uint64_t, uint32_t);
   void prechargeBank(Rank &, Bank &, uint64_t, bool = true);
 
-  uint64_t burstAlign(uint64_t);
+  uint64_t burstAlign(uint64_t addr) const {
+    return (addr & ~((uint64_t)burstSize - 1));
+  }
 
   void updatePowerStats(Rank &);
-  static bool sortTime(const Command &, const Command &);
+  static bool sortTime(const Command &cmd, const Command &cmd_next) {
+    return cmd.timestamp < cmd_next.timestamp;
+  };
 
   bool receive(uint64_t, uint32_t, bool, Event, uint64_t);
 

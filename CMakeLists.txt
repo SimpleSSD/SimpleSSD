@@ -207,6 +207,7 @@ set(SRC_SIM
   sim/simplessd.cc
 )
 set(SRC_UTIL
+  util/bitset.cc
   util/disk.cc
   util/fifo.cc
   util/interface.cc
