@@ -1287,9 +1287,9 @@ bool TimingDRAM::writeQueueFull(uint32_t neededEntries) const {
 
 DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
                                    bool isRead) {
-  uint8_t rank;
-  uint8_t bank;
-  uint64_t row;
+  uint8_t rank = 0;
+  uint8_t bank = 0;
+  uint64_t row = 0;
 
   uint64_t addr = dramPktAddr / burstSize;
 

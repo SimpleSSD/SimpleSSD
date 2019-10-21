@@ -85,7 +85,12 @@ struct Command {
   std::vector<SubCommand> subCommandList;
 
   Command(uint64_t t, Event e)
-      : tag(t), eid(e), status(Status::Prepare), opcode(Operation::None) {}
+      : tag(t),
+        eid(e),
+        status(Status::Prepare),
+        opcode(Operation::None),
+        offset(InvalidLPN),
+        length(InvalidLPN) {}
 };
 
 class CommandManager : public Object {
