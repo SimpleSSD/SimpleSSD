@@ -17,7 +17,7 @@ namespace SimpleSSD::FTL::Mapping {
 PageLevel::PageLevel(ObjectData &o, CommandManager *c)
     : AbstractMapping(o, c),
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
-      totalPhysicalSuperBlocks(param.totalLogicalBlocks / param.superpage),
+      totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
       entrySize(makeEntrySize()),
       table(nullptr),
