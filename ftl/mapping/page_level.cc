@@ -443,4 +443,57 @@ void PageLevel::releaseCopyList(CopyList &copy) {
   commandManager->destroyCommand(copy.eraseTag);
 }
 
+void PageLevel::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void PageLevel::getStatValues(std::vector<double> &) noexcept {}
+
+void PageLevel::resetStatValues() noexcept {}
+
+void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, totalPhysicalSuperPages);
+  BACKUP_SCALAR(out, totalPhysicalSuperBlocks);
+  BACKUP_SCALAR(out, totalLogicalSuperPages);
+  BACKUP_SCALAR(out, entrySize);
+  BACKUP_BLOB(out, table, totalLogicalSuperPages * entrySize);
+
+  validEntry.createCheckpoint(out);
+
+  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
+    BACKUP_SCALAR(out, blockMetadata[i].erased);
+    BACKUP_SCALAR(out, blockMetadata[i].nextPageToWrite);
+
+    blockMetadata[i].validPages.createCheckpoint(out);
+  }
+}
+
+void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
+  uint64_t tmp64;
+
+  RESTORE_SCALAR(in, tmp64);
+  panic_if(tmp64 != totalPhysicalSuperPages,
+           "Invalid FTL configuration while restore.");
+
+  RESTORE_SCALAR(in, tmp64);
+  panic_if(tmp64 != totalPhysicalSuperBlocks,
+           "Invalid FTL configuration while restore.");
+
+  RESTORE_SCALAR(in, tmp64);
+  panic_if(tmp64 != totalLogicalSuperPages,
+           "Invalid FTL configuration while restore.");
+
+  RESTORE_SCALAR(in, tmp64);
+  panic_if(tmp64 != entrySize, "Invalid FTL configuration while restore.");
+
+  RESTORE_BLOB(in, table, totalLogicalSuperPages * entrySize);
+
+  validEntry.restoreCheckpoint(in);
+
+  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
+    RESTORE_SCALAR(in, blockMetadata[i].erased);
+    RESTORE_SCALAR(in, blockMetadata[i].nextPageToWrite);
+
+    blockMetadata[i].validPages.restoreCheckpoint(in);
+  }
+}
+
 }  // namespace SimpleSSD::FTL::Mapping

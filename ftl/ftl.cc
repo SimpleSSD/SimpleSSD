@@ -9,6 +9,7 @@
 
 #include "ftl/allocator/basic_allocator.hh"
 #include "ftl/base/basic_ftl.hh"
+#include "ftl/mapping/page_level.hh"
 
 namespace SimpleSSD {
 
@@ -20,7 +21,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
                                               Config::Key::MappingMode)) {
     case Config::MappingType::PageLevelFTL:
-      // pMapper = new Mapping::PageLevel(object);
+      pMapper = new Mapping::PageLevel(object, commandManager);
 
       break;
     case Config::MappingType::BlockLevelFTL:
@@ -34,7 +35,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   }
 
   // Currently, we only have default block allocator
-  pAllocator = new BlockAllocator::BasicAllocator(object);
+  pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
 
   // Currently, we only have default FTL
   pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
