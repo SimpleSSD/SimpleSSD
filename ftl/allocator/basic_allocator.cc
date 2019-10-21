@@ -110,6 +110,16 @@ void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
 }
 
 PPN BasicAllocator::getBlockAt(PPN idx) {
+  if (idx == InvalidPPN) {
+    PPN ppn = inUseBlockMap[lastAllocated++].blockID;
+
+    if (lastAllocated == parallelism) {
+      lastAllocated = 0;
+    }
+
+    return ppn;
+  }
+
   panic_if(idx >= parallelism, "Invalid block index.");
 
   return inUseBlockMap[idx].blockID;
