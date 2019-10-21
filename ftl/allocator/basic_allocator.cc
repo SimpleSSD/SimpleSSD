@@ -236,7 +236,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
 
         // Return front blocksToReclaim PPNs
         for (uint64_t i = 0; i < blocksToReclaim; i++) {
-          list.emplace_back(valid.at(i));
+          list.emplace_back(valid.at(i).first);
         }
       } break;
       default:

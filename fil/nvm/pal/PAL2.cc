@@ -185,7 +185,7 @@ PAL2::~PAL2() {
   delete[] DieStartPoint;
 }
 
-void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
+void PAL2::TimelineScheduling(::Command &req, CPDPBP &reqCPD) {
   // ensure we can erase multiple blocks from single request
   unsigned erase_block = 1;
   /*=========== CONFLICT data gather ============*/
@@ -568,7 +568,7 @@ void PAL2::TimelineScheduling(Command &req, CPDPBP &reqCPD) {
   }
 }
 
-void PAL2::submit(Command &cmd, CPDPBP &addr) {
+void PAL2::submit(::Command &cmd, CPDPBP &addr) {
   TimelineScheduling(cmd, addr);
 }
 

@@ -135,8 +135,6 @@ void DMACommandData::destroyDMAEngine() {
 }
 
 void DMACommandData::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   CommandData::createCheckpoint(out);
 
   BACKUP_DMATAG(out, dmaTag);
@@ -146,16 +144,12 @@ void DMACommandData::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void DMACommandData::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   CommandData::restoreCheckpoint(in);
 
   RESTORE_DMATAG(dmaEngine, in, dmaTag);
   RESTORE_SCALAR(in, _slba);
   RESTORE_SCALAR(in, _nlb);
   RESTORE_SCALAR(in, beginAt);
-
-  RESTORE_SCALAR(in, exist);
 }
 
 BufferCommandData::BufferCommandData(ObjectData &o, Command *p,

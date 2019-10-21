@@ -35,8 +35,6 @@ Config::Config() {
 
 void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    auto name = node.attribute("name").value();
-
     LOAD_NAME_BOOLEAN(node, NAME_USE_CACHE, enable);
     LOAD_NAME_BOOLEAN(node, NAME_USE_READ_PREFETCH, readPrefetch);
     LOAD_NAME_BOOLEAN(node, NAME_PREFETCH_RATIO, prefetchCount);

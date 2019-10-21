@@ -167,7 +167,6 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   ns->second->write(nlb * info->lbaSize);
 
   // Make command
-  auto disk = ns->second->getDisk();
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto gcid = tag->getGCID();

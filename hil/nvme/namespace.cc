@@ -98,8 +98,7 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
       disk = new Disk(object);
     }
 
-    auto diskSize =
-        disk->open(_disk->path, info.size * info.lbaSize, info.lbaSize);
+    auto diskSize = disk->open(_disk->path, info.size * info.lbaSize);
 
     panic_if(diskSize == 0, "Failed to open/create disk image");
     panic_if(diskSize != info.size * info.lbaSize && _disk->strict,
@@ -123,7 +122,7 @@ void Namespace::format() {
     delete disk;
     disk = new MemDisk(object);
 
-    disk->open("", info.size * info.lbaSize, info.lbaSize);
+    disk->open("", info.size * info.lbaSize);
   }
 
   convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();

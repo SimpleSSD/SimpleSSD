@@ -54,8 +54,8 @@ class PAL2  // let's not inherit PAL1
   std::map<uint64_t, std::map<uint64_t, uint64_t> *> *DieFreeSlots;
   uint64_t *DieStartPoint;
 
-  void submit(Command &cmd, CPDPBP &addr);
-  void TimelineScheduling(Command &req, CPDPBP &reqCPD);
+  void submit(::Command &cmd, CPDPBP &addr);
+  void TimelineScheduling(::Command &req, CPDPBP &reqCPD);
   void FlushTimeSlots(uint64_t currentTick);
   void FlushOpTimeStamp();
   void FlushATimeSlotBusyTime(std::list<TimeSlot> &tgtTimeSlot,
