@@ -62,6 +62,15 @@ class AbstractAllocator : public Object {
   }
 
   virtual PPN getPhysicalPageIndex(PPN ppn) { return ppn / param->parallelism; }
+
+  virtual PPN makePPNIndex(PPN block, PPN page) {
+    return block + page * param->parallelism;
+  }
+
+  virtual PPN makePPNSuperIndex(PPN superblock, PPN superpage, PPN page) {
+    return superblock * param->superpage + superpage +
+           page * param->parallelism;
+  }
 };
 
 }  // namespace BlockAllocator
