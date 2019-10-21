@@ -278,11 +278,18 @@ Bitset &Bitset::operator^=(const Bitset &rhs) {
 Bitset &Bitset::operator=(Bitset &&rhs) {
   if (this != &rhs) {
     // We need to copy when using size optimization
-    if (allocSize < sizeof(buffer)) {
-      memcpy(this->buffer, rhs.buffer, sizeof(buffer));
+    if (rhs.allocSize <= sizeof(rhs.buffer)) {
+      if (allocSize > sizeof(buffer)) {
+        free(this->pointer);
+      }
+      else {
+        memcpy(this->buffer, rhs.buffer, sizeof(buffer));
+      }
     }
     else {
-      free(this->pointer);
+      if (allocSize > sizeof(buffer)) {
+        free(this->pointer);
+      }
 
       this->pointer = std::exchange(rhs.pointer, nullptr);
     }
@@ -292,18 +299,18 @@ Bitset &Bitset::operator=(Bitset &&rhs) {
   }
 
   return *this;
-}
+}  // namespace SimpleSSD
 
 void Bitset::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dataSize);
   BACKUP_SCALAR(out, allocSize);
 
   if (allocSize > 0) {
-    if (allocSize < sizeof(buffer)) {
-      BACKUP_BLOB(out, buffer, sizeof(buffer));
+    if (allocSize > sizeof(buffer)) {
+      BACKUP_BLOB(out, pointer, allocSize);
     }
     else {
-      BACKUP_BLOB(out, pointer, allocSize);
+      BACKUP_BLOB(out, buffer, sizeof(buffer));
     }
   }
 }
@@ -313,11 +320,11 @@ void Bitset::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, allocSize);
 
   if (allocSize > 0) {
-    if (allocSize < sizeof(buffer)) {
-      RESTORE_BLOB(in, buffer, sizeof(buffer));
+    if (allocSize > sizeof(buffer)) {
+      RESTORE_BLOB(in, pointer, allocSize);
     }
     else {
-      RESTORE_BLOB(in, pointer, allocSize);
+      RESTORE_BLOB(in, buffer, sizeof(buffer));
     }
   }
 }
