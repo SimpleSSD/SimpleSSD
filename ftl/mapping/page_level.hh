@@ -20,13 +20,12 @@ class PageLevel : public AbstractMapping {
   struct BlockMetadata {
     PPN blockID;
 
-    bool erased;
     uint32_t nextPageToWrite;
     Bitset validPages;
 
-    BlockMetadata() : blockID(InvalidPPN), erased(true), nextPageToWrite(0) {}
+    BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0) {}
     BlockMetadata(PPN id, uint32_t s)
-        : blockID(id), erased(true), nextPageToWrite(0), validPages(s) {}
+        : blockID(id), nextPageToWrite(0), validPages(s) {}
   };
 
   const uint64_t totalPhysicalSuperPages;

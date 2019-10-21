@@ -248,30 +248,28 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void BasicAllocator::reclaimBlocks(std::vector<SubCommand> &list, Event eid) {
+void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   CPU::Function fstat = CPU::initFunction();
 
-  for (auto &scmd : list) {
-    // Find PPN in full block list
-    for (auto iter = fullBlocks.begin(); iter != fullBlocks.end(); ++iter) {
-      if (iter->blockID == scmd.ppn) {
-        iter->erasedCount++;
+  // Find PPN in full block list
+  for (auto iter = fullBlocks.begin(); iter != fullBlocks.end(); ++iter) {
+    if (iter->blockID == blockID) {
+      iter->erasedCount++;
 
-        // Push to free block list
-        PPN idx = getSuperParallelismIndex(scmd.ppn);
-        auto fb = freeBlocks[idx].begin();
+      // Push to free block list
+      PPN idx = getSuperParallelismIndex(blockID);
+      auto fb = freeBlocks[idx].begin();
 
-        for (; fb != freeBlocks[idx].end(); ++fb) {
-          if (fb->erasedCount > iter->erasedCount) {
-            break;
-          }
+      for (; fb != freeBlocks[idx].end(); ++fb) {
+        if (fb->erasedCount > iter->erasedCount) {
+          break;
         }
-
-        freeBlocks[idx].emplace(fb, *iter);
-        fullBlocks.erase(iter);
-
-        break;
       }
+
+      freeBlocks[idx].emplace(fb, *iter);
+      fullBlocks.erase(iter);
+
+      break;
     }
   }
 

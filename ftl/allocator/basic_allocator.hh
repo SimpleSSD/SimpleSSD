@@ -59,7 +59,7 @@ class BasicAllocator : public AbstractAllocator {
 
   bool checkGCThreshold() override;
   void getVictimBlocks(std::deque<PPN> &, Event) override;
-  void reclaimBlocks(std::vector<SubCommand> &, Event) override;
+  void reclaimBlocks(PPN, Event) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

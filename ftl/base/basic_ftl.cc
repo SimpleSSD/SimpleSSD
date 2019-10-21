@@ -162,9 +162,7 @@ void BasicFTL::gc_writeDoFIL() {
 }
 
 void BasicFTL::gc_erase() {
-  auto &cmd = commandManager->getCommand(gcCopyList.eraseTag);
-
-  pAllocator->reclaimBlocks(cmd.subCommandList, eventGCEraseDone);
+  pAllocator->reclaimBlocks(gcCopyList.blockID, eventGCEraseDone);
 }
 
 void BasicFTL::gc_eraseDone() {

@@ -51,7 +51,7 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     auto &block = blockMetadata[i];
 
-    if (!block.erased) {
+    if (block.nextPageToWrite > 0) {
       valid += block.validPages.count();
 
       for (uint32_t i = 0; i < block.nextPageToWrite; i++) {
@@ -399,8 +399,9 @@ void PageLevel::invalidateMapping(Command &cmd, Event eid) {
 void PageLevel::getCopyList(CopyList &copy, Event eid) {
   CPU::Function fstat = CPU::initFunction();
 
-  PPN sblk = getPhysicalSuperBlockIndex(copy.blockID);
-  auto block = &blockMetadata[sblk];
+  panic_if(copy.blockID >= totalPhysicalSuperBlocks, "Block out of range.");
+
+  auto block = &blockMetadata[copy.blockID];
 
   // Block should be full
   panic_if(block->nextPageToWrite != filparam->page,
@@ -413,8 +414,8 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
       auto &copycmd = commandManager->createFTLCommand(tag);
 
       for (uint64_t j = 0; j < param.superpage; j++) {
-        commandManager->appendTranslation(copycmd, InvalidLPN,
-                                          makePPNSuperIndex(sblk, j, i));
+        commandManager->appendTranslation(
+            copycmd, InvalidLPN, makePPNSuperIndex(copy.blockID, j, i));
       }
 
       copy.commandList.emplace_back(tag);
@@ -427,7 +428,7 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
 
   for (uint32_t i = 0; i < param.superpage; i++) {
     commandManager->appendTranslation(erasecmd, InvalidLPN,
-                                      makePPNSuperIndex(sblk, i, 0));
+                                      makePPNSuperIndex(copy.blockID, i, 0));
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
@@ -440,6 +441,10 @@ void PageLevel::releaseCopyList(CopyList &copy) {
   }
 
   commandManager->destroyCommand(copy.eraseTag);
+
+  // Mark block as erased
+  blockMetadata[copy.blockID].nextPageToWrite = 0;
+  blockMetadata[copy.blockID].validPages.reset();
 }
 
 void PageLevel::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -458,7 +463,6 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
   validEntry.createCheckpoint(out);
 
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    BACKUP_SCALAR(out, blockMetadata[i].erased);
     BACKUP_SCALAR(out, blockMetadata[i].nextPageToWrite);
 
     blockMetadata[i].validPages.createCheckpoint(out);
@@ -488,7 +492,6 @@ void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
   validEntry.restoreCheckpoint(in);
 
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    RESTORE_SCALAR(in, blockMetadata[i].erased);
     RESTORE_SCALAR(in, blockMetadata[i].nextPageToWrite);
 
     blockMetadata[i].validPages.restoreCheckpoint(in);
