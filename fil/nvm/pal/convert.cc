@@ -70,7 +70,7 @@ ConvertFunction Convert::getConvertion() {
     sum += popcount32(shiftBlock);
     shiftPage = sum;
 
-    return [this](HIL::SubCommand &req, ::CPDPBP &addr) {
+    return [this](SubCommand &req, ::CPDPBP &addr) {
       addr.Channel = (req.ppn >> shiftChannel) & maskChannel;
       addr.Package = (req.ppn >> shiftWay) & maskWay;
       addr.Die = (req.ppn >> shiftDie) & maskDie;
@@ -111,7 +111,7 @@ ConvertFunction Convert::getConvertion() {
     }
 
     return [level, ppn, block = this->block, page = this->page](
-               HIL::SubCommand &req, ::CPDPBP &addr) {
+               SubCommand &req, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
       values[ppn[0]] = req.ppn % level[0];

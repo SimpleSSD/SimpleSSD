@@ -11,7 +11,7 @@
 
 namespace SimpleSSD::FIL {
 
-FIL::FIL(ObjectData &o, HIL::CommandManager *m) : Object(o), commandManager(m) {
+FIL::FIL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   auto channel = readConfigUint(Section::FlashInterface, Config::Key::Channel);
   auto way = readConfigUint(Section::FlashInterface, Config::Key::Way);
   auto param = object.config->getNANDStructure();
@@ -49,6 +49,10 @@ void FIL::submit(uint64_t tag) {
   for (auto &scmd : list) {
     pFIL->enqueue(tag, scmd.id);
   }
+}
+
+void FIL::writeSpare(PPN ppn, std::vector<uint8_t> &spare) {
+  pFIL->writeSpare(ppn, spare);
 }
 
 void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

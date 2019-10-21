@@ -22,7 +22,7 @@
 
 namespace SimpleSSD::FIL::NVM {
 
-PALOLD::PALOLD(ObjectData &o, HIL::CommandManager *m)
+PALOLD::PALOLD(ObjectData &o, CommandManager *m)
     : AbstractNVM(o, m), lastResetTick(0), convertObject(o) {
   param = object.config->getNANDStructure();
 
@@ -79,7 +79,7 @@ void PALOLD::enqueue(uint64_t tag, uint32_t id) {
   convertCPDPBP(scmd, addr);
 
   switch (cmd.opcode) {
-    case HIL::Operation::Read: {
+    case Operation::Read: {
       ::Command pcmd(getTick(), 0, OPER_READ, param->pageSize);
 
       printCPDPBP(addr, "READ");
@@ -91,7 +91,7 @@ void PALOLD::enqueue(uint64_t tag, uint32_t id) {
 
       cplt.finishedAt = pcmd.finished;
     } break;
-    case HIL::Operation::Write: {
+    case Operation::Write: {
       ::Command pcmd(getTick(), 0, OPER_WRITE, param->pageSize);
 
       printCPDPBP(addr, "WRITE");
@@ -103,7 +103,7 @@ void PALOLD::enqueue(uint64_t tag, uint32_t id) {
 
       cplt.finishedAt = pcmd.finished;
     } break;
-    case HIL::Operation::Erase: {
+    case Operation::Erase: {
       ::Command pcmd(getTick(), 0, OPER_ERASE, param->pageSize);
 
       printCPDPBP(addr, "ERASE");

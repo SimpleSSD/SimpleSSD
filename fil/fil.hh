@@ -23,11 +23,11 @@ namespace SimpleSSD::FIL {
  */
 class FIL : public Object {
  private:
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
   NVM::AbstractNVM *pFIL;
 
  public:
-  FIL(ObjectData &, HIL::CommandManager *);
+  FIL(ObjectData &, CommandManager *);
   FIL(const FIL &) = delete;
   FIL(FIL &&) noexcept = default;
   ~FIL();
@@ -36,13 +36,18 @@ class FIL : public Object {
   FIL &operator=(FIL &&) = default;
 
   /**
-   * \brief Submit HIL::Command to FIL
+   * \brief Submit Command to FIL
    *
    * This command must have SubCommands with valid ppn field.
    *
-   * \param[in] tag HIL::Command tag
+   * \param[in] tag Command tag
    */
   void submit(uint64_t tag);
+
+  /**
+   * \brief Write spare data without timing calculation
+   */
+  void writeSpare(PPN, std::vector<uint8_t> &);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

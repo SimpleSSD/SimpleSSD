@@ -66,14 +66,14 @@ class PALOLD : public AbstractNVM {
   std::unordered_map<PPN, std::vector<uint8_t>> spareList;
 
   void readSpare(PPN, std::vector<uint8_t> &);
-  void writeSpare(PPN, std::vector<uint8_t> &);
   void eraseSpare(PPN);
 
  public:
-  PALOLD(ObjectData &, HIL::CommandManager *);
+  PALOLD(ObjectData &, CommandManager *);
   ~PALOLD();
 
   void enqueue(uint64_t, uint32_t) override;
+  void writeSpare(PPN, std::vector<uint8_t> &) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

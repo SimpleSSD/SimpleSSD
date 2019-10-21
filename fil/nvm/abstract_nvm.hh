@@ -19,22 +19,27 @@ namespace SimpleSSD::FIL::NVM {
 
 class AbstractNVM : public Object {
  protected:
-  HIL::CommandManager *commandManager;
+  CommandManager *commandManager;
 
  public:
-  AbstractNVM(ObjectData &o, HIL::CommandManager *m)
+  AbstractNVM(ObjectData &o, CommandManager *m)
       : Object(o), commandManager(m) {}
   virtual ~AbstractNVM() {}
 
   /**
-   * \brief Handle HIL::SubCommand
+   * \brief Handle SubCommand
    *
-   * This HIL::SubCommand must have valid ppn field.
+   * This SubCommand must have valid ppn field.
    *
-   * \param[in] tag HIL::Command tag
-   * \param[in] id  HIL::SubCommand id
+   * \param[in] tag Command tag
+   * \param[in] id  SubCommand id
    */
   virtual void enqueue(uint64_t tag, uint32_t id) = 0;
+
+  /**
+   * \brief Write spare data without timing calculation
+   */
+  virtual void writeSpare(PPN, std::vector<uint8_t> &) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM

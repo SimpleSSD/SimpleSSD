@@ -28,7 +28,7 @@ namespace SimpleSSD::FIL {
  * \param[in]  req  Request
  * \param[out] addr CPDPBP
  */
-using ConvertFunction = std::function<void(HIL::SubCommand &, ::CPDPBP &)>;
+using ConvertFunction = std::function<void(SubCommand &, ::CPDPBP &)>;
 
 /**
  * \brief Convert class
@@ -36,7 +36,7 @@ using ConvertFunction = std::function<void(HIL::SubCommand &, ::CPDPBP &)>;
  * This class helps to convert LBA (logical block address) to LPN address.
  *
  * LBA is always uint64_t - NVMe uses 8byte LBA.
- * LPN can have various size. (See SimpleSSD::HIL::HIL class)
+ * LPN can have various size. (See SimpleSSD::HIL class)
  *
  * Both LBA and LPN must power of 2. (popcount == 1)
  */
