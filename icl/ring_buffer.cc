@@ -425,6 +425,9 @@ void RingBuffer::readWorker_done(uint64_t tag) {
         // Done!
         iter = readPendingQueue.erase(iter);
       }
+      else {
+        ++iter;
+      }
     }
 
     // Destroy
