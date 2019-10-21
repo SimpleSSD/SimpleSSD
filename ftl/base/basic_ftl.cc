@@ -16,14 +16,9 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
-  eventReadFILDone = createEvent([this](uint64_t, uint64_t d) { read_done(d); },
-                                 "FTL::BasicFTL::eventReadFILDone");
   eventWriteDoFIL =
       createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
                   "FTL::BasicFTL::eventWriteDoFIL");
-  eventWriteFILDone =
-      createEvent([this](uint64_t, uint64_t d) { write_done(d); },
-                  "FTL::BasicFTL::eventWriteFILDone");
   eventInvalidateDoFIL =
       createEvent([this](uint64_t, uint64_t d) { invalidate_doFIL(d); },
                   "FTL::BasicFTL::eventInvalidateDoFIL");
@@ -57,12 +52,6 @@ void BasicFTL::read_doFIL(uint64_t tag) {
   pFIL->submit(tag);
 }
 
-void BasicFTL::read_done(uint64_t tag) {
-  auto &cmd = commandManager->getCommand(tag);
-
-  scheduleNow(cmd.eid, tag);
-}
-
 void BasicFTL::write_find(Command &cmd) {
   pMapper->writeMapping(cmd, eventWriteDoFIL);
 }
@@ -70,12 +59,6 @@ void BasicFTL::write_find(Command &cmd) {
 void BasicFTL::write_doFIL(uint64_t tag) {
   // Now we have PPN
   pFIL->submit(tag);
-}
-
-void BasicFTL::write_done(uint64_t tag) {
-  auto &cmd = commandManager->getCommand(tag);
-
-  scheduleNow(cmd.eid, tag);
 
   // Check GC threshold for On-demand GC
   if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
@@ -258,9 +241,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventReadDoFIL);
-  BACKUP_EVENT(out, eventReadFILDone);
   BACKUP_EVENT(out, eventWriteDoFIL);
-  BACKUP_EVENT(out, eventWriteFILDone);
   BACKUP_EVENT(out, eventInvalidateDoFIL);
   BACKUP_EVENT(out, eventGCTrigger);
   BACKUP_EVENT(out, eventGCGetBlockList);
@@ -294,9 +275,7 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_EVENT(in, eventReadDoFIL);
-  RESTORE_EVENT(in, eventReadFILDone);
   RESTORE_EVENT(in, eventWriteDoFIL);
-  RESTORE_EVENT(in, eventWriteFILDone);
   RESTORE_EVENT(in, eventInvalidateDoFIL);
   RESTORE_EVENT(in, eventGCTrigger);
   RESTORE_EVENT(in, eventGCGetBlockList);
