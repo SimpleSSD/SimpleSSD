@@ -93,8 +93,11 @@ class Bitset {
       abort();
     }
 
+    auto data = lhs.getBuffer();
+    auto rdata = rhs.getBuffer();
+
     for (uint32_t i = 0; i < lhs.allocSize; i++) {
-      if (lhs.data[i] != rhs.data[i]) {
+      if (data[i] != rdata[i]) {
         ret = false;
 
         break;
