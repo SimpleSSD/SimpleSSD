@@ -46,7 +46,7 @@ BasicAllocator::~BasicAllocator() {
 void BasicAllocator::initialize(Parameter *p) {
   AbstractAllocator::initialize(p);
 
-  uint64_t parallelism = param->parallelism / param->superpage;
+  parallelism = param->parallelism / param->superpage;
   totalSuperblock = param->totalPhysicalBlocks / param->superpage;
   freeBlockCount = totalSuperblock;
 
@@ -90,6 +90,10 @@ void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
   }
   else {
     lastAllocated++;
+
+    if (lastAllocated == parallelism) {
+      lastAllocated = 0;
+    }
   }
 
   panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
@@ -103,6 +107,12 @@ void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
   freeBlockCount--;
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+}
+
+PPN BasicAllocator::getBlockAt(PPN idx) {
+  panic_if(idx >= parallelism, "Invalid block index.");
+
+  return inUseBlockMap[idx].blockID;
 }
 
 bool BasicAllocator::checkGCThreshold() {
@@ -265,8 +275,6 @@ void BasicAllocator::getStatValues(std::vector<double> &) noexcept {}
 void BasicAllocator::resetStatValues() noexcept {}
 
 void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
-  uint64_t parallelism = param->parallelism / param->superpage;
-
   BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, totalSuperblock);
   BACKUP_SCALAR(out, lastAllocated);
@@ -302,7 +310,6 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
-  uint64_t parallelism = param->parallelism / param->superpage;
   uint64_t tmp64;
 
   RESTORE_SCALAR(in, tmp64);

@@ -43,6 +43,7 @@ class AbstractAllocator : public Object {
 
   // For AbstractMapping
   virtual void allocateBlock(PPN &, Event) = 0;
+  virtual PPN getBlockAt(PPN) = 0;
 
   // For FTL
   virtual bool checkGCThreshold() = 0;

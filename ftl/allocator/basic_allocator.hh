@@ -28,6 +28,7 @@ class BasicAllocator : public AbstractAllocator {
     BlockMetadata(PPN id, uint64_t e) : blockID(id), erasedCount(e) {}
   };
 
+  uint64_t parallelism;
   uint64_t totalSuperblock;
 
   PPN lastAllocated;             // Used for pMapper->initialize
@@ -54,6 +55,7 @@ class BasicAllocator : public AbstractAllocator {
   void initialize(Parameter *) override;
 
   void allocateBlock(PPN &, Event) override;
+  PPN getBlockAt(PPN) override;
 
   bool checkGCThreshold() override;
   void getVictimBlocks(std::deque<PPN> &, Event) override;
