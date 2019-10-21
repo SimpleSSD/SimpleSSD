@@ -9,8 +9,7 @@
 
 namespace SimpleSSD::HIL {
 
-Convert::Convert(ObjectData &o, uint64_t lpn, uint64_t lba)
-    : Object(o) {
+Convert::Convert(ObjectData &o, uint64_t lpn, uint64_t lba) : Object(o) {
   panic_if(popcount64((uint64_t)lpn) != 1, "Invalid logical page size.");
   panic_if(popcount64(lba) != 1, "Invalid logical block size.");
 

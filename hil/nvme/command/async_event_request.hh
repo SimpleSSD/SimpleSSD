@@ -11,7 +11,6 @@
 #define __SIMPLESSD_HIL_NVME_COMMAND_ASYNC_EVENT_REQUEST_HH__
 
 #include "hil/nvme/command/abstract_command.hh"
-
 #include "hil/nvme/def.hh"
 
 namespace SimpleSSD::HIL::NVMe {

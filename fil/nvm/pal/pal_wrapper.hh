@@ -83,6 +83,6 @@ class PALOLD : public AbstractNVM {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::FIL
+}  // namespace SimpleSSD::FIL::NVM
 
 #endif

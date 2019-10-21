@@ -11,8 +11,7 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-DeleteCQ::DeleteCQ(ObjectData &o, Subsystem *s)
-    : Command(o, s) {}
+DeleteCQ::DeleteCQ(ObjectData &o, Subsystem *s) : Command(o, s) {}
 
 void DeleteCQ::setRequest(ControllerData *cdata, SQContext *req) {
   auto tag = createTag(cdata, req);
@@ -31,11 +30,11 @@ void DeleteCQ::setRequest(ControllerData *cdata, SQContext *req) {
   switch (ret) {
     case 1:
       tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::Invalid_QueueIdentifier);
+                           CommandSpecificStatusCode::Invalid_QueueIdentifier);
       break;
     case 3:
       tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                      CommandSpecificStatusCode::Invalid_QueueDeletion);
+                           CommandSpecificStatusCode::Invalid_QueueDeletion);
       break;
   }
 

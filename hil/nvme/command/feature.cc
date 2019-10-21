@@ -40,7 +40,6 @@ void Feature::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void Feature::restoreCheckpoint(std::istream &in) noexcept {
-
   RESTORE_SCALAR(in, pm.data);
   RESTORE_SCALAR(in, er.data);
   RESTORE_SCALAR(in, noq.data);

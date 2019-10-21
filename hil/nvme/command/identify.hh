@@ -24,7 +24,8 @@ class Identify : public Command {
   void makeNamespaceStructure(BufferCommandData *, uint32_t, bool = false);
   void makeNamespaceList(BufferCommandData *, uint32_t, bool = false);
   void makeControllerStructure(BufferCommandData *);
-  void makeControllerList(BufferCommandData *, ControllerID, uint32_t = NSID_ALL);
+  void makeControllerList(BufferCommandData *, ControllerID,
+                          uint32_t = NSID_ALL);
 
   void dmaInitDone(uint64_t);
   void dmaComplete(uint64_t);
