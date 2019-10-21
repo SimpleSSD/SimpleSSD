@@ -93,7 +93,7 @@ class CommandManager : public Object {
   std::unordered_map<uint64_t, Command> commandList;
 
   Command &createCommand(uint64_t, Event);
-  SubCommand &createSubCommand(uint64_t);
+  SubCommand &createSubCommand(Command &);
 
  public:
   CommandManager(ObjectData &);
@@ -121,6 +121,9 @@ class CommandManager : public Object {
   // Helper APIs for ICL -> FTL
   void createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp);
   void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+
+  // Helper APIs for FTL -> FIL
+  SubCommand &appendTranslation(Command &, LPN lpn, PPN ppn);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

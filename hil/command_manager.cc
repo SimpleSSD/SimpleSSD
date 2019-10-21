@@ -37,14 +37,10 @@ Command &CommandManager::createCommand(uint64_t tag, Event eid) {
   return iter.first->second;
 }
 
-SubCommand &CommandManager::createSubCommand(uint64_t tag) {
-  auto iter = commandList.find(tag);
+SubCommand &CommandManager::createSubCommand(Command &cmd) {
+  uint32_t id = cmd.subCommandList.size();
 
-  panic_if(iter == commandList.end(), "No such command exists.");
-
-  uint32_t id = iter->second.subCommandList.size();
-
-  return iter->second.subCommandList.emplace_back(SubCommand(tag, id));
+  return cmd.subCommandList.emplace_back(SubCommand(cmd.tag, id));
 }
 
 void CommandManager::destroyCommand(uint64_t tag) {
@@ -65,7 +61,7 @@ void CommandManager::createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.length = nlp;
 
   for (LPN i = slpn; i < slpn + nlp; i++) {
-    auto &scmd = createSubCommand(tag);
+    auto &scmd = createSubCommand(cmd);
 
     scmd.lpn = i;
 
@@ -90,7 +86,7 @@ void CommandManager::createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.length = nlp;
 
   for (LPN i = slpn; i < slpn + nlp; i++) {
-    auto &scmd = createSubCommand(tag);
+    auto &scmd = createSubCommand(cmd);
 
     scmd.lpn = i;
 
@@ -146,6 +142,17 @@ void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn,
   cmd.opcode = Operation::Write;
   cmd.offset = slpn;
   cmd.length = nlp;
+}
+
+SubCommand &CommandManager::appendTranslation(Command &cmd, LPN lpn, PPN ppn) {
+  auto &scmd = createSubCommand(cmd);
+
+  panic_if(scmd.id != lpn - cmd.offset, "Invalid LPN specified.");
+
+  scmd.lpn = lpn;
+  scmd.ppn = ppn;
+
+  return scmd;
 }
 
 void CommandManager::getStatList(std::vector<Stat> &, std::string) noexcept {}
