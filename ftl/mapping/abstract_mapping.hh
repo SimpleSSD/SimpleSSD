@@ -11,6 +11,7 @@
 #define __SIMPLESSD_FTL_MAPPING_ABSTRACT_MAPPING_HH__
 
 #include "ftl/def.hh"
+#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {
@@ -28,12 +29,14 @@ namespace Mapping {
 class AbstractMapping : public Object {
  protected:
   Parameter param;
+  FIL::Config::NANDStructure *filparam;
+
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
  public:
   AbstractMapping(ObjectData &o) : Object(o), allocator(nullptr) {
-    auto filparam = object.config->getNANDStructure();
+    filparam = object.config->getNANDStructure();
     auto channel =
         readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
     auto way = readConfigUint(Section::FlashInterface, FIL::Config::Key::Way);
@@ -113,26 +116,55 @@ class AbstractMapping : public Object {
 
   Parameter *getInfo() { return &param; };
 
-  virtual void initialize(AbstractFTL *,
-                          BlockAllocator::AbstractAllocator *) = 0;
+  virtual void initialize(AbstractFTL *f,
+                          BlockAllocator::AbstractAllocator *a) {
+    pFTL = f;
+    allocator = a;
+  };
 
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  virtual LPN getLogicalBlockIndex(LPN lpn) {
+  virtual inline LPN getLogicalBlockIndex(LPN lpn) {
     return lpn % param.totalLogicalBlocks;
   }
-  virtual LPN getLogicalPageIndex(LPN lpn) {
+
+  virtual inline LPN getLogicalPageIndex(LPN lpn) {
     return lpn / param.totalLogicalBlocks;
   }
 
-  virtual LPN getLogicalSuperBlockIndex(LPN lpn) {
+  virtual inline LPN getLogicalSuperBlockIndex(LPN lpn) {
     return (lpn % param.totalLogicalBlocks) / param.superpage;
   }
 
-  virtual LPN getLogicalSuperPageIndex(LPN lpn) {
-    return (lpn / param.totalLogicalBlocks) / param.superpage;
+  virtual inline LPN getLogicalSuperPageIndex(LPN lpn) {
+    return lpn % param.superpage;
   }
 
+  virtual inline PPN getPhysicalBlockIndex(PPN ppn) {
+    return ppn % param.totalPhysicalBlocks;
+  }
+
+  virtual inline PPN getPhysicalPageIndex(PPN ppn) {
+    return ppn / param.totalPhysicalBlocks;
+  }
+
+  virtual inline PPN getPhysicalSuperBlockIndex(PPN ppn) {
+    return (ppn % param.totalPhysicalBlocks) / param.superpage;
+  }
+
+  virtual inline PPN getPhysicalSuperPageIndex(PPN ppn) {
+    return ppn % param.superpage;
+  }
+
+  virtual inline PPN makePPNIndex(PPN block, PPN page) {
+    return block + page * param.totalPhysicalBlocks;
+  }
+
+  virtual inline PPN makePPNSuperIndex(PPN superblock, PPN superpage,
+                                       PPN page) {
+    return superblock * param.superpage + superpage +
+           page * param.totalPhysicalBlocks;
+  }
 
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
