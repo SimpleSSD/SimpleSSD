@@ -122,11 +122,11 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   errfile = openStream(prefix, errpath);
   debugfile = openStream(prefix, debugpath);
 
-  // Initialize log system
-  log.init(object.cpu, outfile, errfile, debugfile);
-
   // Initialize hardware
   object.cpu = new CPU::CPU(e, c, &log);
+
+  log.init(object.cpu, outfile, errfile, debugfile);
+
   object.sram = new Memory::SRAM::SRAM(object);
 
   switch ((Memory::Config::Model)c->readUint(Section::Memory,
@@ -175,10 +175,10 @@ void SimpleSSD::deinit() noexcept {
     // Deinitialize hardware
     delete object.sram;
     delete object.dram;
-    delete object.cpu;
 
-    // Deinitialize log system
     log.deinit();
+
+    delete object.cpu;
 
     // outfile, errfile and debugfile are closed by Log::deinit()
     delete outfile;
