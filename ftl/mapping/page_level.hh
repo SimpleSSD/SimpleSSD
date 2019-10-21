@@ -31,7 +31,8 @@ class PageLevel : public AbstractMapping {
   const uint64_t totalPhysicalSuperPages;
   const uint64_t totalPhysicalSuperBlocks;
   const uint64_t totalLogicalSuperPages;
-  const uint64_t entrySize;
+
+  uint64_t entrySize;
 
   uint8_t *table;
   Bitset validEntry;

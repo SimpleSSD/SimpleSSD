@@ -19,7 +19,6 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
-      entrySize(makeEntrySize()),
       table(nullptr),
       validEntry(totalLogicalSuperPages),
       blockMetadata(nullptr) {
@@ -27,6 +26,8 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
 
   // Allocate table and block metadata
+  entrySize = makeEntrySize();
+
   table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
   blockMetadata = new BlockMetadata[totalPhysicalSuperBlocks]();
 
