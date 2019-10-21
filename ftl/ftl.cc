@@ -24,12 +24,16 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
       pMapper = new Mapping::PageLevel(object, commandManager);
 
       break;
-    case Config::MappingType::BlockLevelFTL:
-      // pMapper = new Mapping::BlockLevel(object);
+    // case Config::MappingType::BlockLevelFTL:
+    //   pMapper = new Mapping::BlockLevel(object);
 
-      break;
-    case Config::MappingType::VLFTL:
-      // pMapper = new Mapping::VLFTL(object);
+    //   break;
+    // case Config::MappingType::VLFTL:
+    //   pMapper = new Mapping::VLFTL(object);
+
+    //   break;
+    default:
+      panic("Unsupported mapping type.");
 
       break;
   }

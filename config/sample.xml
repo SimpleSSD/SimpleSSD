@@ -435,7 +435,7 @@
         1: Block-level Mapping
         2: Virtually-Linked FTL (Extended version of FTL released with Amber)
      -->
-    <config name="MappingMode">2</config>
+    <config name="MappingMode">0</config>
     <!-- Garbage Collection configuration -->
     <section name="gc">
       <!--
