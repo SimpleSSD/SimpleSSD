@@ -105,8 +105,6 @@ class Config : public BaseConfig {
 
  public:
   Config();
-  ~Config();
-
   const char *getSectionName() override { return "fil"; }
 
   void loadFrom(pugi::xml_node &) override;

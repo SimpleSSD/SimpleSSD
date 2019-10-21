@@ -55,9 +55,6 @@ Config::Config() {
   defaultNamespace = 0;
 }
 
-//! A destructor
-Config::~Config() {}
-
 void Config::loadInterface(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();

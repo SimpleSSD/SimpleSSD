@@ -121,12 +121,15 @@ set(SRC_MEM
   mem/config.cc
   mem/dram/abstract_dram.cc
   mem/dram/simple.cc
+  mem/dram/gem5.cc
   mem/sram/abstract_sram.cc
   mem/sram/sram.cc
 )
 set(SRC_HIL
   hil/config.cc
+  hil/command_manager.cc
   hil/convert.cc
+  hil/hil.cc
 )
 set(SRC_HIL_COMMON
   hil/common/dma_engine.cc

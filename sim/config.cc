@@ -26,9 +26,6 @@ Config::Config() {
   mode = Mode::None;
 }
 
-//! A destructor
-Config::~Config() {}
-
 void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_STRING(node, NAME_OUTPUT_DIRECTORY, outputDirectory);

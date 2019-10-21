@@ -23,9 +23,6 @@ const std::regex regexTime("(\\d+)([munp]?s?)",
 //! A constructor
 BaseConfig::BaseConfig() {}
 
-//! A destructor
-BaseConfig::~BaseConfig() {}
-
 int64_t BaseConfig::convertInt(const char *value, bool *valid) {
   int64_t ret = 0;
   std::cmatch match;

@@ -150,8 +150,6 @@ Config::Config() {
   power.pVDD[1] = 1.2f;
 }
 
-Config::~Config() {}
-
 void Config::loadSRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, sram.lineSize);
@@ -439,6 +437,10 @@ Config::DRAMTiming *Config::getDRAMTiming() {
 
 Config::DRAMPower *Config::getDRAMPower() {
   return &power;
+}
+
+Config::TimingDRAMConfig *Config::getTimingDRAM() {
+  return &gem5;
 }
 
 }  // namespace SimpleSSD::Memory

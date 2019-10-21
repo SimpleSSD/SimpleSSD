@@ -156,7 +156,6 @@ class BaseConfig {
 
  public:
   BaseConfig();
-  virtual ~BaseConfig();
 
   virtual const char *getSectionName() = 0;
 
