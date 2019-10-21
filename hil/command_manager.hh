@@ -124,6 +124,7 @@ class CommandManager : public Object {
 
   // Helper APIs for FTL -> FIL
   SubCommand &appendTranslation(Command &, LPN lpn, PPN ppn);
+  Command &createFTLCommand(uint64_t tag);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

@@ -155,6 +155,15 @@ SubCommand &CommandManager::appendTranslation(Command &cmd, LPN lpn, PPN ppn) {
   return scmd;
 }
 
+Command &CommandManager::createFTLCommand(uint64_t tag) {
+  auto &cmd = createCommand(tag, InvalidEventID);
+
+  cmd.offset = InvalidLPN;
+  cmd.length = InvalidLPN;
+
+  return cmd;
+}
+
 void CommandManager::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void CommandManager::getStatValues(std::vector<double> &) noexcept {}
