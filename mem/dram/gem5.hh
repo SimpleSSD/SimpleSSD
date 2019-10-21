@@ -75,7 +75,7 @@ enum class PowerState : uint8_t {
   PrechargePowerdown,  //!< Precharge power down
   Active,              //!< Row active
   ActivePowerdown,     //!< Active power down
-} DRAMState;
+};
 
 enum class RefreshState : uint8_t {
   Idle,
