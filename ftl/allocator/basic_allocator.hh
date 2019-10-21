@@ -54,7 +54,7 @@ class BasicAllocator : public AbstractAllocator {
 
   void initialize(Parameter *) override;
 
-  void allocateBlock(PPN &, Event) override;
+  CPU::Function allocateBlock(PPN &) override;
   PPN getBlockAt(PPN) override;
 
   bool checkGCThreshold() override;

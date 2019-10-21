@@ -42,7 +42,7 @@ class AbstractAllocator : public Object {
   virtual void initialize(Parameter *p) { param = p; };
 
   // For AbstractMapping
-  virtual void allocateBlock(PPN &, Event) = 0;
+  virtual CPU::Function allocateBlock(PPN &) = 0;
   virtual PPN getBlockAt(PPN) = 0;
 
   // For FTL

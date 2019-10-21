@@ -68,7 +68,7 @@ void BasicAllocator::initialize(Parameter *p) {
   }
 }
 
-void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
+CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   CPU::Function fstat = CPU::initFunction();
   PPN idx = lastAllocated;
 
@@ -106,7 +106,7 @@ void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
   freeBlocks[idx].pop_front();
   freeBlockCount--;
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  return std::move(fstat);
 }
 
 PPN BasicAllocator::getBlockAt(PPN idx) {
