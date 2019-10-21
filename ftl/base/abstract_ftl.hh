@@ -50,7 +50,10 @@ class AbstractFTL : public Object {
   virtual bool isGC() = 0;
   virtual uint8_t isFormat() = 0;
 
-  void submitToFIL(uint64_t tag) { pFIL->submit(tag); }
+  // In initialize phase of mapping, they may want to write spare area
+  void writeSpare(PPN ppn, std::vector<uint8_t> &spare) {
+    pFIL->writeSpare(ppn, spare);
+  }
 };
 
 }  // namespace SimpleSSD::FTL

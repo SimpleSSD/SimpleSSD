@@ -83,9 +83,13 @@ void BasicFTL::invalidate_doFIL(uint64_t tag) {
     fctx.eid = cmd.eid;
     fctx.data = tag;
 
-    // Make list
-    pMapper->getBlocks(cmd.offset, cmd.length, gcBlockList,
-                       eventGCGetBlockList);
+    // We already have old PPN in cmd.subCommandList
+    // Copy them
+    gcBlockList.clear();
+
+    for (auto &scmd : cmd.subCommandList) {
+      gcBlockList.emplace_back(scmd.ppn);
+    }
   }
   else {
     // TODO: Handle this case
