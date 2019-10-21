@@ -47,7 +47,7 @@ class AbstractMapping : public Object {
     param.totalPhysicalBlocks =
         channel * way * filparam->die * filparam->plane * filparam->block;
     param.totalLogicalBlocks =
-        param.totalPhysicalBlocks /
+        param.totalPhysicalBlocks *
         (1.f - readConfigFloat(Section::FlashTranslation,
                                Config::Key::OverProvisioningRatio));
     param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
