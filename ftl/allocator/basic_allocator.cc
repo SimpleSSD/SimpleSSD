@@ -73,7 +73,7 @@ void BasicAllocator::allocateBlock(PPN &blockUsed, Event eid) {
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
-    idx = getPhysicalSuperBlockIndex(blockUsed);
+    idx = getSuperParallelismIndex(blockUsed);
 
     panic_if(inUseBlockMap[idx].blockID != blockUsed, "Unexpected block ID.");
 
@@ -248,7 +248,7 @@ void BasicAllocator::reclaimBlocks(std::vector<SubCommand> &list, Event eid) {
         iter->erasedCount++;
 
         // Push to free block list
-        PPN idx = getPhysicalSuperBlockIndex(scmd.ppn);
+        PPN idx = getSuperParallelismIndex(scmd.ppn);
         auto fb = freeBlocks[idx].begin();
 
         for (; fb != freeBlocks[idx].end(); ++fb) {
