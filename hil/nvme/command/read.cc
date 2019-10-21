@@ -54,7 +54,7 @@ void Read::readDone(uint64_t gcid) {
         offset = 0;
         size = iter.buffer.size() - skipFront;
       }
-      else if (iter.lpn + 1 == cmd.offset + cmd.length) {
+      if (iter.lpn + 1 == cmd.offset + cmd.length) {
         size = iter.buffer.size() - skipEnd;
       }
 

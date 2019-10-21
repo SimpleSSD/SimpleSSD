@@ -68,7 +68,7 @@ void CommandManager::createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
     if (i == slpn) {
       scmd.skipFront = skipFront;
     }
-    else if (i + 1 == slpn + nlp) {
+    if (i + 1 == slpn + nlp) {
       scmd.skipEnd = skipEnd;
     }
 
@@ -93,7 +93,7 @@ void CommandManager::createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
     if (i == slpn) {
       scmd.skipFront = skipFront;
     }
-    else if (i + 1 == slpn + nlp) {
+    if (i + 1 == slpn + nlp) {
       scmd.skipEnd = skipEnd;
     }
 
