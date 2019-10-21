@@ -29,10 +29,6 @@ class AbstractFTL : public Object {
 
   uint64_t ftlCommandTag;
 
-  inline uint64_t makeFTLCommandTag() {
-    return ftlCommandTag++ | FTL_TAG_PREFIX;
-  }
-
  public:
   AbstractFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
               Mapping::AbstractMapping *m, BlockAllocator::AbstractAllocator *a)
@@ -43,6 +39,10 @@ class AbstractFTL : public Object {
 
   AbstractFTL &operator=(const AbstractFTL &) = delete;
   AbstractFTL &operator=(AbstractFTL &&) = default;
+
+  inline uint64_t makeFTLCommandTag() {
+    return ftlCommandTag++ | FTL_TAG_PREFIX;
+  }
 
   virtual void initialize() {}
 
