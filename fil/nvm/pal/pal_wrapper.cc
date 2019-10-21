@@ -142,7 +142,9 @@ void PALOLD::reschedule(Complete &&cplt) {
 
   completionQueue.emplace(iter, cplt);
 
-  scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
+  if (completionQueue.size() == 1) {
+    scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
+  }
 }
 
 void PALOLD::completion(uint64_t) {
