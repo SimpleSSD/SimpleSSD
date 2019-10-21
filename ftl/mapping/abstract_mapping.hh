@@ -28,6 +28,8 @@ namespace Mapping {
 
 class AbstractMapping : public Object {
  protected:
+  CommandManager *commandManager;
+
   Parameter param;
   FIL::Config::NANDStructure *filparam;
 
@@ -35,7 +37,8 @@ class AbstractMapping : public Object {
   BlockAllocator::AbstractAllocator *allocator;
 
  public:
-  AbstractMapping(ObjectData &o) : Object(o), allocator(nullptr) {
+  AbstractMapping(ObjectData &o, CommandManager *c)
+      : Object(o), commandManager(c), allocator(nullptr) {
     filparam = object.config->getNANDStructure();
     auto channel =
         readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
@@ -152,7 +155,7 @@ class AbstractMapping : public Object {
     return (ppn % param.totalPhysicalBlocks) / param.superpage;
   }
 
-  virtual inline PPN getPhysicalSuperPageIndex(PPN ppn) {
+  virtual inline PPN getPhysicalPageIndexInSuperPage(PPN ppn) {
     return ppn % param.superpage;
   }
 
@@ -173,12 +176,10 @@ class AbstractMapping : public Object {
   virtual void readMapping(Command &, Event) = 0;
   virtual void writeMapping(Command &, Event) = 0;
   virtual void invalidateMapping(Command &, Event) = 0;
-  virtual void getBlocks(LPN, LPN, std::deque<PPN> &, Event) = 0;
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
-  virtual void writeMapping(std::pair<LPN, PPN> &, Event) = 0;
 };
 
 }  // namespace Mapping
