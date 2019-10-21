@@ -386,45 +386,50 @@ void RingBuffer::readWorker_doFTL() {
 void RingBuffer::readWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  // Read done, prepare new entry
-  cacheEntry.emplace_back(Entry(cmd.offset, minPages, iobits));
-  auto &entry = cacheEntry.back();
+  cmd.counter++;
 
-  // As we got data from FTL, all SubEntries are valid
-  for (auto &iter : entry.list) {
-    iter.valid.set();
-  }
+  if (cmd.counter == cmd.length) {
+    // Read done, prepare new entry
+    cacheEntry.emplace_back(Entry(cmd.offset, minPages, iobits));
+    auto &entry = cacheEntry.back();
 
-  // Apply NVM -> DRAM latency (No completion handler)
-  object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
-                     InvalidEventID);
-
-  // Update capacity
-  usedCapacity += cmd.length * pageSize;
-
-  // We need to erase some entry
-  if (usedCapacity >= totalCapacity) {
-    trigger_writeWorker();
-  }
-
-  // Handle completion of pending request
-  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
-    if (iter->status == CacheStatus::FTL && cmd.offset <= iter->scmd->lpn &&
-        iter->scmd->lpn < cmd.offset + cmd.length) {
-      // This pending read is completed
-      iter->scmd->status = Status::Done;
-
-      // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
-      object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
-                        eventReadDRAMDone, iter->scmd->tag);
-
-      // Done!
-      iter = readPendingQueue.erase(iter);
+    // As we got data from FTL, all SubEntries are valid
+    for (auto &iter : entry.list) {
+      iter.valid.set();
     }
-  }
 
-  // Destroy
-  commandManager->destroyCommand(tag);
+    // Apply NVM -> DRAM latency (No completion handler)
+    object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
+                       InvalidEventID);
+
+    // Update capacity
+    usedCapacity += cmd.length * pageSize;
+
+    // We need to erase some entry
+    if (usedCapacity >= totalCapacity) {
+      trigger_writeWorker();
+    }
+
+    // Handle completion of pending request
+    for (auto iter = readPendingQueue.begin();
+         iter != readPendingQueue.end();) {
+      if (iter->status == CacheStatus::FTL && cmd.offset <= iter->scmd->lpn &&
+          iter->scmd->lpn < cmd.offset + cmd.length) {
+        // This pending read is completed
+        iter->scmd->status = Status::Done;
+
+        // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
+        object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
+                          eventReadDRAMDone, iter->scmd->tag);
+
+        // Done!
+        iter = readPendingQueue.erase(iter);
+      }
+    }
+
+    // Destroy
+    commandManager->destroyCommand(tag);
+  }
 }
 
 void RingBuffer::trigger_writeWorker() {
@@ -536,57 +541,61 @@ void RingBuffer::writeWorker_doFTL() {
 void RingBuffer::writeWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  // Find corresponding entry
-  for (auto &iter : cacheEntry) {
-    if (iter.offset <= cmd.offset &&
-        cmd.offset + cmd.length <= iter.offset + minPages) {
-      uint32_t i = cmd.offset - iter.offset;
-      uint32_t limit = cmd.length + i;
+  cmd.counter++;
 
-      for (; i < limit; i++) {
-        auto &sentry = iter.list.at(i);
+  if (cmd.counter == cmd.length) {
+    // Find corresponding entry
+    for (auto &iter : cacheEntry) {
+      if (iter.offset <= cmd.offset &&
+          cmd.offset + cmd.length <= iter.offset + minPages) {
+        uint32_t i = cmd.offset - iter.offset;
+        uint32_t limit = cmd.length + i;
 
-        sentry.dirty = false;
-        sentry.wpending = false;
+        for (; i < limit; i++) {
+          auto &sentry = iter.list.at(i);
+
+          sentry.dirty = false;
+          sentry.wpending = false;
+        }
+
+        dirtyCapacity -= cmd.length * pageSize;
+        usedCapacity -= cmd.length * pageSize;
+      }
+    }
+
+    commandManager->destroyCommand(tag);
+
+    // Flush?
+    if (UNLIKELY(dirtyCapacity == 0 && flushEvents.size() > 0)) {
+      for (auto &iter : flushEvents) {
+        auto &fcmd = commandManager->getCommand(iter);
+
+        scheduleNow(fcmd.eid, iter);
       }
 
-      dirtyCapacity -= cmd.length * pageSize;
-      usedCapacity -= cmd.length * pageSize;
-    }
-  }
-
-  commandManager->destroyCommand(tag);
-
-  // Flush?
-  if (UNLIKELY(dirtyCapacity == 0 && flushEvents.size() > 0)) {
-    for (auto &iter : flushEvents) {
-      auto &fcmd = commandManager->getCommand(iter);
-
-      scheduleNow(fcmd.eid, iter);
+      flushEvents.clear();
     }
 
-    flushEvents.clear();
+    // Retry requests in writeWaitingQueue
+    std::vector<SubCommand *> list;
+
+    list.reserve(writeWaitingQueue.size());
+
+    for (auto &iter : writeWaitingQueue) {
+      list.emplace_back(iter.scmd);
+    }
+
+    writeWaitingQueue.clear();
+
+    for (auto &iter : list) {
+      write_find(*iter);
+    }
+
+    // Schedule next worker
+    writeTriggered = false;
+
+    trigger_writeWorker();
   }
-
-  // Retry requests in writeWaitingQueue
-  std::vector<SubCommand *> list;
-
-  list.reserve(writeWaitingQueue.size());
-
-  for (auto &iter : writeWaitingQueue) {
-    list.emplace_back(iter.scmd);
-  }
-
-  writeWaitingQueue.clear();
-
-  for (auto &iter : list) {
-    write_find(*iter);
-  }
-
-  // Schedule next worker
-  writeTriggered = false;
-
-  trigger_writeWorker();
 }
 
 void RingBuffer::read_find(Command &cmd) {

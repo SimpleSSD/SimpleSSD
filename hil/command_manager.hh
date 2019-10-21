@@ -82,6 +82,8 @@ struct Command {
   LPN offset;
   LPN length;
 
+  uint64_t counter;
+
   std::vector<SubCommand> subCommandList;
 
   Command(uint64_t t, Event e)
@@ -90,7 +92,8 @@ struct Command {
         status(Status::Prepare),
         opcode(Operation::None),
         offset(InvalidLPN),
-        length(InvalidLPN) {}
+        length(InvalidLPN),
+        counter(0) {}
 };
 
 class CommandManager : public Object {
