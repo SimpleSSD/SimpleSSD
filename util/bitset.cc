@@ -28,7 +28,7 @@ Bitset::Bitset(uint32_t size) : Bitset() {
   }
 }
 
-Bitset::Bitset(Bitset &&rhs) noexcept {
+Bitset::Bitset(Bitset &&rhs) noexcept : Bitset() {
   *this = std::move(rhs);
 }
 

@@ -258,6 +258,8 @@ void CoWDisk::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
   RESTORE_SCALAR(in, size);
 
+  table.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     RESTORE_SCALAR(in, lba);
 

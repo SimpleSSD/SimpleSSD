@@ -126,6 +126,8 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  tagList.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     uint64_t uid;
 

@@ -503,10 +503,6 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     return;
   }
 
-  if (UNLIKELY(func.cycles == 0)) {
-    panic_log("Invalid function object passed.");
-  }
-
   // Determine core number range
   switch (group) {
     case CPUGroup::HostInterface:
@@ -731,6 +727,8 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   // We must have exactly same event list
+  oldEventList.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     RESTORE_SCALAR(in, eid);
 

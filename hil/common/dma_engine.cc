@@ -682,6 +682,8 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  oldTagList.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     newTag = new DMAData();
 
@@ -689,6 +691,8 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
 
     uint64_t list;
     RESTORE_SCALAR(in, list);
+
+    newTag->prList.reserve(list);
 
     for (uint64_t j = 0; j < list; j++) {
       PhysicalRegion pr;

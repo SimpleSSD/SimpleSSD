@@ -62,6 +62,8 @@ struct CopyList {
     uint64_t size;
     RESTORE_SCALAR(in, size);
 
+    commandList.reserve(size);
+
     for (uint64_t i = 0; i < size; i++) {
       uint64_t tag;
 

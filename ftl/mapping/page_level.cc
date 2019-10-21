@@ -291,7 +291,7 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
   slpn /= param.superpage;
   nlp = DIVCEIL(nlp, param.superpage);
 
-  panic_if(slpn + nlp >= totalLogicalSuperPages, "LPN out of range.");
+  panic_if(slpn + nlp > totalLogicalSuperPages, "LPN out of range.");
 
   for (LPN i = slpn; i < nlp; i++) {
     if (validEntry.test(i)) {
@@ -334,7 +334,7 @@ void PageLevel::readMapping(Command &cmd, Event eid) {
     i++;
   } while (i < cmd.offset + cmd.length);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
 }
 
 void PageLevel::writeMapping(Command &cmd, Event eid) {
@@ -364,7 +364,7 @@ void PageLevel::writeMapping(Command &cmd, Event eid) {
     i++;
   } while (i < cmd.offset + cmd.length);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
 }
 
 void PageLevel::invalidateMapping(Command &cmd, Event eid) {
@@ -394,7 +394,7 @@ void PageLevel::invalidateMapping(Command &cmd, Event eid) {
     i++;
   } while (i < cmd.offset + cmd.length);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
 }
 
 void PageLevel::getCopyList(CopyList &copy, Event eid) {
@@ -409,6 +409,8 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
            "Try to erase not-full block.");
 
   // For the valid pages in target block, create I/O operation
+  copy.commandList.reserve(filparam->page);
+
   for (uint32_t i = 0; i < filparam->page; i++) {
     if (block->validPages.test(i)) {
       uint64_t tag = pFTL->makeFTLCommandTag();

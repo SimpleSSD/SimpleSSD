@@ -34,8 +34,9 @@ class RingBuffer : public AbstractCache {
 
     SubEntry(const SubEntry &) = delete;
     SubEntry(SubEntry &&) noexcept = default;
-    SubEntry(uint32_t s) : dirty(false), wpending(false), valid(s) {}
-    SubEntry(uint32_t s, bool d) : dirty(d), wpending(false), valid(s) {}
+    SubEntry(uint32_t s) : data(0), valid(s) {}
+    SubEntry(uint32_t s, bool d)
+        : dirty(d), wpending(false), rsvd(0), valid(s) {}
   };
 
   struct Entry {
@@ -47,6 +48,8 @@ class RingBuffer : public AbstractCache {
     Entry(const Entry &) = delete;
     Entry(Entry &&) noexcept = default;
     Entry(LPN l, uint32_t s, uint32_t b) : offset(l), accessedAt(0) {
+      list.reserve(s);
+
       for (uint32_t i = 0; i < s; i++) {
         list.emplace_back(SubEntry(b));
       }

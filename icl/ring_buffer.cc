@@ -294,6 +294,8 @@ void RingBuffer::readWorker() {
   // Pass all read request to FTL
   std::vector<LPN> pendingLPNs;
 
+  pendingLPNs.reserve(readPendingQueue.size());
+
   for (auto &iter : readPendingQueue) {
     if (iter.status == CacheStatus::ReadWait) {
       // Collect LPNs to merge
@@ -316,7 +318,7 @@ void RingBuffer::readWorker() {
   for (auto &iter : pendingLPNs) {
     LPN aligned = alignToMinPage(iter);
 
-    if (alignedLPN.back() != aligned) {
+    if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
       alignedLPN.emplace_back(aligned);
     }
   }
@@ -356,6 +358,8 @@ void RingBuffer::readWorker() {
   }
 
   // Submit
+  readWorkerTag.reserve(alignedLPN.size());
+
   for (auto &iter : alignedLPN) {
     // Create request
     uint64_t tag = makeCacheCommandTag();
@@ -566,6 +570,8 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
 
   // Retry requests in writeWaitingQueue
   std::vector<SubCommand *> list;
+
+  list.reserve(writeWaitingQueue.size());
 
   for (auto &iter : writeWaitingQueue) {
     list.emplace_back(iter.scmd);
@@ -1064,6 +1070,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  readWorkerTag.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
 
@@ -1073,6 +1081,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  writeWorkerTag.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
 
@@ -1081,6 +1091,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_SCALAR(in, size);
+
+  flushEvents.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;

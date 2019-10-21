@@ -174,6 +174,8 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
         std::uniform_int_distribution<uint64_t> dist(0, size - 1);
 
         // Collect offsets
+        offsets.reserve(blocksToReclaim);
+
         while (offsets.size() < blocksToReclaim) {
           uint64_t idx = dist(mtengine);
           bool unique = true;
@@ -220,6 +222,8 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
         }
         else {
           // D-Choice
+          valid.reserve(list.size());
+
           for (auto &iter : list) {
             valid.emplace_back(
                 std::make_pair(iter, pMapper->getValidPages(iter)));

@@ -792,6 +792,8 @@ void Rank::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
   RESTORE_SCALAR(in, size);
 
+  cmdList.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     Data::MemCommand::cmds cmd;
     uint8_t bank;
@@ -2359,6 +2361,8 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  addressMap.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     uint64_t f, s;
 
@@ -2369,6 +2373,8 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_SCALAR(in, size);
+
+  isInWriteQueue.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t t;

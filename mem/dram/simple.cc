@@ -179,13 +179,15 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
   RESTORE_SCALAR(in, size);
 
+  addressMap.reserve(size);
+
   for (uint64_t i = 0; i < size; i++) {
     uint64_t a, s;
 
     RESTORE_SCALAR(in, a);
     RESTORE_SCALAR(in, s);
 
-    addressMap.push_back(std::make_pair(a, s));
+    addressMap.emplace_back(std::make_pair(a, s));
   }
 
   scheduler.restoreCheckpoint(in);

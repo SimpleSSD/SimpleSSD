@@ -227,6 +227,8 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, size2);
 
+    cmd.subCommandList.reserve(size2);
+
     for (uint64_t j = 0; j < size2; j++) {
       SubCommand scmd(tag, (uint32_t)j);
 
