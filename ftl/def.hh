@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include "sim/event.hh"
+#include "sim/object.hh"
 #include "util/bitset.hh"
 
 namespace SimpleSSD::FTL {

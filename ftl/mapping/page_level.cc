@@ -169,7 +169,6 @@ void PageLevel::initialize(AbstractFTL *f,
   // Perform filling
   uint64_t nPagesToWarmup;
   uint64_t nPagesToInvalidate;
-  uint64_t nTotalLogicalPages;
   uint64_t maxPagesBeforeGC;
   uint64_t valid;
   uint64_t invalid;
@@ -198,14 +197,14 @@ void PageLevel::initialize(AbstractFTL *f,
   }
 
   debugprint(Log::DebugID::FTL_PageLevel, "Total logical pages: %" PRIu64,
-             nTotalLogicalPages);
+             totalLogicalSuperPages);
   debugprint(Log::DebugID::FTL_PageLevel,
              "Total logical pages to fill: %" PRIu64 " (%.2f %%)",
-             nPagesToWarmup, nPagesToWarmup * 100.f / nTotalLogicalPages);
+             nPagesToWarmup, nPagesToWarmup * 100.f / totalLogicalSuperPages);
   debugprint(Log::DebugID::FTL_PageLevel,
              "Total invalidated pages to create: %" PRIu64 " (%.2f %%)",
              nPagesToInvalidate,
-             nPagesToInvalidate * 100.f / nTotalLogicalPages);
+             nPagesToInvalidate * 100.f / totalLogicalSuperPages);
 
   // Step 1. Filling
   if (mode == Config::FillingType::SequentialSequential ||
@@ -221,7 +220,7 @@ void PageLevel::initialize(AbstractFTL *f,
     // Random
     std::random_device rd;
     std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist(0, nTotalLogicalPages - 1);
+    std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
 
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
@@ -257,7 +256,7 @@ void PageLevel::initialize(AbstractFTL *f,
     // Random
     std::random_device rd;
     std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist(0, nTotalLogicalPages - 1);
+    std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
 
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
@@ -274,13 +273,13 @@ void PageLevel::initialize(AbstractFTL *f,
   debugprint(Log::DebugID::FTL_PageLevel,
              "  Total valid physical pages: %" PRIu64
              " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
-             valid, valid * 100.f / nTotalLogicalPages, nPagesToWarmup,
+             valid, valid * 100.f / totalLogicalSuperPages, nPagesToWarmup,
              (int64_t)(valid - nPagesToWarmup));
   debugprint(Log::DebugID::FTL_PageLevel,
              "  Total invalid physical pages: %" PRIu64
              " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
-             invalid, invalid * 100.f / nTotalLogicalPages, nPagesToInvalidate,
-             (int64_t)(invalid - nPagesToInvalidate));
+             invalid, invalid * 100.f / totalLogicalSuperPages,
+             nPagesToInvalidate, (int64_t)(invalid - nPagesToInvalidate));
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization finished");
 }
 
