@@ -116,9 +116,9 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
 
   setCache(enabled);
 
-  debugprint(Log::DebugID::ICL_SetAssociative, "CREATE  | Capacity %" PRIu64,
+  debugprint(Log::DebugID::ICL_RingBuffer, "CREATE  | Capacity %" PRIu64,
              totalCapacity);
-  debugprint(Log::DebugID::ICL_SetAssociative,
+  debugprint(Log::DebugID::ICL_RingBuffer,
              "CREATE  | Eviction granularity %u pages", evictPages);
 
   // Allocate DRAM for data
