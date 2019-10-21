@@ -47,15 +47,15 @@ void Read::readDone(uint64_t gcid) {
     if (iter.status == Status::Done) {
       completed++;
 
-      offset = (iter.lpn - cmd.offset) * iter.buffer.size() - skipFront;
       size = iter.buffer.size();
+      offset = (iter.lpn - cmd.offset) * size - skipFront;
 
       if (iter.lpn == cmd.offset) {
         offset = 0;
-        size = iter.buffer.size() - skipFront;
+        size -= skipFront;
       }
       if (iter.lpn + 1 == cmd.offset + cmd.length) {
-        size = iter.buffer.size() - skipEnd;
+        size -= skipEnd;
       }
 
       // Start DMA for current subcommand
