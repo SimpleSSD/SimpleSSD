@@ -289,6 +289,11 @@ void Rank::suspend() {
   pwrStatePostRefresh = PowerState::Idle;
 }
 
+bool Rank::forceSelfRefreshExit() const {
+  return (readEntries != 0) ||
+         ((parent->busStateNext == BusState::Write) && (writeEntries != 0));
+}
+
 bool Rank::isQueueEmpty() const {
   bool no_queued_cmds =
       ((parent->busStateNext == BusState::Read) && (readEntries == 0)) ||

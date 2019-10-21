@@ -247,10 +247,7 @@ class Rank : public Object {
   void suspend();
   bool inRefIdleState() const { return refreshState == RefreshState::Idle; }
   bool inPwrIdleState() const { return pwrState == PowerState::Idle; }
-  bool forceSelfRefreshExit() const {
-    return (readEntries != 0) ||
-           ((parent->busStateNext == BusState::Write) && (writeEntries != 0));
-  }
+  bool forceSelfRefreshExit() const;
   bool isQueueEmpty() const;
   void checkDrainDone();
   void flushCmdList();
