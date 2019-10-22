@@ -895,6 +895,10 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
 }
 
 Event CPU::restoreEventID(Event old) noexcept {
+  if (UNLIKELY(old == InvalidEventID)) {
+    return InvalidEventID;
+  }
+
   auto iter = oldEventList.find(old);
 
   if (iter == oldEventList.end()) {

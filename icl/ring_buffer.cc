@@ -1085,6 +1085,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     auto ret = cacheEntry.emplace(offset, Entry(offset, minPages, iobits));
 
     RESTORE_SCALAR(in, ret.first->second.accessedAt);
+    RESTORE_SCALAR(in, ret.first->second.insertedAt);
 
     for (auto &sentry : ret.first->second.list) {
       RESTORE_SCALAR(in, sentry.data);

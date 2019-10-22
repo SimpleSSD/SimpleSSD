@@ -953,7 +953,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->dispatched);
     RESTORE_SCALAR(in, iter->completed);
 
-    requestQueue.push_back(iter->commandID, iter);
+    requestQueue.push_back(iter->getCCID(), iter);
   }
 
   RESTORE_SCALAR(in, size);
@@ -970,7 +970,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->dispatched);
     RESTORE_SCALAR(in, iter->completed);
 
-    dispatchedQueue.push_back(iter->commandID, iter);
+    dispatchedQueue.push_back(iter->getCCID(), iter);
   }
 
   RESTORE_SCALAR(in, size);
@@ -1025,7 +1025,11 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
 SQContext *Arbitrator::getRecoveredRequest(uint32_t id) {
   // Query from dispatchedQueue
-  return dispatchedQueue.find(id)->second;
+  auto iter = dispatchedQueue.find(id);
+
+  panic_if(iter == dispatchedQueue.end(), "Unexpected command tag %08x", id);
+
+  return iter->second;
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -19,6 +19,8 @@ class BasicFTL : public AbstractFTL {
   struct FormatContext {
     Event eid;
     uint64_t data;
+
+    FormatContext() : eid(InvalidEventID), data(0) {}
   };
 
   bool gcInProgress;
