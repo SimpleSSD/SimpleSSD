@@ -481,9 +481,13 @@ uint64_t CPU::getTick() noexcept {
   return engine->getTick();
 }
 
-Event CPU::createEvent(const EventFunction &func,
-                       const std::string &name) noexcept {
+#ifdef SIMPLESSD_DEBUG
+Event CPU::createEvent(EventFunction &&func, std::string &&name) noexcept {
   Event eid = new EventData(std::move(func), std::move(name));
+#else
+Event CPU::createEvent(EventFunction &&func, std::string &&) noexcept {
+  Event eid = new EventData(std::move(func));
+#endif
 
   if (UNLIKELY(engine->getTick() != 0)) {
     panic_log("All Event should be created in constructor (time = 0).");
@@ -505,8 +509,13 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
   }
 
   if (UNLIKELY(eid->isScheduled())) {
+#ifdef SIMPLESSD_DEBUG
     panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
               eid->name.c_str(), eid->scheduledAt);
+#else
+    panic_log("Event %" PRIx64 "h already scheduled at %" PRIu64, eid,
+              eid->scheduledAt);
+#endif
   }
 
   // Determine core number range
@@ -559,8 +568,13 @@ void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
   }
 
   if (UNLIKELY(eid->isScheduled())) {
+#ifdef SIMPLESSD_DEBUG
     panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
               eid->name.c_str(), eid->scheduledAt);
+#else
+    panic_log("Event %" PRIx64 "h already scheduled at %" PRIu64, eid,
+              eid->scheduledAt);
+#endif
   }
 
   auto insert = jobQueue.end();

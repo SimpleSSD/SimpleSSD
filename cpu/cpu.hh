@@ -161,8 +161,7 @@ class CPU {
    * \param[in] name  Description of the event
    * \return Event ID
    */
-  Event createEvent(const EventFunction &func,
-                    const std::string &name) noexcept;
+  Event createEvent(EventFunction &&func, std::string &&name) noexcept;
 
   /**
    * \brief Schedule function
@@ -260,7 +259,9 @@ class EventData {
   friend CPU::CPU;
 
   EventFunction func;
+#ifdef SIMPLESSD_DEBUG
   std::string name;
+#endif
 
   uint64_t scheduledAt;
 
@@ -273,10 +274,15 @@ class EventData {
   }
 
  public:
-  EventData(const EventFunction &f, const std::string &s)
+#ifdef SIMPLESSD_DEBUG
+  EventData(EventFunction &&f, std::string &&s)
       : func(std::move(f)),
         name(std::move(s)),
         scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+#else
+  EventData(EventFunction &&f)
+      : func(std::move(f)), scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+#endif
   EventData(const EventData &) = delete;
   EventData(EventData &&) noexcept = delete;
 

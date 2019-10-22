@@ -126,7 +126,7 @@ class Object {
   /* Helper APIs for CPU */
   inline uint64_t getTick() noexcept { return object.cpu->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
-    return object.cpu->createEvent(ef, s);
+    return object.cpu->createEvent(std::move(ef), std::move(s));
   }
   inline void scheduleFunction(CPU::CPUGroup g, Event e,
                                const CPU::Function &f) noexcept {
