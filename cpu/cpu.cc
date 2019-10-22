@@ -114,6 +114,7 @@ void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
   uint64_t busy = func.cycles * clockPeriod;
 
   busyUntil = beginAt + busy;
+  instructionStat += func;
   eventStat.busy += busy;
   eventStat.handledFunction++;
 
