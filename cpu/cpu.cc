@@ -436,12 +436,13 @@ void CPU::dispatch(uint64_t now) {
 
   // Find event to dispatch
   for (auto job = jobQueue.begin(); job != jobQueue.end();) {
-    if (job->scheduledAt <= now) {
+    if (job->eid->scheduledAt <= now) {
       EventData *eptr = job->eid;
       uint64_t data = job->data;
 
       job = jobQueue.erase(job);
 
+      eptr->deschedule();
       eptr->func(now, data);
     }
     else {
@@ -465,7 +466,7 @@ void CPU::scheduleNext() {
   auto job = jobQueue.begin();
 
   if (job != jobQueue.end()) {
-    next = MIN(next, job->scheduledAt);
+    next = MIN(next, job->eid->scheduledAt);
   }
 
   // Schedule next dispatch
@@ -501,6 +502,11 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
 
   if (UNLIKELY(eid == InvalidEventID)) {
     return;
+  }
+
+  if (UNLIKELY(eid->isScheduled())) {
+    panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
+              eid->name.c_str(), eid->scheduledAt);
   }
 
   // Determine core number range
@@ -552,22 +558,31 @@ void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
     panic_log("Invalid tick %" PRIu64, tick);
   }
 
+  if (UNLIKELY(eid->isScheduled())) {
+    panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
+              eid->name.c_str(), eid->scheduledAt);
+  }
+
   auto insert = jobQueue.end();
 
   for (auto entry = jobQueue.begin(); entry != jobQueue.end(); ++entry) {
-    if (entry->scheduledAt > tick) {
+    if (entry->eid->scheduledAt > tick) {
       insert = entry;
 
       break;
     }
   }
 
-  jobQueue.emplace(insert, Job(eid, data, tick));
+  eid->scheduledAt = tick;
+
+  jobQueue.emplace(insert, Job(eid, data));
 
   scheduleNext();
 }
 
 void CPU::deschedule(Event eid) noexcept {
+  eid->deschedule();
+
   for (auto iter = jobQueue.begin(); iter != jobQueue.end(); ++iter) {
     if (iter->eid == eid) {
       jobQueue.erase(iter);
@@ -578,23 +593,11 @@ void CPU::deschedule(Event eid) noexcept {
 }
 
 bool CPU::isScheduled(Event eid) noexcept {
-  for (auto &iter : jobQueue) {
-    if (iter.eid == eid) {
-      return true;
-    }
-  }
-
-  return false;
+  return eid->scheduledAt != std::numeric_limits<uint64_t>::max();
 }
 
 uint64_t CPU::when(Event eid) noexcept {
-  for (auto &iter : jobQueue) {
-    if (iter.eid == eid) {
-      return iter.scheduledAt;
-    }
-  }
-
-  return std::numeric_limits<uint64_t>::max();
+  return eid->scheduledAt;
 }
 
 void CPU::destroyEvent(Event) noexcept {
@@ -703,7 +706,7 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
   for (auto &job : jobQueue) {
     BACKUP_EVENT(out, job.eid);
     BACKUP_SCALAR(out, job.data);
-    BACKUP_SCALAR(out, job.scheduledAt);
+    BACKUP_SCALAR(out, job.eid->scheduledAt);
   }
 }
 
@@ -748,7 +751,8 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, data);
     RESTORE_SCALAR(in, scheduledAt);
 
-    jobQueue.emplace_back(Job(eid, data, scheduledAt));
+    eid->scheduledAt = scheduledAt;
+    jobQueue.emplace_back(Job(eid, data));
   }
 }
 

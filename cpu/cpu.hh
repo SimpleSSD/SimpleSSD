@@ -105,9 +105,8 @@ class CPU {
    public:
     Event eid;
     uint64_t data;
-    uint64_t scheduledAt;
 
-    Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), scheduledAt(t) {}
+    Job(Event e, uint64_t d) : eid(e), data(d) {}
   };
 
   Engine *engine;        //!< Simulation engine
@@ -263,9 +262,21 @@ class EventData {
   EventFunction func;
   std::string name;
 
+  uint64_t scheduledAt;
+
+  inline bool isScheduled() {
+    return scheduledAt != std::numeric_limits<uint64_t>::max();
+  }
+
+  inline void deschedule() {
+    scheduledAt = std::numeric_limits<uint64_t>::max();
+  }
+
  public:
   EventData(const EventFunction &f, const std::string &s)
-      : func(std::move(f)), name(std::move(s)) {}
+      : func(std::move(f)),
+        name(std::move(s)),
+        scheduledAt(std::numeric_limits<uint64_t>::max()) {}
   EventData(const EventData &) = delete;
   EventData(EventData &&) noexcept = delete;
 
