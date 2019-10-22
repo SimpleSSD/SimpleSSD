@@ -13,8 +13,8 @@ Convert::Convert(ObjectData &o, uint64_t lpn, uint64_t lba) : Object(o) {
   panic_if(popcount64((uint64_t)lpn) != 1, "Invalid logical page size.");
   panic_if(popcount64(lba) != 1, "Invalid logical block size.");
 
-  lpnOrder = ffs64((uint64_t)lpn) - 1;
-  lbaOrder = ffs64(lba) - 1;
+  lpnOrder = ctz64((uint64_t)lpn);
+  lbaOrder = ctz64(lba);
   shift = lpnOrder - lbaOrder;
   mask = (1ull << (shift >= 0 ? shift : -shift)) - 1;
 }
