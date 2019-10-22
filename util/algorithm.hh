@@ -20,14 +20,16 @@
 
 #include <cstdlib>
 
-#define bswap16 _byteswap_ushort
-#define bswap32 _byteswap_ulong
-#define bswap64 _byteswap_uint64
-#define popcount16 __popcnt16
-#define popcount32 __popcnt
-#define popcount64 __popcnt64
+#define bswap16(x) _byteswap_ushort((uint16_t)(x))
+#define bswap32(x) _byteswap_ulong((uint32_t)(x))
+#define bswap64(x) _byteswap_uint64((uint64_t)(x))
+#define popcount8(x) __popcnt16((uint16_t)(x))
+#define popcount16(x) __popcnt16((uint16_t)(x))
+#define popcount32(x) __popcnt((uint32_t)(x))
+#define popcount64(x) __popcnt64((uint64_t)(x))
 
-#define clz16 clz32
+#define clz8(x) clz32((uint32_t)0xFFFFFF00 | (uint32_t)(x))
+#define clz16(x) clz32((uint32_t)0xFFFF0000 | (uint32_t)(x))
 
 inline uint32_t clz32(uint32_t val) {
   unsigned long leadingZero = 0;
@@ -49,26 +51,27 @@ inline uint32_t clz64(uint32_t val) {
   return 64;
 }
 
-#define ffs16 ffs32
+#define ctz8(x) ctz32((uint32_t)(x))
+#define ctz16(x) ctz32((uint32_t)(x))
 
-inline uint32_t ffs32(uint32_t val) {
+inline uint32_t ctz32(uint32_t val) {
   unsigned long trailingZero = 0;
 
   if (_BitScanForward(&trailingZero, val)) {
-    return trailingZero + 1;
+    return trailingZero;
   }
 
-  return 0;
+  return 64;
 }
 
-inline uint64_t ffs64(uint64_t val) {
+inline uint64_t ctz64(uint64_t val) {
   unsigned long trailingZero = 0;
 
   if (_BitScanForward64(&trailingZero, val)) {
-    return trailingZero + 1;
+    return trailingZero;
   }
 
-  return 0;
+  return 64;
 }
 
 #define LIKELY
@@ -79,21 +82,24 @@ inline uint64_t ffs64(uint64_t val) {
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 
-#define popcount16 __builtin_popcount
-#define popcount32 __builtin_popcount
-#define clz16 __builtin_clz
-#define clz32 __builtin_clz
-#define ffs16 __builtin_ffs
-#define ffs32 __builtin_ffs
+#define popcount8(x) __builtin_popcount((uint32_t)(x))
+#define popcount16(x) __builtin_popcount((uint32_t)(x))
+#define popcount32(x) __builtin_popcount((uint32_t)(x))
+#define clz8(x) __builtin_clz((uint32_t)0xFFFFFF00 | (uint32_t)(x))
+#define clz16(x) __builtin_clz((uint32_t)0xFFFF0000 | (uint32_t)(x))
+#define clz32(x) __builtin_clz((uint32_t)(x))
+#define ctz8(x) __builtin_ctz((uint32_t)(x))
+#define ctz16(x) __builtin_ctz((uint32_t)(x))
+#define ctz32(x) __builtin_ctz((uint32_t)(x))
 
 #if __WORDSIZE == 64
-#define popcount64 __builtin_popcountl
-#define clz64 __builtin_clzl
-#define ffs64 __builtin_ffsl
+#define popcount64(x) __builtin_popcountl((uint64_t)(x))
+#define clz64(x) __builtin_clzl((uint64_t)(x))
+#define ctz64(x) __builtin_ctzl((uint64_t)(x))
 #else
-#define popcount64 __builtin_popcountll
-#define clz64 __builtin_clzll
-#define ffs64 __builtin_ffsll
+#define popcount64(x) __builtin_popcountll((uint64_t)(x))
+#define clz64(x) __builtin_clzll((uint64_t)(x))
+#define ctz64(x) __builtin_ctzll((uint64_t)(x))
 #endif
 
 #endif
@@ -114,30 +120,5 @@ inline uint64_t ffs64(uint64_t val) {
 #define HIGH16(v32) ((uint16_t)(v32 >> 16))
 #define LOW32(v64) ((uint32_t)v64)
 #define LOW16(v32) ((uint16_t)v32)
-
-namespace SimpleSSD {
-
-inline uint64_t generateMask(uint32_t val, uint32_t &count) {
-  uint64_t mask = (uint64_t)-1;
-  uint32_t tmp = 0;
-
-  if (val > 0) {
-    int shift = clz32(val);
-
-    if (shift + ffs32(val) == 64) {
-      shift++;
-    }
-
-    tmp = 64 - shift;
-    mask = (mask << tmp);
-  }
-
-  mask = (~mask) << count;
-  count += tmp;
-
-  return mask;
-}
-
-}  // namespace SimpleSSD
 
 #endif

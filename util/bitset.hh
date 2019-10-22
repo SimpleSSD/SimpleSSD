@@ -58,8 +58,8 @@ class Bitset {
 
   uint32_t clz() noexcept;  // Leading zero
   uint32_t clz() const noexcept;
-  uint32_t ffs() noexcept;  // Trailing zero
-  uint32_t ffs() const noexcept;
+  uint32_t ctz() noexcept;  // Trailing zero
+  uint32_t ctz() const noexcept;
 
   uint32_t count() noexcept;
   uint32_t count() const noexcept;

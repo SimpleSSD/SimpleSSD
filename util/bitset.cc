@@ -100,14 +100,14 @@ uint32_t Bitset::clz() const noexcept {
     ret++;
   }
 
-  return (ret << 3) + clz16(data[i]);
+  return (ret << 3) + clz8(data[i]);
 }
 
-uint32_t Bitset::ffs() noexcept {
-  return const_cast<const Bitset *>(this)->ffs();
+uint32_t Bitset::ctz() noexcept {
+  return const_cast<const Bitset *>(this)->ctz();
 }
 
-uint32_t Bitset::ffs() const noexcept {
+uint32_t Bitset::ctz() const noexcept {
   uint32_t ret = 0;
   auto data = getBuffer();
 
@@ -126,7 +126,7 @@ uint32_t Bitset::ffs() const noexcept {
     return dataSize;
   }
 
-  return (ret << 3) + ffs16(data[i]);
+  return (ret << 3) + ctz8(data[i]);
 }
 
 bool Bitset::none() const noexcept {
