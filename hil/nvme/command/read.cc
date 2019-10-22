@@ -40,13 +40,10 @@ void Read::readDone(uint64_t gcid) {
   uint32_t size = 0;
   uint32_t skipFront = cmd.subCommandList.front().skipFront;
   uint32_t skipEnd = cmd.subCommandList.back().skipEnd;
-  uint32_t completed = 0;
 
   // Find completed subcommand
   for (auto &iter : cmd.subCommandList) {
     if (iter.status == Status::Done) {
-      completed++;
-
       size = iter.buffer.size();
       offset = (iter.lpn - cmd.offset) * size - skipFront;
 
@@ -58,15 +55,18 @@ void Read::readDone(uint64_t gcid) {
         size -= skipEnd;
       }
 
+      debugprint_command(tag, "DMA write to %" PRIx64 "h + %" PRIx64 "h",
+                         offset, size);
+
       // Start DMA for current subcommand
       tag->dmaEngine->write(tag->dmaTag, offset, size,
                             iter.buffer.data() + iter.skipFront,
                             dmaCompleteEvent, gcid);
-    }
-  }
 
-  if (completed == cmd.subCommandList.size()) {
-    cmd.status = Status::Done;
+      iter.status = Status::DMA;
+
+      break;
+    }
   }
 }
 
@@ -76,7 +76,22 @@ void Read::dmaComplete(uint64_t gcid) {
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
 
-  if (cmd.status == Status::Done) {
+  uint32_t completed = 0;
+
+  for (auto &iter : cmd.subCommandList) {
+    if (iter.status == Status::DMA) {
+      completed++;
+
+      iter.status = Status::Complete;
+
+      break;
+    }
+    else if (iter.status == Status::Complete) {
+      completed++;
+    }
+  }
+
+  if (completed == cmd.subCommandList.size()) {
     // Done
     auto now = getTick();
 

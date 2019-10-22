@@ -57,6 +57,13 @@ void Compare::readNVMDone(uint64_t gcid) {
   for (auto &iter : cmd.subCommandList) {
     if (iter.status == Status::Done) {
       completed++;
+
+      iter.status = Status::Complete;
+
+      break;
+    }
+    else if (iter.status == Status::Complete) {
+      completed++;
     }
   }
 

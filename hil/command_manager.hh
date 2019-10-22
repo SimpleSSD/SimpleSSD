@@ -22,6 +22,7 @@ enum class Status : uint8_t {
   DMA,      // Sub command is in DMA
   Submit,   // Sub command issued to HIL
   Done,     // Sub command completed
+  Complete, // Sub command marked as complete
 
   InternalCache,      // Sub command is in ICL
   InternalCacheDone,  // Sub command is completed in ICL
