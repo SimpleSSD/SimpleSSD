@@ -121,7 +121,7 @@ const PPN InvalidPPN = std::numeric_limits<PPN>::max();
  */
 class Object {
  protected:
-  ObjectData object;
+  ObjectData &object;
 
   /* Helper APIs for CPU */
   inline uint64_t getTick() noexcept { return object.cpu->getTick(); }
