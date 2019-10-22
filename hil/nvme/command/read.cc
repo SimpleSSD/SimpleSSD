@@ -55,9 +55,6 @@ void Read::readDone(uint64_t gcid) {
         size -= skipEnd;
       }
 
-      debugprint_command(tag, "DMA write to %" PRIx64 "h + %" PRIx64 "h",
-                         offset, size);
-
       // Start DMA for current subcommand
       tag->dmaEngine->write(tag->dmaTag, offset, size,
                             iter.buffer.data() + iter.skipFront,
