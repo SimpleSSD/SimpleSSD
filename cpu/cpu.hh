@@ -11,6 +11,7 @@
 #define __SIMPLESSD_CPU_CPU_HH__
 
 #include <cstdarg>
+#include <deque>
 #include <unordered_map>
 
 #include "lib/mcpat/mcpat.h"
@@ -60,8 +61,9 @@ class Function {
 
   Function &operator+=(const Function &);
 
-  uint64_t sum();
-  void clear();
+  inline uint64_t sum();
+  inline void clear();
+  inline void dummy();
 };
 
 /**
@@ -91,22 +93,42 @@ class CPU {
     }
   };
 
-  class Core {
-   public:
-    uint64_t busyUntil;
-
-    EventStat eventStat;
-    Function instructionStat;
-
-    Core() : busyUntil(0) {}
-  };
-
   class Job {
    public:
     Event eid;
     uint64_t data;
+    uint64_t endAt;
 
     Job(Event e, uint64_t d) : eid(e), data(d) {}
+    Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), endAt(t) {}
+  };
+
+  class Core {
+   private:
+    CPU *parent;
+
+    uint64_t busyUntil;
+    uint64_t clockPeriod;
+
+    EventStat eventStat;
+    Function instructionStat;
+
+    Event jobEvent;
+
+    std::deque<Job> jobQueue;
+
+    void handleJob();
+
+   public:
+    Core();
+
+    void init(CPU *, uint32_t, uint64_t) noexcept;
+
+    uint64_t getBusyUntil() noexcept;
+    EventStat &getEventStat() noexcept;
+    Function &getInstructionStat() noexcept;
+
+    void submitJob(Event, uint64_t, uint64_t, Function &);
   };
 
   Engine *engine;        //!< Simulation engine
@@ -178,7 +200,7 @@ class CPU {
    * \param[in] data  Data to pass (this should be value, not pointer)
    */
   void schedule(CPUGroup group, Event eid, uint64_t data,
-                const Function &func) noexcept;
+                Function &func) noexcept;
 
   /**
    * \brief Schedule event

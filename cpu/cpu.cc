@@ -56,8 +56,72 @@ void Function::clear() {
   cycles = 0;
 }
 
+void Function::dummy() {
+  cycles = 5000;
+}
+
 Function initFunction() {
-  return Function();
+  // Make dummy function
+  auto fstat = Function();
+
+  fstat.dummy();
+
+  return std::move(fstat);
+}
+
+CPU::Core::Core() : busyUntil(0), jobEvent(InvalidEventID) {}
+
+void CPU::Core::handleJob() {
+  auto job = std::move(jobQueue.front());
+  jobQueue.pop_front();
+
+  // Function is completed!
+  job.eid->func(parent->getTick(), job.data);
+
+  // Schedule next
+  if (jobQueue.size() > 0) {
+    parent->scheduleAbs(jobEvent, 0ull, jobQueue.front().endAt);
+  }
+}
+
+void CPU::Core::init(CPU *p, uint32_t n, uint64_t period) noexcept {
+  parent = p;
+  clockPeriod = period;
+
+  jobEvent = parent->createEvent(
+      [this](uint64_t, uint64_t) { handleJob(); },
+      "CPU::CPU::Core<" + std::to_string(n) + ">::jobEvent");
+}
+
+uint64_t CPU::Core::getBusyUntil() noexcept {
+  return busyUntil;
+}
+
+CPU::EventStat &CPU::Core::getEventStat() noexcept {
+  return eventStat;
+}
+
+Function &CPU::Core::getInstructionStat() noexcept {
+  return instructionStat;
+}
+
+void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
+                          Function &func) {
+  // Maybe core has running job
+  uint64_t beginAt = MAX(curTick, busyUntil);
+
+  // Current job runs after previous job
+  uint64_t busy = func.cycles * clockPeriod;
+
+  busyUntil = beginAt + busy;
+  eventStat.busy += busy;
+  eventStat.handledFunction++;
+
+  if (jobQueue.size() == 0) {
+    parent->scheduleAbs(jobEvent, 0ull, busyUntil);
+  }
+
+  jobQueue.emplace_back(Job(eid, data, busyUntil));
 }
 
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
@@ -74,6 +138,10 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
   uint16_t totalCore = hilCore + iclCore + ftlCore;
 
   coreList.resize(totalCore);
+
+  for (uint32_t i = 0; i < totalCore; i++) {
+    coreList.at(i).init(this, i, clockPeriod);
+  }
 
   engine->setFunction(
       [this](uint64_t tick, uint64_t) { dispatch(tick); },
@@ -272,14 +340,16 @@ void CPU::calculatePower(Power &power) {
   coreIdx = 0;
 
   for (auto &core : coreList) {
-    param.sys.core[coreIdx].total_instructions = core.instructionStat.sum();
-    param.sys.core[coreIdx].int_instructions = core.instructionStat.arithmetic;
-    param.sys.core[coreIdx].fp_instructions =
-        core.instructionStat.floatingPoint;
-    param.sys.core[coreIdx].branch_instructions = core.instructionStat.branch;
-    param.sys.core[coreIdx].load_instructions = core.instructionStat.load;
-    param.sys.core[coreIdx].store_instructions = core.instructionStat.store;
-    param.sys.core[coreIdx].busy_cycles = core.eventStat.busy / clockPeriod;
+    auto &inst = core.getInstructionStat();
+    auto &evt = core.getEventStat();
+
+    param.sys.core[coreIdx].total_instructions = inst.sum();
+    param.sys.core[coreIdx].int_instructions = inst.arithmetic;
+    param.sys.core[coreIdx].fp_instructions = inst.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = inst.branch;
+    param.sys.core[coreIdx].load_instructions = inst.load;
+    param.sys.core[coreIdx].store_instructions = inst.store;
+    param.sys.core[coreIdx].busy_cycles = evt.busy / clockPeriod;
 
     coreIdx++;
   }
@@ -420,9 +490,10 @@ CPU::Core *CPU::getIdleCoreInRange(uint16_t begin, uint16_t end) {
 
   for (uint16_t i = begin; i < end; i++) {
     auto *core = &coreList.at(i);
+    auto busy = core->getBusyUntil();
 
-    if (minBusy > core->busyUntil) {
-      minBusy = core->busyUntil;
+    if (minBusy > busy) {
+      minBusy = busy;
       ret = core;
     }
   }
@@ -499,23 +570,13 @@ Event CPU::createEvent(EventFunction &&func, std::string &&) noexcept {
 }
 
 void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
-                   const Function &func) noexcept {
+                   Function &func) noexcept {
   uint16_t begin = 0;
   uint16_t end = hilCore;
   uint64_t curTick = engine->getTick();
 
   if (UNLIKELY(eid == InvalidEventID)) {
     return;
-  }
-
-  if (UNLIKELY(eid->isScheduled())) {
-#ifdef SIMPLESSD_DEBUG
-    panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
-              eid->name.c_str(), eid->scheduledAt);
-#else
-    panic_log("Event %" PRIx64 "h already scheduled at %" PRIu64, eid,
-              eid->scheduledAt);
-#endif
   }
 
   // Determine core number range
@@ -540,17 +601,8 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
     panic_log("Unexpected null-pointer while schedule.");
   }
 
-  // Maybe core has running job
-  uint64_t beginAt = MAX(curTick, core->busyUntil);
-
-  // Current job runs after previous job
-  uint64_t busy = func.cycles * clockPeriod;
-
-  core->busyUntil = beginAt + busy;
-  core->eventStat.busy += busy;
-  core->eventStat.handledFunction++;
-
-  scheduleAbs(eid, data, core->busyUntil);
+  // Submit job
+  core->submitJob(eid, data, curTick, func);
 }
 
 void CPU::schedule(Event eid, uint64_t data, uint64_t delay) noexcept {
@@ -677,14 +729,17 @@ void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
 
 void CPU::getStatValues(std::vector<double> &values) noexcept {
   for (auto &core : coreList) {
-    values.push_back(core.eventStat.busy);
-    values.push_back(core.eventStat.handledFunction);
-    values.push_back(core.instructionStat.branch);
-    values.push_back(core.instructionStat.load);
-    values.push_back(core.instructionStat.store);
-    values.push_back(core.instructionStat.arithmetic);
-    values.push_back(core.instructionStat.floatingPoint);
-    values.push_back(core.instructionStat.otherInsts);
+    auto &inst = core.getInstructionStat();
+    auto &evt = core.getEventStat();
+
+    values.push_back(evt.busy);
+    values.push_back(evt.handledFunction);
+    values.push_back(inst.branch);
+    values.push_back(inst.load);
+    values.push_back(inst.store);
+    values.push_back(inst.arithmetic);
+    values.push_back(inst.floatingPoint);
+    values.push_back(inst.otherInsts);
   }
 }
 
@@ -692,8 +747,8 @@ void CPU::resetStatValues() noexcept {
   lastResetStat = getTick();
 
   for (auto &core : coreList) {
-    core.eventStat.clear();
-    core.instructionStat.clear();
+    core.getEventStat().clear();
+    core.getInstructionStat().clear();
   }
 }
 

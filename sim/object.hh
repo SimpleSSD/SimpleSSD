@@ -129,11 +129,11 @@ class Object {
     return object.cpu->createEvent(std::move(ef), std::move(s));
   }
   inline void scheduleFunction(CPU::CPUGroup g, Event e,
-                               const CPU::Function &f) noexcept {
+                               CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, 0, f);
   }
   inline void scheduleFunction(CPU::CPUGroup g, Event e, uint64_t d,
-                               const CPU::Function &f) noexcept {
+                               CPU::Function &f) noexcept {
     object.cpu->schedule(g, e, d, f);
   }
   inline void scheduleNow(Event e, uint64_t c = 0) noexcept {
