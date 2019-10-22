@@ -612,7 +612,7 @@ Event CPU::createEvent(EventFunction &&func, std::string &&) noexcept {
     panic_log("All Event should be created in constructor (time = 0).");
   }
 
-  eventList.push_back(eid);
+  eventList.emplace_back(eid);
 
   return eid;
 }
@@ -707,7 +707,7 @@ void CPU::deschedule(Event eid) noexcept {
 }
 
 bool CPU::isScheduled(Event eid) noexcept {
-  return eid->scheduledAt != std::numeric_limits<uint64_t>::max();
+  return eid->isScheduled();
 }
 
 uint64_t CPU::when(Event eid) noexcept {
