@@ -50,12 +50,14 @@ class AbstractAllocator : public Object {
   virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
   virtual void reclaimBlocks(PPN, Event) = 0;
 
-  virtual PPN getSuperParallelismIndex(PPN ppn) {
-    return (ppn % param->parallelism) / param->superpage;
+  //! PPN -> parallelism
+  virtual inline PPN getParallelismFromPPN(PPN sppn) {
+    return sppn % param->parallelism;
   }
 
-  virtual inline PPN getParallelismIndex(PPN ppn) {
-    return ppn % param->parallelism;
+  //! SPPN -> parallelism
+  virtual inline PPN getParallelismFromSPPN(PPN sppn) {
+    return sppn % (param->parallelism / param->superpage);
   }
 };
 

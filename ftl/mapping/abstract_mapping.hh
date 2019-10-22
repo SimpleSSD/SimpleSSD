@@ -127,48 +127,31 @@ class AbstractMapping : public Object {
 
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  virtual inline LPN getLogicalBlockIndex(LPN lpn) {
-    return lpn % param.totalLogicalBlocks;
-  }
-
-  virtual inline LPN getLogicalPageIndex(LPN lpn) {
-    return lpn / param.totalLogicalBlocks;
-  }
-
-  virtual inline LPN getLogicalSuperBlockIndex(LPN lpn) {
-    return (lpn % param.totalLogicalBlocks) / param.superpage;
-  }
-
-  virtual inline LPN getLogicalSuperPageIndex(LPN lpn) {
-    return lpn % param.superpage;
-  }
-
-  virtual inline PPN getPhysicalBlockIndex(PPN ppn) {
-    return ppn % param.totalPhysicalBlocks;
-  }
-
-  virtual inline PPN getPhysicalPageIndex(PPN ppn) {
-    return ppn / param.totalPhysicalBlocks;
-  }
-
-  virtual inline PPN getPhysicalSuperBlockIndex(PPN ppn) {
-    return (ppn % param.totalPhysicalBlocks) / param.superpage;
-  }
-
-  virtual inline PPN getPhysicalPageIndexInSuperPage(PPN ppn) {
+  //! PPN -> SPIndex (Page index in superpage)
+  virtual inline PPN getSPIndexFromPPN(PPN ppn) {
     return ppn % param.superpage;
   }
 
-  virtual inline PPN makePPNIndex(PPN block, PPN page) {
-    return block + page * param.totalPhysicalBlocks;
+  //! SLPN -> LPN
+  virtual inline LPN getSLPNfromLPN(LPN slpn) { return slpn / param.superpage; }
+
+  //! SPPN -> SBLK
+  virtual inline PPN getSBFromSPPN(PPN sppn) {
+    return sppn % (param.totalPhysicalBlocks / param.superpage);
   }
 
-  virtual inline PPN makeSPPNIndex(PPN superblock, PPN page) {
+  //! SPPN -> Page (Page index in (super)block)
+  virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
+    return sppn / (param.totalPhysicalBlocks / param.superpage);
+  }
+
+  //! SBLK/Page -> SPPN
+  virtual inline PPN makeSPPN(PPN superblock, PPN page) {
     return superblock + page * (param.totalPhysicalBlocks / param.superpage);
   }
 
-  virtual inline PPN makePPNSuperIndex(PPN superblock, PPN superpage,
-                                       PPN page) {
+  //! SBLK/SPIndex/Page -> PPN
+  virtual inline PPN makePPN(PPN superblock, PPN superpage, PPN page) {
     return superblock * param.superpage + superpage +
            page * param.totalPhysicalBlocks;
   }

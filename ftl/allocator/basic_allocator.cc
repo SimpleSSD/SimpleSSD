@@ -71,7 +71,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
-    idx = getParallelismIndex(blockUsed);
+    idx = getParallelismFromSPPN(blockUsed);
 
     panic_if(inUseBlockMap[idx].blockID != blockUsed, "Unexpected block ID.");
 
@@ -259,7 +259,7 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
       iter->erasedCount++;
 
       // Push to free block list
-      PPN idx = getSuperParallelismIndex(blockID);
+      PPN idx = getParallelismFromSPPN(blockID);
       auto fb = freeBlocks[idx].begin();
 
       for (; fb != freeBlocks[idx].end(); ++fb) {

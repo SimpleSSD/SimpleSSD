@@ -87,8 +87,8 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   if (validEntry.test(lpn)) {
     // This is valid entry, invalidate block
     PPN old = readEntry(lpn);
-    PPN block = getPhysicalSuperBlockIndex(old);
-    PPN page = getPhysicalPageIndex(old);
+    PPN block = getSBFromSPPN(old);
+    PPN page = getPageIndexFromSPPN(old);
 
     blockMetadata[block].validPages.reset(page);
   }
@@ -111,7 +111,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
 
   // Get new page
   block->validPages.set(block->nextPageToWrite);
-  ppn = makeSPPNIndex(block->blockID, block->nextPageToWrite++);
+  ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
 
   // Write entry
   writeEntry(lpn, ppn);
@@ -130,9 +130,9 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
 
     // Invalidate block
     old = readEntry(lpn);
-    PPN index = getPhysicalPageIndex(old);
+    PPN index = getPageIndexFromSPPN(old);
 
-    blockMetadata[getPhysicalSuperBlockIndex(old)].validPages.reset(index);
+    blockMetadata[getSBFromSPPN(old)].validPages.reset(index);
   }
 
   return std::move(fstat);
@@ -304,7 +304,7 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
 }
 
 uint32_t PageLevel::getValidPages(PPN ppn) {
-  return blockMetadata[getPhysicalSuperBlockIndex(ppn)].validPages.count();
+  return blockMetadata[getSBFromSPPN(ppn)].validPages.count();
 }
 
 void PageLevel::readMapping(Command &cmd, Event eid) {
@@ -417,8 +417,8 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
       auto &copycmd = commandManager->createFTLCommand(tag);
 
       for (uint64_t j = 0; j < param.superpage; j++) {
-        commandManager->appendTranslation(
-            copycmd, InvalidLPN, makePPNSuperIndex(copy.blockID, j, i));
+        commandManager->appendTranslation(copycmd, InvalidLPN,
+                                          makePPN(copy.blockID, j, i));
       }
 
       copy.commandList.emplace_back(tag);
@@ -431,7 +431,7 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
 
   for (uint32_t i = 0; i < param.superpage; i++) {
     commandManager->appendTranslation(erasecmd, InvalidLPN,
-                                      makePPNSuperIndex(copy.blockID, i, 0));
+                                      makePPN(copy.blockID, i, 0));
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);

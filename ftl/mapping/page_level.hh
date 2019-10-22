@@ -117,6 +117,18 @@ class PageLevel : public AbstractMapping {
   void getCopyList(CopyList &, Event) override;
   void releaseCopyList(CopyList &) override;
 
+  inline PPN getSBFromSPPN(PPN sppn) override {
+    return sppn % totalPhysicalSuperBlocks;
+  }
+
+  inline PPN getPageIndexFromSPPN(PPN sppn) override {
+    return sppn / totalPhysicalSuperBlocks;
+  }
+
+  inline PPN makeSPPN(PPN superblock, PPN page) override {
+    return superblock + page * totalPhysicalSuperBlocks;
+  }
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
