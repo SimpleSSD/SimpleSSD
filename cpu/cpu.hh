@@ -129,6 +129,9 @@ class CPU {
     Function &getInstructionStat() noexcept;
 
     void submitJob(Event, uint64_t, uint64_t, Function &);
+
+    void createCheckpoint(std::ostream &) const;
+    void restoreCheckpoint(std::istream &);
   };
 
   Engine *engine;        //!< Simulation engine

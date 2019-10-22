@@ -124,6 +124,53 @@ void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
   jobQueue.emplace_back(Job(eid, data, busyUntil));
 }
 
+void CPU::Core::createCheckpoint(std::ostream &out) const {
+  BACKUP_SCALAR(out, busyUntil);
+  BACKUP_SCALAR(out, clockPeriod);
+
+  BACKUP_BLOB(out, &eventStat, sizeof(EventStat));
+  BACKUP_BLOB(out, &instructionStat, sizeof(Function));
+
+  BACKUP_EVENT(out, jobEvent);
+
+  uint64_t size = jobQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &job : jobQueue) {
+    BACKUP_EVENT(out, job.eid);
+    BACKUP_SCALAR(out, job.data);
+    BACKUP_SCALAR(out, job.endAt);
+  }
+}
+
+void CPU::Core::restoreCheckpoint(std::istream &in) {
+  RESTORE_SCALAR(in, busyUntil);
+  RESTORE_SCALAR(in, clockPeriod);
+
+  RESTORE_BLOB(in, &eventStat, sizeof(EventStat));
+  RESTORE_BLOB(in, &instructionStat, sizeof(Function));
+
+  RESTORE_SCALAR(in, jobEvent);
+  jobEvent = parent->restoreEventID(jobEvent);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    Event eid;
+    uint64_t data;
+    uint64_t endAt;
+
+    RESTORE_SCALAR(in, eid);
+    eid = parent->restoreEventID(eid);
+
+    RESTORE_SCALAR(in, data);
+    RESTORE_SCALAR(in, endAt);
+
+    jobQueue.emplace_back(Job(eid, data, endAt));
+  }
+}
+
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
     : engine(e), config(c), log(l), lastResetStat(0), lastScheduledAt(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
@@ -769,6 +816,10 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter);
   }
 
+  for (auto &core : coreList) {
+    core.createCheckpoint(out);
+  }
+
   size = jobQueue.size();
   BACKUP_SCALAR(out, size);
 
@@ -780,31 +831,49 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void CPU::restoreCheckpoint(std::istream &in) noexcept {
+  uint16_t tmp16;
+
   RESTORE_SCALAR(in, lastResetStat);
   RESTORE_SCALAR(in, lastScheduledAt);
   RESTORE_SCALAR(in, clockSpeed);
   RESTORE_SCALAR(in, clockPeriod);
   RESTORE_SCALAR(in, useDedicatedCore);
-  RESTORE_SCALAR(in, hilCore);
-  RESTORE_SCALAR(in, iclCore);
-  RESTORE_SCALAR(in, ftlCore);
+
+  RESTORE_SCALAR(in, tmp16);
+  if (tmp16 != hilCore) {
+    panic_log("HIL Core count mismatch.");
+  }
+
+  RESTORE_SCALAR(in, tmp16);
+  if (tmp16 != iclCore) {
+    panic_log("ICL Core count mismatch.");
+  }
+
+  RESTORE_SCALAR(in, tmp16);
+  if (tmp16 != ftlCore) {
+    panic_log("FTL Core count mismatch.");
+  }
 
   uint64_t size;
   Event eid;
 
   RESTORE_SCALAR(in, size);
 
+  // We must have exactly same event list
   if (UNLIKELY(size != eventList.size())) {
     panic_log("Event count mismatch while restore CPU.");
   }
 
-  // We must have exactly same event list
   oldEventList.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     RESTORE_SCALAR(in, eid);
 
     oldEventList.emplace(std::make_pair(eid, eventList[i]));
+  }
+
+  for (auto &core : coreList) {
+    core.restoreCheckpoint(in);
   }
 
   RESTORE_SCALAR(in, size);
