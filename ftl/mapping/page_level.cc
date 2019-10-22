@@ -99,19 +99,19 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   // Get block from allocated block pool
   PPN idx = allocator->getBlockAt(InvalidPPN);
 
-  auto block = &blockMetadata[getPhysicalSuperBlockIndex(idx)];
+  auto block = &blockMetadata[idx];
 
   // Check we have to get new block
   if (block->nextPageToWrite == block->validPages.size()) {
     // Get a new block
     fstat += allocator->allocateBlock(idx);
 
-    block = &blockMetadata[getPhysicalSuperBlockIndex(idx)];
+    block = &blockMetadata[idx];
   }
 
   // Get new page
   block->validPages.set(block->nextPageToWrite);
-  ppn = makePPNSuperIndex(block->blockID, 0, block->nextPageToWrite++);
+  ppn = makeSPPNIndex(block->blockID, block->nextPageToWrite++);
 
   // Write entry
   writeEntry(lpn, ppn);

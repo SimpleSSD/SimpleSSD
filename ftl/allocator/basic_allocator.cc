@@ -71,7 +71,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
-    idx = getSuperParallelismIndex(blockUsed);
+    idx = getParallelismIndex(blockUsed);
 
     panic_if(inUseBlockMap[idx].blockID != blockUsed, "Unexpected block ID.");
 
