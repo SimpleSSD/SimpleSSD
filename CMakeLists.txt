@@ -81,6 +81,10 @@ include_directories(
   ${DRAMPOWER_SOURCE_DIR}
 )
 
+# Set version tag
+set(CMAKE_CXX_FLAGS "-DSIMPLESSD_FULL='\"${VERSION_STRING}\"' ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-DSIMPLESSD_TAG='\"${GIT_TAG}-\"' ${CMAKE_CXX_FLAGS}")
+
 # Platform specific settings
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -90,15 +94,18 @@ if (MSVC)
   add_compile_options(/wd4305)  # Surpress truncation warning
   add_compile_options(/wd4800)  # Surpress int -> boolean waring
 else ()
-  set(CMAKE_CXX_FLAGS "-g -rdynamic -Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
+  add_compile_options(-g)
+  add_compile_options(-Wall)
+  add_compile_options(-Wextra)
+  add_compile_options(-Werror)
+
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "-DSIMPLESSD_FULL='\"${VERSION_STRING}\"' ${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "-DSIMPLESSD_TAG='\"${GIT_TAG}-\"' ${CMAKE_CXX_FLAGS}")
 
   if (DEBUG_BUILD)
-    set(CMAKE_CXX_FLAGS "-O0 -DSIMPLESSD_DEBUG ${CMAKE_CXX_FLAGS}")
+    add_definitions(-DSIMPLESSD_DEBUG)
+    add_compile_options(-O0)
   else ()
-    set(CMAKE_CXX_FLAGS "-O2 ${CMAKE_CXX_FLAGS}")
+    add_compile_options(-O2)
   endif ()
 endif ()
 
