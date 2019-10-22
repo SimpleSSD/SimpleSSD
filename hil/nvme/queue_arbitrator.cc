@@ -52,7 +52,7 @@ uint16_t SQContext::getCommandID() noexcept {
 }
 
 uint32_t SQContext::getCCID() noexcept {
-  return MAKE_CCID(sqID, commandID);
+  return MAKE_CCID(sqID, sqHead);
 }
 
 uint16_t SQContext::getSQID() noexcept {
@@ -88,7 +88,7 @@ CQEntry *CQContext::getData() {
 }
 
 uint32_t CQContext::getCCID() noexcept {
-  return MAKE_CCID(entry.dword2.sqID, entry.dword3.commandID);
+  return MAKE_CCID(entry.dword2.sqID, entry.dword2.sqHead);  // dword2
 }
 
 uint16_t CQContext::getSQID() noexcept {
