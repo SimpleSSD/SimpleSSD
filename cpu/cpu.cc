@@ -876,6 +876,7 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
     core.restoreCheckpoint(in);
   }
 
+  jobQueue.clear();
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
