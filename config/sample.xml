@@ -31,6 +31,18 @@
            Possible suffix (case sensitive):
             s, ms, us, ns, ps
    -->
+  <!-- Simulation configuration -->
+  <section name="sim">
+    <!--
+      <int> Controller to use (Only for SimpleSSD-Standalone)
+
+      Possible values:
+        1: NVMe controller
+        2: SATA controller
+        3: UFS controller
+     -->
+    <config name="Controller">1</config>
+  </section>
   <!--
     CPU configuration
    -->
@@ -249,9 +261,9 @@
            2: HS-G3
            3: HS-G4
          -->
-         <config name="Mode">2</config>
-         <!-- <int> M-PHY Lane (1 ~ 2) -->
-         <config name="Lane">2</config>
+        <config name="Mode">2</config>
+        <!-- <int> M-PHY Lane (1 ~ 2) -->
+        <config name="Lane">2</config>
       </section>
       <!-- AXI4 configuration -->
       <section name="axi">
