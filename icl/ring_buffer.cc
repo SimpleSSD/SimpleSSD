@@ -386,7 +386,9 @@ void RingBuffer::readWorker_doFTL() {
 void RingBuffer::readWorker_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  if (cmd.counter == 0) {
+  cmd.counter++;
+
+  if (cmd.counter == cmd.length) {
     // Read done, prepare new entry
     cacheEntry.emplace_back(Entry(cmd.offset, minPages, iobits));
     auto &entry = cacheEntry.back();
@@ -407,30 +409,27 @@ void RingBuffer::readWorker_done(uint64_t tag) {
     if (usedCapacity >= totalCapacity) {
       trigger_writeWorker();
     }
-  }
 
-  // Handle completion of pending request
-  for (auto iter = readPendingQueue.begin(); iter != readPendingQueue.end();) {
-    if (iter->status == CacheStatus::FTL &&
-        iter->scmd->lpn == cmd.subCommandList.at(cmd.counter).lpn) {
-      // This pending read is completed
-      iter->scmd->status = Status::Done;
+    // Handle completion of pending request
+    for (auto iter = readPendingQueue.begin();
+         iter != readPendingQueue.end();) {
+      if (iter->status == CacheStatus::FTL && iter->scmd->lpn >= cmd.offset &&
+          iter->scmd->lpn < cmd.offset + cmd.length) {
+        // This pending read is completed
+        iter->scmd->status = Status::Done;
 
-      // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
-      object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
-                        eventReadDRAMDone, iter->scmd->tag);
+        // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
+        object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
+                          eventReadDRAMDone, iter->scmd->tag);
 
-      // Done!
-      iter = readPendingQueue.erase(iter);
+        // Done!
+        iter = readPendingQueue.erase(iter);
+      }
+      else {
+        ++iter;
+      }
     }
-    else {
-      ++iter;
-    }
-  }
 
-  cmd.counter++;
-
-  if (cmd.counter == cmd.length) {
     // Destroy
     commandManager->destroyCommand(tag);
   }
