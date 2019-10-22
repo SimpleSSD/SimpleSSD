@@ -61,9 +61,7 @@ void BasicAllocator::initialize(Parameter *p) {
 
   for (uint64_t i = 0; i < parallelism; i++) {
     for (uint64_t j = 0; j < left; j++) {
-      PPN blockID = (i + j * parallelism) * param->superpage;
-
-      freeBlocks[i].emplace_back(blockID);
+      freeBlocks[i].emplace_back(i + j * parallelism);
     }
   }
 }
