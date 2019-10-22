@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <random>
+#include <unordered_map>
 
 #include "icl/abstract_cache.hh"
 #include "util/bitset.hh"
@@ -42,12 +43,14 @@ class RingBuffer : public AbstractCache {
   struct Entry {
     const LPN offset;     // minPages-aligned address
     uint16_t accessedAt;  // Clock
+    uint16_t insertedAt;  // Clock
 
     std::vector<SubEntry> list;
 
     Entry(const Entry &) = delete;
     Entry(Entry &&) noexcept = default;
-    Entry(LPN l, uint32_t s, uint32_t b) : offset(l), accessedAt(0) {
+    Entry(LPN l, uint32_t s, uint32_t b)
+        : offset(l), accessedAt(0), insertedAt(0) {
       list.reserve(s);
 
       for (uint32_t i = 0; i < s; i++) {
@@ -55,6 +58,8 @@ class RingBuffer : public AbstractCache {
       }
     }
   };
+
+  using CacheEntry = std::unordered_map<LPN, Entry>;
 
   enum class CacheStatus {
     None,            // Invalid status
@@ -74,9 +79,9 @@ class RingBuffer : public AbstractCache {
     CacheStatus status;
 
     SubCommand *scmd;
-    std::list<Entry>::iterator entry;
+    CacheEntry::iterator entry;
 
-    CacheContext(SubCommand *c, std::list<Entry>::iterator e, CacheStatus cs)
+    CacheContext(SubCommand *c, CacheEntry::iterator e, CacheStatus cs)
         : status(cs), scmd(c), entry(e) {}
   };
 
@@ -109,7 +114,7 @@ class RingBuffer : public AbstractCache {
   bool enabled;
   bool prefetchEnabled;
 
-  std::list<Entry> cacheEntry;
+  CacheEntry cacheEntry;
 
   // Prefetch
   PrefetchTrigger trigger;
@@ -122,7 +127,7 @@ class RingBuffer : public AbstractCache {
   uint32_t evictPages;  // Request evict pages
   std::random_device rd;
   std::mt19937 mtengine;
-  std::function<std::list<Entry>::iterator(SelectionMode)> chooseEntry;
+  std::function<CacheEntry::iterator(SelectionMode)> chooseEntry;
 
   // For DRAM timing
   uint64_t dataAddress;
@@ -165,10 +170,10 @@ class RingBuffer : public AbstractCache {
     if (bitset.none()) {
       return false;
     }
-    else if (bitset.ffs() < skipFrontBit) {
+    else if (bitset.ctz() > skipFrontBit) {
       return false;
     }
-    else if (bitset.clz() < skipEndBit) {
+    else if (bitset.clz() > skipEndBit) {
       return false;
     }
 

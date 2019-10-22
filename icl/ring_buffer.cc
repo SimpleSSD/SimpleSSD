@@ -133,12 +133,12 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       mtengine = std::mt19937(rd());
 
       chooseEntry = [this](SelectionMode sel) {
-        std::vector<std::list<Entry>::iterator> list;
+        std::vector<CacheEntry::iterator> list;
 
         if (sel == SelectionMode::All) {
           for (auto iter = cacheEntry.begin(); iter != cacheEntry.end();
                ++iter) {
-            if (isDirty(iter->list)) {
+            if (isDirty(iter->second.list)) {
               list.emplace_back(iter);
             }
           }
@@ -150,7 +150,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
         else if (sel == SelectionMode::FullSized) {
           for (auto iter = cacheEntry.begin(); iter != cacheEntry.end();
                ++iter) {
-            if (isFullSizeDirty(iter->list)) {
+            if (isFullSizeDirty(iter->second.list)) {
               list.emplace_back(iter);
             }
           }
@@ -162,7 +162,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
         else {
           for (auto iter = cacheEntry.begin(); iter != cacheEntry.end();
                ++iter) {
-            if (!isDirty(iter->list)) {
+            if (!isDirty(iter->second.list)) {
               list.emplace_back(iter);
             }
           }
@@ -176,39 +176,34 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       break;
     case Config::EvictModeType::FIFO:
       chooseEntry = [this](SelectionMode sel) {
-        if (sel == SelectionMode::All) {
-          auto iter = cacheEntry.begin();
+        uint16_t diff = 0;
+        auto iter = cacheEntry.end();
 
-          for (; iter != cacheEntry.end(); iter++) {
-            if (isDirty(iter->list)) {
-              break;
+        // Find line with largest difference
+        for (auto i = cacheEntry.begin(); i != cacheEntry.end(); ++i) {
+          if (diff > clock - i->second.insertedAt) {
+            if (sel == SelectionMode::All) {
+              if (!isDirty(iter->second.list)) {
+                continue;
+              }
             }
-          }
-
-          return iter;
-        }
-        else if (sel == SelectionMode::FullSized) {
-          auto iter = cacheEntry.begin();
-
-          for (; iter != cacheEntry.end(); iter++) {
-            if (isFullSizeDirty(iter->list)) {
-              break;
+            else if (sel == SelectionMode::FullSized) {
+              if (!isFullSizeDirty(iter->second.list)) {
+                continue;
+              }
             }
-          }
-
-          return iter;
-        }
-        else {
-          auto iter = cacheEntry.begin();
-
-          for (; iter != cacheEntry.end(); iter++) {
-            if (!isDirty(iter->list)) {
-              break;
+            else {
+              if (isDirty(iter->second.list)) {
+                continue;
+              }
             }
-          }
 
-          return iter;
+            diff = clock - i->second.insertedAt;
+            iter = i;
+          }
         }
+
+        return iter;
       };
 
       break;
@@ -219,24 +214,24 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
 
         // Find line with largest difference
         for (auto i = cacheEntry.begin(); i != cacheEntry.end(); ++i) {
-          if (diff > clock - i->accessedAt) {
+          if (diff > clock - i->second.accessedAt) {
             if (sel == SelectionMode::All) {
-              if (!isDirty(iter->list)) {
+              if (!isDirty(iter->second.list)) {
                 continue;
               }
             }
             else if (sel == SelectionMode::FullSized) {
-              if (!isFullSizeDirty(iter->list)) {
+              if (!isFullSizeDirty(iter->second.list)) {
                 continue;
               }
             }
             else {
-              if (isDirty(iter->list)) {
+              if (isDirty(iter->second.list)) {
                 continue;
               }
             }
 
-            diff = clock - i->accessedAt;
+            diff = clock - i->second.accessedAt;
             iter = i;
           }
         }
@@ -389,9 +384,19 @@ void RingBuffer::readWorker_done(uint64_t tag) {
   cmd.counter++;
 
   if (cmd.counter == cmd.length) {
+    cmd.counter = 0;
+
     // Read done, prepare new entry
-    cacheEntry.emplace_back(Entry(cmd.offset, minPages, iobits));
-    auto &entry = cacheEntry.back();
+    auto ret =
+        cacheEntry.emplace(cmd.offset, Entry(cmd.offset, minPages, iobits));
+    auto &entry = ret.first->second;
+
+    // Update clock
+    entry.accessedAt = clock;
+
+    if (ret.second) {
+      entry.insertedAt = clock;
+    }
 
     // As we got data from FTL, all SubEntries are valid
     for (auto &iter : entry.list) {
@@ -476,7 +481,7 @@ void RingBuffer::writeWorker() {
 
     if (iter != cacheEntry.end()) {
       // Mark as write pending
-      for (auto &sentry : iter->list) {
+      for (auto &sentry : iter->second.list) {
         if (sentry.valid.any()) {
           sentry.wpending = true;
         }
@@ -486,12 +491,12 @@ void RingBuffer::writeWorker() {
       LPN offset = 0;
       uint32_t length = 0;
 
-      while (offset + length < iter->offset + minPages) {
+      while (offset + length < iter->second.offset + minPages) {
         // TODO: Consider partial pages
-        if (iter->list.at(offset).valid.none()) {
+        if (iter->second.list.at(offset).valid.none()) {
           offset++;
         }
-        else if (iter->list.at(offset + length).valid.any()) {
+        else if (iter->second.list.at(offset + length).valid.any()) {
           length++;
         }
         else {
@@ -547,15 +552,17 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
   cmd.counter++;
 
   if (cmd.counter == cmd.length) {
+    cmd.counter = 0;
+
     // Find corresponding entry
     for (auto &iter : cacheEntry) {
-      if (iter.offset <= cmd.offset &&
-          cmd.offset + cmd.length <= iter.offset + minPages) {
-        uint32_t i = cmd.offset - iter.offset;
+      if (iter.second.offset <= cmd.offset &&
+          cmd.offset + cmd.length <= iter.second.offset + minPages) {
+        uint32_t i = cmd.offset - iter.second.offset;
         uint32_t limit = cmd.length + i;
 
         for (; i < limit; i++) {
-          auto &sentry = iter.list.at(i);
+          auto &sentry = iter.second.list.at(i);
 
           sentry.dirty = false;
           sentry.wpending = false;
@@ -618,21 +625,24 @@ void RingBuffer::read_find(Command &cmd) {
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       uint8_t bound = 0;
 
-      if (cmd.offset < iter->offset + minPages) {
+      if (iter->second.offset <= cmd.offset &&
+          cmd.offset < iter->second.offset + minPages) {
         bound |= 1;
       }
-      if (iter->offset < cmd.offset + cmd.length) {
+      if (iter->second.offset < cmd.offset + cmd.length &&
+          cmd.offset + cmd.length <= iter->second.offset + minPages) {
         bound |= 2;
       }
 
       if (bound != 0) {
         // Accessed
-        iter->accessedAt = clock;
+        iter->second.accessedAt = clock;
 
         // Mark as done
         for (auto &scmd : cmd.subCommandList) {
-          if (iter->offset <= scmd.lpn && scmd.lpn < iter->offset + minPages) {
-            auto &sentry = iter->list.at(scmd.lpn - iter->offset);
+          if (iter->second.offset <= scmd.lpn &&
+              scmd.lpn < iter->second.offset + minPages) {
+            auto &sentry = iter->second.list.at(scmd.lpn - iter->second.offset);
 
             // Skip checking
             if (!skipCheck(sentry.valid, scmd.skipFront, scmd.skipEnd)) {
@@ -642,10 +652,18 @@ void RingBuffer::read_find(Command &cmd) {
             scmd.status = Status::InternalCacheDone;
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
+
+            cmd.counter++;
           }
         }
       }
+
+      if (cmd.counter == cmd.subCommandList.size()) {
+        break;
+      }
     }
+
+    cmd.counter = 0;
   }
 
   // Check we have scmd.status == Submit
@@ -693,12 +711,13 @@ void RingBuffer::write_find(SubCommand &scmd) {
     // Find entry including scmd
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       // Included existing entry
-      if (iter->offset <= scmd.lpn && scmd.lpn < iter->offset + minPages) {
+      if (iter->second.offset <= scmd.lpn &&
+          scmd.lpn < iter->second.offset + minPages) {
         // Accessed
-        iter->accessedAt = clock;
+        iter->second.accessedAt = clock;
 
         // Get sub entry
-        auto &sentry = iter->list.at(scmd.lpn - iter->offset);
+        auto &sentry = iter->second.list.at(scmd.lpn - iter->second.offset);
 
         // Check write pending
         if (sentry.wpending) {
@@ -726,10 +745,12 @@ void RingBuffer::write_find(SubCommand &scmd) {
         // In this case, there was no entry for this sub command
         LPN aligned = alignToMinPage(scmd.lpn);
 
-        cacheEntry.emplace_back(Entry(aligned, minPages, iobits));
-        auto &entry = cacheEntry.back();
+        auto ret =
+            cacheEntry.emplace(aligned, Entry(aligned, minPages, iobits));
+        auto &entry = ret.first->second;
 
         entry.accessedAt = clock;
+        entry.insertedAt = clock;
 
         auto &sentry = entry.list.at(scmd.lpn - aligned);
 
@@ -791,7 +812,7 @@ void RingBuffer::flush_find(Command &cmd) {
 
     // Find dirty entry
     for (auto &iter : cacheEntry) {
-      if (isDirty(iter.list)) {
+      if (isDirty(iter.second.list)) {
         dirty = true;
 
         break;
@@ -816,19 +837,21 @@ void RingBuffer::invalidate_find(Command &cmd) {
     for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
       uint8_t bound = 0;
 
-      if (cmd.offset < iter->offset + minPages) {
+      if (iter->second.offset <= cmd.offset &&
+          cmd.offset < iter->second.offset + minPages) {
         bound |= 1;
       }
-      if (iter->offset < cmd.offset + cmd.length) {
+      if (iter->second.offset < cmd.offset + cmd.length &&
+          cmd.offset + cmd.length <= iter->second.offset + minPages) {
         bound |= 2;
       }
 
       if (bound != 0) {
-        LPN from = MAX(cmd.offset, iter->offset);
+        LPN from = MAX(cmd.offset, iter->second.offset);
         LPN to = from + MIN(cmd.length, minPages);
 
         for (LPN lpn = from; lpn < to; lpn++) {
-          auto &sentry = iter->list.at(lpn - from);
+          auto &sentry = iter->second.list.at(lpn - from);
 
           sentry.valid.reset();
         }
@@ -943,10 +966,11 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : cacheEntry) {
-    BACKUP_SCALAR(out, iter.offset);
-    BACKUP_SCALAR(out, iter.accessedAt);
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.accessedAt);
+    BACKUP_SCALAR(out, iter.second.insertedAt);
 
-    for (auto &sentry : iter.list) {
+    for (auto &sentry : iter.second.list) {
       BACKUP_SCALAR(out, sentry.data);
       sentry.valid.createCheckpoint(out);
     }
@@ -996,7 +1020,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.scmd->id);
 
     if (iter.entry != cacheEntry.end()) {
-      BACKUP_SCALAR(out, iter.entry->offset);
+      BACKUP_SCALAR(out, iter.entry->first);
     }
     else {
       BACKUP_SCALAR(out, InvalidLPN);
@@ -1012,7 +1036,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.scmd->id);
 
     if (iter.entry != cacheEntry.end()) {
-      BACKUP_SCALAR(out, iter.entry->offset);
+      BACKUP_SCALAR(out, iter.entry->first);
     }
     else {
       BACKUP_SCALAR(out, InvalidLPN);
@@ -1053,17 +1077,16 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
   RESTORE_SCALAR(in, size);
 
-  for (auto &iter : cacheEntry) {
+  for (uint64_t i = 0; i < size; i++) {
     LPN offset;
 
     RESTORE_SCALAR(in, offset);
 
-    cacheEntry.emplace_back(Entry(offset, minPages, iobits));
-    auto &entry = cacheEntry.back();
+    auto ret = cacheEntry.emplace(offset, Entry(offset, minPages, iobits));
 
-    RESTORE_SCALAR(in, entry.accessedAt);
+    RESTORE_SCALAR(in, ret.first->second.accessedAt);
 
-    for (auto &sentry : iter.list) {
+    for (auto &sentry : ret.first->second.list) {
       RESTORE_SCALAR(in, sentry.data);
       sentry.valid.restoreCheckpoint(in);
     }
@@ -1136,7 +1159,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     }
     else {
       for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-        if (iter->offset == offset) {
+        if (iter->first == offset) {
           readPendingQueue.emplace_back(CacheContext(&scmd, iter, cs));
 
           break;
@@ -1165,7 +1188,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     }
     else {
       for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-        if (iter->offset == offset) {
+        if (iter->first == offset) {
           writeWaitingQueue.emplace_back(CacheContext(&scmd, iter, cs));
 
           break;
