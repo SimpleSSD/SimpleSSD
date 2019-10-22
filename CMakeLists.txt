@@ -45,33 +45,19 @@ if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     OUTPUT_VARIABLE GIT_CODE_MODIFIED
     OUTPUT_STRIP_TRAILING_WHITESPACE
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  execute_process(COMMAND git describe --tags --abbre=0
+  execute_process(COMMAND git describe --tags --abbre=8
     OUTPUT_VARIABLE GIT_TAG
     ERROR_QUIET
     OUTPUT_STRIP_TRAILING_WHITESPACE
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  execute_process(COMMAND git describe --tags --abbre=0 --exact-match
-    OUTPUT_VARIABLE GIT_EXACT_TAG
-    ERROR_QUIET
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  execute_process(COMMAND git log --pretty=format:'%H' -n 1
-    OUTPUT_VARIABLE GIT_REV
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
   string(STRIP "${GIT_TAG}" GIT_TAG)
-  string(SUBSTRING "${GIT_REV}" 1 8 GIT_REV)
 
   if ("${GIT_TAG}" STREQUAL "")
-    execute_process(COMMAND git rev-parse --abbrev-ref HEAD
-      OUTPUT_VARIABLE GIT_TAG
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  elseif (NOT "${GIT_EXACT_TAG}" STREQUAL "")
-    set(VERSION_STRING "${GIT_EXACT_TAG}")
+    set(VERSION_STRING "2.1-unknown")
+    set(GIT_TAG "2.1")
   else ()
-    set(VERSION_STRING "${GIT_TAG}-${GIT_REV}${GIT_CODE_MODIFIED}")
+    set(VERSION_STRING "${GIT_TAG}${GIT_CODE_MODIFIED}")
   endif ()
 
   message("Using version string: ${VERSION_STRING}")
