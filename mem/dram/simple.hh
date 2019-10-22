@@ -25,8 +25,6 @@ class SimpleDRAM : public AbstractDRAM {
   uint64_t unallocated;
   double interfaceBandwidth;
 
-  Event autoRefresh;
-
   uint64_t preSubmitRead(Request *);
   uint64_t preSubmitWrite(Request *);
   void postDone(Request *);

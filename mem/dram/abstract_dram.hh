@@ -35,16 +35,8 @@ class AbstractDRAM : public AbstractRAM {
   Config::DRAMTiming *pTiming;
   Config::DRAMPower *pPower;
 
-  Data::MemorySpecification spec;
-  libDRAMPower *dramPower;
-
   Stats readStat;
   Stats writeStat;
-  double totalEnergy;  // Unit: pJ
-  double totalPower;   // Unit: mW
-
-  void convertMemspec();
-  void updateStats(uint64_t);
 
  public:
   AbstractDRAM(ObjectData &);

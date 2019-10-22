@@ -16,7 +16,7 @@ namespace SimpleSSD::Memory::DRAM {
 SimpleDRAM::SimpleDRAM(ObjectData &o)
     : AbstractDRAM(o),
       scheduler(
-          o, "Memory::SRAM::scheduler",
+          o, "Memory::DRAM::scheduler",
           [this](Request *r) -> uint64_t { return preSubmitRead(r); },
           [this](Request *r) -> uint64_t { return preSubmitWrite(r); },
           [this](Request *r) { postDone(r); },
@@ -27,16 +27,6 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
                        pStructure->channel / 8.0 / pTiming->tCK;
   unallocated = pStructure->chipSize * pStructure->chip * pStructure->rank *
                 pStructure->channel;
-
-  autoRefresh = createEvent(
-      [this](uint64_t now, uint64_t) {
-        dramPower->doCommand(Data::MemCommand::REF, 0, now / pTiming->tCK);
-
-        scheduleRel(autoRefresh, 0ull, REFRESH_PERIOD);
-      },
-      "SimpleSSD::Memory::DRAM::SimpleDRAM::autoRefresh");
-
-  scheduleRel(autoRefresh, 0ull, REFRESH_PERIOD);
 }
 
 SimpleDRAM::~SimpleDRAM() {
@@ -51,22 +41,6 @@ uint64_t SimpleDRAM::preSubmitRead(Request *req) {
       (uint64_t)(pageCount * (pageFetchLatency +
                               pStructure->pageSize / interfaceBandwidth));
 
-  req->beginAt = getTick() / pTiming->tCK;
-
-  dramPower->doCommand(Data::MemCommand::ACT, 0, req->beginAt);
-
-  for (uint64_t i = 0; i < pageCount; i++) {
-    dramPower->doCommand(Data::MemCommand::RD, 0,
-                         req->beginAt + spec.memTimingSpec.RCD);
-
-    req->beginAt += spec.memTimingSpec.RCD;
-  }
-
-  req->beginAt -= spec.memTimingSpec.RCD;
-
-  dramPower->doCommand(Data::MemCommand::PRE, 0,
-                       req->beginAt + spec.memTimingSpec.RAS);
-
   return latency;
 }
 
@@ -78,28 +52,10 @@ uint64_t SimpleDRAM::preSubmitWrite(Request *req) {
       (uint64_t)(pageCount * (pageFetchLatency +
                               pStructure->pageSize / interfaceBandwidth));
 
-  req->beginAt = getTick() / pTiming->tCK;
-
-  dramPower->doCommand(Data::MemCommand::ACT, 0, req->beginAt);
-
-  for (uint64_t i = 0; i < pageCount; i++) {
-    dramPower->doCommand(Data::MemCommand::WR, 0,
-                         req->beginAt + spec.memTimingSpec.RCD);
-
-    req->beginAt += spec.memTimingSpec.RCD;
-  }
-
-  req->beginAt -= spec.memTimingSpec.RCD;
-
-  dramPower->doCommand(Data::MemCommand::PRE, 0,
-                       req->beginAt + spec.memTimingSpec.RAS);
-
   return latency;
 }
 
 void SimpleDRAM::postDone(Request *req) {
-  updateStats(req->beginAt + spec.memTimingSpec.RAS + spec.memTimingSpec.RP);
-
   scheduleNow(req->eid, req->data);
 
   delete req;
@@ -152,7 +108,6 @@ void SimpleDRAM::write(uint64_t address, uint64_t length, Event eid,
 void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractDRAM::createCheckpoint(out);
 
-  BACKUP_EVENT(out, autoRefresh);
   BACKUP_SCALAR(out, pageFetchLatency);
   BACKUP_SCALAR(out, unallocated);
   BACKUP_SCALAR(out, interfaceBandwidth);
@@ -171,7 +126,6 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
 void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractDRAM::restoreCheckpoint(in);
 
-  RESTORE_EVENT(in, autoRefresh);
   RESTORE_SCALAR(in, pageFetchLatency);
   RESTORE_SCALAR(in, unallocated);
   RESTORE_SCALAR(in, interfaceBandwidth);
