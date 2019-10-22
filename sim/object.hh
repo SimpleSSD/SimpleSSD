@@ -19,7 +19,7 @@
 
 namespace SimpleSSD {
 
-#if !defined(NO_LOG_MACRO) && !defined(EXCLUDE_CPU)
+#if !defined(SIMPLESSD_GEM5_EXCLUDE) && !defined(EXCLUDE_CPU)
 
 #define panic_if(cond, format, ...)                                            \
   {                                                                            \

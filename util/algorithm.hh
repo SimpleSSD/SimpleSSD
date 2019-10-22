@@ -88,9 +88,12 @@ inline uint64_t ctz64(uint64_t val) {
 #define clz8(x) __builtin_clz((uint32_t)0xFFFFFF00 | (uint32_t)(x))
 #define clz16(x) __builtin_clz((uint32_t)0xFFFF0000 | (uint32_t)(x))
 #define clz32(x) __builtin_clz((uint32_t)(x))
+
+#ifndef SIMPLESSD_GEM5_EXCLUDE
 #define ctz8(x) __builtin_ctz((uint32_t)(x))
 #define ctz16(x) __builtin_ctz((uint32_t)(x))
 #define ctz32(x) __builtin_ctz((uint32_t)(x))
+#endif
 
 #if __WORDSIZE == 64
 #define popcount64(x) __builtin_popcountl((uint64_t)(x))
