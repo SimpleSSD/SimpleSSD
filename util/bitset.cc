@@ -71,15 +71,26 @@ bool Bitset::all() const noexcept {
 }
 
 bool Bitset::any() noexcept {
-  return !none();
+  return const_cast<const Bitset *>(this)->any();
 }
 
 bool Bitset::any() const noexcept {
-  return const_cast<const Bitset *>(this)->any();
+  return !none();
 }
 
 bool Bitset::none() noexcept {
   return const_cast<const Bitset *>(this)->none();
+}
+
+bool Bitset::none() const noexcept {
+  uint8_t ret = 0x00;
+  auto data = getBuffer();
+
+  for (uint32_t i = 0; i < allocSize; i++) {
+    ret |= data[i];
+  }
+
+  return ret == 0x00;
 }
 
 uint32_t Bitset::clz() noexcept {
@@ -127,17 +138,6 @@ uint32_t Bitset::ctz() const noexcept {
   }
 
   return (ret << 3) + ctz8(data[i]);
-}
-
-bool Bitset::none() const noexcept {
-  uint8_t ret = 0x00;
-  auto data = getBuffer();
-
-  for (uint32_t i = 0; i < allocSize; i++) {
-    ret |= data[i];
-  }
-
-  return ret == 0x00;
 }
 
 uint32_t Bitset::count() noexcept {

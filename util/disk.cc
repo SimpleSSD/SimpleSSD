@@ -54,7 +54,7 @@ uint64_t Disk::open(std::string path, uint64_t desiredSize) noexcept {
     try {
       std::filesystem::resize_file(path, desiredSize);
     }
-    catch (std::exception &e) {
+    catch (std::exception &) {
       panic("Failed to create and resize disk image file.");
     }
   }
