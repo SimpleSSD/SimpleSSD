@@ -676,11 +676,113 @@ uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
   return 0;
 }
 
-void Subsystem::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void Subsystem::getStatList(std::vector<Stat> &list,
+                            std::string prefix) noexcept {
+  prefix += "nvme.";
 
-void Subsystem::getStatValues(std::vector<double> &) noexcept {}
+  // All controllers
+  for (auto &ctrl : controllerList) {
+    std::string ctrlname("ctrl");
 
-void Subsystem::resetStatValues() noexcept {}
+    ctrlname += std::to_string(ctrl.first);
+    ctrlname += ".";
+
+    ctrl.second->controller->getStatList(list, prefix + ctrlname);
+    ctrl.second->arbitrator->getStatList(list, prefix + ctrlname + "arb.");
+    ctrl.second->interruptManager->getStatList(list,
+                                               prefix + ctrlname + "intr.");
+    ctrl.second->dmaEngine->getStatList(list, prefix + ctrlname + "dma.");
+  }
+
+  // All commands
+  commandDeleteSQ->getStatList(list, prefix + "admin.deletesq");
+  commandCreateSQ->getStatList(list, prefix + "admin.createsq");
+  commandGetLogPage->getStatList(list, prefix + "admin.getlogpage");
+  commandDeleteCQ->getStatList(list, prefix + "admin.deletecq");
+  commandCreateCQ->getStatList(list, prefix + "admin.createcq");
+  commandIdentify->getStatList(list, prefix + "admin.identify");
+  commandAbort->getStatList(list, prefix + "admin.abort");
+  commandSetFeature->getStatList(list, prefix + "admin.setfeature");
+  commandGetFeature->getStatList(list, prefix + "admin.getfeature");
+  commandAsyncEventRequest->getStatList(list, prefix + "admin.asynceventreq");
+  commandNamespaceManagement->getStatList(list, prefix + "admin.nsmgmt");
+  commandNamespaceAttachment->getStatList(list, prefix + "admin.nsattach");
+  commandFormatNVM->getStatList(list, prefix + "admin.format");
+  commandFlush->getStatList(list, prefix + "nvm.flush");
+  commandWrite->getStatList(list, prefix + "nvm.write");
+  commandRead->getStatList(list, prefix + "nvm.read");
+  commandCompare->getStatList(list, prefix + "nvm.compare");
+  commandDatasetManagement->getStatList(list, prefix + "nvm.datasetmgmt");
+
+  // HIL
+  pHIL->getStatList(list, prefix);
+}
+
+void Subsystem::getStatValues(std::vector<double> &values) noexcept {
+  // All controllers
+  for (auto &ctrl : controllerList) {
+    ctrl.second->controller->getStatValues(values);
+    ctrl.second->arbitrator->getStatValues(values);
+    ctrl.second->interruptManager->getStatValues(values);
+    ctrl.second->dmaEngine->getStatValues(values);
+  }
+
+  // All commands
+  commandDeleteSQ->getStatValues(values);
+  commandCreateSQ->getStatValues(values);
+  commandGetLogPage->getStatValues(values);
+  commandDeleteCQ->getStatValues(values);
+  commandCreateCQ->getStatValues(values);
+  commandIdentify->getStatValues(values);
+  commandAbort->getStatValues(values);
+  commandSetFeature->getStatValues(values);
+  commandGetFeature->getStatValues(values);
+  commandAsyncEventRequest->getStatValues(values);
+  commandNamespaceManagement->getStatValues(values);
+  commandNamespaceAttachment->getStatValues(values);
+  commandFormatNVM->getStatValues(values);
+  commandFlush->getStatValues(values);
+  commandWrite->getStatValues(values);
+  commandRead->getStatValues(values);
+  commandCompare->getStatValues(values);
+  commandDatasetManagement->getStatValues(values);
+
+  // HIL
+  pHIL->getStatValues(values);
+}
+
+void Subsystem::resetStatValues() noexcept {
+  // All controllers
+  for (auto &ctrl : controllerList) {
+    ctrl.second->controller->resetStatValues();
+    ctrl.second->arbitrator->resetStatValues();
+    ctrl.second->interruptManager->resetStatValues();
+    ctrl.second->dmaEngine->resetStatValues();
+  }
+
+  // All commands
+  commandDeleteSQ->resetStatValues();
+  commandCreateSQ->resetStatValues();
+  commandGetLogPage->resetStatValues();
+  commandDeleteCQ->resetStatValues();
+  commandCreateCQ->resetStatValues();
+  commandIdentify->resetStatValues();
+  commandAbort->resetStatValues();
+  commandSetFeature->resetStatValues();
+  commandGetFeature->resetStatValues();
+  commandAsyncEventRequest->resetStatValues();
+  commandNamespaceManagement->resetStatValues();
+  commandNamespaceAttachment->resetStatValues();
+  commandFormatNVM->resetStatValues();
+  commandFlush->resetStatValues();
+  commandWrite->resetStatValues();
+  commandRead->resetStatValues();
+  commandCompare->resetStatValues();
+  commandDatasetManagement->resetStatValues();
+
+  // HIL
+  pHIL->resetStatValues();
+}
 
 void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, controllerID);

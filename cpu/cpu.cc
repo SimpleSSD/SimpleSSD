@@ -724,23 +724,26 @@ void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   std::string number;
   std::string prefix2;
   uint32_t totalCore = hilCore + iclCore + ftlCore;
+  uint32_t ncore = 0;
 
   if (useDedicatedCore) {
-    prefix2 = ".hil";
+    prefix2 = "hil";
   }
   else {
-    prefix2 = ".core";
+    prefix2 = "core";
   }
 
   for (uint32_t i = 0; i < totalCore; i++) {
-    number = std::to_string(i);
-
     if (useDedicatedCore && i == hilCore) {
-      prefix2 = ".icl";
+      prefix2 = "icl";
+      ncore = 0;
     }
     else if (useDedicatedCore && i == hilCore + iclCore) {
-      prefix2 = ".ftl";
+      prefix2 = "ftl";
+      ncore = 0;
     }
+
+    number = std::to_string(ncore++);
 
     temp.name = prefix + prefix2 + number + ".busy";
     temp.desc = "CPU core " + number + " busy ticks";
