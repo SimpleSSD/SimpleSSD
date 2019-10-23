@@ -69,7 +69,8 @@ Function initFunction() {
   return std::move(fstat);
 }
 
-CPU::Core::Core() : busyUntil(0), jobEvent(InvalidEventID) {}
+CPU::Core::Core()
+    : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
 
 void CPU::Core::handleJob() {
   auto job = std::move(jobQueue.front());
