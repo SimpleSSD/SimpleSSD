@@ -57,7 +57,7 @@ void Function::clear() {
 }
 
 void Function::dummy() {
-  cycles = 5;
+  cycles = 1;
 }
 
 Function initFunction() {
@@ -72,16 +72,17 @@ Function initFunction() {
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
 
-void CPU::Core::handleJob() {
+void CPU::Core::handleJob(uint64_t now) {
   auto job = std::move(jobQueue.front());
   jobQueue.pop_front();
 
   // Function is completed!
   job.eid->func(parent->getTick(), job.data);
+  busyUntil = now;
 
   // Schedule next
   if (jobQueue.size() > 0) {
-    parent->scheduleAbs(jobEvent, 0ull, jobQueue.front().endAt);
+    parent->schedule(jobEvent, 0ull, jobQueue.front().delay);
   }
 }
 
@@ -90,7 +91,7 @@ void CPU::Core::init(CPU *p, uint32_t n, uint64_t period) noexcept {
   clockPeriod = period;
 
   jobEvent = parent->createEvent(
-      [this](uint64_t, uint64_t) { handleJob(); },
+      [this](uint64_t t, uint64_t) { handleJob(t); },
       "CPU::CPU::Core<" + std::to_string(n) + ">::jobEvent");
 }
 
@@ -114,16 +115,15 @@ void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
   // Current job runs after previous job
   uint64_t busy = func.cycles * clockPeriod;
 
-  busyUntil = beginAt + busy;
   instructionStat += func;
   eventStat.busy += busy;
   eventStat.handledFunction++;
 
   if (jobQueue.size() == 0) {
-    parent->scheduleAbs(jobEvent, 0ull, busyUntil);
+    parent->scheduleAbs(jobEvent, 0ull, beginAt + busy);
   }
 
-  jobQueue.emplace_back(Job(eid, data, busyUntil));
+  jobQueue.emplace_back(Job(eid, data, busy));
 }
 
 void CPU::Core::createCheckpoint(std::ostream &out) const {
@@ -141,7 +141,7 @@ void CPU::Core::createCheckpoint(std::ostream &out) const {
   for (auto &job : jobQueue) {
     BACKUP_EVENT(out, job.eid);
     BACKUP_SCALAR(out, job.data);
-    BACKUP_SCALAR(out, job.endAt);
+    BACKUP_SCALAR(out, job.delay);
   }
 }
 
@@ -161,15 +161,15 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
   for (uint64_t i = 0; i < size; i++) {
     Event eid;
     uint64_t data;
-    uint64_t endAt;
+    uint64_t delay;
 
     RESTORE_SCALAR(in, eid);
     eid = parent->restoreEventID(eid);
 
     RESTORE_SCALAR(in, data);
-    RESTORE_SCALAR(in, endAt);
+    RESTORE_SCALAR(in, delay);
 
-    jobQueue.emplace_back(Job(eid, data, endAt));
+    jobQueue.emplace_back(Job(eid, data, delay));
   }
 }
 

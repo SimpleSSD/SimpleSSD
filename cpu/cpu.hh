@@ -97,10 +97,10 @@ class CPU {
    public:
     Event eid;
     uint64_t data;
-    uint64_t endAt;
+    uint64_t delay;
 
     Job(Event e, uint64_t d) : eid(e), data(d) {}
-    Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), endAt(t) {}
+    Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), delay(t) {}
   };
 
   class Core {
@@ -117,7 +117,7 @@ class CPU {
 
     std::deque<Job> jobQueue;
 
-    void handleJob();
+    void handleJob(uint64_t);
 
    public:
     Core();
