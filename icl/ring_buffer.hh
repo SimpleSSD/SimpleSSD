@@ -197,11 +197,9 @@ class RingBuffer : public AbstractCache {
   inline void updateCapacity(bool isread, uint32_t exclude = 0) {
     if (isread) {
       stat.cache[0] += pageSize - exclude;
-      usedCapacity += pageSize;
     }
     else {
       stat.cache[1] += pageSize - exclude;
-      usedCapacity += pageSize;
       dirtyCapacity += pageSize;
     }
   }

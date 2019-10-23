@@ -177,11 +177,11 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
     case Config::EvictModeType::FIFO:
       chooseEntry = [this](SelectionMode sel) {
         uint16_t diff = 0;
-        auto iter = cacheEntry.end();
+        auto idx = cacheEntry.end();
 
         // Find line with largest difference
-        for (auto i = cacheEntry.begin(); i != cacheEntry.end(); ++i) {
-          if (diff > clock - i->second.insertedAt) {
+        for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+          if (diff < (uint16_t)(clock - iter->second.insertedAt)) {
             if (sel == SelectionMode::All) {
               if (!isDirty(iter->second.list)) {
                 continue;
@@ -198,23 +198,23 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               }
             }
 
-            diff = clock - i->second.insertedAt;
-            iter = i;
+            diff = clock - iter->second.insertedAt;
+            idx = iter;
           }
         }
 
-        return iter;
+        return idx;
       };
 
       break;
     case Config::EvictModeType::LRU:
       chooseEntry = [this](SelectionMode sel) {
         uint16_t diff = 0;
-        auto iter = cacheEntry.end();
+        auto idx = cacheEntry.end();
 
         // Find line with largest difference
-        for (auto i = cacheEntry.begin(); i != cacheEntry.end(); ++i) {
-          if (diff > clock - i->second.accessedAt) {
+        for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+          if (diff < (uint16_t)(clock - iter->second.accessedAt)) {
             if (sel == SelectionMode::All) {
               if (!isDirty(iter->second.list)) {
                 continue;
@@ -231,12 +231,12 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               }
             }
 
-            diff = clock - i->second.accessedAt;
-            iter = i;
+            diff = clock - iter->second.accessedAt;
+            idx = iter;
           }
         }
 
-        return iter;
+        return idx;
       };
 
       break;
@@ -520,14 +520,11 @@ void RingBuffer::writeWorker() {
     while (usedCapacity >= totalCapacity) {
       auto iter = chooseEntry(SelectionMode::Clean);
 
-      if (iter != cacheEntry.end()) {
-        usedCapacity -= minPages * pageSize;
+      panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
 
-        cacheEntry.erase(iter);
-      }
-      else {
-        panic("Is this possible?");
-      }
+      usedCapacity -= minPages * pageSize;
+
+      cacheEntry.erase(iter);
     }
 
     // We will not call writeWorker_done
