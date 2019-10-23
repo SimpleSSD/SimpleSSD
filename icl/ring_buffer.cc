@@ -300,6 +300,23 @@ void RingBuffer::readWorker() {
     }
   }
 
+  // Check prefetch
+  if (trigger.triggered()) {
+    // Append pages
+    LPN last;
+
+    if (pendingLPNs.size() > 0) {
+      last = pendingLPNs.back();
+    }
+    else {
+      last = lastReadAddress;
+    }
+
+    for (uint32_t i = minPages; i <= prefetchPages; i += minPages) {
+      pendingLPNs.emplace_back(last + i);
+    }
+  }
+
   if (UNLIKELY(pendingLPNs.size() == 0)) {
     readTriggered = false;
 
@@ -317,16 +334,6 @@ void RingBuffer::readWorker() {
 
     if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
       alignedLPN.emplace_back(aligned);
-    }
-  }
-
-  // Check prefetch
-  if (trigger.triggered()) {
-    // Append pages
-    LPN last = alignedLPN.back();
-
-    for (uint32_t i = minPages; i <= prefetchPages; i += minPages) {
-      alignedLPN.emplace_back(last + i);
     }
   }
 
@@ -352,6 +359,9 @@ void RingBuffer::readWorker() {
     return;
   }
 #endif
+
+  // Update last read address
+  lastReadAddress = alignedLPN.back();
 
   // Check capacity
   readWaitsEviction = alignedLPN.size() * pageSize;
@@ -685,6 +695,17 @@ void RingBuffer::read_find(Command &cmd) {
     }
 
     cmd.counter = 0;
+
+    if (trigger.triggered() &&
+        lastReadAddress != std::numeric_limits<uint64_t>::max()) {
+      // Always lastaddress >= offset
+      if (lastReadAddress - cmd.offset < prefetchPages / 2) {
+        trigger_readWorker();
+      }
+    }
+    else {
+      lastReadAddress = std::numeric_limits<uint64_t>::max();
+    }
   }
 
   // Check we have scmd.status == Submit
@@ -1007,6 +1028,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, readTriggered);
   BACKUP_SCALAR(out, writeTriggered);
   BACKUP_SCALAR(out, readWaitsEviction);
+  BACKUP_SCALAR(out, lastReadAddress);
 
   size = readWorkerTag.size();
   BACKUP_SCALAR(out, size);
@@ -1125,6 +1147,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, readTriggered);
   RESTORE_SCALAR(in, writeTriggered);
   RESTORE_SCALAR(in, readWaitsEviction);
+  RESTORE_SCALAR(in, lastReadAddress);
 
   RESTORE_SCALAR(in, size);
 
