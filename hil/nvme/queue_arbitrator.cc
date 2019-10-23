@@ -471,9 +471,9 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
              "Corresponding submission entry not completed.");
 
     // Remove SQContext
-    dispatchedQueue.erase(iter);
-
     delete iter->second;
+
+    dispatchedQueue.erase(iter);
   }
   // Insert to completion queue
   completionQueue.emplace_back(cqe);
