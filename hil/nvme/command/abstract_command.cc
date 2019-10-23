@@ -62,7 +62,7 @@ BufferCommandData *Command::findBufferTag(uint64_t gcid) {
 }
 
 void Command::destroyTag(CommandTag tag) {
-  auto key = tag->getGCID();
+  auto key = MAKE64(tag->controller->getControllerID(), tag->cqc->getCCID());
   auto iter = tagList.find(key);
 
   panic_if(iter == tagList.end(),
