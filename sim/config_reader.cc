@@ -26,7 +26,8 @@ ConfigReader::~ConfigReader() {}
  * \param[in] path Input file path
  */
 void ConfigReader::load(const char *path) noexcept {
-  auto result = file.load_file(path, pugi::parse_default, pugi::encoding_utf8);
+  auto result = file.load_file(
+      path, pugi::parse_default | pugi::parse_trim_pcdata, pugi::encoding_utf8);
 
   if (!result) {
     std::cerr << "Failed to parse configuration file: " << result.description()
