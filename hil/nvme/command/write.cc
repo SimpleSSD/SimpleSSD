@@ -97,8 +97,8 @@ void Write::writeDone(uint64_t gcid) {
     auto now = getTick();
 
     debugprint_command(tag,
-                       "NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64
-                       "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                       "NVM     | Write | NSID %u | %" PRIx64
+                       "h + %xh | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                        tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
                        tag->beginAt, now, now - tag->beginAt);
 
@@ -121,8 +121,7 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   // uint16_t dspec = entry->dword13 >> 16;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command(tag,
-                     "NVM     | Write | NSID %u | %" PRIx64 "h + %" PRIx64 "h",
+  debugprint_command(tag, "NVM     | Write | NSID %u | %" PRIx64 "h + %xh",
                      nsid, slba, nlb);
 
   // Make response

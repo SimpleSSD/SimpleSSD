@@ -100,8 +100,8 @@ void Compare::compare(BufferCommandData *tag) {
   }
 
   debugprint_command(tag,
-                     "NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64
-                     "h | %s | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                     "NVM     | Compare | NSID %u | %" PRIx64
+                     "h + %xh | %s | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                      tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
                      same ? "Success" : "Fail", tag->beginAt, now,
                      now - tag->beginAt);
@@ -121,9 +121,8 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   // bool lr = entry->dword12 & 0x80000000;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
-  debugprint_command(
-      tag, "NVM     | Compare | NSID %u | %" PRIx64 "h + %" PRIx64 "h", nsid,
-      slba, nlb);
+  debugprint_command(tag, "NVM     | Compare | NSID %u | %" PRIx64 "h + %xh",
+                     nsid, slba, nlb);
 
   // Make response
   tag->createResponse();
