@@ -408,11 +408,13 @@ void RingBuffer::readWorker_done(uint64_t tag) {
                        InvalidEventID);
 
     // Update capacity
-    usedCapacity += cmd.length * pageSize;
+    if (LIKELY(enabled)) {
+      usedCapacity += cmd.length * pageSize;
 
-    // We need to erase some entry
-    if (usedCapacity >= totalCapacity) {
-      trigger_writeWorker();
+      // We need to erase some entry
+      if (usedCapacity >= totalCapacity) {
+        trigger_writeWorker();
+      }
     }
 
     // Handle completion of pending request
@@ -907,14 +909,10 @@ void RingBuffer::setCache(bool set) {
   if (enabled) {
     // Clear all previous entries
     cacheEntry.clear();
+  }
 
-    usedCapacity = 0;
-    dirtyCapacity = 0;
-  }
-  else {
-    usedCapacity = totalCapacity;
-    dirtyCapacity = totalCapacity;
-  }
+  usedCapacity = 0;
+  dirtyCapacity = 0;
 }
 
 bool RingBuffer::getCache() {
