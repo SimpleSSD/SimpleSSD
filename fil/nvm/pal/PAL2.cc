@@ -161,7 +161,7 @@ PAL2::PAL2(PALStatistics *statistics, ConfigReader *c, Latency *l)
 PAL2::~PAL2() {
   FlushTimeSlots(MAX64);
 
-  for (uint i = 0; i < channel; i++) {
+  for (uint32_t i = 0; i < channel; i++) {
     for (auto &iter : ChFreeSlots[i]) {
       {
         delete iter.second;
@@ -171,7 +171,7 @@ PAL2::~PAL2() {
   }
   delete[] ChFreeSlots;
 
-  for (uint i = 0; i < totalDie; i++) {
+  for (uint32_t i = 0; i < totalDie; i++) {
     for (auto &iter : DieFreeSlots[i]) {
       {
         delete iter.second;
