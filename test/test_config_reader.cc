@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
       reader.writeBoolean(Section::FlashTranslation,
                           FTL::Config::Key::UseSuperpage, btest);
       reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::SuperpageAllocation, utest);
+                       FTL::Config::Key::SuperpageAllocation, 0x05);  // CD
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::VLTableRatio, ftest);
       reader.writeFloat(Section::FlashTranslation,
@@ -243,10 +243,10 @@ int main(int argc, char *argv[]) {
       auto nand = reader.getNANDStructure();
       nand->type = (FIL::Config::NANDType)utest;
       nand->nop = (uint8_t)utest;
-      nand->pageAllocation[0] = (FIL::PageAllocation)utest;
-      nand->pageAllocation[1] = (FIL::PageAllocation)utest;
-      nand->pageAllocation[2] = (FIL::PageAllocation)utest;
-      nand->pageAllocation[3] = (FIL::PageAllocation)utest;
+      nand->pageAllocation[0] = FIL::PageAllocation::Die;
+      nand->pageAllocation[1] = FIL::PageAllocation::Plane;
+      nand->pageAllocation[2] = FIL::PageAllocation::Channel;
+      nand->pageAllocation[3] = FIL::PageAllocation::Way;
       nand->die = (uint32_t)utest;
       nand->plane = (uint32_t)utest;
       nand->block = (uint32_t)utest;
