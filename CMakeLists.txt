@@ -81,9 +81,8 @@ include_directories(
   ${DRAMPOWER_SOURCE_DIR}
 )
 
-# Set version tag
-set(CMAKE_CXX_FLAGS "-DSIMPLESSD_FULL='\"${VERSION_STRING}\"' ${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "-DSIMPLESSD_TAG='\"${GIT_TAG}-\"' ${CMAKE_CXX_FLAGS}")
+# Make version
+configure_file(sim/version.cc.in version.cc)
 
 # Platform specific settings
 if (MSVC)
@@ -248,6 +247,7 @@ add_library(simplessd STATIC
   ${SRC_FIL_NVM_PAL}
   ${SRC_SIM}
   ${SRC_UTIL}
+  ${CMAKE_CURRENT_BINARY_DIR}/version.cc
 )
 
 target_link_libraries(simplessd mcpat pugixml)

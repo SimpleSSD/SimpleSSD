@@ -13,6 +13,7 @@
 #include "mem/dram/gem5.hh"
 #include "mem/dram/simple.hh"
 #include "mem/sram/sram.hh"
+#include "sim/version.hh"
 
 #define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
 #define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
@@ -296,7 +297,7 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
     std::cerr << "Version does not match while restore from checkpoint."
               << std::endl;
     std::cerr << " Checkpoint file: " << version << std::endl;
-    std::cerr << " Program version: " SIMPLESSD_FULL << std::endl;
+    std::cerr << " Program version: " << SIMPLESSD_FULL << std::endl;
   }
 
   // Restore chain begins here

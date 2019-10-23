@@ -10,6 +10,8 @@
 #include <cstring>
 #include <iostream>
 
+#include "sim/version.hh"
+
 namespace SimpleSSD {
 
 //! ConfigReader constructor
@@ -42,7 +44,7 @@ void ConfigReader::load(const char *path) noexcept {
     if (strncmp(version, SIMPLESSD_TAG, strlen(SIMPLESSD_TAG)) != 0) {
       std::cerr << "Configuration file version does not match" << std::endl;
       std::cerr << " File version: " << version << std::endl;
-      std::cerr << " Program version: " SIMPLESSD_FULL << std::endl;
+      std::cerr << " Program version: " << SIMPLESSD_FULL << std::endl;
     }
 
     // Travel sections
