@@ -379,7 +379,7 @@ void PAL2::TimelineScheduling(::Command &req, CPDPBP &reqCPD) {
 #if 1
       // Manage MergedTimeSlots
       if (MergedTimeSlots.size() == 0) {
-        MergedTimeSlots.push_back(
+        MergedTimeSlots.emplace_back(
             TimeSlot(tsMEM.StartTick, tsMEM.EndTick - tsMEM.StartTick + 1));
       }
       else {

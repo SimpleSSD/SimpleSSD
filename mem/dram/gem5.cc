@@ -414,7 +414,7 @@ void Rank::processRefreshEvent() {
         }
       }
 
-      cmdList.push_back(Command(Data::MemCommand::PREA, 0, pre_at));
+      cmdList.emplace_back(Command(Data::MemCommand::PREA, 0, pre_at));
     }
     else if ((pwrState == PowerState::Idle) && (outstandingEvents == 1)) {
       schedulePowerEvent(PowerState::Refresh, getTick());
@@ -439,7 +439,7 @@ void Rank::processRefreshEvent() {
       b.actAllowedAt = ref_done_at;
     }
 
-    cmdList.push_back(Command(Data::MemCommand::REF, 0, now));
+    cmdList.emplace_back(Command(Data::MemCommand::REF, 0, now));
 
     updatePowerStats();
 
@@ -499,12 +499,12 @@ void Rank::powerDownSleep(PowerState pwr_state, uint64_t tick) {
   if (pwr_state == PowerState::ActivePowerdown) {
     schedulePowerEvent(pwr_state, tick);
 
-    cmdList.push_back(Command(Data::MemCommand::PDN_F_ACT, 0, tick));
+    cmdList.emplace_back(Command(Data::MemCommand::PDN_F_ACT, 0, tick));
   }
   else if (pwr_state == PowerState::PrechargePowerdown) {
     schedulePowerEvent(pwr_state, tick);
 
-    cmdList.push_back(Command(Data::MemCommand::PDN_F_PRE, 0, tick));
+    cmdList.emplace_back(Command(Data::MemCommand::PDN_F_PRE, 0, tick));
   }
   else if (pwr_state == PowerState::Refresh) {
     // if a refresh just occurred
@@ -513,14 +513,14 @@ void Rank::powerDownSleep(PowerState pwr_state, uint64_t tick) {
     // this is not considered.
     schedulePowerEvent(PowerState::PrechargePowerdown, tick);
     // push Command to DRAMPower
-    cmdList.push_back(Command(Data::MemCommand::PDN_F_PRE, 0, tick));
+    cmdList.emplace_back(Command(Data::MemCommand::PDN_F_PRE, 0, tick));
   }
   else if (pwr_state == PowerState::SelfRefresh) {
     assert(pwrStatePostRefresh == PowerState::PrechargePowerdown);
 
     schedulePowerEvent(PowerState::SelfRefresh, tick);
 
-    cmdList.push_back(Command(Data::MemCommand::SREN, 0, tick));
+    cmdList.emplace_back(Command(Data::MemCommand::SREN, 0, tick));
   }
 
   wakeUpAllowedAt = tick + timing->tCK;
@@ -550,13 +550,13 @@ void Rank::scheduleWakeUpEvent(uint64_t exit_delay) {
   inLowPowerState = false;
 
   if (pwrStateTrans == PowerState::ActivePowerdown) {
-    cmdList.push_back(Command(Data::MemCommand::PUP_ACT, 0, wake_up_tick));
+    cmdList.emplace_back(Command(Data::MemCommand::PUP_ACT, 0, wake_up_tick));
   }
   else if (pwrStateTrans == PowerState::PrechargePowerdown) {
-    cmdList.push_back(Command(Data::MemCommand::PUP_PRE, 0, wake_up_tick));
+    cmdList.emplace_back(Command(Data::MemCommand::PUP_PRE, 0, wake_up_tick));
   }
   else if (pwrStateTrans == PowerState::SelfRefresh) {
-    cmdList.push_back(Command(Data::MemCommand::SREX, 0, wake_up_tick));
+    cmdList.emplace_back(Command(Data::MemCommand::SREX, 0, wake_up_tick));
   }
 }
 
@@ -1227,7 +1227,7 @@ TimingDRAM::TimingDRAM(ObjectData &o)
 
   for (int i = 0; i < pStructure->burst; i++) {
     Rank *rank = new Rank(object, this, i);
-    ranks.push_back(rank);
+    ranks.emplace_back(rank);
   }
 
   if (gem5Config->startWriteThreshold >= gem5Config->forceWriteThreshold)
@@ -1388,7 +1388,7 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
 
       assert(!readQueueFull(1));
 
-      readQueue.push_back(dram_pkt);
+      readQueue.emplace_back(dram_pkt);
 
       ++dram_pkt->rankRef.readEntries;
 
@@ -1426,7 +1426,7 @@ bool TimingDRAM::addToWriteQueue(uint64_t addr, uint32_t pktsize,
 
       assert(totalWriteQueueSize < gem5Config->writeBufferSize);
 
-      writeQueue.push_back(dram_pkt);
+      writeQueue.emplace_back(dram_pkt);
       isInWriteQueue.insert(burstAlign(addr));
 
       logRequest(BusState::Write, 1);
@@ -1660,7 +1660,7 @@ void TimingDRAM::activateBank(Rank &rank_ref, Bank &bank_ref, uint64_t act_tick,
   ++rank_ref.numBanksActive;
   assert(rank_ref.numBanksActive <= pStructure->bank);
 
-  rank_ref.cmdList.push_back(
+  rank_ref.cmdList.emplace_back(
       Command(Data::MemCommand::ACT, bank_ref.bank, act_tick));
 
   bank_ref.preAllowedAt = act_tick + pTiming->tRAS;
@@ -1721,7 +1721,7 @@ void TimingDRAM::prechargeBank(Rank &rank_ref, Bank &bank, uint64_t pre_at,
   --rank_ref.numBanksActive;
 
   if (trace) {
-    rank_ref.cmdList.push_back(
+    rank_ref.cmdList.emplace_back(
         Command(Data::MemCommand::PRE, bank.bank, pre_at));
   }
 
@@ -1835,7 +1835,8 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
 
   nextBurstAt = cmd_at + pTiming->tBURST;
 
-  dram_pkt->rankRef.cmdList.push_back(Command(command, dram_pkt->bank, cmd_at));
+  dram_pkt->rankRef.cmdList.emplace_back(
+      Command(command, dram_pkt->bank, cmd_at));
 
   if (auto_precharge) {
     prechargeBank(rank, bank, MAX(now, bank.preAllowedAt));
@@ -1939,7 +1940,7 @@ void TimingDRAM::processNextReqEvent() {
         assert(isScheduled(respondEvent));
       }
 
-      respQueue.push_back(dram_pkt);
+      respQueue.emplace_back(dram_pkt);
 
       if (totalWriteQueueSize > writeHighThreshold) {
         switch_to_writes = true;

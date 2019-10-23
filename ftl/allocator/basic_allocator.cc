@@ -150,7 +150,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
   if (UNLIKELY(fullBlocks.size() <= blocksToReclaim * dchoice)) {
     // Copy usedBlocks to list from front (sorted!)
     for (auto &iter : fullBlocks) {
-      list.push_back(iter.blockID);
+      list.emplace_back(iter.blockID);
 
       if (list.size() == blocksToReclaim) {
         break;

@@ -17,7 +17,7 @@ Feature::Feature(ObjectData &o) : Object(o) {
   aec.nan = 1;  // Send namespace notification
 
   // Fill dummy values
-  for (uint8_t i = 0; i < 10; i++) {
+  for (uint8_t i = 0; i < underThresholdList.size(); i++) {
     underThresholdList[i] = 288;  // 288K = 15C
     overThresholdList[i] = 363;   // 363K = 90C
   }

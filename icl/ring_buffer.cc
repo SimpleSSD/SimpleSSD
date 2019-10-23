@@ -821,7 +821,7 @@ void RingBuffer::flush_find(Command &cmd) {
 
     // Request worker to write all dirty pages
     if (dirty) {
-      flushEvents.push_back(cmd.tag);
+      flushEvents.emplace_back(cmd.tag);
 
       trigger_writeWorker();
     }
