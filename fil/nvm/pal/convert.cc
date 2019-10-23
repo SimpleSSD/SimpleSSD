@@ -67,7 +67,7 @@ ConvertFunction Convert::getConvertion() {
     }
 
     shiftBlock = sum;
-    sum += popcount32(shiftBlock);
+    sum += popcount32(maskBlock);
     shiftPage = sum;
 
     return [this](SubCommand &req, ::CPDPBP &addr) {
