@@ -132,29 +132,22 @@ void PALOLD::printCPDPBP(::CPDPBP &addr, const char *prefix) {
 
 void PALOLD::reschedule(Complete &&cplt) {
   // Find insertion slot
-  auto iter = completionQueue.begin();
-
-  for (; iter != completionQueue.end(); ++iter) {
-    if (iter->finishedAt > cplt.finishedAt) {
-      break;
-    }
-  }
-
-  completionQueue.emplace(iter, cplt);
+  completionQueue.emplace(std::make_pair(cplt.finishedAt, cplt));
 
   if (completionQueue.size() == 1) {
-    scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
+    scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
   }
 }
 
 void PALOLD::completion(uint64_t) {
-  Complete cplt = std::move(completionQueue.front());
-  completionQueue.pop_front();
+  auto iter = completionQueue.begin();
+  Complete cplt = std::move(iter->second);
+  completionQueue.erase(iter);
 
   scheduleNow(cplt.eid, cplt.id);
 
   if (completionQueue.size() > 0) {
-    scheduleAbs(completeEvent, 0ull, completionQueue.front().finishedAt);
+    scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
   }
 }
 
@@ -405,10 +398,10 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : completionQueue) {
-    BACKUP_SCALAR(out, iter.id);
-    BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.beginAt);
-    BACKUP_SCALAR(out, iter.finishedAt);
+    BACKUP_SCALAR(out, iter.second.id);
+    BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.beginAt);
+    BACKUP_SCALAR(out, iter.second.finishedAt);
   }
 
   lat->backup(out);
@@ -433,7 +426,7 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp.beginAt);
     RESTORE_SCALAR(in, tmp.finishedAt);
 
-    completionQueue.emplace_back(tmp);
+    completionQueue.emplace(std::make_pair(tmp.finishedAt, tmp));
   }
 
   lat->restore(in);

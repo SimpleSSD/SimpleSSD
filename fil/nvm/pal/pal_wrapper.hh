@@ -12,6 +12,7 @@
 
 #include <cinttypes>
 #include <vector>
+#include <map>
 
 #include "SimpleSSD_types.h"
 #include "fil/nvm/abstract_nvm.hh"
@@ -51,7 +52,7 @@ class PALOLD : public AbstractNVM {
   };
 
   Event completeEvent;
-  std::list<Complete> completionQueue;
+  std::multimap<uint64_t, Complete> completionQueue;
 
   Convert convertObject;
   ConvertFunction convertCPDPBP;
