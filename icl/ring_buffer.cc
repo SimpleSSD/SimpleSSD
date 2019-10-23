@@ -113,8 +113,9 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   prefetchEnabled =
       readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
 
-  totalCapacity =
+  uint64_t totalCapacity =
       readConfigUint(Section::InternalCache, Config::Key::CacheSize);
+  maxEntryCount = totalCapacity / minPages / pageSize;
 
   setCache(enabled);
 
@@ -290,6 +291,7 @@ void RingBuffer::readWorker() {
 
   // Pass all read request to FTL
   std::vector<LPN> pendingLPNs;
+  std::list<LPN> alignedLPN;
 
   pendingLPNs.reserve(readPendingQueue.size());
 
@@ -300,73 +302,52 @@ void RingBuffer::readWorker() {
     }
   }
 
-  // Check prefetch
-  if (trigger.triggered()) {
-    // Append pages
-    LPN last;
+  if (pendingLPNs.size() > 0) {
+    // Sort
+    std::sort(pendingLPNs.begin(), pendingLPNs.end());
 
-    if (pendingLPNs.size() > 0) {
-      last = pendingLPNs.back();
-    }
-    else {
-      last = lastReadAddress;
-    }
+    // Merge
+    for (auto &iter : pendingLPNs) {
+      LPN aligned = alignToMinPage(iter);
 
-    for (uint32_t i = minPages; i <= prefetchPages; i += minPages) {
-      pendingLPNs.emplace_back(last + i);
-    }
-  }
-
-  if (UNLIKELY(pendingLPNs.size() == 0)) {
-    readTriggered = false;
-
-    return;
-  }
-
-  // Sort
-  std::sort(pendingLPNs.begin(), pendingLPNs.end());
-
-  // Merge
-  std::list<LPN> alignedLPN;
-
-  for (auto &iter : pendingLPNs) {
-    LPN aligned = alignToMinPage(iter);
-
-    if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
-      alignedLPN.emplace_back(aligned);
-    }
-  }
-
-#ifndef EXCLUDE_CPU
-  // Maybe collected LPN is already in read O(n^2)
-  for (auto &ctx : readPendingQueue) {
-    if (ctx.status == CacheStatus::FTL) {
-      LPN aligned = alignToMinPage(ctx.scmd->lpn);
-
-      for (auto iter = alignedLPN.begin(); iter != alignedLPN.end();) {
-        if (*iter == aligned) {
-          iter = alignedLPN.erase(iter);
-        }
-        else {
-          ++iter;
-        }
+      if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
+        alignedLPN.emplace_back(aligned);
       }
     }
   }
 
-  if (UNLIKELY(alignedLPN.size() == 0)) {
+  // Check prefetch
+  if (trigger.triggered()) {
+    // Append pages
+    LPN last;
+    uint32_t limit = prefetchPages / minPages;
+
+    if (alignedLPN.size() > 0) {
+      last = alignedLPN.back();
+      limit = limit > alignedLPN.size() ? limit - alignedLPN.size() : 0;
+    }
+    else {
+      last = lastReadPendingAddress;
+    }
+
+    for (uint32_t i = 1; i <= limit; i++) {
+      alignedLPN.emplace_back(last + i * minPages);
+    }
+  }
+
+  if (alignedLPN.size() == 0) {
     readTriggered = false;
+
     return;
   }
-#endif
 
   // Update last read address
-  lastReadAddress = alignedLPN.back();
+  lastReadPendingAddress = alignedLPN.back();
 
   // Check capacity
-  readWaitsEviction = alignedLPN.size() * pageSize;
+  readWaitsEviction = alignedLPN.size();
 
-  if (readWaitsEviction + usedCapacity >= totalCapacity) {
+  if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
     readTriggered = false;
 
     trigger_writeWorker();
@@ -375,7 +356,27 @@ void RingBuffer::readWorker() {
     // Mark as submit
     for (auto &ctx : readPendingQueue) {
       if (ctx.status == CacheStatus::ReadWait) {
-        ctx.status = CacheStatus::FTL;
+        ctx.status = CacheStatus::ReadPendingWait;
+      }
+    }
+
+    // Create entry
+    for (auto &lpn : alignedLPN) {
+      auto ret = cacheEntry.emplace(lpn, Entry(lpn, minPages, iobits));
+      auto &entry = ret.first->second;
+
+      // As we got data from FTL, all SubEntries are valid
+      // Mark as read pending
+      for (auto &iter : entry.list) {
+        iter.valid.set();
+        iter.rpending = true;
+      }
+
+      // Update clock
+      entry.accessedAt = clock;
+
+      if (ret.second) {
+        entry.insertedAt = clock;
       }
     }
 
@@ -414,21 +415,13 @@ void RingBuffer::readWorker_done(uint64_t tag) {
   if (cmd.counter == cmd.length) {
     cmd.counter = 0;
 
-    // Read done, prepare new entry
-    auto ret =
-        cacheEntry.emplace(cmd.offset, Entry(cmd.offset, minPages, iobits));
-    auto &entry = ret.first->second;
+    // Read done
+    auto iter = cacheEntry.find(cmd.offset);
+    auto &entry = iter->second;
 
-    // Update clock
-    entry.accessedAt = clock;
-
-    if (ret.second) {
-      entry.insertedAt = clock;
-    }
-
-    // As we got data from FTL, all SubEntries are valid
+    // Mark as read done
     for (auto &iter : entry.list) {
-      iter.valid.set();
+      iter.rpending = false;
     }
 
     // Apply NVM -> DRAM latency (No completion handler)
@@ -437,18 +430,20 @@ void RingBuffer::readWorker_done(uint64_t tag) {
 
     // Update capacity
     if (LIKELY(enabled)) {
-      usedCapacity += cmd.length * pageSize;
-
       // We need to erase some entry
-      if (usedCapacity >= totalCapacity) {
+      if (cacheEntry.size() >= maxEntryCount) {
         trigger_writeWorker();
       }
     }
 
+    // Update address
+    lastReadDoneAddress = cmd.offset + cmd.length;
+
     // Handle completion of pending request
     for (auto iter = readPendingQueue.begin();
          iter != readPendingQueue.end();) {
-      if (iter->status == CacheStatus::FTL && iter->scmd->lpn >= cmd.offset &&
+      if (iter->status == CacheStatus::ReadPendingWait &&
+          iter->scmd->lpn >= cmd.offset &&
           iter->scmd->lpn < cmd.offset + cmd.length) {
         // This pending read is completed
         iter->scmd->status = Status::Done;
@@ -471,7 +466,7 @@ void RingBuffer::readWorker_done(uint64_t tag) {
 }
 
 void RingBuffer::trigger_writeWorker() {
-  if ((float)usedCapacity / totalCapacity >= triggerThreshold &&
+  if ((float)cacheEntry.size() / maxEntryCount >= triggerThreshold &&
       !writeTriggered) {
     writeTriggered = true;
 
@@ -489,7 +484,8 @@ void RingBuffer::writeWorker() {
    */
 
   // Do we need to write?
-  if ((float)dirtyCapacity / totalCapacity >= triggerThreshold) {
+  if ((float)(dirtyCapacity / minPages / pageSize) / maxEntryCount >=
+      triggerThreshold) {
     bool notfound = true;
     auto iter = cacheEntry.end();
 
@@ -545,12 +541,10 @@ void RingBuffer::writeWorker() {
   }
   else {
     // Just erase some clean entries
-    while (readWaitsEviction + usedCapacity >= totalCapacity) {
+    while (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
       auto iter = chooseEntry(SelectionMode::Clean);
 
       panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
-
-      usedCapacity -= minPages * pageSize;
 
       cacheEntry.erase(iter);
     }
@@ -599,7 +593,6 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
         }
 
         dirtyCapacity -= cmd.length * pageSize;
-        usedCapacity -= cmd.length * pageSize;
       }
     }
 
@@ -680,7 +673,12 @@ void RingBuffer::read_find(Command &cmd) {
               continue;
             }
 
-            scmd.status = Status::InternalCacheDone;
+            if (sentry.rpending) {
+              scmd.status = Status::InternalCache;
+            }
+            else {
+              scmd.status = Status::InternalCacheDone;
+            }
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
 
@@ -697,14 +695,11 @@ void RingBuffer::read_find(Command &cmd) {
     cmd.counter = 0;
 
     if (trigger.triggered() &&
-        lastReadAddress != std::numeric_limits<uint64_t>::max()) {
-      // Always lastaddress >= offset
-      if (lastReadAddress - cmd.offset < prefetchPages / 2) {
+        lastReadDoneAddress != std::numeric_limits<uint64_t>::max()) {
+      if (cmd.offset < lastReadPendingAddress &&
+          lastReadPendingAddress - cmd.offset <= prefetchPages * 0.5f) {
         trigger_readWorker();
       }
-    }
-    else {
-      lastReadAddress = std::numeric_limits<uint64_t>::max();
     }
   }
 
@@ -717,6 +712,10 @@ void RingBuffer::read_find(Command &cmd) {
           CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
 
       trigger_readWorker();
+    }
+    else if (scmd.status == Status::InternalCache) {
+      readPendingQueue.emplace_back(
+          CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadPendingWait));
     }
   }
 
@@ -783,7 +782,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
     // Check done
     if (scmd.status == Status::Submit) {
-      if (usedCapacity + pageSize < totalCapacity) {
+      if (cacheEntry.size() + 1 < maxEntryCount) {
         // In this case, there was no entry for this sub command
         LPN aligned = alignToMinPage(scmd.lpn);
 
@@ -951,7 +950,6 @@ void RingBuffer::setCache(bool set) {
     cacheEntry.clear();
   }
 
-  usedCapacity = 0;
   dirtyCapacity = 0;
 }
 
@@ -992,8 +990,7 @@ void RingBuffer::resetStatValues() noexcept {
 }
 
 void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, totalCapacity);
-  BACKUP_SCALAR(out, usedCapacity);
+  BACKUP_SCALAR(out, maxEntryCount);
   BACKUP_SCALAR(out, dirtyCapacity);
   BACKUP_SCALAR(out, enabled);
   BACKUP_SCALAR(out, prefetchEnabled);
@@ -1028,7 +1025,8 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, readTriggered);
   BACKUP_SCALAR(out, writeTriggered);
   BACKUP_SCALAR(out, readWaitsEviction);
-  BACKUP_SCALAR(out, lastReadAddress);
+  BACKUP_SCALAR(out, lastReadPendingAddress);
+  BACKUP_SCALAR(out, lastReadDoneAddress);
 
   size = readWorkerTag.size();
   BACKUP_SCALAR(out, size);
@@ -1101,9 +1099,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   uint8_t tmp8;
 
   RESTORE_SCALAR(in, tmp64);
-  panic_if(tmp64 != totalCapacity, "Cache size not matched while restore.");
+  panic_if(tmp64 != maxEntryCount, "Cache size not matched while restore.");
 
-  RESTORE_SCALAR(in, usedCapacity);
   RESTORE_SCALAR(in, dirtyCapacity);
   RESTORE_SCALAR(in, enabled);
   RESTORE_SCALAR(in, prefetchEnabled);
@@ -1147,7 +1144,8 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, readTriggered);
   RESTORE_SCALAR(in, writeTriggered);
   RESTORE_SCALAR(in, readWaitsEviction);
-  RESTORE_SCALAR(in, lastReadAddress);
+  RESTORE_SCALAR(in, lastReadPendingAddress);
+  RESTORE_SCALAR(in, lastReadDoneAddress);
 
   RESTORE_SCALAR(in, size);
 

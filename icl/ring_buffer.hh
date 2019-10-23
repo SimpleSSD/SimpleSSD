@@ -26,8 +26,9 @@ class RingBuffer : public AbstractCache {
       uint8_t data;
       struct {
         uint8_t dirty : 1;
+        uint8_t rpending : 1;  // Wait for NVM Read done
         uint8_t wpending : 1;  // Wait for NVM Write done
-        uint8_t rsvd : 6;
+        uint8_t rsvd : 5;
       };
     };
 
@@ -62,11 +63,10 @@ class RingBuffer : public AbstractCache {
   using CacheEntry = std::unordered_map<LPN, Entry>;
 
   enum class CacheStatus {
-    None,            // Invalid status
-    ReadWait,        // Cache miss, we need to read data
-    WriteCacheWait,  // Need eviction
-
-    FTL,  // Submitted to FTL, waiting for completion
+    None,             // Invalid status
+    ReadWait,         // Cache miss, we need to read data
+    ReadPendingWait,  // Cache hit, we need to wait NVM read
+    WriteCacheWait,   // Need eviction
   };
 
   enum class SelectionMode {
@@ -107,8 +107,7 @@ class RingBuffer : public AbstractCache {
   const uint32_t iobits;    // Necessary # bits to mark partial subentry
 
   // Cache size
-  uint64_t totalCapacity;
-  uint64_t usedCapacity;
+  uint64_t maxEntryCount;
   uint64_t dirtyCapacity;
 
   bool enabled;
@@ -157,7 +156,7 @@ class RingBuffer : public AbstractCache {
      * But for memory requirement and simulation speed, we approximate
      * the data address.
      */
-    return dataAddress + lpn % totalCapacity;
+    return dataAddress + lpn % (maxEntryCount * minPages * pageSize);
   }
 
   inline bool skipCheck(Bitset &bitset, uint32_t skipFront, uint32_t skipEnd) {
@@ -240,7 +239,8 @@ class RingBuffer : public AbstractCache {
   bool readTriggered;
   bool writeTriggered;
   uint64_t readWaitsEviction;
-  LPN lastReadAddress;
+  LPN lastReadPendingAddress;
+  LPN lastReadDoneAddress;
   std::vector<uint64_t> readWorkerTag;
   std::vector<uint64_t> writeWorkerTag;
   std::vector<uint64_t> flushEvents;
