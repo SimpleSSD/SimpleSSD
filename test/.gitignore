@@ -1,2 +1,7 @@
+# Extra
 *.xml
 *.o
+
+# Test binaries
+test_sorted_map
+test_config_reader
