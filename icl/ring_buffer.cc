@@ -20,12 +20,12 @@ RingBuffer::PrefetchTrigger::PrefetchTrigger(const uint64_t c, const uint64_t r)
       prefetchRatio(r),
       requestCounter(0),
       requestCapacity(0),
-      lastAddress(0),
+      lastAddress(std::numeric_limits<uint64_t>::max()),
       trigger(false) {}
 
 void RingBuffer::PrefetchTrigger::update(LPN addr, uint32_t size) {
   // New request arrived, check sequential
-  if (addr == lastAddress + 1) {
+  if (addr == lastAddress) {
     requestCounter++;
     requestCapacity += size;
   }
@@ -40,8 +40,9 @@ void RingBuffer::PrefetchTrigger::update(LPN addr, uint32_t size) {
   if (requestCounter >= prefetchCount && requestCapacity >= prefetchRatio) {
     trigger = true;
   }
-
-  trigger = false;
+  else {
+    trigger = false;
+  }
 }
 
 bool RingBuffer::PrefetchTrigger::triggered() {
@@ -54,7 +55,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       iobits(pageSize / minIO),
       trigger(
           readConfigUint(Section::InternalCache, Config::Key::PrefetchCount),
-          readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio)),
+          readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio) *
+              pageSize),
       readTriggered(false),
       writeTriggered(false) {
   auto param = pFTL->getInfo();
@@ -318,6 +320,16 @@ void RingBuffer::readWorker() {
     }
   }
 
+  // Check prefetch
+  if (trigger.triggered()) {
+    // Append pages
+    LPN last = alignedLPN.back();
+
+    for (uint32_t i = minPages; i <= prefetchPages; i += minPages) {
+      alignedLPN.emplace_back(last + i);
+    }
+  }
+
 #ifndef EXCLUDE_CPU
   // Maybe collected LPN is already in read O(n^2)
   for (auto &ctx : readPendingQueue) {
@@ -333,9 +345,6 @@ void RingBuffer::readWorker() {
         }
       }
     }
-    else {
-      ctx.status = CacheStatus::FTL;
-    }
   }
 
   if (UNLIKELY(alignedLPN.size() == 0)) {
@@ -344,21 +353,22 @@ void RingBuffer::readWorker() {
   }
 #endif
 
-  // Check prefetch
-  if (trigger.triggered()) {
-    // Append pages
-    for (uint32_t i = minPages; i <= prefetchPages; i += minPages) {
-      alignedLPN.emplace_back(alignedLPN.back() + i);
-    }
-  }
-
   // Check capacity
   readWaitsEviction = alignedLPN.size() * pageSize;
 
   if (readWaitsEviction + usedCapacity >= totalCapacity) {
+    readTriggered = false;
+
     trigger_writeWorker();
   }
   else {
+    // Mark as submit
+    for (auto &ctx : readPendingQueue) {
+      if (ctx.status == CacheStatus::ReadWait) {
+        ctx.status = CacheStatus::FTL;
+      }
+    }
+
     // Submit
     readWorkerTag.reserve(alignedLPN.size());
 
@@ -620,15 +630,16 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
 
 void RingBuffer::read_find(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
+  uint64_t size = cmd.length * pageSize - cmd.subCommandList.front().skipFront -
+                  cmd.subCommandList.back().skipEnd;
 
-  stat.request[0] += cmd.length * pageSize -
-                     cmd.subCommandList.front().skipFront -
-                     cmd.subCommandList.back().skipEnd;
+  stat.request[0] += size;
 
   if (LIKELY(enabled)) {
     // Update prefetch trigger
     if (prefetchEnabled) {
-      trigger.update(cmd.offset, cmd.length);
+      trigger.update(
+          cmd.offset * pageSize + cmd.subCommandList.front().skipFront, size);
     }
 
     // Find entry including range
