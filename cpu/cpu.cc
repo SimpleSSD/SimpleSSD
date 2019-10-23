@@ -57,7 +57,7 @@ void Function::clear() {
 }
 
 void Function::dummy() {
-  cycles = 5000;
+  cycles = 5;
 }
 
 Function initFunction() {
