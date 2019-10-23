@@ -167,6 +167,7 @@ bool BaseConfig::isKey(pugi::xml_node &node) {
 }
 
 void BaseConfig::panic_if(bool eval, const char *format, ...) {
+#ifndef EXCLUDE_CPU
   if (eval) {
     va_list copy, args;
     std::vector<char> str;
@@ -181,9 +182,11 @@ void BaseConfig::panic_if(bool eval, const char *format, ...) {
     std::cerr << "panic: " << str.data() << std::endl;
     abort();
   }
+#endif
 }
 
 void BaseConfig::warn_if(bool eval, const char *format, ...) {
+#ifndef EXCLUDE_CPU
   if (eval) {
     va_list copy, args;
     std::vector<char> str;
@@ -197,6 +200,7 @@ void BaseConfig::warn_if(bool eval, const char *format, ...) {
 
     std::cerr << "warn: " << str.data() << std::endl;
   }
+#endif
 }
 
 }  // namespace SimpleSSD
