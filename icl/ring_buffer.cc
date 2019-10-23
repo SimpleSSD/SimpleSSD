@@ -352,17 +352,25 @@ void RingBuffer::readWorker() {
     }
   }
 
-  // Submit
-  readWorkerTag.reserve(alignedLPN.size());
+  // Check capacity
+  readWaitsEviction = alignedLPN.size() * pageSize;
 
-  for (auto &iter : alignedLPN) {
-    // Create request
-    uint64_t tag = makeCacheCommandTag();
+  if (readWaitsEviction + usedCapacity >= totalCapacity) {
+    trigger_writeWorker();
+  }
+  else {
+    // Submit
+    readWorkerTag.reserve(alignedLPN.size());
 
-    commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages);
+    for (auto &iter : alignedLPN) {
+      // Create request
+      uint64_t tag = makeCacheCommandTag();
 
-    // Store for CPU latency
-    readWorkerTag.emplace_back(tag);
+      commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages);
+
+      // Store for CPU latency
+      readWorkerTag.emplace_back(tag);
+    }
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventReadWorkerDoFTL, fstat);
@@ -517,7 +525,7 @@ void RingBuffer::writeWorker() {
   }
   else {
     // Just erase some clean entries
-    while (usedCapacity >= totalCapacity) {
+    while (readWaitsEviction + usedCapacity >= totalCapacity) {
       auto iter = chooseEntry(SelectionMode::Clean);
 
       panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
@@ -529,6 +537,9 @@ void RingBuffer::writeWorker() {
 
     // We will not call writeWorker_done
     writeTriggered = false;
+
+    readWaitsEviction = 0;
+    trigger_readWorker();
 
     return;
   }
@@ -984,6 +995,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, readTriggered);
   BACKUP_SCALAR(out, writeTriggered);
+  BACKUP_SCALAR(out, readWaitsEviction);
 
   size = readWorkerTag.size();
   BACKUP_SCALAR(out, size);
@@ -1101,6 +1113,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, readTriggered);
   RESTORE_SCALAR(in, writeTriggered);
+  RESTORE_SCALAR(in, readWaitsEviction);
 
   RESTORE_SCALAR(in, size);
 

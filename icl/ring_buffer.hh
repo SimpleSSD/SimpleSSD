@@ -239,6 +239,7 @@ class RingBuffer : public AbstractCache {
   // Workers
   bool readTriggered;
   bool writeTriggered;
+  uint64_t readWaitsEviction;
   std::vector<uint64_t> readWorkerTag;
   std::vector<uint64_t> writeWorkerTag;
   std::vector<uint64_t> flushEvents;
