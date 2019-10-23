@@ -697,7 +697,8 @@ void RingBuffer::read_find(Command &cmd) {
     if (trigger.triggered() &&
         lastReadDoneAddress != std::numeric_limits<uint64_t>::max()) {
       if (cmd.offset < lastReadPendingAddress &&
-          lastReadPendingAddress - cmd.offset <= prefetchPages * 0.5f) {
+          (lastReadPendingAddress + minPages) - cmd.offset <=
+              prefetchPages * 0.5f) {
         trigger_readWorker();
       }
     }
