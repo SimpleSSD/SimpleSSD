@@ -101,6 +101,20 @@ void Config::loadFrom(pugi::xml_node &section) {
 void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node, node2;
 
+  // Re-generate superpage allocation string
+  const char table[4] = {'C', 'W', 'D', 'P'};
+
+  superpage.clear();
+  superpage.reserve(4);
+
+  for (int i = 0; i < 4; i++) {
+    uint8_t mask = 1 << i;
+
+    if (superpageAllocation & mask) {
+      superpage.push_back(table[i]);
+    }
+  }
+
   STORE_NAME_UINT(section, NAME_MAPPING_MODE, mappingMode);
 
   STORE_SECTION(section, "gc", node);

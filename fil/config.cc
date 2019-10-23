@@ -259,6 +259,31 @@ void Config::loadFrom(pugi::xml_node &section) {
 void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node;
 
+  // Re-generate page allocation string
+  _pageAllocation.clear();
+  _pageAllocation.resize(4);
+
+  for (int i = 0; i < 4; i++) {
+    switch (nandStructure.pageAllocation[i]) {
+      case PageAllocation::Channel:
+        _pageAllocation[i] = 'C';
+        break;
+      case PageAllocation::Way:
+        _pageAllocation[i] = 'W';
+        break;
+      case PageAllocation::Die:
+        _pageAllocation[i] = 'D';
+        break;
+      case PageAllocation::Plane:
+        _pageAllocation[i] = 'P';
+        break;
+      default:
+        _pageAllocation[i] = '?';
+        panic_if(true, "Unexpected page allocation.");
+        break;
+    }
+  }
+
   STORE_NAME_UINT(section, NAME_CHANNEL, channel);
   STORE_NAME_UINT(section, NAME_PACKAGE, package);
   STORE_NAME_UINT(section, NAME_DMA_SPEED, dmaSpeed);
