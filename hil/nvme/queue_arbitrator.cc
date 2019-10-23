@@ -511,11 +511,11 @@ void Arbitrator::completion_done() {
   }
 
   // Remove CQContext
+  auto id = cqe->getCCID();
+
   delete cqe;
 
   if (completionQueue.size() == 0) {
-    auto id = cqe->getCCID();
-
     // Pending abort events?
     abort_SQDone();
     abort_CommandDone(id);
