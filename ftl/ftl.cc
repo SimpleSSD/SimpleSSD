@@ -55,6 +55,7 @@ FTL::~FTL() {
   delete pFIL;
   delete pMapper;
   delete pAllocator;
+  delete pFTL;
 }
 
 void FTL::submit(uint64_t tag) {

@@ -160,6 +160,25 @@ Arbitrator::~Arbitrator() {
 
   free(cqList);
   free(sqList);
+
+  // Checking queues (maybe AEN exists)
+  for (auto &iter : requestQueue) {
+    delete iter.second;
+  }
+
+  requestQueue.clear();
+
+  for (auto &iter : dispatchedQueue) {
+    delete iter.second;
+  }
+
+  dispatchedQueue.clear();
+
+  for (auto &iter : completionQueue) {
+    delete iter;
+  }
+
+  completionQueue.clear();
 }
 
 void Arbitrator::enable(bool r) {

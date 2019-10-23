@@ -98,9 +98,9 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
 }
 
 Controller::~Controller() {
-  delete controllerData.dmaEngine;
   delete controllerData.interruptManager;
   delete controllerData.arbitrator;
+  delete controllerData.dmaEngine;
   delete pcie;
   // delete interconnect;
 }

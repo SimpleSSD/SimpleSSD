@@ -31,7 +31,13 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i, ControllerID id)
                            "HIL::InterruptManager::eventTimer");
 }
 
-InterruptManager::~InterruptManager() {}
+InterruptManager::~InterruptManager() {
+  for (auto &iter : coalesceMap) {
+    delete iter.second;
+  }
+
+  coalesceMap.clear();
+}
 
 void InterruptManager::timerHandler(uint64_t tick) {
   auto data = coalesceMap.begin();

@@ -35,7 +35,7 @@ class AbstractFTL : public Object {
       : Object(o), commandManager(c), pFIL(f), pMapper(m), pAllocator(a) {}
   AbstractFTL(const AbstractFTL &) = delete;
   AbstractFTL(AbstractFTL &&) noexcept = default;
-  ~AbstractFTL() {}
+  virtual ~AbstractFTL() {}
 
   AbstractFTL &operator=(const AbstractFTL &) = delete;
   AbstractFTL &operator=(AbstractFTL &&) = default;

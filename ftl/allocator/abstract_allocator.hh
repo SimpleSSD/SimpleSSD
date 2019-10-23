@@ -34,7 +34,7 @@ class AbstractAllocator : public Object {
       : Object(o), pMapper(m) {}
   AbstractAllocator(const AbstractAllocator &) = delete;
   AbstractAllocator(AbstractAllocator &&) noexcept = default;
-  ~AbstractAllocator() {}
+  virtual ~AbstractAllocator() {}
 
   AbstractAllocator &operator=(const AbstractAllocator &) = delete;
   AbstractAllocator &operator=(AbstractAllocator &&) = default;

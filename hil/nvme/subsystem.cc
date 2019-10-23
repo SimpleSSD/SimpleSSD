@@ -41,6 +41,10 @@ Subsystem::Subsystem(ObjectData &o)
 }
 
 Subsystem::~Subsystem() {
+  for (auto &iter : controllerList) {
+    // Other fields will be handled in dtor of controller
+    delete iter.second->controller;
+  }
   for (auto &iter : namespaceList) {
     delete iter.second;
   }
