@@ -71,8 +71,8 @@ void Config::loadFrom(pugi::xml_node &section) {
            node2 = node2.next_sibling()) {
         auto name2 = node2.attribute("name").value();
 
-        LOAD_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
-        LOAD_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_OVERPROVISION_RATIO, overProvision);
+        LOAD_NAME_UINT(node2, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
         LOAD_NAME_BOOLEAN(node2, NAME_USE_SUPERPAGE, useSuperpage);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
 

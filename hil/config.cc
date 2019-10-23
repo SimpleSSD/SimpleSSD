@@ -135,11 +135,11 @@ void Config::storeInterface(pugi::xml_node &section) {
   pugi::xml_node node;
 
   STORE_SECTION(section, "pcie", node);
-  STORE_NAME_UINT(node, NAME_GENERATION, pcieGen);
+  STORE_NAME_UINT(node, NAME_GENERATION, (uint8_t)pcieGen + 1);
   STORE_NAME_UINT(node, NAME_LANE, pcieLane);
 
   STORE_SECTION(section, "sata", node);
-  STORE_NAME_UINT(node, NAME_GENERATION, sataGen);
+  STORE_NAME_UINT(node, NAME_GENERATION, (uint8_t)sataGen + 1);
 
   STORE_SECTION(section, "mphy", node);
   STORE_NAME_UINT(node, NAME_MODE, mphyMode);
