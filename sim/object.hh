@@ -84,7 +84,7 @@ class AbstractSRAM;
  * Hardware including CPU (Event engine), DRAM and SRAM.
  * Simulation system like configuration reader and log system.
  */
-using ObjectData = struct _ObjectData {
+struct ObjectData {
   /* SSD hardware */
   CPU::CPU *cpu;
   Memory::DRAM::AbstractDRAM *dram;
@@ -94,14 +94,14 @@ using ObjectData = struct _ObjectData {
   ConfigReader *config;
   Log *log;
 
-  _ObjectData()
+  ObjectData()
       : cpu(nullptr),
         dram(nullptr),
         sram(nullptr),
         config(nullptr),
         log(nullptr) {}
-  _ObjectData(CPU::CPU *e, Memory::DRAM::AbstractDRAM *d,
-              Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
+  ObjectData(CPU::CPU *e, Memory::DRAM::AbstractDRAM *d,
+             Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
       : cpu(e), dram(d), sram(s), config(c), log(l) {}
 };
 
