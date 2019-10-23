@@ -115,7 +115,7 @@ void Config::loadNVMe(pugi::xml_node &section) {
 
     if (strcmp(node.attribute("name").value(), "namespace") == 0 &&
         isSection(node)) {
-      namespaceList.push_back(Namespace());
+      namespaceList.emplace_back(Namespace());
 
       loadNamespace(node, &namespaceList.back());
     }
@@ -196,7 +196,7 @@ void Config::loadFrom(pugi::xml_node &section) {
       loadInterface(node);
     }
     else if (strcmp(name, "disk") == 0 && isSection(node)) {
-      diskList.push_back(Disk());
+      diskList.emplace_back(Disk());
 
       loadDisk(node, &diskList.back());
     }

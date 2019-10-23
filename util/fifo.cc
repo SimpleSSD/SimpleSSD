@@ -98,7 +98,7 @@ void FIFO::Queue::restore(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    waitQueue.push_back(FIFOEntry());
+    waitQueue.emplace_back(FIFOEntry());
 
     RESTORE_SCALAR(in, waitQueue.back().last);
     RESTORE_SCALAR(in, waitQueue.back().id);
@@ -114,7 +114,7 @@ void FIFO::Queue::restore(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    transferQueue.push_back(FIFOEntry());
+    transferQueue.emplace_back(FIFOEntry());
 
     RESTORE_SCALAR(in, transferQueue.back().last);
     RESTORE_SCALAR(in, transferQueue.back().id);
@@ -246,7 +246,7 @@ void FIFO::insertWrite() {
   }
 
   // Push current item to transferQueue
-  writeQueue.transferQueue.push_back(*iter);
+  writeQueue.transferQueue.emplace_back(*iter);
 }
 
 void FIFO::insertWriteDone() {
@@ -366,7 +366,7 @@ void FIFO::transferRead() {
   }
 
   // Push current item to transferQueue
-  readQueue.transferQueue.push_back(*iter);
+  readQueue.transferQueue.emplace_back(*iter);
 }
 
 void FIFO::transferReadDone() {
@@ -378,7 +378,7 @@ void FIFO::transferReadDone() {
   auto comp = find(iter.id);
 
   if (comp == readCompletion.end()) {
-    readCompletion.push_back(ReadEntry(iter.id, 0, getTick(), latency));
+    readCompletion.emplace_back(ReadEntry(iter.id, 0, getTick(), latency));
   }
   else {
     comp->dmaEndAt = getTick();
@@ -425,7 +425,7 @@ void FIFO::insertReadDone() {
   auto comp = find(iter.id);
 
   if (comp == readCompletion.end()) {
-    readCompletion.push_back(ReadEntry(iter.id, getTick(), 0, latency));
+    readCompletion.emplace_back(ReadEntry(iter.id, getTick(), 0, latency));
   }
   else {
     insertReadDoneMerge(comp);
@@ -481,7 +481,8 @@ void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
     return;
   }
 
-  readQueue.waitQueue.push_back(FIFOEntry(addr, size, buffer, getTick(), eid));
+  readQueue.waitQueue.emplace_back(
+      FIFOEntry(addr, size, buffer, getTick(), eid));
 
   transferRead();
 }
@@ -493,7 +494,8 @@ void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
     return;
   }
 
-  writeQueue.waitQueue.push_back(FIFOEntry(addr, size, buffer, getTick(), eid));
+  writeQueue.waitQueue.emplace_back(
+      FIFOEntry(addr, size, buffer, getTick(), eid));
 
   insertWrite();
 }
@@ -541,7 +543,7 @@ void FIFO::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    readCompletion.push_back(ReadEntry());
+    readCompletion.emplace_back(ReadEntry());
 
     RESTORE_SCALAR(in, readCompletion.back().id);
     RESTORE_SCALAR(in, readCompletion.back().insertEndAt);

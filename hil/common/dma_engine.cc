@@ -178,7 +178,7 @@ void DMAEngine::prdt_readDone() {
   uint32_t entryCount = (uint32_t)(session.bufferSize / sizeof(PRDT));
 
   for (uint32_t i = 0; i < entryCount; i++) {
-    session.parent->prList.push_back(
+    session.parent->prList.emplace_back(
         PhysicalRegion(prdt->address, prdt->size + 1));
     session.handled += prdt->size + 1;
   }
@@ -215,7 +215,7 @@ void DMAEngine::getPRPListFromPRP_readDone() {
       panic("Invalid PRP in PRP List");
     }
 
-    session.parent->prList.push_back(PhysicalRegion(listPRP, listPRPSize));
+    session.parent->prList.emplace_back(PhysicalRegion(listPRP, listPRPSize));
     session.handled += listPRPSize;
 
     if (session.handled >= session.requested) {
@@ -245,13 +245,13 @@ void DMAEngine::parseSGLDescriptor(DMASession &session, SGLDescriptor *desc) {
   switch (desc->getType()) {
     case DataBlock:
     case KeyedDataBlock:
-      session.parent->prList.push_back(
+      session.parent->prList.emplace_back(
           PhysicalRegion(desc->address, desc->length));
       session.handled += desc->length;
 
       break;
     case BitBucket:
-      session.parent->prList.push_back(
+      session.parent->prList.emplace_back(
           PhysicalRegion(desc->address, desc->length, true));
       session.handled += desc->length;
 
@@ -379,14 +379,14 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   switch (mode) {
     case 0:
       // PRP1 is PRP pointer, PRP2 is not used
-      ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
+      ret->prList.emplace_back(PhysicalRegion(prp1, prp1Size));
       session.handled = prp1Size;
 
       break;
     case 1:
       // PRP1 and PRP2 are PRP pointer
-      ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
-      ret->prList.push_back(PhysicalRegion(prp2, prp2Size));
+      ret->prList.emplace_back(PhysicalRegion(prp1, prp1Size));
+      ret->prList.emplace_back(PhysicalRegion(prp2, prp2Size));
 
       panic_if(prp1Size + prp2Size < session.requested, "Invalid DPTR size");
 
@@ -395,7 +395,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
       break;
     case 2:
       // PRP1 is PRP pointer, PRP2 is PRP list
-      ret->prList.push_back(PhysicalRegion(prp1, prp1Size));
+      ret->prList.emplace_back(PhysicalRegion(prp1, prp1Size));
 
       /* fallthrough */
     case 3:
@@ -457,7 +457,7 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
 DMATag DMAEngine::initRaw(uint64_t base, uint32_t size) noexcept {
   auto ret = createTag();
 
-  ret->prList.push_back(PhysicalRegion(base, size));
+  ret->prList.emplace_back(PhysicalRegion(base, size));
   ret->inited = true;
 
   return ret;

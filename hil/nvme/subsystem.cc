@@ -92,7 +92,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
 
   // Collect allocated slots
   for (auto &iter : namespaceList) {
-    allocated.push_back(iter.second->getInfo()->namespaceRange);
+    allocated.emplace_back(iter.second->getInfo()->namespaceRange);
   }
 
   // Sort
@@ -124,7 +124,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
   }
 
   // Invert
-  unallocated.push_back(LPNRange(0, totalLogicalPages));
+  unallocated.emplace_back(LPNRange(0, totalLogicalPages));
 
   for (auto &iter : allocated) {
     // Split last item
@@ -132,7 +132,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
 
     if (last.first <= iter.first &&
         last.first + last.second >= iter.first + iter.second) {
-      unallocated.push_back(
+      unallocated.emplace_back(
           LPNRange(iter.first + iter.second,
                    last.first + last.second - iter.first - iter.second));
       last.second = iter.first - last.first;
@@ -186,7 +186,7 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
     auto list = iter->second->getAttachment();
 
     for (auto &ctrlid : list) {
-      aenTo.push_back(ctrlid);
+      aenTo.emplace_back(ctrlid);
 
       auto mapping = attachmentTable.find(ctrlid);
 
@@ -530,7 +530,7 @@ uint8_t Subsystem::attachNamespace(ControllerID ctrlid, uint32_t nsid,
   iter.first->second.emplace(nsid);
 
   // For attach, send newly attached namespace ID to the log
-  aenTo.push_back(ctrlid);
+  aenTo.emplace_back(ctrlid);
   ctrl->second->controller->getLogPage()->cnl.appendList(nsid);
 
   return 0;
@@ -572,7 +572,7 @@ uint8_t Subsystem::detachNamespace(ControllerID ctrlid, uint32_t nsid,
     }
   }
 
-  aenTo.push_back(ctrlid);
+  aenTo.emplace_back(ctrlid);
 
   return 0;
 }

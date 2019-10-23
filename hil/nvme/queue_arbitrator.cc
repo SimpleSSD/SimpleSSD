@@ -471,12 +471,12 @@ void Arbitrator::complete(CQContext *cqe, bool ignore) {
              "Corresponding submission entry not completed.");
 
     // Remove SQContext
-    dispatchedQueue.erase(iter);
-
     delete iter->second;
+
+    dispatchedQueue.erase(iter);
   }
   // Insert to completion queue
-  completionQueue.push_back(cqe);
+  completionQueue.emplace_back(cqe);
 
   cq->setData(cqe->getData(), eventCompDone);
 }
@@ -691,7 +691,7 @@ bool Arbitrator::checkQueue(uint16_t qid) {
   if (sq && sq->getItemCount() > 0) {
     auto *entry = new SQContext();
 
-    collectQueue.push_back(entry);
+    collectQueue.emplace_back(entry);
 
     entry->update(qid, sq->getCQID(), sq->getHead());
     sq->getData(entry->getData(), eventCollect);
@@ -981,7 +981,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_BLOB(in, iter->entry.data, 16);
     RESTORE_SCALAR(in, iter->cqID);
 
-    completionQueue.push_back(iter);
+    completionQueue.emplace_back(iter);
   }
 
   RESTORE_SCALAR(in, size);
@@ -991,7 +991,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_BLOB(in, iter->entry.data, 64);
 
-    collectQueue.push_back(iter);
+    collectQueue.emplace_back(iter);
   }
 
   RESTORE_SCALAR(in, size);
