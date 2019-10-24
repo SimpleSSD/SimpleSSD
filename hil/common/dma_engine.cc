@@ -129,6 +129,8 @@ DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
 }
 
 DMAEngine::~DMAEngine() {
+  warn_if(tagList.size() > 0, "Not all DMA Tag destoryed.");
+
   for (auto &iter : tagList) {
     delete iter;
   }
