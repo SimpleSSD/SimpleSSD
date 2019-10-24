@@ -129,7 +129,11 @@ DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
 }
 
 DMAEngine::~DMAEngine() {
-  panic_if(tagList.size() > 0, "Not all DMA tag is released.");
+  for (auto &iter : tagList) {
+    delete iter;
+  }
+
+  tagList.clear();
 }
 
 void DMAEngine::dmaDone() {
