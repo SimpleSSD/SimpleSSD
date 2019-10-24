@@ -782,8 +782,10 @@ void RingBuffer::read_find(Command &cmd) {
       readPendingQueue.emplace_back(
           CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
 
-      debugprint(Log::DebugID::ICL_RingBuffer,
-                 "Read  | LPN %" PRIx64 "h | Cache miss", scmd.lpn);
+      if (LIKELY(enabled)) {
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Read  | LPN %" PRIx64 "h | Cache miss", scmd.lpn);
+      }
 
       trigger_readWorker();
     }
