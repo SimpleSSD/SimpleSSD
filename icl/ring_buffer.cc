@@ -539,19 +539,8 @@ void RingBuffer::writeWorker() {
 
     // We will not call writeWorker_done
     readWaitsEviction = 0;
-    writeTriggered = false;
 
     trigger_readWorker();
-
-    return;
-  }
-
-  if (UNLIKELY(writeWorkerTag.size() == 0)) {
-    writeTriggered = false;
-
-    trigger_writeWorker();
-
-    return;
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoFTL, fstat);
@@ -615,6 +604,8 @@ void RingBuffer::writeWorker_doFTL() {
     pFTL->submit(iter);
   }
 
+  writeTriggered = false;
+
   writeWorkerTag.clear();
 }
 
@@ -677,8 +668,6 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     }
 
     // Schedule next worker
-    writeTriggered = false;
-
     trigger_writeWorker();
   }
 }
