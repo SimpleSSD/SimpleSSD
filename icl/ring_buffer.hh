@@ -222,11 +222,25 @@ class RingBuffer : public AbstractCache {
     return dirty;
   }
 
+  inline bool isClean(std::vector<SubEntry> &list) {
+    bool dirty = false;
+
+    for (auto &iter : list) {
+      if (iter.dirty || iter.wpending) {
+        dirty = true;
+
+        break;
+      }
+    }
+
+    return !dirty;
+  }
+
   inline bool isFullSizeDirty(std::vector<SubEntry> &list) {
     bool good = true;
 
     for (auto &iter : list) {
-      if (!iter.valid.all() || iter.dirty) {
+      if (!iter.valid.all() || !iter.dirty) {
         good = false;
 
         break;

@@ -166,7 +166,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
         else {
           for (auto iter = cacheEntry.begin(); iter != cacheEntry.end();
                ++iter) {
-            if (!isDirty(iter->second.list)) {
+            if (isClean(iter->second.list)) {
               list.emplace_back(iter);
             }
           }
@@ -197,7 +197,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               }
             }
             else {
-              if (isDirty(iter->second.list)) {
+              if (!isClean(iter->second.list)) {
                 continue;
               }
             }
@@ -230,7 +230,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               }
             }
             else {
-              if (isDirty(iter->second.list)) {
+              if (!isClean(iter->second.list)) {
                 continue;
               }
             }
