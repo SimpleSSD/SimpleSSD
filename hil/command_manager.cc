@@ -11,7 +11,9 @@ namespace SimpleSSD {
 
 CommandManager::CommandManager(ObjectData &o) : Object(o) {}
 
-CommandManager::~CommandManager() {}
+CommandManager::~CommandManager() {
+  warn_if(commandList.size() > 0, "Not all commands are destroyed.");
+}
 
 Command &CommandManager::getCommand(uint64_t tag) {
   auto iter = commandList.find(tag);
