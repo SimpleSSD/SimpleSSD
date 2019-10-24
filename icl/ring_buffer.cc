@@ -59,6 +59,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               pageSize),
       readTriggered(false),
       writeTriggered(false),
+      readWaitsEviction(0),
       flushTag({InvalidEventID, 0}) {
   auto param = pFTL->getInfo();
 
@@ -608,16 +609,18 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
   }
 
   // Last chunk
-  uint64_t tag = makeCacheCommandTag();
+  if (length > 0) {
+    uint64_t tag = makeCacheCommandTag();
 
-  commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                 iter->second.offset + offset, length, now);
+    commandManager->createICLWrite(tag, eventWriteWorkerDone,
+                                   iter->second.offset + offset, length, now);
 
-  debugprint(Log::DebugID::ICL_RingBuffer,
-             "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
-             iter->second.offset + offset, length);
+    debugprint(Log::DebugID::ICL_RingBuffer,
+               "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
+               iter->second.offset + offset, length);
 
-  writeWorkerTag.emplace_back(tag);
+    writeWorkerTag.emplace_back(tag);
+  }
 
   return std::move(fstat);
 }
