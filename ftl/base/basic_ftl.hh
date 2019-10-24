@@ -23,6 +23,30 @@ class BasicFTL : public AbstractFTL {
     FormatContext() : eid(InvalidEventID), data(0) {}
   };
 
+  struct ReadModifyWriteContext {
+    Event originalEvent;
+    uint64_t originalTag;
+
+    bool readPending;
+    bool writePending;
+
+    uint64_t readTag;
+    uint64_t writeTag;
+
+    LPN offset;
+    LPN length;
+
+    ReadModifyWriteContext(Event e, uint64_t t)
+        : originalEvent(e),
+          originalTag(t),
+          readTag(0),
+          writeTag(0),
+          offset(InvalidLPN),
+          length(InvalidLPN) {}
+  };
+
+  LPN mappingGranularity;
+
   bool gcInProgress;
   std::deque<PPN> gcBlockList;
   CopyList gcCopyList;
@@ -32,6 +56,8 @@ class BasicFTL : public AbstractFTL {
   uint8_t formatInProgress;
   FormatContext fctx;
 
+  std::list<ReadModifyWriteContext> rmwList;
+
   void read_find(Command &);
 
   Event eventReadDoFIL;
@@ -39,8 +65,14 @@ class BasicFTL : public AbstractFTL {
 
   void write_find(Command &);
 
+  Event eventWriteFindDone;
+
   Event eventWriteDoFIL;
   void write_doFIL(uint64_t);
+
+  Event eventReadModifyDone;
+
+  Event eventWriteDone;
 
   void invalidate_find(Command &);
 

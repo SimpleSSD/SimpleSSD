@@ -39,6 +39,8 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                                  "FTL::BasicFTL::EventGCEraseDone");
   eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
                             "FTL::BasicFTL::eventGCDone");
+
+  mappingGranularity = pMapper->mappingGranularity();
 }
 
 BasicFTL::~BasicFTL() {}
@@ -53,7 +55,97 @@ void BasicFTL::read_doFIL(uint64_t tag) {
 }
 
 void BasicFTL::write_find(Command &cmd) {
-  pMapper->writeMapping(cmd, eventWriteDoFIL);
+  CPU::Function fstat = CPU::initFunction();
+
+  // Check this request is aligned to mapping granularity
+  LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
+  LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, mappingGranularity);
+
+  if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd ||
+      cmd.subCommandList.front().skipFront > 0 ||
+      cmd.subCommandList.back().skipEnd > 0) {
+    bool merged = false;
+
+    // Not aligned - read-modify-write
+    warn_if(alignedBegin + 1 != alignedEnd,
+            "Merge might fail. (I/O size > one mapping granularity)");
+
+    // 1. Check merge
+    for (auto entry = rmwList.begin(); entry != rmwList.end(); ++entry) {
+      // Not submitted yet
+      if (!entry->readPending && !entry->writePending) {
+        if (entry->offset == alignedBegin) {
+          // Merge with this request
+          rmwList.emplace(++entry, ReadModifyWriteContext(cmd.eid, cmd.tag));
+
+          break;
+        }
+      }
+    }
+
+    if (!merged) {
+      // 2. Create read request
+      ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
+
+      ctx.offset = alignedBegin;
+      ctx.length = alignedEnd - alignedBegin;
+
+      uint64_t tag = makeFTLCommandTag();
+
+      commandManager->createICLRead(tag, eventReadModifyDone, alignedBegin,
+                                    alignedEnd, 0);
+
+      auto &rcmd = commandManager->getCommand(tag);
+
+      fstat += pMapper->readMapping(rcmd);
+
+      // 2-1. Prepare exclude [cmd.offset, cmd.offset + cmd.length)
+      LPN excludeBegin = cmd.offset;
+      LPN excludeEnd = cmd.offset + cmd.length;
+
+      // 2-1-1. We need to include cmd.offset when skipFront > 0
+      if (cmd.subCommandList.front().skipFront > 0) {
+        excludeBegin++;
+      }
+
+      // 2-1-2. We need to include cmd.offset + cmd.length - 1 when skipEnd > 0
+      if (cmd.subCommandList.back().skipEnd > 0) {
+        excludeEnd--;
+      }
+
+      // 2-1-3. Exclude
+      for (auto &scmd : rcmd.subCommandList) {
+        if (excludeBegin <= scmd.lpn && scmd.lpn < excludeEnd) {
+          scmd.lpn = InvalidLPN;
+          scmd.ppn = InvalidPPN;
+        }
+      }
+
+      ctx.readTag = tag;
+
+      // 3. Create write request [alignedBegin, alignedEnd)
+      tag = makeFTLCommandTag();
+
+      commandManager->createICLWrite(tag, eventWriteDone, alignedBegin,
+                                     alignedEnd, 0, 0, 0);
+
+      auto &wcmd = commandManager->getCommand(tag);
+
+      fstat += pMapper->writeMapping(wcmd);
+
+      ctx.writeTag = tag;
+
+      rmwList.emplace_back(ctx);
+    }
+  }
+  else {
+    pMapper->writeMapping(cmd, eventWriteDoFIL);
+
+    return;
+  }
+
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventWriteFindDone,
+                   fstat);
 }
 
 void BasicFTL::write_doFIL(uint64_t tag) {
