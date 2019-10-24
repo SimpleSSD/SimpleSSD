@@ -148,6 +148,18 @@ void BasicFTL::write_find(Command &cmd) {
                    fstat);
 }
 
+void BasicFTL::write_findDone() {
+  if (rmwList.size() > 0) {
+    auto &job = rmwList.front();
+
+    if (!job.readPending) {
+      job.readPending = true;
+
+      pFIL->submit(job.readTag);
+    }
+  }
+}
+
 void BasicFTL::write_doFIL(uint64_t tag) {
   // Now we have PPN
   pFIL->submit(tag);
@@ -155,6 +167,43 @@ void BasicFTL::write_doFIL(uint64_t tag) {
   // Check GC threshold for On-demand GC
   if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
     scheduleNow(eventGCTrigger);
+  }
+}
+
+void BasicFTL::write_readModifyDone() {
+  auto &job = rmwList.front();
+
+  panic_if(!job.readPending, "Read-Modify-Write queue corrupted.");
+  panic_if(job.writePending, "Read-Modify-Write queue corrupted.");
+
+  job.writePending = true;
+
+  pFIL->submit(job.writeTag);
+}
+
+void BasicFTL::write_rmwDone() {
+  auto &job = rmwList.front();
+
+  panic_if(!job.writePending, "Read-Modify-Write queue corrupted.");
+
+  scheduleNow(job.originalEvent, job.originalTag);
+
+  if (job.readTag > 0) {
+    commandManager->destroyCommand(job.readTag);
+    commandManager->destroyCommand(job.writeTag);
+  }
+
+  rmwList.pop_front();
+
+  if (rmwList.size() > 0) {
+    // Check merged
+    if (rmwList.front().readTag == 0) {
+      // Call this function again
+      scheduleNow(eventWriteDone);
+    }
+    else {
+      scheduleNow(eventWriteFindDone);
+    }
   }
 }
 

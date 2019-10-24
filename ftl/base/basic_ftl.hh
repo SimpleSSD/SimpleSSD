@@ -66,13 +66,16 @@ class BasicFTL : public AbstractFTL {
   void write_find(Command &);
 
   Event eventWriteFindDone;
+  void write_findDone();
 
   Event eventWriteDoFIL;
   void write_doFIL(uint64_t);
 
   Event eventReadModifyDone;
+  void write_readModifyDone();
 
   Event eventWriteDone;
+  void write_rmwDone();
 
   void invalidate_find(Command &);
 
