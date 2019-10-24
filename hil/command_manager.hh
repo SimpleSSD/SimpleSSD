@@ -131,7 +131,8 @@ class CommandManager : public Object {
 
   // Helper APIs for ICL -> FTL
   void createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp, uint64_t now);
-  void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp, uint64_t now);
+  void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                      uint32_t skipFront, uint32_t skipEnd, uint64_t now);
 
   // Helper APIs for FTL -> FIL
   SubCommand &appendTranslation(Command &, LPN lpn, PPN ppn);

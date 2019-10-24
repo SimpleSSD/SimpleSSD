@@ -60,6 +60,8 @@ void CommandManager::createHILRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.offset = slpn;
   cmd.length = nlp;
 
+  cmd.subCommandList.reserve(nlp);
+
   for (LPN i = slpn; i < slpn + nlp; i++) {
     auto &scmd = createSubCommand(cmd);
 
@@ -84,6 +86,8 @@ void CommandManager::createHILWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.opcode = Operation::Write;
   cmd.offset = slpn;
   cmd.length = nlp;
+
+  cmd.subCommandList.reserve(nlp);
 
   for (LPN i = slpn; i < slpn + nlp; i++) {
     auto &scmd = createSubCommand(cmd);
@@ -135,9 +139,18 @@ void CommandManager::createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.offset = slpn;
   cmd.length = nlp;
   cmd.beginAt = now;
+
+  cmd.subCommandList.reserve(nlp);
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = createSubCommand(cmd);
+
+    scmd.lpn = i;
+  }
 }
 
 void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                                    uint32_t skipFront, uint32_t skipEnd,
                                     uint64_t now) {
   auto &cmd = createCommand(tag, eid);
 
@@ -145,6 +158,21 @@ void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
   cmd.offset = slpn;
   cmd.length = nlp;
   cmd.beginAt = now;
+
+  cmd.subCommandList.reserve(nlp);
+
+  for (LPN i = slpn; i < slpn + nlp; i++) {
+    auto &scmd = createSubCommand(cmd);
+
+    scmd.lpn = i;
+
+    if (i == slpn) {
+      scmd.skipFront = skipFront;
+    }
+    if (i + 1 == slpn + nlp) {
+      scmd.skipEnd = skipEnd;
+    }
+  }
 }
 
 SubCommand &CommandManager::appendTranslation(Command &cmd, LPN lpn, PPN ppn) {
