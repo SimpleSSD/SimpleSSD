@@ -252,7 +252,7 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   object.config->save(cpt_config);
 
   // Checkpointing this
-  std::string version(SIMPLESSD_FULL);
+  std::string version(SIMPLESSD_VERSION);
   uint64_t size = version.size();
 
   BACKUP_SCALAR(file, size);
@@ -293,11 +293,11 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
 
   RESTORE_BLOB(file, version.c_str(), size);
 
-  if (version.compare(SIMPLESSD_FULL) != 0) {
+  if (version.compare(SIMPLESSD_VERSION) != 0) {
     std::cerr << "Version does not match while restore from checkpoint."
               << std::endl;
     std::cerr << " Checkpoint file: " << version << std::endl;
-    std::cerr << " Program version: " << SIMPLESSD_FULL << std::endl;
+    std::cerr << " Program version: " << SIMPLESSD_VERSION << std::endl;
   }
 
   // Restore chain begins here

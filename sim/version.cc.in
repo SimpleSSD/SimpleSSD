@@ -9,7 +9,6 @@
 
 namespace SimpleSSD {
 
-const char SIMPLESSD_TAG[] = "@GIT_TAG@";
-const char SIMPLESSD_FULL[] = "@VERSION_STRING@";
+const char SIMPLESSD_VERSION[] = "@VERSION_STRING@";
 
 }

@@ -12,8 +12,7 @@
 
 namespace SimpleSSD {
 
-extern const char SIMPLESSD_TAG[];
-extern const char SIMPLESSD_FULL[];
+extern const char SIMPLESSD_VERSION[];
 
 }  // namespace SimpleSSD
 

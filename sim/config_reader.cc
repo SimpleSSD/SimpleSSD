@@ -42,10 +42,10 @@ void ConfigReader::load(const char *path) noexcept {
   if (config) {
     // Check version
     auto version = config.attribute("version").value();
-    if (strncmp(version, SIMPLESSD_TAG, strlen(SIMPLESSD_TAG)) != 0) {
-      std::cerr << "Configuration file version does not match" << std::endl;
+    if (strncmp(version, SIMPLESSD_VERSION, strlen(SIMPLESSD_VERSION)) != 0) {
+      std::cerr << "SimpleSSD configuration file version is different." << std::endl;
       std::cerr << " File version: " << version << std::endl;
-      std::cerr << " Program version: " << SIMPLESSD_FULL << std::endl;
+      std::cerr << " Program version: " << SIMPLESSD_VERSION << std::endl;
     }
 
     // Travel sections
@@ -107,7 +107,7 @@ void ConfigReader::load(std::string &path) noexcept {
 void ConfigReader::save(const char *path) noexcept {
   // Create simplessd node
   auto config = file.append_child(CONFIG_NODE_NAME);
-  config.append_attribute("version").set_value(SIMPLESSD_FULL);
+  config.append_attribute("version").set_value(SIMPLESSD_VERSION);
 
   // Append configuration sections
   pugi::xml_node section;
