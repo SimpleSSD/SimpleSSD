@@ -122,10 +122,21 @@ void PALOLD::printCPDPBP(::CPDPBP &addr, const char *prefix) {
 }
 
 void PALOLD::reschedule(Complete &&cplt) {
+  bool schedule = false;
+  uint64_t tick = object.cpu->when(completeEvent);
+
   // Find insertion slot
   completionQueue.emplace(std::make_pair(cplt.finishedAt, cplt));
 
-  if (completionQueue.size() == 1) {
+  if (tick > completionQueue.begin()->first) {
+    schedule = true;
+
+    if (tick != std::numeric_limits<uint64_t>::max()) {
+      deschedule(completeEvent);
+    }
+  }
+
+  if (schedule) {
     scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
   }
 }
