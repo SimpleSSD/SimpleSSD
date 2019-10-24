@@ -260,30 +260,31 @@ class RingBuffer : public AbstractCache {
   std::vector<uint64_t> writeWorkerTag;
   std::unordered_set<LPN> flushWorkerLPN;
   std::pair<Event, uint64_t> flushTag;
+  uint64_t flushBeginAt;
 
   void trigger_readWorker();
 
   Event eventReadWorker;
-  void readWorker();
+  void readWorker(uint64_t);
 
   Event eventReadWorkerDoFTL;
   void readWorker_doFTL();
 
   Event eventReadWorkerDone;
-  void readWorker_done(uint64_t);
+  void readWorker_done(uint64_t, uint64_t);
 
   void trigger_writeWorker();
 
   Event eventWriteWorker;
-  void writeWorker();
+  void writeWorker(uint64_t);
 
-  CPU::Function writeWorker_collect(CacheEntry::iterator);
+  CPU::Function writeWorker_collect(uint64_t, CacheEntry::iterator);
 
   Event eventWriteWorkerDoFTL;
   void writeWorker_doFTL();
 
   Event eventWriteWorkerDone;
-  void writeWorker_done(uint64_t);
+  void writeWorker_done(uint64_t, uint64_t);
 
   // Read
   void read_find(Command &);

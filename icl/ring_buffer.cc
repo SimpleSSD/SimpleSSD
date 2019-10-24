@@ -249,21 +249,22 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   memset(&stat, 0, sizeof(stat));
 
   // Make events
-  eventReadWorker = createEvent([this](uint64_t, uint64_t) { readWorker(); },
+  eventReadWorker = createEvent([this](uint64_t t, uint64_t) { readWorker(t); },
                                 "ICL::RingBuffer::eventReadWorker");
   eventReadWorkerDoFTL =
       createEvent([this](uint64_t, uint64_t) { readWorker_doFTL(); },
                   "ICL::RingBuffer::eventReadWorkerDoFTL");
   eventReadWorkerDone =
-      createEvent([this](uint64_t, uint64_t d) { readWorker_done(d); },
+      createEvent([this](uint64_t t, uint64_t d) { readWorker_done(t, d); },
                   "ICL::RingBuffer::eventReadWorkerDone");
-  eventWriteWorker = createEvent([this](uint64_t, uint64_t) { writeWorker(); },
-                                 "ICL::RingBuffer::eventWriteWorker");
+  eventWriteWorker =
+      createEvent([this](uint64_t t, uint64_t) { writeWorker(t); },
+                  "ICL::RingBuffer::eventWriteWorker");
   eventWriteWorkerDoFTL =
       createEvent([this](uint64_t, uint64_t) { writeWorker_doFTL(); },
                   "ICL::RingBuffer::eventWriteWorkerDoFTL");
   eventWriteWorkerDone =
-      createEvent([this](uint64_t, uint64_t d) { writeWorker_done(d); },
+      createEvent([this](uint64_t t, uint64_t d) { writeWorker_done(t, d); },
                   "ICL::RingBuffer::eventWriteWorkerDone");
   eventReadPreCPUDone =
       createEvent([this](uint64_t, uint64_t d) { read_findDone(d); },
@@ -287,7 +288,7 @@ void RingBuffer::trigger_readWorker() {
   readTriggered = true;
 }
 
-void RingBuffer::readWorker() {
+void RingBuffer::readWorker(uint64_t now) {
   CPU::Function fstat = CPU::initFunction();
 
   // Pass all read request to FTL
@@ -330,6 +331,10 @@ void RingBuffer::readWorker() {
     else {
       last = lastReadPendingAddress;
     }
+
+    debugprint(Log::DebugID::ICL_RingBuffer,
+               "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64 "h",
+               last + minPages, last + limit * minPages);
 
     for (uint32_t i = 1; i <= limit; i++) {
       alignedLPN.emplace_back(last + i * minPages);
@@ -388,7 +393,12 @@ void RingBuffer::readWorker() {
       // Create request
       uint64_t tag = makeCacheCommandTag();
 
-      commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages);
+      commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages,
+                                    now);
+
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h", iter,
+                 minPages);
 
       // Store for CPU latency
       readWorkerTag.emplace_back(tag);
@@ -408,7 +418,7 @@ void RingBuffer::readWorker_doFTL() {
   readWorkerTag.clear();
 }
 
-void RingBuffer::readWorker_done(uint64_t tag) {
+void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   cmd.counter++;
@@ -419,6 +429,11 @@ void RingBuffer::readWorker_done(uint64_t tag) {
     // Read done
     auto iter = cacheEntry.find(cmd.offset);
     auto &entry = iter->second;
+
+    debugprint(Log::DebugID::ICL_RingBuffer,
+               "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               cmd.offset, cmd.length, cmd.beginAt, now, now - cmd.beginAt);
 
     // Mark as read done
     for (auto &iter : entry.list) {
@@ -475,7 +490,7 @@ void RingBuffer::trigger_writeWorker() {
   }
 }
 
-void RingBuffer::writeWorker() {
+void RingBuffer::writeWorker(uint64_t now) {
   CPU::Function fstat = CPU::initFunction();
   /*
    * Some FTL may require 'minPage'-sized write request to prevent
@@ -509,7 +524,7 @@ void RingBuffer::writeWorker() {
       }
 
       if (iter != cacheEntry.end()) {
-        fstat += writeWorker_collect(iter);
+        fstat += writeWorker_collect(now, iter);
       }
     }
   }
@@ -520,7 +535,7 @@ void RingBuffer::writeWorker() {
 
     panic_if(iter == cacheEntry.end(), "Flushing non-exist entry.");
 
-    fstat += writeWorker_collect(iter);
+    fstat += writeWorker_collect(now, iter);
   }
 
   // Do we need to erase clean entries
@@ -546,7 +561,8 @@ void RingBuffer::writeWorker() {
   scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoFTL, fstat);
 }
 
-CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
+CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
+                                              CacheEntry::iterator iter) {
   CPU::Function fstat = CPU::initFunction();
 
   panic_if(!isDirty(iter->second.list), "Try to write clean entry.");
@@ -578,12 +594,16 @@ CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
       uint64_t tag = makeCacheCommandTag();
 
       commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                     iter->second.offset + offset, length);
+                                     iter->second.offset + offset, length, now);
+
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
+                 iter->second.offset + offset, length);
+
+      writeWorkerTag.emplace_back(tag);
 
       offset += length;
       length = 0;
-
-      writeWorkerTag.emplace_back(tag);
     }
   }
 
@@ -591,7 +611,11 @@ CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
   uint64_t tag = makeCacheCommandTag();
 
   commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                 iter->second.offset + offset, length);
+                                 iter->second.offset + offset, length, now);
+
+  debugprint(Log::DebugID::ICL_RingBuffer,
+             "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
+             iter->second.offset + offset, length);
 
   writeWorkerTag.emplace_back(tag);
 
@@ -609,7 +633,7 @@ void RingBuffer::writeWorker_doFTL() {
   writeWorkerTag.clear();
 }
 
-void RingBuffer::writeWorker_done(uint64_t tag) {
+void RingBuffer::writeWorker_done(uint64_t now, uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   cmd.counter++;
@@ -623,6 +647,11 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     auto iter = cacheEntry.find(aligned);
 
     panic_if(iter == cacheEntry.end(), "Evicted entry not found.");
+
+    debugprint(Log::DebugID::ICL_RingBuffer,
+               "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               cmd.offset, cmd.length, cmd.beginAt, now, now - cmd.beginAt);
 
     uint32_t i = cmd.offset - iter->second.offset;
     uint32_t limit = cmd.length + i;
@@ -648,6 +677,10 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
           scheduleNow(flushTag.first, flushTag.second);
 
           flushTag.first = InvalidEventID;
+
+          debugprint(Log::DebugID::ICL_RingBuffer,
+                     "Flush | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                     flushBeginAt, now, now - flushBeginAt);
         }
       }
     }
@@ -678,6 +711,9 @@ void RingBuffer::read_find(Command &cmd) {
                   cmd.subCommandList.back().skipEnd;
 
   stat.request[0] += size;
+
+  debugprint(Log::DebugID::ICL_RingBuffer,
+             "Read  | LPN %" PRIx64 "h + %" PRIx64 "h", cmd.offset, cmd.length);
 
   if (LIKELY(enabled)) {
     // Update prefetch trigger
@@ -710,9 +746,16 @@ void RingBuffer::read_find(Command &cmd) {
 
             if (sentry.rpending) {
               scmd.status = Status::InternalCache;
+
+              debugprint(Log::DebugID::ICL_RingBuffer,
+                         "Read  | LPN %" PRIx64 "h | Cache hit, pending read",
+                         scmd.lpn);
             }
             else {
               scmd.status = Status::InternalCacheDone;
+
+              debugprint(Log::DebugID::ICL_RingBuffer,
+                         "Read  | LPN %" PRIx64 "h | Cache hit", scmd.lpn);
             }
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
@@ -738,6 +781,9 @@ void RingBuffer::read_find(Command &cmd) {
 
       readPendingQueue.emplace_back(
           CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
+
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Read  | LPN %" PRIx64 "h | Cache miss", scmd.lpn);
 
       trigger_readWorker();
     }
@@ -803,10 +849,17 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
           writeWaitingQueue.emplace_back(
               CacheContext(&scmd, iter, CacheStatus::WriteCacheWait));
+
+          debugprint(Log::DebugID::ICL_RingBuffer,
+                     "Write | LPN %" PRIx64 "h | Cache hit, pending write",
+                     scmd.lpn);
         }
         else {
           // Mark as done
           scmd.status = Status::InternalCacheDone;
+
+          debugprint(Log::DebugID::ICL_RingBuffer,
+                     "Write | LPN %" PRIx64 "h | Cache hit", scmd.lpn);
 
           // Update entry
           sentry.dirty = true;
@@ -840,12 +893,18 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
         // Mark as done
         scmd.status = Status::InternalCacheDone;
+
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Write | LPN %" PRIx64 "h | Cache cold miss", scmd.lpn);
       }
       else {
         scmd.status = Status::InternalCache;
 
         writeWaitingQueue.emplace_back(
             CacheContext(&scmd, cacheEntry.end(), CacheStatus::WriteCacheWait));
+
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Write | LPN %" PRIx64 "h | Cache capacity miss", scmd.lpn);
 
         trigger_writeWorker();
       }
@@ -857,7 +916,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
     auto &wcmd = commandManager->getCommand(scmd.tag);
 
-    commandManager->createICLWrite(tag, wcmd.eid, scmd.lpn, 1);
+    commandManager->createICLWrite(tag, wcmd.eid, scmd.lpn, 1, getTick());
 
     writeWorkerTag.emplace_back(tag);
 
@@ -928,6 +987,12 @@ void RingBuffer::flush_find(Command &cmd) {
       flushTag.first = cmd.eid;
       flushTag.second = cmd.tag;
 
+      flushBeginAt = getTick();
+
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Flush | LPN %" PRIx64 "h + %" PRIx64 "h", alignedBegin,
+                 alignedEnd);
+
       trigger_writeWorker();
 
       return;
@@ -944,6 +1009,10 @@ void RingBuffer::invalidate_find(Command &cmd) {
   if (LIKELY(enabled)) {
     LPN alignedBegin = alignToMinPage(cmd.offset);
     LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+
+    debugprint(Log::DebugID::ICL_RingBuffer,
+               "Format | LPN %" PRIx64 "h + %" PRIx64 "h", alignedBegin,
+               alignedEnd);
 
     for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn++) {
       auto iter = cacheEntry.find(lpn);
@@ -1088,6 +1157,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, readWaitsEviction);
   BACKUP_SCALAR(out, lastReadPendingAddress);
   BACKUP_SCALAR(out, lastReadDoneAddress);
+  BACKUP_SCALAR(out, flushBeginAt);
 
   size = readWorkerTag.size();
   BACKUP_SCALAR(out, size);
@@ -1210,6 +1280,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, readWaitsEviction);
   RESTORE_SCALAR(in, lastReadPendingAddress);
   RESTORE_SCALAR(in, lastReadDoneAddress);
+  RESTORE_SCALAR(in, flushBeginAt);
 
   RESTORE_SCALAR(in, size);
 

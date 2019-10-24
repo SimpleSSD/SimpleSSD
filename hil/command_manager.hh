@@ -18,11 +18,11 @@
 namespace SimpleSSD {
 
 enum class Status : uint8_t {
-  Prepare,  // Sub command created
-  DMA,      // Sub command is in DMA
-  Submit,   // Sub command issued to HIL
-  Done,     // Sub command completed
-  Complete, // Sub command marked as complete
+  Prepare,   // Sub command created
+  DMA,       // Sub command is in DMA
+  Submit,    // Sub command issued to HIL
+  Done,      // Sub command completed
+  Complete,  // Sub command marked as complete
 
   InternalCache,      // Sub command is in ICL
   InternalCacheDone,  // Sub command is completed in ICL
@@ -83,7 +83,9 @@ struct Command {
   LPN offset;
   LPN length;
 
+  // Used by ICL
   uint64_t counter;
+  uint64_t beginAt;
 
   std::vector<SubCommand> subCommandList;
 
@@ -128,8 +130,8 @@ class CommandManager : public Object {
   void createHILFormat(uint64_t tag, Event eid, LPN slpn, LPN nlp);
 
   // Helper APIs for ICL -> FTL
-  void createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp);
-  void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp);
+  void createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp, uint64_t now);
+  void createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp, uint64_t now);
 
   // Helper APIs for FTL -> FIL
   SubCommand &appendTranslation(Command &, LPN lpn, PPN ppn);

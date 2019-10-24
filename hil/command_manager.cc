@@ -127,21 +127,24 @@ void CommandManager::createHILFormat(uint64_t tag, Event eid, LPN slpn,
   cmd.length = nlp;
 }
 
-void CommandManager::createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp) {
+void CommandManager::createICLRead(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                                   uint64_t now) {
   auto &cmd = createCommand(tag, eid);
 
   cmd.opcode = Operation::Read;
   cmd.offset = slpn;
   cmd.length = nlp;
+  cmd.beginAt = now;
 }
 
-void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn,
-                                    LPN nlp) {
+void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
+                                    uint64_t now) {
   auto &cmd = createCommand(tag, eid);
 
   cmd.opcode = Operation::Write;
   cmd.offset = slpn;
   cmd.length = nlp;
+  cmd.beginAt = now;
 }
 
 SubCommand &CommandManager::appendTranslation(Command &cmd, LPN lpn, PPN ppn) {
