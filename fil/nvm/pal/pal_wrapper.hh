@@ -11,8 +11,8 @@
 #define __SIMPLESSD_FIL_PAL_OLD_HH__
 
 #include <cinttypes>
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "SimpleSSD_types.h"
 #include "fil/nvm/abstract_nvm.hh"
@@ -46,9 +46,13 @@ class PALOLD : public AbstractNVM {
     uint64_t id;
 
     Event eid;
+    PPN ppn;
 
     uint64_t beginAt;
     uint64_t finishedAt;
+
+    ::CPDPBP addr;
+    PAL_OPERATION oper;
   };
 
   Event completeEvent;

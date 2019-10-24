@@ -70,55 +70,46 @@ void PALOLD::enqueue(uint64_t tag, uint32_t id) {
   auto &cmd = commandManager->getCommand(tag);
   auto &scmd = cmd.subCommandList.at(id);
   Complete cplt;
-  ::CPDPBP addr;
 
   cplt.id = tag;
   cplt.eid = cmd.eid;
+  cplt.ppn = scmd.ppn;
   cplt.beginAt = getTick();
 
-  convertCPDPBP(scmd, addr);
+  convertCPDPBP(scmd, cplt.addr);
 
   switch (cmd.opcode) {
-    case Operation::Read: {
-      ::Command pcmd(getTick(), 0, OPER_READ, param->pageSize);
-
-      printCPDPBP(addr, "READ");
+    case Operation::Read:
+      cplt.oper = OPER_READ;
 
       readSpare(scmd.ppn, scmd.spare);
-
-      pal->submit(pcmd, addr);
       stat.readCount++;
-
-      cplt.finishedAt = pcmd.finished;
-    } break;
-    case Operation::Write: {
-      ::Command pcmd(getTick(), 0, OPER_WRITE, param->pageSize);
-
-      printCPDPBP(addr, "WRITE");
+      break;
+    case Operation::Write:
+      cplt.oper = OPER_WRITE;
 
       writeSpare(scmd.ppn, scmd.spare);
-
-      pal->submit(pcmd, addr);
       stat.writeCount++;
-
-      cplt.finishedAt = pcmd.finished;
-    } break;
-    case Operation::Erase: {
-      ::Command pcmd(getTick(), 0, OPER_ERASE, param->pageSize);
-
-      printCPDPBP(addr, "ERASE");
+      break;
+    case Operation::Erase:
+      cplt.oper = OPER_ERASE;
 
       eraseSpare(scmd.ppn);
-
-      pal->submit(pcmd, addr);
       stat.eraseCount++;
-
-      cplt.finishedAt = pcmd.finished;
-    } break;
+      break;
     default:
       panic("Copyback not supported in PAL.");
       break;
   }
+
+  ::Command pcmd(getTick(), 0, cplt.oper, param->pageSize);
+
+  debugprint(Log::DebugID::FIL_PALOLD, "%-5s | PPN %" PRIx64 "h",
+             OPER_STRINFO2[cplt.oper], cplt.ppn);
+  printCPDPBP(cplt.addr, OPER_STRINFO2[cplt.oper]);
+
+  pal->submit(pcmd, cplt.addr);
+  cplt.finishedAt = pcmd.finished;
 
   reschedule(std::move(cplt));
 }
@@ -143,6 +134,13 @@ void PALOLD::completion(uint64_t) {
   auto iter = completionQueue.begin();
   Complete cplt = std::move(iter->second);
   completionQueue.erase(iter);
+
+  debugprint(Log::DebugID::FIL_PALOLD,
+             "%-5s | PPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+             ")",
+             OPER_STRINFO2[cplt.oper], cplt.ppn, cplt.beginAt, cplt.finishedAt,
+             cplt.finishedAt - cplt.beginAt);
+  printCPDPBP(cplt.addr, OPER_STRINFO2[cplt.oper]);
 
   scheduleNow(cplt.eid, cplt.id);
 
