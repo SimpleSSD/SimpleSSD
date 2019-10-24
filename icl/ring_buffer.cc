@@ -529,7 +529,10 @@ void RingBuffer::writeWorker() {
     while (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
       auto iter = chooseEntry(SelectionMode::Clean);
 
-      panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
+      if (UNLIKELY(iter == cacheEntry.end())) {
+        // All entry is write pending
+        break;
+      }
 
       cacheEntry.erase(iter);
     }
@@ -541,7 +544,7 @@ void RingBuffer::writeWorker() {
   if (UNLIKELY(writeWorkerTag.size() == 0)) {
     writeTriggered = false;
 
-    trigger_readWorker();
+    trigger_writeWorker();
 
     return;
   }
