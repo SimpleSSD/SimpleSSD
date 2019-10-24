@@ -789,6 +789,11 @@ void RingBuffer::write_find(SubCommand &scmd) {
         // Accessed
         iter->second.accessedAt = clock;
 
+        // If this entry was clean, we need to increase dirtyEntryCount
+        if (isClean(iter->second.list)) {
+          dirtyEntryCount++;
+        }
+
         // Get sub entry
         auto &sentry = iter->second.list.at(scmd.lpn - iter->second.offset);
 
