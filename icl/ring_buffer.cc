@@ -733,7 +733,7 @@ void RingBuffer::read_find(Command &cmd) {
 
     // Find entry including range
     LPN alignedBegin = alignToMinPage(cmd.offset);
-    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages) * minPages;
 
     for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn += minPages) {
       auto iter = cacheEntry.find(lpn);
@@ -928,7 +928,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
     if (scmd.id == 0) {
       // Create minPages aligned requests
       LPN alignedBegin = alignToMinPage(wcmd.offset);
-      LPN alignedEnd = alignedBegin + DIVCEIL(wcmd.length, minPages);
+      LPN alignedEnd = alignedBegin + DIVCEIL(wcmd.length, minPages) * minPages;
       LPN front = wcmd.offset - alignedBegin;
       LPN back = alignedEnd - alignedBegin - wcmd.length - front;
 
@@ -990,7 +990,7 @@ void RingBuffer::flush_find(Command &cmd) {
 
   if (LIKELY(enabled && flushWorkerLPN.size() == 0)) {
     LPN alignedBegin = alignToMinPage(cmd.offset);
-    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages) * minPages;
 
     for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn++) {
       auto iter = cacheEntry.find(lpn);
@@ -1044,7 +1044,7 @@ void RingBuffer::flush_find(Command &cmd) {
 void RingBuffer::invalidate_find(Command &cmd) {
   if (LIKELY(enabled)) {
     LPN alignedBegin = alignToMinPage(cmd.offset);
-    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages) * minPages;
 
     debugprint(Log::DebugID::ICL_RingBuffer,
                "Format | LPN %" PRIx64 "h + %" PRIx64 "h", alignedBegin,

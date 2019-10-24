@@ -59,7 +59,8 @@ void BasicFTL::write_find(Command &cmd) {
 
   // Check this request is aligned to mapping granularity
   LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
-  LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, mappingGranularity);
+  LPN alignedEnd = alignedBegin +
+                   DIVCEIL(cmd.length, mappingGranularity) * mappingGranularity;
 
   if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd ||
       cmd.subCommandList.front().skipFront > 0 ||
