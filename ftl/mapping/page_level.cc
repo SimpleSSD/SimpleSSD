@@ -307,20 +307,18 @@ uint32_t PageLevel::getValidPages(PPN ppn) {
   return blockMetadata[getSBFromSPPN(ppn)].validPages.count();
 }
 
-void PageLevel::readMapping(Command &cmd, Event eid) {
+CPU::Function PageLevel::readMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
-  panic_if(cmd.subCommandList.size() > 0, "Unexpected sub commands.");
+  panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
 
   // Perform read translation
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
-  LPN i = cmd.offset;
 
-  do {
-    LPN currentLPN = i / param.superpage;
-    LPN superpageIndex = i % param.superpage;
-    PPN ippn;
+  for (auto &scmd : cmd.subCommandList) {
+    LPN currentLPN = scmd.lpn / param.superpage;
+    LPN superpageIndex = scmd.lpn % param.superpage;
 
     if (lpn != currentLPN) {
       lpn = currentLPN;
@@ -331,34 +329,28 @@ void PageLevel::readMapping(Command &cmd, Event eid) {
                  "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
     }
 
-    ippn = ppn * param.superpage + superpageIndex;
+    scmd.ppn = ppn * param.superpage + superpageIndex;
 
     debugprint(Log::DebugID::FTL_PageLevel,
-               "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", i, ippn);
+               "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
+               scmd.ppn);
+  }
 
-    // Add subcommand
-    commandManager->appendTranslation(cmd, i, ippn);
-
-    i++;
-  } while (i < cmd.offset + cmd.length);
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  return std::move(fstat);
 }
 
-void PageLevel::writeMapping(Command &cmd, Event eid) {
+CPU::Function PageLevel::writeMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
-  panic_if(cmd.subCommandList.size() > 0, "Unexpected sub commands.");
+  panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
 
   // Perform write translation
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
-  LPN i = cmd.offset;
 
-  do {
-    LPN currentLPN = i / param.superpage;
-    LPN superpageIndex = i % param.superpage;
-    PPN ippn;
+  for (auto &scmd : cmd.subCommandList) {
+    LPN currentLPN = scmd.lpn / param.superpage;
+    LPN superpageIndex = scmd.lpn % param.superpage;
 
     if (lpn != currentLPN) {
       lpn = currentLPN;
@@ -369,24 +361,22 @@ void PageLevel::writeMapping(Command &cmd, Event eid) {
                  "Write | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
     }
 
-    ippn = ppn * param.superpage + superpageIndex;
+    scmd.ppn = ppn * param.superpage + superpageIndex;
 
     debugprint(Log::DebugID::FTL_PageLevel,
-               "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", i, ippn);
+               "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
+               scmd.ppn);
+  }
 
-    // Add subcommand
-    commandManager->appendTranslation(cmd, i, ippn);
-
-    i++;
-  } while (i < cmd.offset + cmd.length);
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  return std::move(fstat);
 }
 
-void PageLevel::invalidateMapping(Command &cmd, Event eid) {
+CPU::Function PageLevel::invalidateMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
   panic_if(cmd.subCommandList.size() > 0, "Unexpected sub commands.");
+
+  cmd.subCommandList.reserve(cmd.length);
 
   // Perform invalidation
   LPN lpn = InvalidLPN;
@@ -419,7 +409,7 @@ void PageLevel::invalidateMapping(Command &cmd, Event eid) {
     i++;
   } while (i < cmd.offset + cmd.length);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  return std::move(fstat);
 }
 
 void PageLevel::getCopyList(CopyList &copy, Event eid) {

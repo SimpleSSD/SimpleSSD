@@ -111,9 +111,9 @@ class PageLevel : public AbstractMapping {
 
   uint32_t getValidPages(PPN) override;
 
-  void readMapping(Command &, Event) override;
-  void writeMapping(Command &, Event) override;
-  void invalidateMapping(Command &, Event) override;
+  CPU::Function readMapping(Command &) override;
+  CPU::Function writeMapping(Command &) override;
+  CPU::Function invalidateMapping(Command &) override;
   void getCopyList(CopyList &, Event) override;
   void releaseCopyList(CopyList &) override;
 

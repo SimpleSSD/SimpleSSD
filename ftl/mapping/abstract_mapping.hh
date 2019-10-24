@@ -156,13 +156,34 @@ class AbstractMapping : public Object {
            page * param.totalPhysicalBlocks;
   }
 
+  //! Mapping granularity
+  virtual inline LPN mappingGranularity() { return param.superpage; }
+
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
 
   // I/O interfaces
-  virtual void readMapping(Command &, Event) = 0;
-  virtual void writeMapping(Command &, Event) = 0;
-  virtual void invalidateMapping(Command &, Event) = 0;
+  virtual CPU::Function readMapping(Command &) = 0;
+  virtual CPU::Function writeMapping(Command &) = 0;
+  virtual CPU::Function invalidateMapping(Command &) = 0;
+
+  inline void readMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = readMapping(cmd);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  }
+
+  inline void writeMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = writeMapping(cmd);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  }
+
+  inline void invalidateMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = invalidateMapping(cmd);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  }
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
