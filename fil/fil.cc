@@ -47,6 +47,10 @@ void FIL::submit(uint64_t tag) {
   panic_if(list.size() == 0, "Unexpected empty subcommands.");
 
   for (auto &scmd : list) {
+    if (scmd.ppn == InvalidPPN) {
+      continue;
+    }
+
     pFIL->enqueue(tag, scmd.id);
   }
 }
