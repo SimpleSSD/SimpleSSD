@@ -568,14 +568,6 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
   panic_if(!isDirty(iter->second.list), "Try to write clean entry.");
 
-  // Mark as write pending and clean (to prevent double eviction)
-  for (auto &sentry : iter->second.list) {
-    if (sentry.valid.any()) {
-      sentry.dirty = false;
-      sentry.wpending = true;
-    }
-  }
-
   dirtyEntryCount--;
 
   // Create command(s)
@@ -585,10 +577,12 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
   while (iter->second.offset + offset + length <
          iter->second.offset + minPages) {
     // TODO: Consider partial pages
-    if (iter->second.list.at(offset).valid.none()) {
+    if (iter->second.list.at(offset).valid.none() ||
+        iter->second.list.at(offset).wpending) {
       offset++;
     }
-    else if (iter->second.list.at(offset + length).valid.any()) {
+    else if (iter->second.list.at(offset + length).valid.any() &&
+             !iter->second.list.at(offset + length).wpending) {
       length++;
     }
     else {
@@ -620,6 +614,14 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
                iter->second.offset + offset, length);
 
     writeWorkerTag.emplace_back(tag);
+  }
+
+  // Mark as write pending and clean (to prevent double eviction)
+  for (auto &sentry : iter->second.list) {
+    if (sentry.valid.any()) {
+      sentry.dirty = false;
+      sentry.wpending = true;
+    }
   }
 
   return std::move(fstat);
