@@ -484,8 +484,11 @@ void RingBuffer::writeWorker() {
    */
 
   // Do we need to write?
-  if ((float)(dirtyCapacity / minPages / pageSize) / maxEntryCount >=
-      triggerThreshold) {
+  if ((float)dirtyEntryCount / maxEntryCount >= triggerThreshold) {
+    // Iterate evictPages / minPages times
+    uint32_t times = evictPages / minPages;
+
+    for (uint32_t i = 0; i < times; i++) {
     bool notfound = true;
     auto iter = cacheEntry.end();
 
@@ -506,9 +509,10 @@ void RingBuffer::writeWorker() {
     }
 
     if (iter != cacheEntry.end()) {
-      // Mark as write pending
+        // Mark as write pending and clean (to prevent double eviction)
       for (auto &sentry : iter->second.list) {
         if (sentry.valid.any()) {
+            sentry.dirty = false;
           sentry.wpending = true;
         }
       }
@@ -517,7 +521,8 @@ void RingBuffer::writeWorker() {
       LPN offset = 0;
       uint32_t length = 0;
 
-      while (offset + length < iter->second.offset + minPages) {
+        while (iter->second.offset + offset + length <
+               iter->second.offset + minPages) {
         // TODO: Consider partial pages
         if (iter->second.list.at(offset).valid.none()) {
           offset++;
@@ -528,7 +533,8 @@ void RingBuffer::writeWorker() {
         else {
           uint64_t tag = makeCacheCommandTag();
 
-          commandManager->createICLWrite(tag, eventWriteWorkerDone, offset,
+            commandManager->createICLWrite(tag, eventWriteWorkerDone,
+                                           iter->second.offset + offset,
                                          length);
 
           offset += length;
@@ -537,9 +543,20 @@ void RingBuffer::writeWorker() {
           writeWorkerTag.emplace_back(tag);
         }
       }
+
+        // Last chunk
+        uint64_t tag = makeCacheCommandTag();
+
+        commandManager->createICLWrite(tag, eventWriteWorkerDone,
+                                       iter->second.offset + offset, length);
+
+        writeWorkerTag.emplace_back(tag);
     }
   }
-  else {
+  }
+
+  // Do we need to erase clean entries
+  if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
     // Just erase some clean entries
     while (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
       auto iter = chooseEntry(SelectionMode::Clean);
@@ -579,27 +596,27 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     cmd.counter = 0;
 
     // Find corresponding entry
-    for (auto &iter : cacheEntry) {
-      if (iter.second.offset <= cmd.offset &&
-          cmd.offset + cmd.length <= iter.second.offset + minPages) {
-        uint32_t i = cmd.offset - iter.second.offset;
+    LPN aligned = alignToMinPage(cmd.offset);
+
+    auto iter = cacheEntry.find(aligned);
+
+    panic_if(iter == cacheEntry.end(), "Evicted entry not found.");
+
+    uint32_t i = cmd.offset - iter->second.offset;
         uint32_t limit = cmd.length + i;
 
         for (; i < limit; i++) {
-          auto &sentry = iter.second.list.at(i);
+      auto &sentry = iter->second.list.at(i);
 
-          sentry.dirty = false;
           sentry.wpending = false;
         }
 
-        dirtyCapacity -= cmd.length * pageSize;
-      }
-    }
+    dirtyEntryCount--;
 
     commandManager->destroyCommand(tag);
 
     // Flush?
-    if (UNLIKELY(dirtyCapacity == 0 && flushEvents.size() > 0)) {
+    if (UNLIKELY(dirtyEntryCount == 0 && flushEvents.size() > 0)) {
       for (auto &iter : flushEvents) {
         auto &fcmd = commandManager->getCommand(iter);
 
@@ -800,6 +817,12 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
         updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
         updateCapacity(false, scmd.skipFront + scmd.skipEnd);
+
+        // New dirty entry
+        dirtyEntryCount++;
+
+        // Mark as done
+        scmd.status = Status::InternalCacheDone;
       }
       else {
         scmd.status = Status::InternalCache;
@@ -951,7 +974,7 @@ void RingBuffer::setCache(bool set) {
     cacheEntry.clear();
   }
 
-  dirtyCapacity = 0;
+  dirtyEntryCount = 0;
 }
 
 bool RingBuffer::getCache() {
@@ -992,7 +1015,7 @@ void RingBuffer::resetStatValues() noexcept {
 
 void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, maxEntryCount);
-  BACKUP_SCALAR(out, dirtyCapacity);
+  BACKUP_SCALAR(out, dirtyEntryCount);
   BACKUP_SCALAR(out, enabled);
   BACKUP_SCALAR(out, prefetchEnabled);
   BACKUP_SCALAR(out, noPageLimit);
@@ -1102,7 +1125,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != maxEntryCount, "Cache size not matched while restore.");
 
-  RESTORE_SCALAR(in, dirtyCapacity);
+  RESTORE_SCALAR(in, dirtyEntryCount);
   RESTORE_SCALAR(in, enabled);
   RESTORE_SCALAR(in, prefetchEnabled);
 

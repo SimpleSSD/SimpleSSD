@@ -108,7 +108,7 @@ class RingBuffer : public AbstractCache {
 
   // Cache size
   uint64_t maxEntryCount;
-  uint64_t dirtyCapacity;
+  uint64_t dirtyEntryCount;
 
   bool enabled;
   bool prefetchEnabled;
@@ -199,7 +199,6 @@ class RingBuffer : public AbstractCache {
     }
     else {
       stat.cache[1] += pageSize - exclude;
-      dirtyCapacity += pageSize;
     }
   }
 
