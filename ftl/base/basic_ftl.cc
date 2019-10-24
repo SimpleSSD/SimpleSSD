@@ -127,7 +127,8 @@ void BasicFTL::write_find(Command &cmd) {
         if (excludeBegin <= scmd.lpn && scmd.lpn < excludeEnd) {
           scmd.lpn = InvalidLPN;
           scmd.ppn = InvalidPPN;
-          scmd.status = Status::Done;
+
+          rcmd.counter++;
         }
       }
 
@@ -140,6 +141,8 @@ void BasicFTL::write_find(Command &cmd) {
                                      ctx.length, 0, 0, 0);
 
       auto &wcmd = commandManager->getCommand(tag);
+
+      wcmd.counter = mappingGranularity - cmd.length;
 
       fstat += pMapper->writeMapping(wcmd);
 
@@ -182,24 +185,11 @@ void BasicFTL::write_doFIL(uint64_t tag) {
 
 void BasicFTL::write_readModifyDone() {
   auto &job = rmwList.front();
-  uint8_t completed = 0;
-
   auto &rcmd = commandManager->getCommand(job.readTag);
 
-  for (auto &iter : rcmd.subCommandList) {
-    if (iter.status != Status::Done) {
-      iter.status = Status::Done;
+  rcmd.counter++;
 
-      break;
-    }
-  }
-
-  for (auto &iter : rcmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      completed++;
-    }
-  }
-  if (completed == rcmd.length) {
+  if (rcmd.counter == rcmd.length) {
     job.writePending = true;
 
     pFIL->submit(job.writeTag);
@@ -225,9 +215,13 @@ void BasicFTL::write_rmwDone() {
     }
   }
 
-  if (completed == wcmd.length) {
-    scheduleNow(job.originalEvent, job.originalTag);
+  if (wcmd.counter < completed) {
+    wcmd.counter++;
 
+    scheduleNow(job.originalEvent, job.originalTag);
+  }
+
+  if (completed == wcmd.length) {
     if (job.readTag > 0) {
       commandManager->destroyCommand(job.readTag);
       commandManager->destroyCommand(job.writeTag);

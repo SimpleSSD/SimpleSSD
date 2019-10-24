@@ -1000,24 +1000,28 @@ void RingBuffer::write_done(uint64_t tag) {
 void RingBuffer::write_nocache(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
-  for (auto iter = writeWaitingQueue.begin();
-       iter != writeWaitingQueue.end();) {
-    if (iter->status == CacheStatus::WriteCacheWait &&
-        iter->scmd->lpn >= cmd.offset &&
-        iter->scmd->lpn < cmd.offset + cmd.length) {
-      iter->scmd->status = Status::Done;
+  cmd.counter++;
 
-      object.dram->write(getDRAMAddress(iter->scmd->lpn), pageSize,
-                         eventWriteDRAMDone, iter->scmd->tag);
+  if (cmd.counter == cmd.length) {
+    for (auto iter = writeWaitingQueue.begin();
+         iter != writeWaitingQueue.end();) {
+      if (iter->status == CacheStatus::WriteCacheWait &&
+          iter->scmd->lpn >= cmd.offset &&
+          iter->scmd->lpn < cmd.offset + cmd.length) {
+        iter->scmd->status = Status::Done;
 
-      iter = writeWaitingQueue.erase(iter);
+        object.dram->write(getDRAMAddress(iter->scmd->lpn), pageSize,
+                           eventWriteDRAMDone, iter->scmd->tag);
+
+        iter = writeWaitingQueue.erase(iter);
+      }
+      else {
+        ++iter;
+      }
     }
-    else {
-      ++iter;
-    }
+
+    commandManager->destroyCommand(tag);
   }
-
-  commandManager->destroyCommand(tag);
 }
 
 void RingBuffer::flush_find(Command &cmd) {
