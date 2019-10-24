@@ -550,50 +550,50 @@ void RingBuffer::writeWorker() {
 CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
   CPU::Function fstat = CPU::initFunction();
 
-        // Mark as write pending and clean (to prevent double eviction)
-        for (auto &sentry : iter->second.list) {
-          if (sentry.valid.any()) {
-            sentry.dirty = false;
-            sentry.wpending = true;
-          }
-        }
+  // Mark as write pending and clean (to prevent double eviction)
+  for (auto &sentry : iter->second.list) {
+    if (sentry.valid.any()) {
+      sentry.dirty = false;
+      sentry.wpending = true;
+    }
+  }
 
-        // Create command(s)
-        LPN offset = 0;
-        uint32_t length = 0;
+  // Create command(s)
+  LPN offset = 0;
+  uint32_t length = 0;
 
-        while (iter->second.offset + offset + length <
-               iter->second.offset + minPages) {
-          // TODO: Consider partial pages
-          if (iter->second.list.at(offset).valid.none()) {
-            offset++;
-          }
-          else if (iter->second.list.at(offset + length).valid.any()) {
-            length++;
-          }
-          else {
-            uint64_t tag = makeCacheCommandTag();
+  while (iter->second.offset + offset + length <
+         iter->second.offset + minPages) {
+    // TODO: Consider partial pages
+    if (iter->second.list.at(offset).valid.none()) {
+      offset++;
+    }
+    else if (iter->second.list.at(offset + length).valid.any()) {
+      length++;
+    }
+    else {
+      uint64_t tag = makeCacheCommandTag();
 
-            commandManager->createICLWrite(tag, eventWriteWorkerDone,
+      commandManager->createICLWrite(tag, eventWriteWorkerDone,
                                      iter->second.offset + offset, length);
 
-            offset += length;
-            length = 0;
+      offset += length;
+      length = 0;
 
-            writeWorkerTag.emplace_back(tag);
-          }
-        }
+      writeWorkerTag.emplace_back(tag);
+    }
+  }
 
-        // Last chunk
-        uint64_t tag = makeCacheCommandTag();
+  // Last chunk
+  uint64_t tag = makeCacheCommandTag();
 
-        commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                       iter->second.offset + offset, length);
+  commandManager->createICLWrite(tag, eventWriteWorkerDone,
+                                 iter->second.offset + offset, length);
 
-        writeWorkerTag.emplace_back(tag);
+  writeWorkerTag.emplace_back(tag);
 
   return std::move(fstat);
-    }
+}
 
 void RingBuffer::writeWorker_doFTL() {
   // Issue writes in writePendingQueue
@@ -645,7 +645,7 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
           scheduleNow(flushTag.first, flushTag.second);
 
           flushTag.first = InvalidEventID;
-    }
+        }
       }
     }
 
@@ -687,9 +687,9 @@ void RingBuffer::read_find(Command &cmd) {
 
     // Find entry including range
     LPN alignedBegin = alignToMinPage(cmd.offset);
-    LPN alingedEnd = alignToMinPage(cmd.offset + cmd.length);
+    LPN alingedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
 
-    for (LPN lpn = alignedBegin; lpn <= alingedEnd; lpn += minPages) {
+    for (LPN lpn = alignedBegin; lpn < alingedEnd; lpn += minPages) {
       auto iter = cacheEntry.find(lpn);
 
       if (iter != cacheEntry.end()) {
@@ -895,19 +895,19 @@ void RingBuffer::flush_find(Command &cmd) {
       if (iter != cacheEntry.end()) {
         LPN from = MAX(cmd.offset, lpn);
         LPN to = MIN(cmd.offset + cmd.length, lpn + minPages);
-    bool dirty = false;
+        bool dirty = false;
 
         for (LPN i = from; i < to; i++) {
           auto &sentry = iter->second.list.at(i - lpn);
 
           if (sentry.dirty) {
-        dirty = true;
+            dirty = true;
 
-        break;
-      }
-    }
+            break;
+          }
+        }
 
-    if (dirty) {
+        if (dirty) {
           flushWorkerLPN.emplace(lpn);
         }
       }
@@ -926,32 +926,26 @@ void RingBuffer::flush_find(Command &cmd) {
     }
   }
 
-    // Nothing to flush - no dirty lines!
-    cmd.status = Status::Done;
+  // Nothing to flush - no dirty lines!
+  cmd.status = Status::Done;
 
   scheduleFunction(CPU::CPUGroup::InternalCache, cmd.eid, cmd.tag, fstat);
 }
 
 void RingBuffer::invalidate_find(Command &cmd) {
   if (LIKELY(enabled)) {
-    for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-      uint8_t bound = 0;
+    LPN alignedBegin = alignToMinPage(cmd.offset);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
 
-      if (iter->second.offset <= cmd.offset &&
-          cmd.offset < iter->second.offset + minPages) {
-        bound |= 1;
-      }
-      if (iter->second.offset < cmd.offset + cmd.length &&
-          cmd.offset + cmd.length <= iter->second.offset + minPages) {
-        bound |= 2;
-      }
+    for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn++) {
+      auto iter = cacheEntry.find(lpn);
 
-      if (bound != 0) {
-        LPN from = MAX(cmd.offset, iter->second.offset);
-        LPN to = from + MIN(cmd.length, minPages);
+      if (iter != cacheEntry.end()) {
+        LPN from = MAX(cmd.offset, lpn);
+        LPN to = MIN(cmd.offset + cmd.length, lpn + minPages);
 
-        for (LPN lpn = from; lpn < to; lpn++) {
-          auto &sentry = iter->second.list.at(lpn - from);
+        for (LPN i = from; i < to; i++) {
+          auto &sentry = iter->second.list.at(i - lpn);
 
           sentry.valid.reset();
         }
