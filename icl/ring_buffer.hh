@@ -304,6 +304,9 @@ class RingBuffer : public AbstractCache {
   Event eventWriteDRAMDone;
   void write_done(uint64_t);
 
+  Event eventWriteNocache;
+  void write_nocache(uint64_t);
+
   // Flush
   void flush_find(Command &);
 

@@ -279,6 +279,9 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   eventWriteDRAMDone =
       createEvent([this](uint64_t, uint64_t d) { write_done(d); },
                   "ICL::RingBuffer::eventWriteDRAMDone");
+  eventWriteNocache =
+      createEvent([this](uint64_t, uint64_t d) { write_nocache(d); },
+                  "ICL::RingBuffer::eventWriteNocache");
 }
 
 void RingBuffer::trigger_readWorker() {
@@ -932,7 +935,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
       LPN front = wcmd.offset - alignedBegin;
       LPN back = alignedEnd - alignedBegin - wcmd.length - front;
 
-      for (LPN i = alignedBegin; i < alignedEnd; i++) {
+      for (LPN i = alignedBegin; i < alignedEnd; i += minPages) {
         LPN offset = alignedBegin;
         LPN length = minPages;
         uint32_t skipFront = 0;
@@ -943,18 +946,27 @@ void RingBuffer::write_find(SubCommand &scmd) {
           length -= front;
           skipFront = wcmd.subCommandList.front().skipFront;
         }
-        if (i + 1 == alignedEnd) {
+        if (i + minPages == alignedEnd) {
           length -= back;
           skipEnd = wcmd.subCommandList.back().skipEnd;
         }
 
         uint64_t tag = makeCacheCommandTag();
 
-        commandManager->createICLWrite(tag, wcmd.eid, offset, length, skipFront,
-                                       skipEnd, getTick());
+        commandManager->createICLWrite(tag, eventWriteNocache, offset, length,
+                                       skipFront, skipEnd, getTick());
+
+        for (LPN j = offset; j < offset + length; j++) {
+          writeWaitingQueue.emplace_back(
+              CacheContext(&wcmd.subCommandList.at(j - offset),
+                           cacheEntry.end(), CacheStatus::WriteCacheWait));
+        }
+
+        writeWorkerTag.emplace_back(tag);
       }
     }
-    else if (wcmd.length == scmd.id + 1) {
+
+    if (wcmd.length == scmd.id + 1) {
       scheduleNow(eventWriteWorkerDoFTL);
     }
   }
@@ -983,6 +995,29 @@ void RingBuffer::write_done(uint64_t tag) {
   scheduleNow(cmd.eid, tag);
 
   trigger_writeWorker();
+}
+
+void RingBuffer::write_nocache(uint64_t tag) {
+  auto &cmd = commandManager->getCommand(tag);
+
+  for (auto iter = writeWaitingQueue.begin();
+       iter != writeWaitingQueue.end();) {
+    if (iter->status == CacheStatus::WriteCacheWait &&
+        iter->scmd->lpn >= cmd.offset &&
+        iter->scmd->lpn < cmd.offset + cmd.length) {
+      iter->scmd->status = Status::Done;
+
+      object.dram->write(getDRAMAddress(iter->scmd->lpn), pageSize,
+                         eventWriteDRAMDone, iter->scmd->tag);
+
+      iter = writeWaitingQueue.erase(iter);
+    }
+    else {
+      ++iter;
+    }
+  }
+
+  commandManager->destroyCommand(tag);
 }
 
 void RingBuffer::flush_find(Command &cmd) {
@@ -1261,6 +1296,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventReadDRAMDone);
   BACKUP_EVENT(out, eventWritePreCPUDone);
   BACKUP_EVENT(out, eventWriteDRAMDone);
+  BACKUP_EVENT(out, eventWriteNocache);
 }
 
 void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
@@ -1418,6 +1454,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventReadDRAMDone);
   RESTORE_EVENT(in, eventWritePreCPUDone);
   RESTORE_EVENT(in, eventWriteDRAMDone);
+  RESTORE_EVENT(in, eventWriteNocache);
 }
 
 }  // namespace SimpleSSD::ICL
