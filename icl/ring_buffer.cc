@@ -576,7 +576,7 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
   while (iter->second.offset + offset + length <
          iter->second.offset + minPages) {
-    // TODO: Consider partial pages
+    // Partial pages are handled in FTL
     if (iter->second.list.at(offset).valid.none() ||
         iter->second.list.at(offset).wpending) {
       offset++;
@@ -588,8 +588,10 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
     else {
       uint64_t tag = makeCacheCommandTag();
 
-      commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                     iter->second.offset + offset, length, now);
+      commandManager->createICLWrite(
+          tag, eventWriteWorkerDone, iter->second.offset + offset, length,
+          iter->second.list.at(offset).valid.ctz() * minIO,
+          iter->second.list.at(offset + length - 1).valid.clz() * minIO, now);
 
       debugprint(Log::DebugID::ICL_RingBuffer,
                  "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
@@ -606,8 +608,10 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
   if (length > 0) {
     uint64_t tag = makeCacheCommandTag();
 
-    commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                   iter->second.offset + offset, length, now);
+    commandManager->createICLWrite(
+        tag, eventWriteWorkerDone, iter->second.offset + offset, length,
+        iter->second.list.at(offset).valid.ctz() * minIO,
+        iter->second.list.at(offset + length - 1).valid.clz() * minIO, now);
 
     debugprint(Log::DebugID::ICL_RingBuffer,
                "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
@@ -729,9 +733,9 @@ void RingBuffer::read_find(Command &cmd) {
 
     // Find entry including range
     LPN alignedBegin = alignToMinPage(cmd.offset);
-    LPN alingedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
 
-    for (LPN lpn = alignedBegin; lpn < alingedEnd; lpn += minPages) {
+    for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn += minPages) {
       auto iter = cacheEntry.find(lpn);
 
       if (iter != cacheEntry.end()) {
@@ -918,16 +922,41 @@ void RingBuffer::write_find(SubCommand &scmd) {
     }
   }
   else {
-    scmd.status = Status::InternalCache;
-    uint64_t tag = makeCacheCommandTag();
-
+    // If cache is disabled, try to make Command as one ICL write command.
     auto &wcmd = commandManager->getCommand(scmd.tag);
 
-    commandManager->createICLWrite(tag, wcmd.eid, scmd.lpn, 1, getTick());
+    if (scmd.id == 0) {
+      // Create minPages aligned requests
+      LPN alignedBegin = alignToMinPage(wcmd.offset);
+      LPN alignedEnd = alignedBegin + DIVCEIL(wcmd.length, minPages);
+      LPN front = wcmd.offset - alignedBegin;
+      LPN back = alignedEnd - alignedBegin - wcmd.length - front;
 
-    writeWorkerTag.emplace_back(tag);
+      for (LPN i = alignedBegin; i < alignedEnd; i++) {
+        LPN offset = alignedBegin;
+        LPN length = minPages;
+        uint32_t skipFront = 0;
+        uint32_t skipEnd = 0;
 
-    scheduleNow(eventWriteWorkerDoFTL);
+        if (i == alignedBegin) {
+          offset = wcmd.offset;
+          length -= front;
+          skipFront = wcmd.subCommandList.front().skipFront;
+        }
+        if (i + 1 == alignedEnd) {
+          length -= back;
+          skipEnd = wcmd.subCommandList.back().skipEnd;
+        }
+
+        uint64_t tag = makeCacheCommandTag();
+
+        commandManager->createICLWrite(tag, wcmd.eid, offset, length, skipFront,
+                                       skipEnd, getTick());
+      }
+    }
+    else if (wcmd.length == scmd.id + 1) {
+      scheduleNow(eventWriteWorkerDoFTL);
+    }
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, scmd.tag,
