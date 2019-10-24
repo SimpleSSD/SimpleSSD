@@ -27,12 +27,29 @@ Write::Write(ObjectData &o, Subsystem *s) : Command(o, s) {
 void Write::dmaInitDone(uint64_t gcid) {
   auto tag = findDMATag(gcid);
   auto pHIL = subsystem->getHIL();
-  auto &scmd = pHIL->getCommandManager()->getSubCommand(gcid).front();
+  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
+  auto &scmd = cmd.subCommandList.front();
+
+  uint64_t offset = 0;
+  uint32_t size = 0;
+  uint32_t skipFront = cmd.subCommandList.front().skipFront;
+  uint32_t skipEnd = cmd.subCommandList.back().skipEnd;
 
   scmd.status = Status::DMA;
 
+  size = scmd.buffer.size();
+  offset = (scmd.lpn - cmd.offset) * size - skipFront;
+
+  if (scmd.lpn == cmd.offset) {
+    offset = 0;
+    size -= skipFront;
+  }
+  if (scmd.lpn + 1 == cmd.offset + cmd.length) {
+    size -= skipEnd;
+  }
+
   // Perform first page DMA
-  tag->dmaEngine->read(tag->dmaTag, 0, scmd.buffer.size() - scmd.skipFront,
+  tag->dmaEngine->read(tag->dmaTag, offset, size,
                        scmd.buffer.data() + scmd.skipFront, dmaCompleteEvent,
                        gcid);
 }
@@ -58,7 +75,7 @@ void Write::dmaComplete(uint64_t gcid) {
       // Handle disk
       if (disk) {
         disk->write(i * iter.buffer.size() + iter.skipFront,
-                    iter.buffer.size() - iter.skipEnd,
+                    iter.buffer.size() - iter.skipFront - iter.skipEnd,
                     iter.buffer.data() + iter.skipFront);
       }
 
@@ -66,8 +83,8 @@ void Write::dmaComplete(uint64_t gcid) {
     }
   }
 
-  // Start next DMA
-  if (LIKELY(i < scmds)) {
+  // Start next DMA (as we break-ed, i != scmds)
+  if (LIKELY(++i < scmds)) {
     auto &scmd = cmd.subCommandList.at(i);
 
     scmd.status = Status::DMA;
