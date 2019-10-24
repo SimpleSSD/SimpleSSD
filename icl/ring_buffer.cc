@@ -593,8 +593,8 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
       commandManager->createICLWrite(
           tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-          iter->second.list.at(offset).valid.ctz() * minIO,
-          iter->second.list.at(offset + length - 1).valid.clz() * minIO, now);
+          iter->second.list.at(offset).valid.clz() * minIO,
+          iter->second.list.at(offset + length - 1).valid.ctz() * minIO, now);
 
       debugprint(Log::DebugID::ICL_RingBuffer,
                  "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
@@ -613,8 +613,8 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
     commandManager->createICLWrite(
         tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-        iter->second.list.at(offset).valid.ctz() * minIO,
-        iter->second.list.at(offset + length - 1).valid.clz() * minIO, now);
+        iter->second.list.at(offset).valid.clz() * minIO,
+        iter->second.list.at(offset + length - 1).valid.ctz() * minIO, now);
 
     debugprint(Log::DebugID::ICL_RingBuffer,
                "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",

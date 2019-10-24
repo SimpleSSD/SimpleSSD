@@ -187,23 +187,18 @@ void BasicFTL::write_readModifyDone() {
   auto &rcmd = commandManager->getCommand(job.readTag);
 
   for (auto &iter : rcmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      completed++;
-    }
-    else {
-      completed++;
-
+    if (iter.status != Status::Done) {
       iter.status = Status::Done;
 
       break;
     }
   }
 
-  if (completed + 1u == rcmd.length &&
-      rcmd.subCommandList.back().status == Status::Done) {
-    completed++;
+  for (auto &iter : rcmd.subCommandList) {
+    if (iter.status == Status::Done) {
+      completed++;
+    }
   }
-
   if (completed == rcmd.length) {
     job.writePending = true;
 
