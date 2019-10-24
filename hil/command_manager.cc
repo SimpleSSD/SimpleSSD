@@ -211,6 +211,7 @@ void CommandManager::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second.opcode);
     BACKUP_SCALAR(out, iter.second.offset);
     BACKUP_SCALAR(out, iter.second.length);
+    BACKUP_SCALAR(out, iter.second.counter);
 
     size = iter.second.subCommandList.size();
     BACKUP_SCALAR(out, size);
@@ -257,6 +258,7 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, cmd.opcode);
     RESTORE_SCALAR(in, cmd.offset);
     RESTORE_SCALAR(in, cmd.length);
+    RESTORE_SCALAR(in, cmd.counter);
 
     RESTORE_SCALAR(in, size2);
 
