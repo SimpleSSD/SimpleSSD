@@ -505,8 +505,7 @@ void RingBuffer::writeWorker() {
       if (notfound) {
         iter = chooseEntry(SelectionMode::All);
 
-        panic_if(iter == cacheEntry.end(),
-                 "Why write worker is flushing entries?");
+        panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
       }
 
       if (iter != cacheEntry.end()) {
@@ -536,9 +535,12 @@ void RingBuffer::writeWorker() {
     }
 
     // We will not call writeWorker_done
+    readWaitsEviction = 0;
+  }
+
+  if (UNLIKELY(writeWorkerTag.size() == 0)) {
     writeTriggered = false;
 
-    readWaitsEviction = 0;
     trigger_readWorker();
 
     return;
@@ -550,6 +552,8 @@ void RingBuffer::writeWorker() {
 CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
   CPU::Function fstat = CPU::initFunction();
 
+  panic_if(!isDirty(iter->second.list), "Try to write clean entry.");
+
   // Mark as write pending and clean (to prevent double eviction)
   for (auto &sentry : iter->second.list) {
     if (sentry.valid.any()) {
@@ -557,6 +561,8 @@ CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
       sentry.wpending = true;
     }
   }
+
+  dirtyEntryCount--;
 
   // Create command(s)
   LPN offset = 0;
@@ -627,8 +633,6 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
 
       sentry.wpending = false;
     }
-
-    dirtyEntryCount--;
 
     commandManager->destroyCommand(tag);
 
@@ -840,6 +844,8 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
         writeWaitingQueue.emplace_back(
             CacheContext(&scmd, cacheEntry.end(), CacheStatus::WriteCacheWait));
+
+        trigger_writeWorker();
       }
     }
   }
