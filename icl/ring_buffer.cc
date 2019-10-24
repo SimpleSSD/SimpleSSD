@@ -489,60 +489,60 @@ void RingBuffer::writeWorker() {
     uint32_t times = evictPages / minPages;
 
     for (uint32_t i = 0; i < times; i++) {
-    bool notfound = true;
-    auto iter = cacheEntry.end();
+      bool notfound = true;
+      auto iter = cacheEntry.end();
 
-    if (!noPageLimit) {
-      // Collect full-sized request when FTL wants minPages write
-      iter = chooseEntry(SelectionMode::FullSized);
+      if (!noPageLimit) {
+        // Collect full-sized request when FTL wants minPages write
+        iter = chooseEntry(SelectionMode::FullSized);
 
-      if (LIKELY(iter != cacheEntry.end())) {
-        notfound = false;
-      }
-    }
-
-    if (notfound) {
-      iter = chooseEntry(SelectionMode::All);
-
-      panic_if(iter == cacheEntry.end(),
-               "Why write worker is flushing entries?");
-    }
-
-    if (iter != cacheEntry.end()) {
-        // Mark as write pending and clean (to prevent double eviction)
-      for (auto &sentry : iter->second.list) {
-        if (sentry.valid.any()) {
-            sentry.dirty = false;
-          sentry.wpending = true;
+        if (LIKELY(iter != cacheEntry.end())) {
+          notfound = false;
         }
       }
 
-      // Create command(s)
-      LPN offset = 0;
-      uint32_t length = 0;
+      if (notfound) {
+        iter = chooseEntry(SelectionMode::All);
+
+        panic_if(iter == cacheEntry.end(),
+                 "Why write worker is flushing entries?");
+      }
+
+      if (iter != cacheEntry.end()) {
+        // Mark as write pending and clean (to prevent double eviction)
+        for (auto &sentry : iter->second.list) {
+          if (sentry.valid.any()) {
+            sentry.dirty = false;
+            sentry.wpending = true;
+          }
+        }
+
+        // Create command(s)
+        LPN offset = 0;
+        uint32_t length = 0;
 
         while (iter->second.offset + offset + length <
                iter->second.offset + minPages) {
-        // TODO: Consider partial pages
-        if (iter->second.list.at(offset).valid.none()) {
-          offset++;
-        }
-        else if (iter->second.list.at(offset + length).valid.any()) {
-          length++;
-        }
-        else {
-          uint64_t tag = makeCacheCommandTag();
+          // TODO: Consider partial pages
+          if (iter->second.list.at(offset).valid.none()) {
+            offset++;
+          }
+          else if (iter->second.list.at(offset + length).valid.any()) {
+            length++;
+          }
+          else {
+            uint64_t tag = makeCacheCommandTag();
 
             commandManager->createICLWrite(tag, eventWriteWorkerDone,
                                            iter->second.offset + offset,
-                                         length);
+                                           length);
 
-          offset += length;
-          length = 0;
+            offset += length;
+            length = 0;
 
-          writeWorkerTag.emplace_back(tag);
+            writeWorkerTag.emplace_back(tag);
+          }
         }
-      }
 
         // Last chunk
         uint64_t tag = makeCacheCommandTag();
@@ -551,8 +551,8 @@ void RingBuffer::writeWorker() {
                                        iter->second.offset + offset, length);
 
         writeWorkerTag.emplace_back(tag);
+      }
     }
-  }
   }
 
   // Do we need to erase clean entries
@@ -603,13 +603,13 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     panic_if(iter == cacheEntry.end(), "Evicted entry not found.");
 
     uint32_t i = cmd.offset - iter->second.offset;
-        uint32_t limit = cmd.length + i;
+    uint32_t limit = cmd.length + i;
 
-        for (; i < limit; i++) {
+    for (; i < limit; i++) {
       auto &sentry = iter->second.list.at(i);
 
-          sentry.wpending = false;
-        }
+      sentry.wpending = false;
+    }
 
     dirtyEntryCount--;
 
@@ -663,19 +663,13 @@ void RingBuffer::read_find(Command &cmd) {
     }
 
     // Find entry including range
-    for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-      uint8_t bound = 0;
+    LPN alignedBegin = alignToMinPage(cmd.offset);
+    LPN alingedEnd = alignToMinPage(cmd.offset + cmd.length);
 
-      if (iter->second.offset <= cmd.offset &&
-          cmd.offset < iter->second.offset + minPages) {
-        bound |= 1;
-      }
-      if (iter->second.offset < cmd.offset + cmd.length &&
-          cmd.offset + cmd.length <= iter->second.offset + minPages) {
-        bound |= 2;
-      }
+    for (LPN lpn = alignedBegin; lpn <= alingedEnd; lpn += minPages) {
+      auto iter = cacheEntry.find(lpn);
 
-      if (bound != 0) {
+      if (iter != cacheEntry.end()) {
         // Accessed
         iter->second.accessedAt = clock;
 
@@ -698,18 +692,10 @@ void RingBuffer::read_find(Command &cmd) {
             }
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
-
-            cmd.counter++;
           }
         }
       }
-
-      if (cmd.counter == cmd.subCommandList.size()) {
-        break;
-      }
     }
-
-    cmd.counter = 0;
 
     if (trigger.triggered() &&
         lastReadDoneAddress != std::numeric_limits<uint64_t>::max()) {
@@ -768,7 +754,11 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
   if (LIKELY(enabled)) {
     // Find entry including scmd
-    for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
+    LPN aligned = alignToMinPage(scmd.lpn);
+
+    auto iter = cacheEntry.find(aligned);
+
+    if (iter != cacheEntry.end()) {
       // Included existing entry
       if (iter->second.offset <= scmd.lpn &&
           scmd.lpn < iter->second.offset + minPages) {
@@ -780,6 +770,8 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
         // Check write pending
         if (sentry.wpending) {
+          scmd.status = Status::InternalCache;
+
           writeWaitingQueue.emplace_back(
               CacheContext(&scmd, iter, CacheStatus::WriteCacheWait));
         }
@@ -793,14 +785,10 @@ void RingBuffer::write_find(SubCommand &scmd) {
           updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
           updateCapacity(false, scmd.skipFront + scmd.skipEnd);
         }
-
-        break;
       }
     }
-
-    // Check done
-    if (scmd.status == Status::Submit) {
-      if (cacheEntry.size() + 1 < maxEntryCount) {
+    else {
+      if (cacheEntry.size() < maxEntryCount) {
         // In this case, there was no entry for this sub command
         LPN aligned = alignToMinPage(scmd.lpn);
 
@@ -1223,13 +1211,11 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
       readPendingQueue.emplace_back(CacheContext(&scmd, cacheEntry.end(), cs));
     }
     else {
-      for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-        if (iter->first == offset) {
-          readPendingQueue.emplace_back(CacheContext(&scmd, iter, cs));
+      auto iter = cacheEntry.find(offset);
 
-          break;
-        }
-      }
+      panic_if(iter == cacheEntry.end(), "Entry not found while restore.");
+
+      readPendingQueue.emplace_back(CacheContext(&scmd, iter, cs));
     }
   }
 
@@ -1252,13 +1238,11 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
       writeWaitingQueue.emplace_back(CacheContext(&scmd, cacheEntry.end(), cs));
     }
     else {
-      for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-        if (iter->first == offset) {
-          writeWaitingQueue.emplace_back(CacheContext(&scmd, iter, cs));
+      auto iter = cacheEntry.find(offset);
 
-          break;
-        }
-      }
+      panic_if(iter == cacheEntry.end(), "Entry not found while restore.");
+
+      writeWaitingQueue.emplace_back(CacheContext(&scmd, iter, cs));
     }
   }
 
