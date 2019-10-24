@@ -539,6 +539,11 @@ void RingBuffer::writeWorker() {
 
     // We will not call writeWorker_done
     readWaitsEviction = 0;
+    writeTriggered = false;
+
+    trigger_readWorker();
+
+    return;
   }
 
   if (UNLIKELY(writeWorkerTag.size() == 0)) {
