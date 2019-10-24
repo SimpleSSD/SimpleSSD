@@ -16,9 +16,17 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
+  eventWriteFindDone =
+      createEvent([this](uint64_t, uint64_t) { write_findDone(); },
+                  "FTL::BasicFTL::eventWriteFindDone");
   eventWriteDoFIL =
       createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
                   "FTL::BasicFTL::eventWriteDoFIL");
+  eventReadModifyDone =
+      createEvent([this](uint64_t, uint64_t) { write_readModifyDone(); },
+                  "FTL::BasicFTL::eventReadModifyDone");
+  eventWriteDone = createEvent([this](uint64_t, uint64_t) { write_rmwDone(); },
+                               "FTL::BasicFTL::eventWriteDone");
   eventInvalidateDoFIL =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_doFIL(t, d); },
                   "FTL::BasicFTL::eventInvalidateDoFIL");
@@ -68,7 +76,7 @@ void BasicFTL::write_find(Command &cmd) {
     bool merged = false;
 
     // Not aligned - read-modify-write
-    warn_if(alignedBegin + 1 != alignedEnd,
+    warn_if(alignedBegin + mappingGranularity != alignedEnd,
             "Merge might fail. (I/O size > one mapping granularity)");
 
     // 1. Check merge
@@ -93,8 +101,8 @@ void BasicFTL::write_find(Command &cmd) {
 
       uint64_t tag = makeFTLCommandTag();
 
-      commandManager->createICLRead(tag, eventReadModifyDone, alignedBegin,
-                                    alignedEnd, 0);
+      commandManager->createICLRead(tag, eventReadModifyDone, ctx.offset,
+                                    ctx.length, 0);
 
       auto &rcmd = commandManager->getCommand(tag);
 
@@ -119,6 +127,7 @@ void BasicFTL::write_find(Command &cmd) {
         if (excludeBegin <= scmd.lpn && scmd.lpn < excludeEnd) {
           scmd.lpn = InvalidLPN;
           scmd.ppn = InvalidPPN;
+          scmd.status = Status::Done;
         }
       }
 
@@ -127,8 +136,8 @@ void BasicFTL::write_find(Command &cmd) {
       // 3. Create write request [alignedBegin, alignedEnd)
       tag = makeFTLCommandTag();
 
-      commandManager->createICLWrite(tag, eventWriteDone, alignedBegin,
-                                     alignedEnd, 0, 0, 0);
+      commandManager->createICLWrite(tag, eventWriteDone, ctx.offset,
+                                     ctx.length, 0, 0, 0);
 
       auto &wcmd = commandManager->getCommand(tag);
 
@@ -173,37 +182,73 @@ void BasicFTL::write_doFIL(uint64_t tag) {
 
 void BasicFTL::write_readModifyDone() {
   auto &job = rmwList.front();
+  uint8_t completed = 0;
 
-  panic_if(!job.readPending, "Read-Modify-Write queue corrupted.");
-  panic_if(job.writePending, "Read-Modify-Write queue corrupted.");
+  auto &rcmd = commandManager->getCommand(job.readTag);
 
-  job.writePending = true;
+  for (auto &iter : rcmd.subCommandList) {
+    if (iter.status == Status::Done) {
+      completed++;
+    }
+    else {
+      completed++;
 
-  pFIL->submit(job.writeTag);
+      iter.status = Status::Done;
+
+      break;
+    }
+  }
+
+  if (completed + 1u == rcmd.length &&
+      rcmd.subCommandList.back().status == Status::Done) {
+    completed++;
+  }
+
+  if (completed == rcmd.length) {
+    job.writePending = true;
+
+    pFIL->submit(job.writeTag);
+  }
 }
 
 void BasicFTL::write_rmwDone() {
   auto &job = rmwList.front();
+  uint8_t completed = 0;
 
-  panic_if(!job.writePending, "Read-Modify-Write queue corrupted.");
+  auto &wcmd = commandManager->getCommand(job.writeTag);
 
-  scheduleNow(job.originalEvent, job.originalTag);
-
-  if (job.readTag > 0) {
-    commandManager->destroyCommand(job.readTag);
-    commandManager->destroyCommand(job.writeTag);
-  }
-
-  rmwList.pop_front();
-
-  if (rmwList.size() > 0) {
-    // Check merged
-    if (rmwList.front().readTag == 0) {
-      // Call this function again
-      scheduleNow(eventWriteDone);
+  for (auto &iter : wcmd.subCommandList) {
+    if (iter.status == Status::Done) {
+      completed++;
     }
     else {
-      scheduleNow(eventWriteFindDone);
+      completed++;
+
+      iter.status = Status::Done;
+
+      break;
+    }
+  }
+
+  if (completed == wcmd.length) {
+    scheduleNow(job.originalEvent, job.originalTag);
+
+    if (job.readTag > 0) {
+      commandManager->destroyCommand(job.readTag);
+      commandManager->destroyCommand(job.writeTag);
+    }
+
+    rmwList.pop_front();
+
+    if (rmwList.size() > 0) {
+      // Check merged
+      if (rmwList.front().readTag == 0) {
+        // Call this function again
+        scheduleNow(eventWriteDone);
+      }
+      else {
+        scheduleNow(eventWriteFindDone);
+      }
     }
   }
 }
@@ -414,6 +459,9 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventGCErase);
   BACKUP_EVENT(out, eventGCEraseDone);
   BACKUP_EVENT(out, eventGCDone);
+  BACKUP_EVENT(out, eventWriteFindDone);
+  BACKUP_EVENT(out, eventReadModifyDone);
+  BACKUP_EVENT(out, eventWriteDone);
 }
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
@@ -449,6 +497,9 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventGCErase);
   RESTORE_EVENT(in, eventGCEraseDone);
   RESTORE_EVENT(in, eventGCDone);
+  RESTORE_EVENT(in, eventWriteFindDone);
+  RESTORE_EVENT(in, eventReadModifyDone);
+  RESTORE_EVENT(in, eventWriteDone);
 }
 
 }  // namespace SimpleSSD::FTL
