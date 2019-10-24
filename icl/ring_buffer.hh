@@ -13,6 +13,8 @@
 #include <functional>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 #include "icl/abstract_cache.hh"
 #include "util/bitset.hh"
@@ -242,7 +244,8 @@ class RingBuffer : public AbstractCache {
   LPN lastReadDoneAddress;
   std::vector<uint64_t> readWorkerTag;
   std::vector<uint64_t> writeWorkerTag;
-  std::vector<uint64_t> flushEvents;
+  std::unordered_set<LPN> flushWorkerLPN;
+  std::pair<Event, uint64_t> flushTag;
 
   void trigger_readWorker();
 
@@ -259,6 +262,8 @@ class RingBuffer : public AbstractCache {
 
   Event eventWriteWorker;
   void writeWorker();
+
+  CPU::Function writeWorker_collect(CacheEntry::iterator);
 
   Event eventWriteWorkerDoFTL;
   void writeWorker_doFTL();

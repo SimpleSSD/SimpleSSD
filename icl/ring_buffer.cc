@@ -58,7 +58,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
           readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio) *
               pageSize),
       readTriggered(false),
-      writeTriggered(false) {
+      writeTriggered(false),
+      flushTag({InvalidEventID, 0}) {
   auto param = pFTL->getInfo();
 
   triggerThreshold =
@@ -509,6 +510,46 @@ void RingBuffer::writeWorker() {
       }
 
       if (iter != cacheEntry.end()) {
+        fstat += writeWorker_collect(iter);
+      }
+    }
+  }
+
+  // Do we have to flush
+  for (auto &lpn : flushWorkerLPN) {
+    auto iter = cacheEntry.find(lpn);
+
+    panic_if(iter == cacheEntry.end(), "Flushing non-exist entry.");
+
+    fstat += writeWorker_collect(iter);
+  }
+
+  // Do we need to erase clean entries
+  if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
+    // Just erase some clean entries
+    while (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
+      auto iter = chooseEntry(SelectionMode::Clean);
+
+      panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
+
+      cacheEntry.erase(iter);
+    }
+
+    // We will not call writeWorker_done
+    writeTriggered = false;
+
+    readWaitsEviction = 0;
+    trigger_readWorker();
+
+    return;
+  }
+
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoFTL, fstat);
+}
+
+CPU::Function RingBuffer::writeWorker_collect(CacheEntry::iterator iter) {
+  CPU::Function fstat = CPU::initFunction();
+
         // Mark as write pending and clean (to prevent double eviction)
         for (auto &sentry : iter->second.list) {
           if (sentry.valid.any()) {
@@ -534,8 +575,7 @@ void RingBuffer::writeWorker() {
             uint64_t tag = makeCacheCommandTag();
 
             commandManager->createICLWrite(tag, eventWriteWorkerDone,
-                                           iter->second.offset + offset,
-                                           length);
+                                     iter->second.offset + offset, length);
 
             offset += length;
             length = 0;
@@ -551,32 +591,9 @@ void RingBuffer::writeWorker() {
                                        iter->second.offset + offset, length);
 
         writeWorkerTag.emplace_back(tag);
-      }
+
+  return std::move(fstat);
     }
-  }
-
-  // Do we need to erase clean entries
-  if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
-    // Just erase some clean entries
-    while (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
-      auto iter = chooseEntry(SelectionMode::Clean);
-
-      panic_if(iter == cacheEntry.end(), "Not possible case. Bug?");
-
-      cacheEntry.erase(iter);
-    }
-
-    // We will not call writeWorker_done
-    writeTriggered = false;
-
-    readWaitsEviction = 0;
-    trigger_readWorker();
-
-    return;
-  }
-
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoFTL, fstat);
-}
 
 void RingBuffer::writeWorker_doFTL() {
   // Issue writes in writePendingQueue
@@ -616,14 +633,20 @@ void RingBuffer::writeWorker_done(uint64_t tag) {
     commandManager->destroyCommand(tag);
 
     // Flush?
-    if (UNLIKELY(dirtyEntryCount == 0 && flushEvents.size() > 0)) {
-      for (auto &iter : flushEvents) {
-        auto &fcmd = commandManager->getCommand(iter);
+    if (UNLIKELY(flushWorkerLPN.size() > 0)) {
+      auto fiter = flushWorkerLPN.find(aligned);
 
-        scheduleNow(fcmd.eid, iter);
+      if (fiter != flushWorkerLPN.end()) {
+        // This request was flush
+        flushWorkerLPN.erase(fiter);
+
+        // Complete?
+        if (flushWorkerLPN.size() == 0) {
+          scheduleNow(flushTag.first, flushTag.second);
+
+          flushTag.first = InvalidEventID;
+    }
       }
-
-      flushEvents.clear();
     }
 
     // Retry requests in writeWaitingQueue
@@ -860,29 +883,53 @@ void RingBuffer::write_done(uint64_t tag) {
 }
 
 void RingBuffer::flush_find(Command &cmd) {
-  if (LIKELY(enabled)) {
+  CPU::Function fstat = CPU::initFunction();
+
+  if (LIKELY(enabled && flushWorkerLPN.size() == 0)) {
+    LPN alignedBegin = alignToMinPage(cmd.offset);
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, minPages);
+
+    for (LPN lpn = alignedBegin; lpn < alignedEnd; lpn++) {
+      auto iter = cacheEntry.find(lpn);
+
+      if (iter != cacheEntry.end()) {
+        LPN from = MAX(cmd.offset, lpn);
+        LPN to = MIN(cmd.offset + cmd.length, lpn + minPages);
     bool dirty = false;
 
-    // Find dirty entry
-    for (auto &iter : cacheEntry) {
-      if (isDirty(iter.second.list)) {
+        for (LPN i = from; i < to; i++) {
+          auto &sentry = iter->second.list.at(i - lpn);
+
+          if (sentry.dirty) {
         dirty = true;
 
         break;
       }
     }
 
-    // Request worker to write all dirty pages
     if (dirty) {
-      flushEvents.emplace_back(cmd.tag);
+          flushWorkerLPN.emplace(lpn);
+        }
+      }
+    }
+
+    // Request worker to write all dirty pages
+    if (flushWorkerLPN.size() > 0) {
+      cmd.status = Status::InternalCache;
+
+      flushTag.first = cmd.eid;
+      flushTag.second = cmd.tag;
 
       trigger_writeWorker();
+
+      return;
     }
   }
-  else {
+
     // Nothing to flush - no dirty lines!
     cmd.status = Status::Done;
-  }
+
+  scheduleFunction(CPU::CPUGroup::InternalCache, cmd.eid, cmd.tag, fstat);
 }
 
 void RingBuffer::invalidate_find(Command &cmd) {
@@ -1054,12 +1101,15 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter);
   }
 
-  size = flushEvents.size();
+  size = flushWorkerLPN.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : flushEvents) {
+  for (auto &iter : flushWorkerLPN) {
     BACKUP_SCALAR(out, iter);
   }
+
+  BACKUP_EVENT(out, flushTag.first);
+  BACKUP_SCALAR(out, flushTag.second);
 
   size = readPendingQueue.size();
   BACKUP_SCALAR(out, size);
@@ -1183,14 +1233,17 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
-  flushEvents.reserve(size);
+  writeWorkerTag.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
 
     RESTORE_SCALAR(in, tag);
-    flushEvents.emplace_back(tag);
+    writeWorkerTag.emplace_back(tag);
   }
+
+  RESTORE_EVENT(in, flushTag.first);
+  RESTORE_SCALAR(in, flushTag.second);
 
   RESTORE_SCALAR(in, size);
 
