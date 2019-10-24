@@ -27,6 +27,7 @@ class BasicFTL : public AbstractFTL {
   std::deque<PPN> gcBlockList;
   CopyList gcCopyList;
   uint32_t nextCopyIndex;
+  uint64_t gcBeginAt;
 
   uint8_t formatInProgress;
   FormatContext fctx;
@@ -44,10 +45,10 @@ class BasicFTL : public AbstractFTL {
   void invalidate_find(Command &);
 
   Event eventInvalidateDoFIL;
-  void invalidate_doFIL(uint64_t);
+  void invalidate_doFIL(uint64_t, uint64_t);
 
   Event eventGCTrigger;
-  void gc_trigger();
+  void gc_trigger(uint64_t);
 
   Event eventGCGetBlockList;
   void gc_blockinfo();
@@ -68,7 +69,7 @@ class BasicFTL : public AbstractFTL {
   void gc_eraseDone();
 
   Event eventGCDone;
-  void gc_done();
+  void gc_done(uint64_t);
 
  public:
   BasicFTL(ObjectData &, CommandManager *, FIL::FIL *,

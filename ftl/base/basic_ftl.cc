@@ -20,9 +20,9 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
       createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
                   "FTL::BasicFTL::eventWriteDoFIL");
   eventInvalidateDoFIL =
-      createEvent([this](uint64_t, uint64_t d) { invalidate_doFIL(d); },
+      createEvent([this](uint64_t t, uint64_t d) { invalidate_doFIL(t, d); },
                   "FTL::BasicFTL::eventInvalidateDoFIL");
-  eventGCTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
+  eventGCTrigger = createEvent([this](uint64_t t, uint64_t) { gc_trigger(t); },
                                "FTL::BasicFTL::eventGCTrigger");
   eventGCGetBlockList =
       createEvent([this](uint64_t, uint64_t) { gc_blockinfo(); },
@@ -37,7 +37,7 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                              "FTL::BasicFTL::eventGCErase");
   eventGCEraseDone = createEvent([this](uint64_t, uint64_t) { gc_eraseDone(); },
                                  "FTL::BasicFTL::EventGCEraseDone");
-  eventGCDone = createEvent([this](uint64_t, uint64_t) { gc_done(); },
+  eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
                             "FTL::BasicFTL::eventGCDone");
 }
 
@@ -70,7 +70,7 @@ void BasicFTL::invalidate_find(Command &cmd) {
   pMapper->invalidateMapping(cmd, eventInvalidateDoFIL);
 }
 
-void BasicFTL::invalidate_doFIL(uint64_t tag) {
+void BasicFTL::invalidate_doFIL(uint64_t now, uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   if (cmd.opcode == Operation::Trim) {
@@ -90,6 +90,11 @@ void BasicFTL::invalidate_doFIL(uint64_t tag) {
     for (auto &scmd : cmd.subCommandList) {
       gcBlockList.emplace_back(scmd.ppn);
     }
+
+    debugprint(Log::DebugID::FTL, "Fmt   | Immediate erase | %u blocks",
+               gcBlockList.size());
+
+    gcBeginAt = now;
   }
   else {
     // TODO: Handle this case
@@ -97,12 +102,16 @@ void BasicFTL::invalidate_doFIL(uint64_t tag) {
   }
 }
 
-void BasicFTL::gc_trigger() {
+void BasicFTL::gc_trigger(uint64_t now) {
   gcInProgress = true;
   formatInProgress = 100;
+  gcBeginAt = now;
 
   // Get block list from allocator
   pAllocator->getVictimBlocks(gcBlockList, eventGCGetBlockList);
+
+  debugprint(Log::DebugID::FTL, "GC    | On-demand | %u blocks",
+             gcBlockList.size());
 }
 
 void BasicFTL::gc_blockinfo() {
@@ -171,10 +180,19 @@ void BasicFTL::gc_eraseDone() {
   pMapper->releaseCopyList(gcCopyList);
 }
 
-void BasicFTL::gc_done() {
+void BasicFTL::gc_done(uint64_t now) {
   formatInProgress = 0;
 
-  if (!gcInProgress) {
+  if (gcInProgress) {
+    debugprint(Log::DebugID::FTL,
+               "GC    | On-demand | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+               gcBeginAt, now, now - gcBeginAt);
+  }
+  else {
+    debugprint(Log::DebugID::FTL,
+               "Fmt   | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")", gcBeginAt,
+               now, now - gcBeginAt);
+
     // This was format
     scheduleNow(fctx.eid, fctx.data);
   }
@@ -228,6 +246,7 @@ void BasicFTL::resetStatValues() noexcept {}
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, gcInProgress);
   BACKUP_SCALAR(out, nextCopyIndex);
+  BACKUP_SCALAR(out, gcBeginAt);
 
   BACKUP_SCALAR(out, formatInProgress);
   BACKUP_EVENT(out, fctx.eid);
@@ -258,6 +277,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, gcInProgress);
   RESTORE_SCALAR(in, nextCopyIndex);
+  RESTORE_SCALAR(in, gcBeginAt);
 
   RESTORE_SCALAR(in, formatInProgress);
   RESTORE_EVENT(in, fctx.eid);

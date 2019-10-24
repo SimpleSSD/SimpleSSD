@@ -320,16 +320,24 @@ void PageLevel::readMapping(Command &cmd, Event eid) {
   do {
     LPN currentLPN = i / param.superpage;
     LPN superpageIndex = i % param.superpage;
+    PPN ippn;
 
     if (lpn != currentLPN) {
       lpn = currentLPN;
 
       readMappingInternal(lpn, ppn);
+
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
     }
 
+    ippn = ppn * param.superpage + superpageIndex;
+
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", i, ippn);
+
     // Add subcommand
-    commandManager->appendTranslation(cmd, i,
-                                      ppn * param.superpage + superpageIndex);
+    commandManager->appendTranslation(cmd, i, ippn);
 
     i++;
   } while (i < cmd.offset + cmd.length);
@@ -350,16 +358,24 @@ void PageLevel::writeMapping(Command &cmd, Event eid) {
   do {
     LPN currentLPN = i / param.superpage;
     LPN superpageIndex = i % param.superpage;
+    PPN ippn;
 
     if (lpn != currentLPN) {
       lpn = currentLPN;
 
       fstat += writeMappingInternal(lpn, ppn);
+
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "Write | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
     }
 
+    ippn = ppn * param.superpage + superpageIndex;
+
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", i, ippn);
+
     // Add subcommand
-    commandManager->appendTranslation(cmd, i,
-                                      ppn * param.superpage + superpageIndex);
+    commandManager->appendTranslation(cmd, i, ippn);
 
     i++;
   } while (i < cmd.offset + cmd.length);
@@ -380,16 +396,25 @@ void PageLevel::invalidateMapping(Command &cmd, Event eid) {
   do {
     LPN currentLPN = i / param.superpage;
     LPN superpageIndex = i % param.superpage;
+    PPN ippn;
 
     if (lpn != currentLPN) {
       lpn = currentLPN;
 
       fstat += invalidateMappingInternal(lpn, ppn);
+
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "Trim/Format | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn,
+                 ppn);
     }
 
+    ippn = ppn * param.superpage + superpageIndex;
+
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "Trim/Format | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", i, ippn);
+
     // Add subcommand
-    commandManager->appendTranslation(cmd, i,
-                                      ppn * param.superpage + superpageIndex);
+    commandManager->appendTranslation(cmd, i, ippn);
 
     i++;
   } while (i < cmd.offset + cmd.length);
@@ -448,6 +473,9 @@ void PageLevel::releaseCopyList(CopyList &copy) {
   // Mark block as erased
   blockMetadata[copy.blockID].nextPageToWrite = 0;
   blockMetadata[copy.blockID].validPages.reset();
+
+  debugprint(Log::DebugID::FTL_PageLevel, "Erase | (S)PPN %" PRIx64 "h",
+             copy.blockID);
 }
 
 void PageLevel::getStatList(std::vector<Stat> &, std::string) noexcept {}
