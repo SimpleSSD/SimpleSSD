@@ -159,7 +159,7 @@ class CPU {
   Core *getIdleCoreInRange(uint16_t, uint16_t);
 
   void dispatch(uint64_t);
-  void interrupt(Event, uint64_t);
+  void interrupt(Event, uint64_t, uint64_t);
 
   void scheduleNext();
 

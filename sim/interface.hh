@@ -30,13 +30,14 @@ class DMAInterface {
    * Simulator must read data to the buffer and call callback function with
    * provided context.
    *
-   * \param[in]  offset    Address to read
-   * \param[in]  length    # of bytes to read
-   * \param[out] buffer    Buffer. can be nullptr
-   * \param[in]  eid       Event ID of callback function
+   * \param[in]  offset   Address to read
+   * \param[in]  length   # of bytes to read
+   * \param[out] buffer   Buffer. can be nullptr
+   * \param[in]  eid      Event ID of callback function
+   * \param[in] eid       Corresponding data
    */
   virtual void read(uint64_t offset, uint64_t length, uint8_t *buffer,
-                    Event eid) = 0;
+                    Event eid, uint64_t data = 0) = 0;
 
   /**
    * DMA write request function
@@ -48,9 +49,10 @@ class DMAInterface {
    * \param[in] length    # of bytes to write
    * \param[in] buffer    Data to write. can be nullptr
    * \param[in] eid       Event ID of callback function
+   * \param[in] eid       Corresponding data
    */
   virtual void write(uint64_t offset, uint64_t length, uint8_t *buffer,
-                     Event eid) = 0;
+                     Event eid, uint64_t data = 0) = 0;
 };
 
 /**

@@ -42,7 +42,7 @@ using EventFunction = std::function<void(uint64_t, uint64_t)>;
  *
  * See SimpleSSD::Engine::setFunction for more details.
  */
-using InterruptFunction = std::function<void(Event, uint64_t)>;
+using InterruptFunction = std::function<void(Event, uint64_t, uint64_t)>;
 
 }  // namespace SimpleSSD
 

@@ -74,11 +74,12 @@ CPU::Core::Core()
 
 void CPU::Core::handleJob(uint64_t now) {
   auto job = std::move(jobQueue.front());
-  jobQueue.pop_front();
 
   // Function is completed!
-  job.eid->func(parent->getTick(), job.data);
+  job.eid->func(now, job.data);
   busyUntil = now;
+
+  jobQueue.pop_front();
 
   // Schedule next
   if (jobQueue.size() > 0) {
@@ -192,9 +193,10 @@ CPU::CPU(Engine *e, ConfigReader *c, Log *l)
     coreList.at(i).init(this, i, clockPeriod);
   }
 
-  engine->setFunction(
-      [this](uint64_t tick, uint64_t) { dispatch(tick); },
-      [this](Event eid, uint64_t tick) { interrupt(eid, tick); });
+  engine->setFunction([this](uint64_t tick, uint64_t) { dispatch(tick); },
+                      [this](Event eid, uint64_t tick, uint64_t data) {
+                        interrupt(eid, tick, data);
+                      });
 }
 
 CPU::~CPU() {
@@ -573,9 +575,9 @@ void CPU::dispatch(uint64_t now) {
   scheduleNext();
 }
 
-void CPU::interrupt(Event eid, uint64_t tick) {
+void CPU::interrupt(Event eid, uint64_t tick, uint64_t data) {
   // Engine invokes event!
-  eid->func(tick, 0);
+  eid->func(tick, data);
 }
 
 void CPU::scheduleNext() {
