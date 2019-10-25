@@ -312,60 +312,108 @@ void RingBuffer::readWorker(uint64_t now) {
     }
   }
 
-  if (pendingLPNs.size() > 0) {
-    // Sort
-    std::sort(pendingLPNs.begin(), pendingLPNs.end());
+  if (LIKELY(enabled)) {
+    if (pendingLPNs.size() > 0) {
+      // Sort
+      std::sort(pendingLPNs.begin(), pendingLPNs.end());
 
-    // Merge
-    for (auto &iter : pendingLPNs) {
-      LPN aligned = alignToMinPage(iter);
+      // Merge
+      for (auto &iter : pendingLPNs) {
+        LPN aligned = alignToMinPage(iter);
 
-      if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
-        alignedLPN.emplace_back(aligned);
+        if (alignedLPN.size() == 0 || alignedLPN.back() != aligned) {
+          alignedLPN.emplace_back(aligned);
+        }
       }
     }
-  }
 
-  // Check prefetch
-  if (trigger.triggered()) {
-    // Append pages
-    LPN last;
-    uint32_t limit = prefetchPages / minPages;
+    // Check prefetch
+    if (trigger.triggered()) {
+      // Append pages
+      LPN last;
+      uint32_t limit = prefetchPages / minPages;
 
-    if (alignedLPN.size() > 0) {
-      last = alignedLPN.back();
-      limit =
-          limit > alignedLPN.size() ? limit - (uint32_t)alignedLPN.size() : 0;
+      if (alignedLPN.size() > 0) {
+        last = alignedLPN.back();
+        limit =
+            limit > alignedLPN.size() ? limit - (uint32_t)alignedLPN.size() : 0;
+      }
+      else {
+        last = lastReadPendingAddress;
+      }
+
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64 "h",
+                 last + minPages, last + limit * minPages);
+
+      for (uint32_t i = 1; i <= limit; i++) {
+        alignedLPN.emplace_back(last + i * minPages);
+      }
+    }
+
+    if (alignedLPN.size() == 0) {
+      readTriggered = false;
+
+      return;
+    }
+
+    // Update last read address
+    lastReadPendingAddress = alignedLPN.back();
+
+    // Check capacity
+    readWaitsEviction = alignedLPN.size();
+
+    if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
+      readTriggered = false;
+
+      trigger_writeWorker();
     }
     else {
-      last = lastReadPendingAddress;
+      // Mark as submit
+      for (auto &ctx : readPendingQueue) {
+        if (ctx.status == CacheStatus::ReadWait) {
+          ctx.status = CacheStatus::ReadPendingWait;
+        }
+      }
+
+      // Create entry
+      for (auto &lpn : alignedLPN) {
+        auto ret = cacheEntry.emplace(lpn, Entry(lpn, minPages, iobits));
+        auto &entry = ret.first->second;
+
+        // As we got data from FTL, all SubEntries are valid
+        // Mark as read pending
+        for (auto &iter : entry.list) {
+          iter.valid.set();
+          iter.rpending = true;
+        }
+
+        // Update clock
+        entry.accessedAt = clock;
+
+        if (ret.second) {
+          entry.insertedAt = clock;
+        }
+      }
+
+      // Submit
+      readWorkerTag.reserve(alignedLPN.size());
+
+      for (auto &iter : alignedLPN) {
+        // Create request
+        uint64_t tag = makeCacheCommandTag();
+
+        commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages,
+                                      now);
+
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h", iter,
+                   minPages);
+
+        // Store for CPU latency
+        readWorkerTag.emplace_back(tag);
+      }
     }
-
-    debugprint(Log::DebugID::ICL_RingBuffer,
-               "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64 "h",
-               last + minPages, last + limit * minPages);
-
-    for (uint32_t i = 1; i <= limit; i++) {
-      alignedLPN.emplace_back(last + i * minPages);
-    }
-  }
-
-  if (alignedLPN.size() == 0) {
-    readTriggered = false;
-
-    return;
-  }
-
-  // Update last read address
-  lastReadPendingAddress = alignedLPN.back();
-
-  // Check capacity
-  readWaitsEviction = alignedLPN.size();
-
-  if (readWaitsEviction + cacheEntry.size() >= maxEntryCount) {
-    readTriggered = false;
-
-    trigger_writeWorker();
   }
   else {
     // Mark as submit
@@ -375,39 +423,17 @@ void RingBuffer::readWorker(uint64_t now) {
       }
     }
 
-    // Create entry
-    for (auto &lpn : alignedLPN) {
-      auto ret = cacheEntry.emplace(lpn, Entry(lpn, minPages, iobits));
-      auto &entry = ret.first->second;
-
-      // As we got data from FTL, all SubEntries are valid
-      // Mark as read pending
-      for (auto &iter : entry.list) {
-        iter.valid.set();
-        iter.rpending = true;
-      }
-
-      // Update clock
-      entry.accessedAt = clock;
-
-      if (ret.second) {
-        entry.insertedAt = clock;
-      }
-    }
-
     // Submit
-    readWorkerTag.reserve(alignedLPN.size());
+    readWorkerTag.reserve(pendingLPNs.size());
 
-    for (auto &iter : alignedLPN) {
+    for (auto &iter : pendingLPNs) {
       // Create request
       uint64_t tag = makeCacheCommandTag();
 
-      commandManager->createICLRead(tag, eventReadWorkerDone, iter, minPages,
-                                    now);
+      commandManager->createICLRead(tag, eventReadWorkerDone, iter, 1, now);
 
       debugprint(Log::DebugID::ICL_RingBuffer,
-                 "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h", iter,
-                 minPages);
+                 "Read  | Internal | LPN %" PRIx64 "h", iter);
 
       // Store for CPU latency
       readWorkerTag.emplace_back(tag);
@@ -435,34 +461,36 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
   if (cmd.counter == cmd.length) {
     cmd.counter = 0;
 
-    // Read done
-    auto iter = cacheEntry.find(cmd.offset);
-    auto &entry = iter->second;
-
-    debugprint(Log::DebugID::ICL_RingBuffer,
-               "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h | %" PRIu64
-               " - %" PRIu64 " (%" PRIu64 ")",
-               cmd.offset, cmd.length, cmd.beginAt, now, now - cmd.beginAt);
-
-    // Mark as read done
-    for (auto &iter : entry.list) {
-      iter.rpending = false;
-    }
-
-    // Apply NVM -> DRAM latency (No completion handler)
-    object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
-                       InvalidEventID);
-
-    // Update capacity
     if (LIKELY(enabled)) {
-      // We need to erase some entry
-      if (cacheEntry.size() >= maxEntryCount) {
-        trigger_writeWorker();
-      }
-    }
+      // Read done
+      auto iter = cacheEntry.find(cmd.offset);
+      auto &entry = iter->second;
 
-    // Update address
-    lastReadDoneAddress = cmd.offset + cmd.length;
+      debugprint(Log::DebugID::ICL_RingBuffer,
+                 "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h | %" PRIu64
+                 " - %" PRIu64 " (%" PRIu64 ")",
+                 cmd.offset, cmd.length, cmd.beginAt, now, now - cmd.beginAt);
+
+      // Mark as read done
+      for (auto &iter : entry.list) {
+        iter.rpending = false;
+      }
+
+      // Apply NVM -> DRAM latency (No completion handler)
+      object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
+                         InvalidEventID);
+
+      // Update capacity
+      if (LIKELY(enabled)) {
+        // We need to erase some entry
+        if (cacheEntry.size() >= maxEntryCount) {
+          trigger_writeWorker();
+        }
+      }
+
+      // Update address
+      lastReadDoneAddress = cmd.offset + cmd.length;
+    }
 
     // Handle completion of pending request
     for (auto iter = readPendingQueue.begin();
