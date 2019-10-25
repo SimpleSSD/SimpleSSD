@@ -515,6 +515,11 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
 
     // Destroy
     commandManager->destroyCommand(tag);
+
+    // Trigger again
+    if (readPendingQueue.size() > 0) {
+      trigger_readWorker();
+    }
   }
 }
 
