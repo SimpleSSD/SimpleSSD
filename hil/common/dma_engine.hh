@@ -64,6 +64,8 @@ class DMAEngine : public Object {
  private:
   class DMASession {
    public:
+    const uint64_t tag;
+
     DMATag parent;
 
     Event eid;
@@ -81,9 +83,8 @@ class DMAEngine : public Object {
     void allocateBuffer(uint64_t);
     void deallocateBuffer();
 
-    DMASession(DMATag, Event);
-    DMASession(DMATag, Event, uint64_t);
-    DMASession(DMATag, Event, uint64_t, bool, uint64_t, uint8_t *);
+    DMASession(uint64_t t) : tag(t) {}
+    DMASession(uint64_t, DMATag, Event, uint64_t, bool, uint64_t, uint8_t *);
   };
 
   DMAInterface *interface;
@@ -93,34 +94,62 @@ class DMAEngine : public Object {
   Event eventPRPReadDone;
   Event eventSGLReadDone;
 
+  uint64_t sessionID;
+
   std::unordered_set<DMATag> tagList;
-  std::deque<DMASession> pendingTagList;
-  std::deque<DMASession> pendingInitTagList;
+  std::unordered_map<uint64_t, DMASession> sessionList;
   std::unordered_map<DMATag, DMATag> oldTagList;
 
   uint64_t pageSize;
 
-  void dmaDone();
+  void dmaDone(uint64_t);
 
   DMATag createTag();
   void destroyTag(DMATag);
 
   // PRDT related
-  void prdt_readDone();
+  void prdt_readDone(uint64_t);
 
   // PRP related
   uint32_t getPRPSize(uint64_t);
-  void getPRPListFromPRP(DMASession &&, uint64_t);
-  void getPRPListFromPRP_readDone();
+  void getPRPListFromPRP(DMASession &, uint64_t);
+  void getPRPListFromPRP_readDone(uint64_t);
 
   // SGL related
   void parseSGLDescriptor(DMASession &, SGLDescriptor *);
-  void parseSGLSegment(DMASession &&, uint64_t, uint32_t);
-  void parseSGLSegment_readDone();
+  void parseSGLSegment(DMASession &, uint64_t, uint32_t);
+  void parseSGLSegment_readDone(uint64_t);
 
   // I/O related
-  void readNext(DMASession &&) noexcept;
-  void writeNext(DMASession &&) noexcept;
+  void readNext(DMASession &) noexcept;
+  void writeNext(DMASession &) noexcept;
+
+  inline DMASession &findSession(uint64_t tag) {
+    auto iter = sessionList.find(tag);
+
+    panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
+
+    return iter->second;
+  }
+
+  inline uint64_t createSession(DMATag t, Event e, uint64_t d = 0,
+                                bool r = false, uint64_t s = 0,
+                                uint8_t *b = nullptr) {
+    uint64_t tag = sessionID++;
+    auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, r, s, b));
+
+    panic_if(!iter.second, "Failed to create DMA session.");
+
+    return tag;
+  }
+
+  inline void destroySession(uint64_t tag) {
+    auto iter = sessionList.find(tag);
+
+    panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
+
+    sessionList.erase(iter);
+  }
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);
