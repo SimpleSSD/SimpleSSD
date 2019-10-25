@@ -59,6 +59,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
               pageSize),
       readTriggered(false),
       writeTriggered(false),
+      writeRetrying(false),
       readWaitsEviction(0),
       flushTag({InvalidEventID, 0}) {
   auto param = pFTL->getInfo();
@@ -708,9 +709,13 @@ void RingBuffer::writeWorker_done(uint64_t now, uint64_t tag) {
 
     writeWaitingQueue.clear();
 
+    writeRetrying = true;
+
     for (auto &iter : list) {
       write_find(*iter);
     }
+
+    writeRetrying = false;
 
     // Schedule next worker
     trigger_writeWorker();
@@ -864,9 +869,11 @@ void RingBuffer::write_find(SubCommand &scmd) {
           writeWaitingQueue.emplace_back(
               CacheContext(&scmd, iter, CacheStatus::WriteCacheWait));
 
-          debugprint(Log::DebugID::ICL_RingBuffer,
-                     "Write | LPN %" PRIx64 "h | Cache hit, pending write",
-                     scmd.lpn);
+          if (!writeRetrying) {
+            debugprint(Log::DebugID::ICL_RingBuffer,
+                       "Write | LPN %" PRIx64 "h | Cache hit, pending write",
+                       scmd.lpn);
+          }
         }
         else {
           // Mark as done
@@ -917,8 +924,11 @@ void RingBuffer::write_find(SubCommand &scmd) {
         writeWaitingQueue.emplace_back(
             CacheContext(&scmd, cacheEntry.end(), CacheStatus::WriteCacheWait));
 
-        debugprint(Log::DebugID::ICL_RingBuffer,
-                   "Write | LPN %" PRIx64 "h | Cache capacity miss", scmd.lpn);
+        if (!writeRetrying) {
+          debugprint(Log::DebugID::ICL_RingBuffer,
+                     "Write | LPN %" PRIx64 "h | Cache capacity miss",
+                     scmd.lpn);
+        }
 
         trigger_writeWorker();
       }
@@ -1114,9 +1124,6 @@ void RingBuffer::enqueue(uint64_t tag, uint32_t id) {
   // Increase clock
   clock++;
 
-  // Clear counter
-  cmd.counter = 0;
-
   if (id != std::numeric_limits<uint32_t>::max()) {
     if (LIKELY(cmd.opcode == Operation::Write)) {
       // As we can start write only if PCIe DMA done, write is always partial.
@@ -1229,6 +1236,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, readTriggered);
   BACKUP_SCALAR(out, writeTriggered);
+  BACKUP_SCALAR(out, writeRetrying);
   BACKUP_SCALAR(out, readWaitsEviction);
   BACKUP_SCALAR(out, lastReadPendingAddress);
   BACKUP_SCALAR(out, lastReadDoneAddress);
@@ -1353,6 +1361,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, readTriggered);
   RESTORE_SCALAR(in, writeTriggered);
+  RESTORE_SCALAR(in, writeRetrying);
   RESTORE_SCALAR(in, readWaitsEviction);
   RESTORE_SCALAR(in, lastReadPendingAddress);
   RESTORE_SCALAR(in, lastReadDoneAddress);

@@ -253,6 +253,7 @@ class RingBuffer : public AbstractCache {
   // Workers
   bool readTriggered;
   bool writeTriggered;
+  bool writeRetrying;
   uint64_t readWaitsEviction;
   LPN lastReadPendingAddress;
   LPN lastReadDoneAddress;
