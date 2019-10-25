@@ -351,13 +351,13 @@ void PALOLD::getStatValues(std::vector<double> &values) noexcept {
   energy.total /= elapsedTick / 1e+12;
   values.push_back(energy.total);
 
-  values.push_back(stat.readCount);
-  values.push_back(stat.writeCount);
-  values.push_back(stat.eraseCount);
+  values.push_back((double)stat.readCount);
+  values.push_back((double)stat.writeCount);
+  values.push_back((double)stat.eraseCount);
 
-  values.push_back(stat.readCount * param->pageSize);
-  values.push_back(stat.writeCount * param->pageSize);
-  values.push_back(stat.eraseCount * param->pageSize * param->page);
+  values.push_back((double)(stat.readCount * param->pageSize));
+  values.push_back((double)(stat.writeCount * param->pageSize));
+  values.push_back((double)(stat.eraseCount * param->pageSize * param->page));
 
   stats->getReadBreakdown(breakdown);
   values.push_back(breakdown.dma0wait);

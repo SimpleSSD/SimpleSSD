@@ -333,8 +333,8 @@ void Subsystem::complete(CommandTag command) {
 }
 
 void Subsystem::init() {
-  uint16_t nNamespaces =
-      readConfigUint(Section::HostInterface, Config::Key::NVMeDefaultNamespace);
+  uint32_t nNamespaces = (uint32_t)readConfigUint(
+      Section::HostInterface, Config::Key::NVMeDefaultNamespace);
   uint64_t totalByteSize;
 
   totalLogicalPages = pHIL->getTotalPages();

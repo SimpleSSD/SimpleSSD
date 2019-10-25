@@ -15,7 +15,7 @@ Convert::Convert(ObjectData &o, uint64_t lpn, uint64_t lba) : Object(o) {
 
   lpnOrder = ctz64((uint64_t)lpn);
   lbaOrder = ctz64(lba);
-  shift = lpnOrder - lbaOrder;
+  shift = (int16_t)((int64_t)lpnOrder - (int64_t)lbaOrder);
   mask = (1ull << (shift >= 0 ? shift : -shift)) - 1;
 }
 
@@ -26,13 +26,13 @@ ConvertFunction Convert::getConvertion() {
                uint64_t slba, uint32_t nlb, uint64_t &slpn, uint32_t &nlp,
                uint32_t *skipFirst, uint32_t *skipLast) {
       slpn = slba >> shift;
-      nlp = ((slba + nlb - 1) >> shift) + 1 - slpn;
+      nlp = (uint32_t)(((slba + nlb - 1) >> shift) + 1 - slpn);
 
       if (skipFirst) {
-        *skipFirst = (slba & mask) << order;
+        *skipFirst = (uint32_t)((slba & mask) << order);
       }
       if (skipLast) {
-        *skipLast = (((slpn + nlp) << shift) - slba - nlb) << order;
+        *skipLast = (uint32_t)((((slpn + nlp) << shift) - slba - nlb) << order);
       }
     };
   }

@@ -334,8 +334,8 @@ uint8_t Arbitrator::createIOSQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto sq = new SQueue(object, controller->dmaEngine, id, size, sqEntrySize,
-                       cqid, (QueuePriority)pri);
+  auto sq = new SQueue(object, controller->dmaEngine, id, size,
+                       (uint32_t)sqEntrySize, cqid, (QueuePriority)pri);
   sq->setDMAData(base, pc, eid, gcid);
 
   panic_if(!sq, "Failed to allocate completion queue.");
@@ -360,8 +360,8 @@ uint8_t Arbitrator::createIOCQ(uint64_t base, uint16_t id, uint16_t size,
 
   controller->controller->getQueueStride(sqEntrySize, cqEntrySize);
 
-  auto cq =
-      new CQueue(object, controller->dmaEngine, id, size, cqEntrySize, iv, ien);
+  auto cq = new CQueue(object, controller->dmaEngine, id, size,
+                       (uint32_t)cqEntrySize, iv, ien);
   cq->setDMAData(base, pc, eid, gcid);
 
   panic_if(!cq, "Failed to allocate completion queue.");

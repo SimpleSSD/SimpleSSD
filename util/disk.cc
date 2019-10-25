@@ -84,7 +84,7 @@ uint32_t Disk::read(uint64_t offset, uint32_t size, uint8_t *buffer) noexcept {
         size = 0;
       }
       else {
-        size = diskSize - offset;
+        size = (uint32_t)(diskSize - offset);
       }
     }
 
@@ -122,7 +122,7 @@ uint32_t Disk::write(uint64_t offset, uint32_t size, uint8_t *buffer) noexcept {
         size = 0;
       }
       else {
-        size = diskSize - offset;
+        size = (uint32_t)(diskSize - offset);
       }
     }
 

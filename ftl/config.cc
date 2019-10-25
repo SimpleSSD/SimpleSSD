@@ -63,7 +63,7 @@ void Config::loadFrom(pugi::xml_node &section) {
         LOAD_NAME_FLOAT(node2, NAME_GC_THRESHOLD, gcThreshold);
         LOAD_NAME_UINT_TYPE(node2, NAME_GC_MODE, GCBlockReclaimMode, gcMode);
         LOAD_NAME_UINT(node2, NAME_GC_RECLAIM_BLOCK, gcReclaimBlocks);
-        LOAD_NAME_UINT(node2, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
       }
     }
     else if (strcmp(name, "common") == 0 && isSection(node)) {
@@ -123,7 +123,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_FLOAT(node, NAME_GC_THRESHOLD, gcThreshold);
   STORE_NAME_UINT(node, NAME_GC_MODE, gcMode);
   STORE_NAME_UINT(node, NAME_GC_RECLAIM_BLOCK, gcReclaimBlocks);
-  STORE_NAME_UINT(node, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
+  STORE_NAME_FLOAT(node, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
 
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
@@ -282,7 +282,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       gcReclaimBlocks = value;
       break;
     case SuperpageAllocation:
-      superpageAllocation = value;
+      superpageAllocation = (uint8_t)value;
       break;
     default:
       ret = false;

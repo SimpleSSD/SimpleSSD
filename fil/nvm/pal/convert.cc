@@ -71,12 +71,12 @@ ConvertFunction Convert::getConvertion() {
     shiftPage = sum;
 
     return [this](SubCommand &req, ::CPDPBP &addr) {
-      addr.Channel = (req.ppn >> shiftChannel) & maskChannel;
-      addr.Package = (req.ppn >> shiftWay) & maskWay;
-      addr.Die = (req.ppn >> shiftDie) & maskDie;
-      addr.Plane = (req.ppn >> shiftPlane) & maskPlane;
-      addr.Block = (req.ppn >> shiftBlock) & maskBlock;
-      addr.Page = (req.ppn >> shiftPage) & maskPage;
+      addr.Channel = (uint32_t)((req.ppn >> shiftChannel) & maskChannel);
+      addr.Package = (uint32_t)((req.ppn >> shiftWay) & maskWay);
+      addr.Die = (uint32_t)((req.ppn >> shiftDie) & maskDie);
+      addr.Plane = (uint32_t)((req.ppn >> shiftPlane) & maskPlane);
+      addr.Block = (uint32_t)((req.ppn >> shiftBlock) & maskBlock);
+      addr.Page = (uint32_t)((req.ppn >> shiftPage) & maskPage);
     };
   }
   else {
@@ -114,17 +114,17 @@ ConvertFunction Convert::getConvertion() {
                SubCommand &req, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
-      values[ppn[0]] = req.ppn % level[0];
+      values[ppn[0]] = (uint32_t)(req.ppn % level[0]);
       req.ppn /= level[0];
-      values[ppn[1]] = req.ppn % level[1];
+      values[ppn[1]] = (uint32_t)(req.ppn % level[1]);
       req.ppn /= level[1];
-      values[ppn[2]] = req.ppn % level[2];
+      values[ppn[2]] = (uint32_t)(req.ppn % level[2]);
       req.ppn /= level[2];
-      values[ppn[3]] = req.ppn % level[3];
+      values[ppn[3]] = (uint32_t)(req.ppn % level[3]);
       req.ppn /= level[3];
-      values[4] = req.ppn % block;
+      values[4] = (uint32_t)(req.ppn % block);
       req.ppn /= block;
-      values[5] = req.ppn % page;
+      values[5] = (uint32_t)(req.ppn % page);
     };
   }
 }

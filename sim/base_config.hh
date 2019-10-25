@@ -71,21 +71,24 @@ namespace SimpleSSD {
 #define LOAD_NAME_UINT(node, attr, out)                                        \
   LOAD_NAME_UINT_TYPE(node, attr, uint64_t, out)
 
-#define LOAD_NAME_TIME(node, attr, out)                                        \
+#define LOAD_NAME_TIME_TYPE(node, attr, type, out)                             \
   {                                                                            \
     if (strcmp((node).attribute(CONFIG_ATTRIBUTE).value(), attr) == 0 &&       \
         isKey(node)) {                                                         \
       bool _flag = false;                                                      \
       auto _str = (node).child_value();                                        \
-      auto _def = out;                                                         \
+      auto _def = (type)out;                                                   \
                                                                                \
-      out = convertTime(_str, &_flag);                                         \
+      out = (type)convertTime(_str, &_flag);                                   \
                                                                                \
       if (!_flag) {                                                            \
         out = _def;                                                            \
       }                                                                        \
     }                                                                          \
   }
+
+#define LOAD_NAME_TIME(node, addr, out)                                        \
+  LOAD_NAME_TIME_TYPE(node, addr, uint64_t, out)
 
 #define LOAD_NAME_BOOLEAN(node, attr, out) LOAD_NAME(node, attr, out, as_bool)
 

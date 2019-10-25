@@ -46,7 +46,7 @@ LPN HIL::getTotalPages() {
   return icl.getTotalPages();
 }
 
-uint64_t HIL::getLPNSize() {
+uint32_t HIL::getLPNSize() {
   return logicalPageSize;
 }
 

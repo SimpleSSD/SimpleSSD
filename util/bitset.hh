@@ -56,15 +56,15 @@ class Bitset {
   bool none() noexcept;
   bool none() const noexcept;
 
-  uint32_t clz() noexcept;  // Leading zero
-  uint32_t clz() const noexcept;
-  uint32_t ctz() noexcept;  // Trailing zero
-  uint32_t ctz() const noexcept;
+  uint64_t clz() noexcept;  // Leading zero
+  uint64_t clz() const noexcept;
+  uint64_t ctz() noexcept;  // Trailing zero
+  uint64_t ctz() const noexcept;
 
-  uint32_t count() noexcept;
-  uint32_t count() const noexcept;
-  uint32_t size() noexcept;
-  uint32_t size() const noexcept;
+  uint64_t count() noexcept;
+  uint64_t count() const noexcept;
+  uint64_t size() noexcept;
+  uint64_t size() const noexcept;
 
   void set() noexcept;
   void set(uint64_t, bool = true) noexcept;
@@ -96,7 +96,7 @@ class Bitset {
     auto data = lhs.getBuffer();
     auto rdata = rhs.getBuffer();
 
-    for (uint32_t i = 0; i < lhs.allocSize; i++) {
+    for (uint64_t i = 0; i < lhs.allocSize; i++) {
       if (data[i] != rdata[i]) {
         ret = false;
 

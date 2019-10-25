@@ -47,9 +47,9 @@ class AbstractMapping : public Object {
     param.totalPhysicalBlocks =
         channel * way * filparam->die * filparam->plane * filparam->block;
     param.totalLogicalBlocks =
-        param.totalPhysicalBlocks *
-        (1.f - readConfigFloat(Section::FlashTranslation,
-                               Config::Key::OverProvisioningRatio));
+        (uint64_t)(param.totalPhysicalBlocks *
+                   (1.f - readConfigFloat(Section::FlashTranslation,
+                                          Config::Key::OverProvisioningRatio)));
     param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
     param.totalLogicalPages = param.totalLogicalBlocks * filparam->page;
     param.pageSize = filparam->pageSize;
@@ -58,10 +58,10 @@ class AbstractMapping : public Object {
     for (uint8_t i = 0; i < 4; i++) {
       switch (filparam->pageAllocation[i]) {
         case FIL::PageAllocation::Channel:
-          param.parallelismLevel[i] = channel;
+          param.parallelismLevel[i] = (uint32_t)channel;
           break;
         case FIL::PageAllocation::Way:
-          param.parallelismLevel[i] = way;
+          param.parallelismLevel[i] = (uint32_t)way;
           break;
         case FIL::PageAllocation::Die:
           param.parallelismLevel[i] = filparam->die;
@@ -76,8 +76,8 @@ class AbstractMapping : public Object {
 
     if (readConfigBoolean(Section::FlashTranslation,
                           Config::Key::UseSuperpage)) {
-      param.superpageLevel = readConfigUint(Section::FlashTranslation,
-                                            Config::Key::SuperpageAllocation);
+      param.superpageLevel = (uint8_t)readConfigUint(
+          Section::FlashTranslation, Config::Key::SuperpageAllocation);
     }
     else {
       param.superpageLevel = FIL::PageAllocation::None;
@@ -100,7 +100,7 @@ class AbstractMapping : public Object {
     panic_if(param.superpageLevel != mask,
              "Invalid superpage configuration detected.");
 
-    param.superpageLevel = popcount16(mask);
+    param.superpageLevel = (uint8_t)popcount8(mask);
 
     // Print mapping Information
     debugprint(Log::DebugID::FTL, "Total physical pages %u",

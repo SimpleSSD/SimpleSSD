@@ -49,7 +49,7 @@ LPN ICL::getTotalPages() {
   return totalLogicalPages;
 }
 
-uint64_t ICL::getLPNSize() {
+uint32_t ICL::getLPNSize() {
   return logicalPageSize;
 }
 

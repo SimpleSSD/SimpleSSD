@@ -71,11 +71,11 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::EvictMode)) {
     case Config::Granularity::SuperpageLevel:
-      evictPages = param->superpage;
+      evictPages = (uint32_t)param->superpage;
 
       break;
     case Config::Granularity::AllLevel:
-      evictPages = param->parallelism;
+      evictPages = (uint32_t)param->parallelism;
 
       break;
     default:
@@ -85,7 +85,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   }
 
   // Calculate FTL's write granularity
-  minPages = param->superpage;
+  minPages = (uint32_t)param->superpage;
 
   if (minPages == 1) {
     noPageLimit = true;
@@ -99,11 +99,11 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::PrefetchMode)) {
     case Config::Granularity::SuperpageLevel:
-      prefetchPages = param->superpage;
+      prefetchPages = (uint32_t)param->superpage;
 
       break;
     case Config::Granularity::AllLevel:
-      prefetchPages = param->parallelism;
+      prefetchPages = (uint32_t)param->parallelism;
 
       break;
     default:
@@ -149,7 +149,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
             }
           }
 
-          std::uniform_int_distribution<uint32_t> dist(0, list.size() - 1);
+          std::uniform_int_distribution<uint32_t> dist(
+              0, (uint32_t)list.size() - 1);
 
           return list.at(dist(mtengine));
         }
@@ -161,7 +162,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
             }
           }
 
-          std::uniform_int_distribution<uint32_t> dist(0, list.size() - 1);
+          std::uniform_int_distribution<uint32_t> dist(
+              0, (uint32_t)list.size() - 1);
 
           return list.at(dist(mtengine));
         }
@@ -173,7 +175,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
             }
           }
 
-          std::uniform_int_distribution<uint32_t> dist(0, list.size() - 1);
+          std::uniform_int_distribution<uint32_t> dist(
+              0, (uint32_t)list.size() - 1);
 
           return list.at(dist(mtengine));
         }
@@ -331,7 +334,8 @@ void RingBuffer::readWorker(uint64_t now) {
 
     if (alignedLPN.size() > 0) {
       last = alignedLPN.back();
-      limit = limit > alignedLPN.size() ? limit - alignedLPN.size() : 0;
+      limit =
+          limit > alignedLPN.size() ? limit - (uint32_t)alignedLPN.size() : 0;
     }
     else {
       last = lastReadPendingAddress;
@@ -594,8 +598,10 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
       commandManager->createICLWrite(
           tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-          iter->second.list.at(offset).valid.clz() * minIO,
-          iter->second.list.at(offset + length - 1).valid.ctz() * minIO, now);
+          (uint32_t)iter->second.list.at(offset).valid.clz() * minIO,
+          (uint32_t)iter->second.list.at(offset + length - 1).valid.ctz() *
+              minIO,
+          now);
 
       debugprint(Log::DebugID::ICL_RingBuffer,
                  "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
@@ -614,8 +620,9 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
     commandManager->createICLWrite(
         tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-        iter->second.list.at(offset).valid.clz() * minIO,
-        iter->second.list.at(offset + length - 1).valid.ctz() * minIO, now);
+        (uint32_t)iter->second.list.at(offset).valid.clz() * minIO,
+        (uint32_t)iter->second.list.at(offset + length - 1).valid.ctz() * minIO,
+        now);
 
     debugprint(Log::DebugID::ICL_RingBuffer,
                "Write | Internal | LPN %" PRIx64 "h + %" PRIx64 "h",
@@ -666,8 +673,8 @@ void RingBuffer::writeWorker_done(uint64_t now, uint64_t tag) {
                " - %" PRIu64 " (%" PRIu64 ")",
                cmd.offset, cmd.length, cmd.beginAt, now, now - cmd.beginAt);
 
-    uint32_t i = cmd.offset - iter->second.offset;
-    uint32_t limit = cmd.length + i;
+    uint32_t i = (uint32_t)(cmd.offset - iter->second.offset);
+    uint32_t limit = (uint32_t)(cmd.length + i);
 
     for (; i < limit; i++) {
       auto &sentry = iter->second.list.at(i);
@@ -736,7 +743,8 @@ void RingBuffer::read_find(Command &cmd) {
     // Update prefetch trigger
     if (prefetchEnabled) {
       trigger.update(
-          cmd.offset * pageSize + cmd.subCommandList.front().skipFront, size);
+          cmd.offset * pageSize + cmd.subCommandList.front().skipFront,
+          (uint32_t)size);
     }
 
     // Find entry including range
@@ -1191,10 +1199,10 @@ void RingBuffer::getStatList(std::vector<Stat> &list,
 }
 
 void RingBuffer::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back(stat.request[0]);
-  values.push_back(stat.cache[0]);
-  values.push_back(stat.request[1]);
-  values.push_back(stat.cache[1]);
+  values.push_back((double)stat.request[0]);
+  values.push_back((double)stat.cache[0]);
+  values.push_back((double)stat.request[1]);
+  values.push_back((double)stat.cache[1]);
 }
 
 void RingBuffer::resetStatValues() noexcept {

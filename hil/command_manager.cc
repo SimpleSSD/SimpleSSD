@@ -45,7 +45,7 @@ Command &CommandManager::createCommand(uint64_t tag, Event eid) {
 }
 
 SubCommand &CommandManager::createSubCommand(Command &cmd) {
-  uint32_t id = cmd.subCommandList.size();
+  uint32_t id = (uint32_t)cmd.subCommandList.size();
 
   return cmd.subCommandList.emplace_back(SubCommand(cmd.tag, id));
 }

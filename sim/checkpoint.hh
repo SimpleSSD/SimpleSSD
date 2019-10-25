@@ -35,7 +35,7 @@ namespace SimpleSSD {
   { write_checkpoint(os, sizeof(value), (void *)&value); }
 
 #define BACKUP_BLOB(os, data, length)                                          \
-  { write_checkpoint(os, length, (void *)data); }
+  { write_checkpoint(os, (uint32_t)(length), (void *)data); }
 
 #define BACKUP_EVENT(os, eid) BACKUP_SCALAR(os, eid)
 
@@ -55,7 +55,7 @@ namespace SimpleSSD {
 
 #define RESTORE_BLOB(is, data, length)                                         \
   {                                                                            \
-    uint32_t _length = length;                                                 \
+    uint32_t _length = (uint32_t)(length);                                     \
                                                                                \
     if (!read_checkpoint(is, _length, (void *)data)) {                         \
       std::cerr << __FILENAME__ << ":" << __LINE__ << ": "                     \

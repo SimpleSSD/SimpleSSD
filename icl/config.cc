@@ -24,13 +24,13 @@ Config::Config() {
   enable = false;
   readPrefetch = false;
   prefetchCount = 1;
-  prefetchRatio = 0.5;
+  prefetchRatio = 4;
   prefetchMode = Granularity::AllLevel;
   mode = Mode::RingBuffer;
   cacheSize = 33554432;
   evictPolicy = EvictModeType::LRU;
   evictMode = Granularity::AllLevel;
-  evictThreshold = 0.7;
+  evictThreshold = 0.7f;
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -38,7 +38,7 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_BOOLEAN(node, NAME_USE_CACHE, enable);
     LOAD_NAME_BOOLEAN(node, NAME_USE_READ_PREFETCH, readPrefetch);
     LOAD_NAME_UINT(node, NAME_PREFETCH_COUNT, prefetchCount);
-    LOAD_NAME_FLOAT(node, NAME_PREFETCH_RATIO, prefetchRatio);
+    LOAD_NAME_UINT(node, NAME_PREFETCH_RATIO, prefetchRatio);
     LOAD_NAME_UINT_TYPE(node, NAME_PREFETCH_MODE, Granularity, prefetchMode);
     LOAD_NAME_UINT_TYPE(node, NAME_CACHE_MODE, Mode, mode);
     LOAD_NAME_UINT(node, NAME_CACHE_SIZE, cacheSize);
@@ -52,7 +52,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_BOOLEAN(section, NAME_USE_CACHE, enable);
   STORE_NAME_BOOLEAN(section, NAME_USE_READ_PREFETCH, readPrefetch);
   STORE_NAME_UINT(section, NAME_PREFETCH_COUNT, prefetchCount);
-  STORE_NAME_FLOAT(section, NAME_PREFETCH_RATIO, prefetchRatio);
+  STORE_NAME_UINT(section, NAME_PREFETCH_RATIO, prefetchRatio);
   STORE_NAME_UINT(section, NAME_PREFETCH_MODE, prefetchMode);
   STORE_NAME_UINT(section, NAME_CACHE_MODE, mode);
   STORE_NAME_UINT(section, NAME_CACHE_SIZE, cacheSize);

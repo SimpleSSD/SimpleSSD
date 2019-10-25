@@ -128,8 +128,8 @@ DelayFunction makeFunction(uint64_t clock, Width width) {
   return [mp = maxPayloadSize, w = (uint8_t)width,
           period = (uint64_t)(1000000000000.0 / clock + 0.5)](
              uint64_t length) -> uint64_t {
-    uint32_t nBeats = MAX(DIVCEIL(length, w), 1);
-    uint32_t nBursts = popcount32(nBeats) + (length - 1) / mp;
+    uint32_t nBeats = (uint32_t)MAX(DIVCEIL(length, w), 1);
+    uint32_t nBursts = popcount32(nBeats) + (uint32_t)(length - 1) / mp;
     uint32_t nClocks = nBeats * 2 + nBursts * 3;
 
     return nClocks * period;

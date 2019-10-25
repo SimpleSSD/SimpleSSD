@@ -28,8 +28,8 @@ DatasetManagement::DatasetManagement(ObjectData &o, Subsystem *s)
 void DatasetManagement::dmaInitDone(uint64_t gcid) {
   auto tag = findBufferTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0, tag->buffer.size(), tag->buffer.data(),
-                       dmaCompleteEvent, gcid);
+  tag->dmaEngine->read(tag->dmaTag, 0, (uint32_t)tag->buffer.size(),
+                       tag->buffer.data(), dmaCompleteEvent, gcid);
 }
 
 void DatasetManagement::dmaComplete(uint64_t gcid) {
@@ -151,7 +151,7 @@ void DatasetManagement::setRequest(ControllerData *cdata, SQContext *req) {
   tag->buffer.resize((uint64_t)nr << 4);
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(tag->buffer.size(), dmaInitEvent);
+  tag->createDMAEngine((uint32_t)tag->buffer.size(), dmaInitEvent);
 }
 
 void DatasetManagement::getStatList(std::vector<Stat> &, std::string) noexcept {

@@ -43,7 +43,8 @@ void ConfigReader::load(const char *path) noexcept {
     // Check version
     auto version = config.attribute("version").value();
     if (strncmp(version, SIMPLESSD_VERSION, strlen(SIMPLESSD_VERSION)) != 0) {
-      std::cerr << "SimpleSSD configuration file version is different." << std::endl;
+      std::cerr << "SimpleSSD configuration file version is different."
+                << std::endl;
       std::cerr << " File version: " << version << std::endl;
       std::cerr << " Program version: " << SIMPLESSD_VERSION << std::endl;
     }

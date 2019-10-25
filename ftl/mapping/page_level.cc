@@ -179,18 +179,18 @@ void PageLevel::initialize(AbstractFTL *f,
 
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization started");
 
-  nPagesToWarmup =
+  nPagesToWarmup = (uint64_t)(
       totalLogicalSuperPages *
-      readConfigFloat(Section::FlashTranslation, Config::Key::FillRatio);
-  nPagesToInvalidate =
-      totalLogicalSuperPages *
-      readConfigFloat(Section::FlashTranslation, Config::Key::InvalidFillRatio);
+      readConfigFloat(Section::FlashTranslation, Config::Key::FillRatio));
+  nPagesToInvalidate = (uint64_t)(
+      totalLogicalSuperPages * readConfigFloat(Section::FlashTranslation,
+                                               Config::Key::InvalidFillRatio));
   mode = (Config::FillingType)readConfigUint(Section::FlashTranslation,
                                              Config::Key::FillingMode);
-  maxPagesBeforeGC =
+  maxPagesBeforeGC = (uint64_t)(
       filparam->page * (totalPhysicalSuperBlocks *
                         (1.f - readConfigFloat(Section::FlashTranslation,
-                                               Config::Key::GCThreshold)));
+                                               Config::Key::GCThreshold))));
 
   if (nPagesToWarmup + nPagesToInvalidate > maxPagesBeforeGC) {
     warn("ftl: Too high filling ratio. Adjusting invalidPageRatio.");
@@ -304,7 +304,7 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
 }
 
 uint32_t PageLevel::getValidPages(PPN ppn) {
-  return blockMetadata[getSBFromSPPN(ppn)].validPages.count();
+  return (uint32_t)blockMetadata[getSBFromSPPN(ppn)].validPages.count();
 }
 
 CPU::Function PageLevel::readMapping(Command &cmd) {

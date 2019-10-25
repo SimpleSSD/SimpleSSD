@@ -58,7 +58,7 @@ class ICL : public Object {
   LPN getTotalPages();
 
   //! Get bytesize of one logical page.
-  uint64_t getLPNSize();
+  uint32_t getLPNSize();
 
   //! Enable/disable ICL
   void setCache(bool);

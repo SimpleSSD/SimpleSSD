@@ -33,7 +33,8 @@ void Compare::dmaInitDone(uint64_t gcid) {
 
   // DMA
   tag->dmaEngine->read(
-      tag->dmaTag, 0, tag->buffer.size() - first.skipFront - last.skipEnd,
+      tag->dmaTag, 0,
+      (uint32_t)tag->buffer.size() - first.skipFront - last.skipEnd,
       tag->buffer.data() + first.skipFront, dmaCompleteEvent, gcid);
 }
 
@@ -170,13 +171,14 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   auto gcid = tag->getGCID();
 
   mgr->createHILRead(gcid, readNVMDoneEvent, slpn, nlp, skipFront, skipEnd,
-                     info->lpnSize);
+                     (uint32_t)info->lpnSize);
 
   if (disk) {
     auto &cmd = mgr->getCommand(gcid);
 
     for (auto &iter : cmd.subCommandList) {
-      disk->read(iter.lpn * info->lpnSize, info->lpnSize, iter.buffer.data());
+      disk->read(iter.lpn * info->lpnSize, (uint32_t)info->lpnSize,
+                 iter.buffer.data());
     }
   }
 
@@ -185,7 +187,8 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
+  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
+                       dmaInitEvent);
 }
 
 void Compare::getStatList(std::vector<Stat> &, std::string) noexcept {}

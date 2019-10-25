@@ -91,8 +91,6 @@ class PAL2  // let's not inherit PAL1
   uint8_t AddrRemap[6];
   uint32_t CPDPBPtoDieIdx(CPDPBP *pCPDPBP);
   void printCPDPBP(CPDPBP *pCPDPBP);
-  void PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP);
-  void AssemblePPN(CPDPBP *pCPDPBP, uint64_t *pPPN);
 
   void backup(std::ostream &) const;
   void restore(std::istream &);

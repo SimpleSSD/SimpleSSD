@@ -142,7 +142,8 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
       panic_if(totalSuperblock * blockRatio < freeBlockCount,
                "GC should not triggered.");
 
-      blocksToReclaim = totalSuperblock * blockRatio - freeBlockCount;
+      blocksToReclaim =
+          (uint64_t)(totalSuperblock * blockRatio) - freeBlockCount;
 
       break;
   }

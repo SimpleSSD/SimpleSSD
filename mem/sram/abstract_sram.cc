@@ -52,12 +52,12 @@ void AbstractSRAM::getStatList(std::vector<Stat> &list,
 }
 
 void AbstractSRAM::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back(readStat.count);
-  values.push_back(readStat.size);
-  values.push_back(writeStat.count);
-  values.push_back(writeStat.size);
-  values.push_back(readStat.count + writeStat.count);
-  values.push_back(readStat.size + writeStat.size);
+  values.push_back((double)readStat.count);
+  values.push_back((double)readStat.size);
+  values.push_back((double)writeStat.count);
+  values.push_back((double)writeStat.size);
+  values.push_back((double)(readStat.count + writeStat.count));
+  values.push_back((double)(readStat.size + writeStat.size));
 }
 
 void AbstractSRAM::resetStatValues() noexcept {

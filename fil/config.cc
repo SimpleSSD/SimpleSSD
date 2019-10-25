@@ -107,13 +107,14 @@ void Config::loadNANDStructure(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    LOAD_NAME_UINT(node, NAME_NOP, nandStructure.nop);
-    LOAD_NAME_UINT(node, NAME_DIE, nandStructure.die);
-    LOAD_NAME_UINT(node, NAME_PLANE, nandStructure.plane);
-    LOAD_NAME_UINT(node, NAME_BLOCK, nandStructure.block);
-    LOAD_NAME_UINT(node, NAME_PAGE, nandStructure.page);
-    LOAD_NAME_UINT(node, NAME_PAGE_SIZE, nandStructure.pageSize);
-    LOAD_NAME_UINT(node, NAME_SPARE_SIZE, nandStructure.spareSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_NOP, uint8_t, nandStructure.nop);
+    LOAD_NAME_UINT_TYPE(node, NAME_DIE, uint32_t, nandStructure.die);
+    LOAD_NAME_UINT_TYPE(node, NAME_PLANE, uint32_t, nandStructure.plane);
+    LOAD_NAME_UINT_TYPE(node, NAME_BLOCK, uint32_t, nandStructure.block);
+    LOAD_NAME_UINT_TYPE(node, NAME_PAGE, uint32_t, nandStructure.page);
+    LOAD_NAME_UINT_TYPE(node, NAME_PAGE_SIZE, uint32_t, nandStructure.pageSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_SPARE_SIZE, uint32_t,
+                        nandStructure.spareSize);
     LOAD_NAME_UINT_TYPE(node, NAME_FLASH_TYPE, NANDType, nandStructure.type);
     LOAD_NAME_STRING(node, NAME_PAGE_ALLOCATION, _pageAllocation);
 
@@ -128,19 +129,19 @@ void Config::loadNANDStructure(pugi::xml_node &section) {
 
 void Config::loadNANDTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT(node, NAME_TADL, nandTiming.tADL);
-    LOAD_NAME_UINT(node, NAME_TCS, nandTiming.tCS);
-    LOAD_NAME_UINT(node, NAME_TDH, nandTiming.tDH);
-    LOAD_NAME_UINT(node, NAME_TDS, nandTiming.tDS);
-    LOAD_NAME_UINT(node, NAME_TRC, nandTiming.tRC);
-    LOAD_NAME_UINT(node, NAME_TRR, nandTiming.tRR);
-    LOAD_NAME_UINT(node, NAME_TWB, nandTiming.tWB);
-    LOAD_NAME_UINT(node, NAME_TWC, nandTiming.tWC);
-    LOAD_NAME_UINT(node, NAME_TWP, nandTiming.tWP);
-    LOAD_NAME_UINT(node, NAME_TBERS, nandTiming.tBERS);
-    LOAD_NAME_UINT(node, NAME_TCBSY, nandTiming.tCBSY);
-    LOAD_NAME_UINT(node, NAME_TDBSY, nandTiming.tDBSY);
-    LOAD_NAME_UINT(node, NAME_TRCBSY, nandTiming.tRCBSY);
+    LOAD_NAME_UINT_TYPE(node, NAME_TADL, uint32_t, nandTiming.tADL);
+    LOAD_NAME_UINT_TYPE(node, NAME_TCS, uint32_t, nandTiming.tCS);
+    LOAD_NAME_UINT_TYPE(node, NAME_TDH, uint32_t, nandTiming.tDH);
+    LOAD_NAME_UINT_TYPE(node, NAME_TDS, uint32_t, nandTiming.tDS);
+    LOAD_NAME_UINT_TYPE(node, NAME_TRC, uint32_t, nandTiming.tRC);
+    LOAD_NAME_UINT_TYPE(node, NAME_TRR, uint32_t, nandTiming.tRR);
+    LOAD_NAME_UINT_TYPE(node, NAME_TWB, uint32_t, nandTiming.tWB);
+    LOAD_NAME_UINT_TYPE(node, NAME_TWC, uint32_t, nandTiming.tWC);
+    LOAD_NAME_UINT_TYPE(node, NAME_TWP, uint32_t, nandTiming.tWP);
+    LOAD_NAME_UINT_TYPE(node, NAME_TBERS, uint32_t, nandTiming.tBERS);
+    LOAD_NAME_UINT_TYPE(node, NAME_TCBSY, uint32_t, nandTiming.tCBSY);
+    LOAD_NAME_UINT_TYPE(node, NAME_TDBSY, uint32_t, nandTiming.tDBSY);
+    LOAD_NAME_UINT_TYPE(node, NAME_TRCBSY, uint32_t, nandTiming.tRCBSY);
 
     switch (strtoul(node.attribute("level").value(), nullptr, 10)) {
       case Level1:
@@ -244,10 +245,10 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
-    LOAD_NAME_UINT(node, NAME_CHANNEL, channel);
-    LOAD_NAME_UINT(node, NAME_PACKAGE, package);
-    LOAD_NAME_UINT(node, NAME_DMA_SPEED, dmaSpeed);
-    LOAD_NAME_UINT(node, NAME_DMA_WIDTH, dmaWidth);
+    LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint32_t, channel);
+    LOAD_NAME_UINT_TYPE(node, NAME_PACKAGE, uint32_t, package);
+    LOAD_NAME_UINT_TYPE(node, NAME_DMA_SPEED, uint32_t, dmaSpeed);
+    LOAD_NAME_UINT_TYPE(node, NAME_DMA_WIDTH, uint32_t, dmaWidth);
     LOAD_NAME_UINT_TYPE(node, NAME_NVM_MODEL, NVMType, nvmModel);
 
     if (strcmp(name, "nand") == 0 && isSection(node)) {
@@ -374,16 +375,16 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
 
   switch (idx) {
     case Channel:
-      channel = value;
+      channel = (uint32_t)value;
       break;
     case Way:
-      package = value;
+      package = (uint32_t)value;
       break;
     case DMASpeed:
-      dmaSpeed = value;
+      dmaSpeed = (uint32_t)value;
       break;
     case DMAWidth:
-      dmaWidth = value;
+      dmaWidth = (uint32_t)value;
       break;
     case Model:
       nvmModel = (NVMType)value;

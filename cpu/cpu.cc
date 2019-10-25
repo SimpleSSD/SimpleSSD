@@ -176,13 +176,13 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
     : engine(e), config(c), log(l), lastResetStat(0), lastScheduledAt(0) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
-  clockPeriod = 1000000000000. / clockSpeed;  // in pico-seconds
+  clockPeriod = (uint64_t)(1000000000000. / clockSpeed);  // in pico-seconds
 
   useDedicatedCore =
       config->readBoolean(Section::CPU, Config::Key::UseDedicatedCore);
-  hilCore = config->readUint(Section::CPU, Config::Key::HILCore);
-  iclCore = config->readUint(Section::CPU, Config::Key::ICLCore);
-  ftlCore = config->readUint(Section::CPU, Config::Key::FTLCore);
+  hilCore = (uint16_t)config->readUint(Section::CPU, Config::Key::HILCore);
+  iclCore = (uint16_t)config->readUint(Section::CPU, Config::Key::ICLCore);
+  ftlCore = (uint16_t)config->readUint(Section::CPU, Config::Key::FTLCore);
 
   uint16_t totalCore = hilCore + iclCore + ftlCore;
 
@@ -247,7 +247,7 @@ void CPU::calculatePower(Power &power) {
     param.sys.homogeneous_ccs = 1;
     param.sys.homogeneous_NoCs = 1;
     param.sys.core_tech_node = 40;
-    param.sys.target_core_clockrate = clockSpeed / 1000000;
+    param.sys.target_core_clockrate = (int)(clockSpeed / 1000000);
     param.sys.temperature = 340;
     param.sys.number_cache_levels = 2;
     param.sys.interconnect_projection_type = 1;
@@ -259,7 +259,7 @@ void CPU::calculatePower(Power &power) {
     param.sys.virtual_address_width = 48;
     param.sys.physical_address_width = 48;
     param.sys.virtual_memory_page_size = 4096;
-    param.sys.total_cycles = simCycle;
+    param.sys.total_cycles = (double)simCycle;
     param.sys.number_of_cores = totalCore;
   }
 
@@ -392,19 +392,19 @@ void CPU::calculatePower(Power &power) {
     auto &inst = core.getInstructionStat();
     auto &evt = core.getEventStat();
 
-    param.sys.core[coreIdx].total_instructions = inst.sum();
-    param.sys.core[coreIdx].int_instructions = inst.arithmetic;
-    param.sys.core[coreIdx].fp_instructions = inst.floatingPoint;
-    param.sys.core[coreIdx].branch_instructions = inst.branch;
-    param.sys.core[coreIdx].load_instructions = inst.load;
-    param.sys.core[coreIdx].store_instructions = inst.store;
-    param.sys.core[coreIdx].busy_cycles = evt.busy / clockPeriod;
+    param.sys.core[coreIdx].total_instructions = (double)inst.sum();
+    param.sys.core[coreIdx].int_instructions = (double)inst.arithmetic;
+    param.sys.core[coreIdx].fp_instructions = (double)inst.floatingPoint;
+    param.sys.core[coreIdx].branch_instructions = (double)inst.branch;
+    param.sys.core[coreIdx].load_instructions = (double)inst.load;
+    param.sys.core[coreIdx].store_instructions = (double)inst.store;
+    param.sys.core[coreIdx].busy_cycles = (double)(evt.busy / clockPeriod);
 
     coreIdx++;
   }
 
   for (coreIdx = 0; coreIdx < totalCore; coreIdx++) {
-    param.sys.core[coreIdx].total_cycles = simCycle;
+    param.sys.core[coreIdx].total_cycles = (double)simCycle;
     param.sys.core[coreIdx].idle_cycles =
         simCycle - param.sys.core[coreIdx].busy_cycles;
     param.sys.core[coreIdx].committed_instructions =
@@ -784,14 +784,14 @@ void CPU::getStatValues(std::vector<double> &values) noexcept {
     auto &inst = core.getInstructionStat();
     auto &evt = core.getEventStat();
 
-    values.push_back(evt.busy);
-    values.push_back(evt.handledFunction);
-    values.push_back(inst.branch);
-    values.push_back(inst.load);
-    values.push_back(inst.store);
-    values.push_back(inst.arithmetic);
-    values.push_back(inst.floatingPoint);
-    values.push_back(inst.otherInsts);
+    values.push_back((double)evt.busy);
+    values.push_back((double)evt.handledFunction);
+    values.push_back((double)inst.branch);
+    values.push_back((double)inst.load);
+    values.push_back((double)inst.store);
+    values.push_back((double)inst.arithmetic);
+    values.push_back((double)inst.floatingPoint);
+    values.push_back((double)inst.otherInsts);
   }
 }
 

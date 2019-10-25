@@ -219,7 +219,7 @@ class Rank : public Object {
 
   uint32_t numBanksActive;
 
-  std::deque<uint32_t> actTicks;
+  std::deque<uint64_t> actTicks;
 
   RankStats stats;
 
@@ -377,11 +377,11 @@ class TimingDRAM : public AbstractDRAM {
  private:
   struct RetryRequest {
     uint64_t addr;
-    uint64_t size;
+    uint32_t size;
     Event eid;
     uint64_t data;
 
-    RetryRequest(uint64_t a, uint64_t s, Event e, uint64_t d)
+    RetryRequest(uint64_t a, uint32_t s, Event e, uint64_t d)
         : addr(a), size(s), eid(e), data(d) {}
   };
 

@@ -63,10 +63,6 @@ include(${PROJECT_SOURCE_DIR}/util/scripts/simplessd_version.cmake)
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_compile_options(/wd4819)  # Surpress unicode warning
-  add_compile_options(/wd4244)  # Surpress conversion warning
-  add_compile_options(/wd4267)  # Surpress conversion warning
-  add_compile_options(/wd4305)  # Surpress truncation warning
-  add_compile_options(/wd4800)  # Surpress int -> boolean waring
 else ()
   add_compile_options(-g)
   add_compile_options(-Wall)

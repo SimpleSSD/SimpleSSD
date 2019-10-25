@@ -67,14 +67,14 @@ inline uint64_t mask(int nbits) {
 template <class T, class B>
 inline T insertBits(T val, int first, int last, B bit_val) {
   T t_bit_val = bit_val;
-  T bmask = mask(first - last + 1) << last;
-  return ((t_bit_val << last) & bmask) | (val & ~bmask);
+  T bmask = (T)(mask(first - last + 1) << last);
+  return (T)(((t_bit_val << last) & bmask) | (val & ~bmask));
 }
 
 template <class T>
 inline T bits(T val, int first, int last) {
   int nbits = first - last + 1;
-  return (val >> last) & mask(nbits);
+  return (T)((val >> last) & mask(nbits));
 }
 
 template <class T, class B>
@@ -1187,10 +1187,10 @@ TimingDRAM::TimingDRAM(ObjectData &o)
       columnsPerRowBuffer(rowBufferSize / burstSize),
       columnsPerStripe(1),
       bankGroupArch(gem5Config->bankGroup > 0),
-      writeHighThreshold(gem5Config->writeBufferSize *
-                         gem5Config->forceWriteThreshold),
-      writeLowThreshold(gem5Config->writeBufferSize *
-                        gem5Config->startWriteThreshold),
+      writeHighThreshold((uint32_t)(gem5Config->writeBufferSize *
+                                    gem5Config->forceWriteThreshold)),
+      writeLowThreshold((uint32_t)(gem5Config->writeBufferSize *
+                                   gem5Config->startWriteThreshold)),
       rankToRankDly(pTiming->tCS + pTiming->tBURST),
       wrToRdDly(pTiming->tCL + pTiming->tBURST + pTiming->tWTR),
       rdToWrDly(pTiming->tRTW + pTiming->tBURST),
@@ -1237,8 +1237,8 @@ TimingDRAM::TimingDRAM(ObjectData &o)
 
   capacity =
       pStructure->chipSize / (1048576) * pStructure->chip * pStructure->burst;
-  rowsPerBank =
-      capacity / (rowBufferSize * pStructure->bank * pStructure->burst);
+  rowsPerBank = (uint32_t)(
+      capacity / (rowBufferSize * pStructure->bank * pStructure->burst));
 
   if (pTiming->tREFI <= pTiming->tRP || pTiming->tREFI <= pTiming->tRFC) {
     panic("tREFI (%u) must be larger than tRP (%u) and tRFC (%u)",
@@ -1294,9 +1294,9 @@ bool TimingDRAM::writeQueueFull(uint32_t neededEntries) const {
 
 DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
                                    bool isRead) {
-  uint8_t rank = 0;
+  uint16_t rank = 0;
   uint8_t bank = 0;
-  uint64_t row = 0;
+  uint32_t row = 0;
 
   uint64_t addr = dramPktAddr / burstSize;
 
@@ -1343,7 +1343,7 @@ DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
   // later
   uint16_t bank_id = pStructure->bank * rank + bank;
 
-  return new DRAMPacket(getTick(), isRead, rank, bank, row, bank_id,
+  return new DRAMPacket(getTick(), isRead, (uint8_t)rank, bank, row, bank_id,
                         dramPktAddr, size, ranks[rank]->banks[bank],
                         *ranks[rank]);
 }
@@ -1381,7 +1381,7 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
         burst_helper = new BurstHelper(pktCount);
       }
 
-      auto *dram_pkt = decodeAddr(addr, size, true);
+      auto *dram_pkt = decodeAddr(addr, (uint32_t)size, true);
       dram_pkt->burstHelper = burst_helper;
       dram_pkt->eid = eid;
       dram_pkt->data = data;
@@ -1422,7 +1422,7 @@ bool TimingDRAM::addToWriteQueue(uint64_t addr, uint32_t pktsize,
     bool merged = isInWriteQueue.find(burstAlign(addr)) != isInWriteQueue.end();
 
     if (!merged) {
-      DRAMPacket *dram_pkt = decodeAddr(addr, size, false);
+      DRAMPacket *dram_pkt = decodeAddr(addr, (uint32_t)size, false);
 
       assert(totalWriteQueueSize < gem5Config->writeBufferSize);
 
@@ -1461,7 +1461,7 @@ bool TimingDRAM::receive(uint64_t address, uint32_t size, bool read, Event eid,
   prevArrival = now;
 
   auto offset = address & (burstSize - 1);
-  uint32_t dram_pkt_count = DIVCEIL(offset + size, burstSize);
+  uint32_t dram_pkt_count = (uint32_t)DIVCEIL(offset + size, burstSize);
 
   if (!read) {
     assert(size != 0);
@@ -2119,13 +2119,14 @@ void TimingDRAM::retryWrite() {
 }
 
 void TimingDRAM::read(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
-  auto ret = receive(addr, size, true, eid, data);
+  auto ret = receive(addr, (uint32_t)size, true, eid, data);
 
   if (!ret) {
     // Not submitted
     if (retryRdReq) {
       // Put request to retry queue
-      retryReadQueue.emplace_back(RetryRequest(addr, size, eid, data));
+      retryReadQueue.emplace_back(
+          RetryRequest(addr, (uint32_t)size, eid, data));
     }
     else {
       // Read served by write queue
@@ -2135,11 +2136,11 @@ void TimingDRAM::read(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
 }
 
 void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
-  receive(addr, size, false, eid, data);
+  receive(addr, (uint32_t)size, false, eid, data);
 
   if (retryWrReq) {
     // Put request to retry queue
-    retryWriteQueue.emplace_back(RetryRequest(addr, size, eid, data));
+    retryWriteQueue.emplace_back(RetryRequest(addr, (uint32_t)size, eid, data));
   }
   else {
     // Request successfully pushed to queue (write is async!)
@@ -2240,8 +2241,8 @@ void TimingDRAM::restoreQueue(std::istream &in, DRAMPacketQueue *queue) {
   uint32_t _size;
   Event eid;
   uint64_t data;
-  uint64_t count;
-  uint64_t served;
+  uint32_t count;
+  uint32_t served;
 
   RESTORE_SCALAR(in, size);
 

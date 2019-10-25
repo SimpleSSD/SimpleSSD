@@ -37,7 +37,7 @@ void Write::dmaInitDone(uint64_t gcid) {
 
   scmd.status = Status::DMA;
 
-  size = scmd.buffer.size();
+  size = (uint32_t)scmd.buffer.size();
   offset = (scmd.lpn - cmd.offset) * size - skipFront;
 
   if (scmd.lpn == cmd.offset) {
@@ -64,7 +64,7 @@ void Write::dmaComplete(uint64_t gcid) {
 
   // Find dma subcommand
   uint32_t i = 0;
-  uint32_t scmds = cmd.subCommandList.size();
+  uint32_t scmds = (uint32_t)cmd.subCommandList.size();
 
   for (i = 0; i < scmds; i++) {
     auto &iter = cmd.subCommandList.at(i);
@@ -74,9 +74,10 @@ void Write::dmaComplete(uint64_t gcid) {
 
       // Handle disk
       if (disk) {
-        disk->write(i * iter.buffer.size() + iter.skipFront,
-                    iter.buffer.size() - iter.skipFront - iter.skipEnd,
-                    iter.buffer.data() + iter.skipFront);
+        disk->write(
+            i * iter.buffer.size() + iter.skipFront,
+            (uint32_t)iter.buffer.size() - iter.skipFront - iter.skipEnd,
+            iter.buffer.data() + iter.skipFront);
       }
 
       break;
@@ -91,9 +92,9 @@ void Write::dmaComplete(uint64_t gcid) {
 
     tag->dmaEngine->read(
         tag->dmaTag,
-        i * scmd.buffer.size() - cmd.subCommandList.front().skipFront,
-        scmd.buffer.size() - scmd.skipEnd, scmd.buffer.data(), dmaCompleteEvent,
-        gcid);
+        i * (uint32_t)scmd.buffer.size() - cmd.subCommandList.front().skipFront,
+        (uint32_t)scmd.buffer.size() - scmd.skipEnd, scmd.buffer.data(),
+        dmaCompleteEvent, gcid);
   }
 }
 
@@ -183,13 +184,14 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   auto gcid = tag->getGCID();
 
   mgr->createHILWrite(gcid, writeDoneEvent, slpn, nlp, skipFront, skipEnd,
-                      info->lpnSize);
+                      (uint32_t)info->lpnSize);
 
   tag->_slba = slba;
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
+  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
+                       dmaInitEvent);
 }
 
 void Write::getStatList(std::vector<Stat> &, std::string) noexcept {}

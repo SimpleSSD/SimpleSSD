@@ -12,6 +12,7 @@
 #define __ssdsim_types_h__
 
 #include <cinttypes>
+#include <limits>
 
 /*==============================
 Switches
@@ -113,8 +114,8 @@ Macros
 /*==============================
 Type & Struct
 ==============================*/
-#define MAX64 0xFFFFFFFFFFFFFFFF
-#define MAX32 0xFFFFFFFF
+#define MAX64 (std::numeric_limits<uint64_t>::max())
+#define MAX32 (std::numeric_limits<uint32_t>::max())
 
 #define BYTE (1)
 #define KBYTE (1024)

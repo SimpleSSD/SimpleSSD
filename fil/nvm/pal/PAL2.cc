@@ -16,16 +16,19 @@ using namespace SimpleSSD;
 PAL2::PAL2(PALStatistics *statistics, ConfigReader *c, Latency *l)
     : pParam(c->getNANDStructure()), lat(l), stats(statistics) {
   uint32_t OriginalSizes[7];
-  uint32_t SPDIV =
-      c->readUint(Section::FlashInterface, FIL::Config::Key::DMASpeed) / 50;
+  uint32_t SPDIV = (uint32_t)c->readUint(Section::FlashInterface,
+                                         FIL::Config::Key::DMASpeed) /
+                   50;
   uint32_t PGDIV = 16384 / pParam->pageSize;
 
   if (SPDIV == 0 || PGDIV == 0) {
     abort();
   }
 
-  channel = c->readUint(Section::FlashInterface, FIL::Config::Key::Channel);
-  package = c->readUint(Section::FlashInterface, FIL::Config::Key::Way);
+  channel =
+      (uint32_t)c->readUint(Section::FlashInterface, FIL::Config::Key::Channel);
+  package =
+      (uint32_t)c->readUint(Section::FlashInterface, FIL::Config::Key::Way);
 
   OriginalSizes[ADDR_CHANNEL] = channel;
   OriginalSizes[ADDR_PACKAGE] = package;
@@ -867,81 +870,6 @@ void PAL2::printCPDPBP(CPDPBP *) {}
 //           pCPDPBP_IDX[gconf->AddrSeq[4]],
 //           pCPDPBP_IDX[gconf->AddrSeq[5]]);  // Use DPRINTF here
 // }
-
-void PAL2::PPNdisassemble(uint64_t *pPPN, CPDPBP *pCPDPBP) {
-  uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
-  uint64_t tmp_MOD = *pPPN;
-  uint8_t *AS = AddrRemap;
-  uint32_t *RS = RearrangedSizes;
-  for (uint32_t i = 0; i < 6; i++) {
-    pCPDPBP_IDX[i] = 0;
-  }
-  if (RS[6] == 0)  // there is no misalignment
-  {
-    pCPDPBP_IDX[AS[0]] = tmp_MOD / (RS[5] * RS[4] * RS[3] * RS[2] * RS[1]);
-    tmp_MOD = tmp_MOD % (RS[5] * RS[4] * RS[3] * RS[2] * RS[1]);
-
-    pCPDPBP_IDX[AS[1]] = tmp_MOD / (RS[5] * RS[4] * RS[3] * RS[2]);
-    tmp_MOD = tmp_MOD % (RS[5] * RS[4] * RS[3] * RS[2]);
-
-    pCPDPBP_IDX[AS[2]] = tmp_MOD / (RS[5] * RS[4] * RS[3]);
-    tmp_MOD = tmp_MOD % (RS[5] * RS[4] * RS[3]);
-
-    pCPDPBP_IDX[AS[3]] = tmp_MOD / (RS[5] * RS[4]);
-    tmp_MOD = tmp_MOD % (RS[5] * RS[4]);
-
-    pCPDPBP_IDX[AS[4]] = tmp_MOD / (RS[5]);
-    tmp_MOD = tmp_MOD % (RS[5]);
-
-    pCPDPBP_IDX[AS[5]] = tmp_MOD;
-  }
-  else {
-    uint32_t tmp_size = RS[6] * RS[5] * RS[4] * RS[3] * RS[2] * RS[1] * RS[0];
-    for (int i = 0; i < (4 - AS[6]); i++) {
-      tmp_size /= RS[i];
-      pCPDPBP_IDX[AS[i]] = tmp_MOD / tmp_size;
-      tmp_MOD = tmp_MOD % tmp_size;
-    }
-    tmp_size /= RS[6];
-    uint32_t tmp = tmp_MOD / tmp_size;
-    tmp_MOD = tmp_MOD % tmp_size;
-    for (int i = (4 - AS[6]); i < 6; i++) {
-      tmp_size /= RS[i];
-      pCPDPBP_IDX[AS[i]] = tmp_MOD / tmp_size;
-      tmp_MOD = tmp_MOD % tmp_size;
-    }
-    pCPDPBP_IDX[AS[5 - AS[6]]] *= tmp;
-  }
-
-#if DBG_PRINT_PPN
-  DPRINTF(PAL, "PAL:     0x%llX (%llu) ==>\n", *pPPN,
-          *pPPN);  // Use DPRINTF here
-  printCPDPBP(pCPDPBP);
-#endif
-}
-
-void PAL2::AssemblePPN(CPDPBP *pCPDPBP, uint64_t *pPPN) {
-  uint64_t AddrPPN = 0;
-
-  // with re-arrange ... I hate current structure! too dirty even made with
-  // FOR-LOOP! (less-readability)
-  uint32_t *pCPDPBP_IDX = ((uint32_t *)pCPDPBP);
-  uint8_t *AS = AddrRemap;
-  uint32_t *RS = RearrangedSizes;
-  AddrPPN += pCPDPBP_IDX[AS[5]];
-  AddrPPN += pCPDPBP_IDX[AS[4]] * (RS[5]);
-  AddrPPN += pCPDPBP_IDX[AS[3]] * (RS[5] * RS[4]);
-  AddrPPN += pCPDPBP_IDX[AS[2]] * (RS[5] * RS[4] * RS[3]);
-  AddrPPN += pCPDPBP_IDX[AS[1]] * (RS[5] * RS[4] * RS[3] * RS[2]);
-  AddrPPN += pCPDPBP_IDX[AS[0]] * (RS[5] * RS[4] * RS[3] * RS[2] * RS[1]);
-
-  *pPPN = AddrPPN;
-
-#if DBG_PRINT_PPN
-  printCPDPBP(pCPDPBP);
-  DPRINTF(PAL, "PAL    ==> 0x%llx (%llu)\n", *pPPN, *pPPN);  // Use DPRINTF here
-#endif
-}
 
 void PAL2::backup(std::ostream &out) const {
   uint64_t size = MergedTimeSlots.size();

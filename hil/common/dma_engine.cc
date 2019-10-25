@@ -196,7 +196,7 @@ void DMAEngine::prdt_readDone() {
 }
 
 uint32_t DMAEngine::getPRPSize(uint64_t prp) {
-  return pageSize - (prp & (pageSize - 1));
+  return (uint32_t)(pageSize - (prp & (pageSize - 1)));
 }
 
 void DMAEngine::getPRPListFromPRP(DMASession &&session, uint64_t prp) {
@@ -209,7 +209,7 @@ void DMAEngine::getPRPListFromPRP(DMASession &&session, uint64_t prp) {
 void DMAEngine::getPRPListFromPRP_readDone() {
   auto session = std::move(pendingInitTagList.front());
   uint64_t listPRP;
-  uint64_t listPRPSize;
+  uint32_t listPRPSize;
 
   pendingInitTagList.pop_front();
 
@@ -352,8 +352,8 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
 
   bool immediate = true;
   uint8_t mode = 0xFF;
-  uint64_t prp1Size = getPRPSize(prp1);
-  uint64_t prp2Size = getPRPSize(prp2);
+  uint32_t prp1Size = getPRPSize(prp1);
+  uint32_t prp2Size = getPRPSize(prp2);
 
   DMASession session(ret, eid, data, false, size, nullptr);
 

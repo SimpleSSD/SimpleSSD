@@ -295,7 +295,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
     }
 
     if (offset >= (uint64_t)Register::DoorbellBegin) {
-      const int dstrd = 4;
+      const uint64_t dstrd = 4;
       uint32_t uiTemp, uiMask;
       uint16_t uiDoorbell;
 
@@ -304,7 +304,7 @@ uint64_t Controller::write(uint64_t offset, uint64_t size,
 
       // Calculate Queue Type and Queue ID from offset
       offset -= (uint64_t)Register::DoorbellBegin;
-      uiTemp = offset / dstrd;
+      uiTemp = (uint32_t)(offset / dstrd);
       uiMask = (uiTemp & 0x00000001);  // 0 for Submission Queue Tail Doorbell
                                        // 1 for Completion Queue Head Doorbell
       uiTemp = (uiTemp >> 1);          // Queue ID

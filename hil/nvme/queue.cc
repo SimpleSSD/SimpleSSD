@@ -27,8 +27,8 @@ Queue::Queue(ObjectData &o, DMAEngine *d)
       dmaEngine(d),
       dmaTag(InvalidDMATag) {}
 
-Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint16_t length,
-             uint64_t stride)
+Queue::Queue(ObjectData &o, DMAEngine *d, uint16_t qid, uint32_t length,
+             uint32_t stride)
     : Object(o),
       id(qid),
       head(0),
@@ -51,7 +51,8 @@ void Queue::setDMAData(uint64_t base, bool pc, Event eid, uint64_t gcid) {
     scheduleNow(eid, gcid);
   }
   else {
-    dmaTag = dmaEngine->initFromPRP(0, base, size * stride, eid, gcid);
+    dmaTag =
+        dmaEngine->initFromPRP(0, base, (uint32_t)(size * stride), eid, gcid);
   }
 }
 
@@ -107,8 +108,8 @@ void Queue::restoreCheckpoint(std::istream &in) noexcept {
 CQueue::CQueue(ObjectData &o, DMAEngine *d)
     : Queue(o, d), ien(false), phase(false), iv(0xFFFF) {}
 
-CQueue::CQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint16_t length,
-               uint64_t stride, uint16_t iv, bool en)
+CQueue::CQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint32_t length,
+               uint32_t stride, uint16_t iv, bool en)
     : Queue(o, d, qid, length, stride), ien(en), phase(true), iv(iv) {}
 
 void CQueue::setData(CQEntry *entry, Event eid) {
@@ -173,8 +174,8 @@ void CQueue::restoreCheckpoint(std::istream &in) noexcept {
 SQueue::SQueue(ObjectData &o, DMAEngine *d)
     : Queue(o, d), cqID(0xFFFF), priority(QueuePriority::Low) {}
 
-SQueue::SQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint16_t length,
-               uint64_t stride, uint16_t cqid, QueuePriority pri)
+SQueue::SQueue(ObjectData &o, DMAEngine *d, uint16_t qid, uint32_t length,
+               uint32_t stride, uint16_t cqid, QueuePriority pri)
     : Queue(o, d, qid, length, stride), cqID(cqid), priority(pri) {}
 
 uint16_t SQueue::getCQID() {

@@ -24,8 +24,8 @@ void GetLogPage::dmaInitDone(uint64_t gcid) {
   auto tag = findBufferTag(gcid);
 
   // Write buffer to host
-  tag->dmaEngine->write(tag->dmaTag, 0, tag->buffer.size(), tag->buffer.data(),
-                        dmaCompleteEvent, gcid);
+  tag->dmaEngine->write(tag->dmaTag, 0, (uint32_t)tag->buffer.size(),
+                        tag->buffer.data(), dmaCompleteEvent, gcid);
 }
 
 void GetLogPage::dmaComplete(uint64_t gcid) {
@@ -53,7 +53,7 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
   uint8_t uuid = entry->dword14 & 0x7F;
 
   uint64_t offset = ((uint64_t)lopu << 32) | lopl;
-  uint64_t size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
+  uint32_t size = (((uint32_t)numdu << 16 | numdl) + 1u) * 4;
 
   debugprint_command(
       tag, "ADMIN   | Get Log Page | Log %d | Size %d | NSID %u | UUID %u", lid,
@@ -70,7 +70,7 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
       auto health = subsystem->getHealth(nsid);
 
       if (LIKELY(health && offset <= 0x1FC)) {
-        size = MIN(size, 0x200 - offset);  // At least 4 bytes
+        size = MIN(size, 0x200 - (uint32_t)offset);  // At least 4 bytes
 
         memcpy(tag->buffer.data(), health->data + offset, size);
       }

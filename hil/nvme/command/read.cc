@@ -44,7 +44,7 @@ void Read::readDone(uint64_t gcid) {
   // Find completed subcommand
   for (auto &iter : cmd.subCommandList) {
     if (iter.status == Status::Done) {
-      size = iter.buffer.size();
+      size = (uint32_t)iter.buffer.size();
       offset = (iter.lpn - cmd.offset) * size - skipFront;
 
       if (iter.lpn == cmd.offset) {
@@ -153,13 +153,14 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   auto gcid = tag->getGCID();
 
   mgr->createHILRead(gcid, readDoneEvent, slpn, nlp, skipFront, skipEnd,
-                     info->lpnSize);
+                     (uint32_t)info->lpnSize);
 
   if (disk) {
     auto &cmd = mgr->getCommand(gcid);
 
     for (auto &iter : cmd.subCommandList) {
-      disk->read(iter.lpn * info->lpnSize, info->lpnSize, iter.buffer.data());
+      disk->read(iter.lpn * info->lpnSize, (uint32_t)info->lpnSize,
+                 iter.buffer.data());
     }
   }
 
@@ -167,7 +168,8 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   tag->_nlb = nlb;
   tag->beginAt = getTick();
 
-  tag->createDMAEngine(nlp * info->lpnSize - skipFront - skipEnd, dmaInitEvent);
+  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
+                       dmaInitEvent);
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}

@@ -17,7 +17,7 @@ namespace SimpleSSD::ICL {
 
 class AbstractCache : public Object {
  protected:
-  const uint64_t minIO = 512;
+  const uint32_t minIO = 512;
 
   CommandManager *commandManager;
   FTL::FTL *pFTL;

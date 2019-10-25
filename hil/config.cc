@@ -398,7 +398,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       pcieGen = (PCIExpress::Generation)value;
       break;
     case PCIeLane:
-      pcieLane = value;
+      pcieLane = (uint8_t)value;
       break;
     case SATAGeneration:
       sataGen = (SATA::Generation)value;
@@ -407,7 +407,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       mphyMode = (MIPI::M_PHY::Mode)value;
       break;
     case MPHYLane:
-      mphyLane = value;
+      mphyLane = (uint8_t)value;
       break;
     case AXIWidth:
       axiWidth = (ARM::AXI::Width)value;
@@ -416,22 +416,22 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       axiClock = value;
       break;
     case NVMeMaxSQ:
-      maxSQ = value;
+      maxSQ = (uint16_t)value;
       break;
     case NVMeMaxCQ:
-      maxCQ = value;
+      maxCQ = (uint16_t)value;
       break;
     case NVMeWRRHigh:
-      wrrHigh = value;
+      wrrHigh = (uint16_t)value;
       break;
     case NVMeWRRMedium:
-      wrrMedium = value;
+      wrrMedium = (uint16_t)value;
       break;
     case NVMeMaxNamespace:
-      maxNamespace = value;
+      maxNamespace = (uint32_t)value;
       break;
     case NVMeDefaultNamespace:
-      defaultNamespace = value;
+      defaultNamespace = (uint32_t)value;
       break;
     default:
       ret = false;

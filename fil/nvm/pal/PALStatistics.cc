@@ -94,11 +94,11 @@ void PALStatistics::Value::init() {
   cnt = 0;
   sampled_sum = 0;
   sampled_cnt = 0;
-  minval = MAX64;
+  minval = (double)MAX64;
   maxval = 0;
   legacy_sum = 0;
   legacy_cnt = 0;
-  legacy_minval = MAX64;
+  legacy_minval = (double)MAX64;
   legacy_maxval = 0;
 }
 void PALStatistics::Value::backup() {
@@ -586,8 +586,10 @@ void PALStatistics::InitStats() {
   OpBusyTime[0] = OpBusyTime[1] = OpBusyTime[2] = 0;
   LastOpBusyTime[0] = LastOpBusyTime[1] = LastOpBusyTime[2] = 0;
 
-  channel = gconf->readUint(Section::FlashInterface, FIL::Config::Key::Channel);
-  package = gconf->readUint(Section::FlashInterface, FIL::Config::Key::Way);
+  channel = (uint32_t)gconf->readUint(Section::FlashInterface,
+                                      FIL::Config::Key::Channel);
+  package =
+      (uint32_t)gconf->readUint(Section::FlashInterface, FIL::Config::Key::Way);
   auto param = gconf->getNANDStructure();
 
   totalDie = channel * package * param->die;
@@ -744,12 +746,12 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   if (!(confType & CONFLICT_DMA1))
     CF_DMA1_none.add(oper);
 
-  Ticks_DMA0WAIT.add(oper, time_all[TICK_DMA0WAIT]);
-  Ticks_DMA0.add(oper, time_all[TICK_DMA0]);
-  Ticks_MEM.add(oper, time_all[TICK_MEM]);
-  Ticks_DMA1WAIT.add(oper, time_all[TICK_DMA1WAIT]);
-  Ticks_DMA1.add(oper, time_all[TICK_DMA1]);
-  Ticks_Total.add(oper, time_all[TICK_FULL]);
+  Ticks_DMA0WAIT.add(oper, (double)time_all[TICK_DMA0WAIT]);
+  Ticks_DMA0.add(oper, (double)time_all[TICK_DMA0]);
+  Ticks_MEM.add(oper, (double)time_all[TICK_MEM]);
+  Ticks_DMA1WAIT.add(oper, (double)time_all[TICK_DMA1WAIT]);
+  Ticks_DMA1.add(oper, (double)time_all[TICK_DMA1]);
+  Ticks_Total.add(oper, (double)time_all[TICK_FULL]);
   //***********************************************
   // energy = [nW] * [ps] / [10^9] = [pJ]
   uint64_t energy_dma0 = lat->GetPower(CMD.operation, BUSY_DMA0) *
@@ -758,10 +760,10 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
       lat->GetPower(CMD.operation, BUSY_MEM) * time_all[TICK_MEM] / 1000000000;
   uint64_t energy_dma1 = lat->GetPower(CMD.operation, BUSY_DMA1) *
                          time_all[TICK_DMA1] / 1000000000;
-  Energy_DMA0.add(oper, energy_dma0);
-  Energy_MEM.add(oper, energy_mem);
-  Energy_DMA1.add(oper, energy_dma1);
-  Energy_Total.add(oper, energy_dma0 + energy_mem + energy_dma1);
+  Energy_DMA0.add(oper, (double)energy_dma0);
+  Energy_MEM.add(oper, (double)energy_mem);
+  Energy_DMA1.add(oper, (double)energy_dma1);
+  Energy_Total.add(oper, (double)(energy_dma0 + energy_mem + energy_dma1));
   // printf("[Energy(fJ) of Oper(%d)] DMA0(%llu) MEM(%llu) DMA1(%llu)\n", oper,
   // energy_dma0, energy_mem, energy_dma1);
   uint64_t finished_time = CMD.finished;
@@ -769,7 +771,7 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   std::map<uint64_t, ValueOper *>::iterator e =
       Ticks_Total_snapshot.find(update_point);
   if (e != Ticks_Total_snapshot.end())
-    e->second->add(oper, time_all[TICK_FULL]);
+    e->second->add(oper, (double)time_all[TICK_FULL]);
   else {
     e = Ticks_Total_snapshot.upper_bound(update_point);
     if (e != Ticks_Total_snapshot.end()) {
@@ -789,21 +791,22 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
         Ticks_Total_snapshot[update_point] = new ValueOper(e->second);
       }
     }
-    Ticks_Total_snapshot[update_point]->add(oper, time_all[TICK_FULL]);
+    Ticks_Total_snapshot[update_point]->add(oper, (double)time_all[TICK_FULL]);
   }
 
   e = Ticks_Total_snapshot.upper_bound(update_point);
   while (e != Ticks_Total_snapshot.end()) {
-    e->second->add(oper, time_all[TICK_FULL]);
+    e->second->add(oper, (double)time_all[TICK_FULL]);
 
     e = Ticks_Total_snapshot.upper_bound(e->first);
   }
   //***********************************************
-  Ticks_TotalOpti.add(oper, time_all[TICK_PROC]);
-  Ticks_Active_ch[chIdx].add(oper, time_all[TICK_DMA0] + time_all[TICK_DMA1]);
-  Ticks_Active_die[dieIdx].add(oper,
-                               (time_all[TICK_DMA0] + time_all[TICK_MEM] +
-                                time_all[TICK_DMA1WAIT] + time_all[TICK_DMA1]));
+  Ticks_TotalOpti.add(oper, (double)time_all[TICK_PROC]);
+  Ticks_Active_ch[chIdx].add(
+      oper, (double)(time_all[TICK_DMA0] + time_all[TICK_DMA1]));
+  Ticks_Active_die[dieIdx].add(
+      oper, (double)(time_all[TICK_DMA0] + time_all[TICK_MEM] +
+                     time_all[TICK_DMA1WAIT] + time_all[TICK_DMA1]));
   if (oper == OPER_ERASE)
     Access_Capacity.add(oper, param->pageSize * param->page);  // ERASE
   else

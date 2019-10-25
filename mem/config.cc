@@ -172,28 +172,28 @@ void Config::loadDRAMStructure(pugi::xml_node &section) {
 
 void Config::loadDRAMTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_TIME(node, NAME_TCK, timing.tCK);
-    LOAD_NAME_TIME(node, NAME_TRCD, timing.tRCD);
-    LOAD_NAME_TIME(node, NAME_TCL, timing.tCL);
-    LOAD_NAME_TIME(node, NAME_TRP, timing.tRP);
-    LOAD_NAME_TIME(node, NAME_TRAS, timing.tRAS);
-    LOAD_NAME_TIME(node, NAME_TWR, timing.tWR);
-    LOAD_NAME_TIME(node, NAME_TRTP, timing.tRTP);
-    LOAD_NAME_TIME(node, NAME_TBURST, timing.tBURST);
-    LOAD_NAME_TIME(node, NAME_TCCD_L, timing.tCCD_L);
-    LOAD_NAME_TIME(node, NAME_TCCD_L_WR, timing.tCCD_L_WR);
-    LOAD_NAME_TIME(node, NAME_TRFC, timing.tRFC);
-    LOAD_NAME_TIME(node, NAME_TREFI, timing.tREFI);
-    LOAD_NAME_TIME(node, NAME_TWTR, timing.tWTR);
-    LOAD_NAME_TIME(node, NAME_TRTW, timing.tRTW);
-    LOAD_NAME_TIME(node, NAME_TCS, timing.tCS);
-    LOAD_NAME_TIME(node, NAME_TRRD, timing.tRRD);
-    LOAD_NAME_TIME(node, NAME_TRRD_L, timing.tRRD_L);
-    LOAD_NAME_TIME(node, NAME_TXAW, timing.tXAW);
-    LOAD_NAME_TIME(node, NAME_TXP, timing.tXP);
-    LOAD_NAME_TIME(node, NAME_TXPDLL, timing.tXPDLL);
-    LOAD_NAME_TIME(node, NAME_TXS, timing.tXS);
-    LOAD_NAME_TIME(node, NAME_TXSDLL, timing.tXSDLL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCK, uint32_t, timing.tCK);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRCD, uint32_t, timing.tRCD);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCL, uint32_t, timing.tCL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRP, uint32_t, timing.tRP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRAS, uint32_t, timing.tRAS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWR, uint32_t, timing.tWR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRTP, uint32_t, timing.tRTP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TBURST, uint32_t, timing.tBURST);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCCD_L, uint32_t, timing.tCCD_L);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCCD_L_WR, uint32_t, timing.tCCD_L_WR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRFC, uint32_t, timing.tRFC);
+    LOAD_NAME_TIME_TYPE(node, NAME_TREFI, uint32_t, timing.tREFI);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWTR, uint32_t, timing.tWTR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRTW, uint32_t, timing.tRTW);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCS, uint32_t, timing.tCS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRRD, uint32_t, timing.tRRD);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRRD_L, uint32_t, timing.tRRD_L);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXAW, uint32_t, timing.tXAW);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXP, uint32_t, timing.tXP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXPDLL, uint32_t, timing.tXPDLL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXS, uint32_t, timing.tXS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXSDLL, uint32_t, timing.tXSDLL);
   }
 }
 
@@ -228,11 +228,14 @@ void Config::loadDRAMPower(pugi::xml_node &section) {
 
 void Config::loadTimingDRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT(node, NAME_WRITE_BUFFER_SIZE, gem5.writeBufferSize);
-    LOAD_NAME_UINT(node, NAME_READ_BUFFER_SIZE, gem5.readBufferSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_BUFFER_SIZE, uint32_t,
+                        gem5.writeBufferSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_READ_BUFFER_SIZE, uint32_t,
+                        gem5.readBufferSize);
     LOAD_NAME_FLOAT(node, NAME_FORCE_WRITE_THRESHOLD, gem5.forceWriteThreshold);
     LOAD_NAME_FLOAT(node, NAME_START_WRITE_THRESHOLD, gem5.startWriteThreshold);
-    LOAD_NAME_UINT(node, NAME_MIN_WRITE_BURST, gem5.minWriteBurst);
+    LOAD_NAME_UINT_TYPE(node, NAME_MIN_WRITE_BURST, uint32_t,
+                        gem5.minWriteBurst);
     LOAD_NAME_UINT_TYPE(node, NAME_MEMORY_SCHEDULING, MemoryScheduling,
                         gem5.scheduling);
     LOAD_NAME_UINT_TYPE(node, NAME_ADDRESS_MAPPING, AddressMapping,
@@ -240,9 +243,11 @@ void Config::loadTimingDRAM(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_PAGE_POLICY, PagePolicy, gem5.policy);
     LOAD_NAME_UINT(node, NAME_MAX_ACCESS_PER_ROW, gem5.frontendLatency);
     LOAD_NAME_UINT(node, NAME_FRONTEND_LATENCY, gem5.backendLatency);
-    LOAD_NAME_UINT(node, NAME_BACKEND_LATENCY, gem5.maxAccessesPerRow);
-    LOAD_NAME_UINT(node, NAME_ROW_BUFFER_SIZE, gem5.rowBufferSize);
-    LOAD_NAME_UINT(node, NAME_BANK_GROUP, gem5.bankGroup);
+    LOAD_NAME_UINT_TYPE(node, NAME_BACKEND_LATENCY, uint32_t,
+                        gem5.maxAccessesPerRow);
+    LOAD_NAME_UINT_TYPE(node, NAME_ROW_BUFFER_SIZE, uint32_t,
+                        gem5.rowBufferSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_BANK_GROUP, uint32_t, gem5.bankGroup);
     LOAD_NAME_BOOLEAN(node, NAME_ENABLE_POWERDOWN, gem5.enablePowerdown);
     LOAD_NAME_BOOLEAN(node, NAME_USE_DLL, gem5.useDLL);
   }

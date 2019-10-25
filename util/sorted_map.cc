@@ -28,8 +28,8 @@ map_list<Key, T, U>::iterator::iterator(list_item *h, list_item *t,
     : head(h), tail(t), cur(c) {}
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::iterator &
-map_list<Key, T, U>::iterator::operator++() {
+typename map_list<Key, T, U>::iterator &map_list<Key, T, U>::iterator::
+operator++() {
   if (cur != nullptr && cur != tail) {
     cur = cur->next;
   }
@@ -38,8 +38,8 @@ map_list<Key, T, U>::iterator::operator++() {
 }
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::iterator &
-map_list<Key, T, U>::iterator::operator--() {
+typename map_list<Key, T, U>::iterator &map_list<Key, T, U>::iterator::
+operator--() {
   if (cur != nullptr && cur != head->next) {
     cur = cur->prev;
   }
@@ -68,8 +68,8 @@ typename map_list<Key, T, U>::iterator::reference
 }
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::iterator::pointer
-    map_list<Key, T, U>::iterator::operator->() {
+typename map_list<Key, T, U>::iterator::pointer map_list<Key, T, U>::iterator::
+operator->() {
   if (cur != head && cur != tail && cur != nullptr) {
     return &cur->field;
   }
