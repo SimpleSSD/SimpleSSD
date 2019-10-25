@@ -187,7 +187,8 @@ uint32_t DMAEngine::getPRPSize(uint64_t prp) {
 void DMAEngine::getPRPListFromPRP(DMASession &session, uint64_t prp) {
   session.allocateBuffer(getPRPSize(prp));
 
-  interface->read(prp, session.bufferSize, session.buffer, eventPRPReadDone);
+  interface->read(prp, session.bufferSize, session.buffer, eventPRPReadDone,
+                  session.tag);
 }
 
 void DMAEngine::getPRPListFromPRP_readDone(uint64_t tag) {
@@ -259,8 +260,8 @@ void DMAEngine::parseSGLSegment(DMASession &session, uint64_t address,
                                 uint32_t length) {
   session.allocateBuffer(length);
 
-  interface->read(address, session.bufferSize, session.buffer,
-                  eventSGLReadDone);
+  interface->read(address, session.bufferSize, session.buffer, eventSGLReadDone,
+                  session.tag);
 }
 
 void DMAEngine::parseSGLSegment_readDone(uint64_t tag) {
