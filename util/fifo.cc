@@ -22,7 +22,8 @@ FIFOEntry::FIFOEntry()
       insertEndAt(0),
       eid(InvalidEventID) {}
 
-FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e)
+FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e,
+                     uint64_t d)
     : last(true),
       id(0),
       addr(a),
@@ -31,7 +32,8 @@ FIFOEntry::FIFOEntry(uint64_t a, uint64_t s, uint8_t *b, uint64_t t, Event e)
       arrivedAt(t),
       insertBeginAt(0),
       insertEndAt(0),
-      eid(e) {}
+      eid(e),
+      data(d) {}
 
 ReadEntry::ReadEntry() : id(0), insertEndAt(0), dmaEndAt(0), latency(0) {}
 
@@ -295,7 +297,7 @@ void FIFO::transferWriteDoneNext() {
 
   // Call handler
   if (iter.last) {
-    scheduleNow(iter.eid);
+    scheduleNow(iter.eid, iter.data);
   }
 
   // Transfer done
@@ -453,7 +455,7 @@ void FIFO::insertReadDoneNext() {
 
   // Call handler
   if (iter.last) {
-    scheduleNow(iter.eid);
+    scheduleNow(iter.eid, iter.data);
   }
 
   // Insert done
@@ -474,7 +476,8 @@ void FIFO::insertReadDoneNext() {
   }
 }
 
-void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
+void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
+                uint64_t data) {
   if (size == 0) {
     warn("FIFO: zero-size DMA read request. Ignore.");
 
@@ -482,12 +485,13 @@ void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
   }
 
   readQueue.waitQueue.emplace_back(
-      FIFOEntry(addr, size, buffer, getTick(), eid));
+      FIFOEntry(addr, size, buffer, getTick(), eid, data));
 
   transferRead();
 }
 
-void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
+void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
+                 uint64_t data) {
   if (size == 0) {
     warn("FIFO: zero-size DMA write request. Ignore.");
 
@@ -495,7 +499,7 @@ void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid) {
   }
 
   writeQueue.waitQueue.emplace_back(
-      FIFOEntry(addr, size, buffer, getTick(), eid));
+      FIFOEntry(addr, size, buffer, getTick(), eid, data));
 
   insertWrite();
 }
