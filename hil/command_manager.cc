@@ -12,6 +12,11 @@ namespace SimpleSSD {
 CommandManager::CommandManager(ObjectData &o) : Object(o) {}
 
 CommandManager::~CommandManager() {
+  /*
+   * Cache may have uncompleted command tags -- they flushing request in
+   * background, simulation may terminated before all write requests are
+   * completed by FTL and FIL.
+   */
   warn_if(commandList.size() > 0, "Not all commands are destroyed.");
 }
 
