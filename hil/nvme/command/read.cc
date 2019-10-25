@@ -73,22 +73,9 @@ void Read::dmaComplete(uint64_t gcid) {
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
 
-  uint32_t completed = 0;
+  cmd.counter++;
 
-  for (auto &iter : cmd.subCommandList) {
-    if (iter.status == Status::DMA) {
-      completed++;
-
-      iter.status = Status::Complete;
-
-      break;
-    }
-    else if (iter.status == Status::Complete) {
-      completed++;
-    }
-  }
-
-  if (completed == cmd.subCommandList.size()) {
+  if (cmd.counter == cmd.subCommandList.size()) {
     // Done
     auto now = getTick();
 

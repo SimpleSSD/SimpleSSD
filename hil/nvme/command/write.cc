@@ -102,22 +102,10 @@ void Write::writeDone(uint64_t gcid) {
   auto pHIL = subsystem->getHIL();
   auto mgr = pHIL->getCommandManager();
   auto &cmd = mgr->getCommand(gcid);
-  uint32_t completed = 0;
 
-  for (auto &iter : cmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      completed++;
+  cmd.counter++;
 
-      iter.status = Status::Complete;
-
-      break;
-    }
-    else if (iter.status == Status::Complete) {
-      completed++;
-    }
-  }
-
-  if (completed == cmd.subCommandList.size()) {
+  if (cmd.counter == cmd.subCommandList.size()) {
     auto now = getTick();
 
     debugprint_command(tag,
