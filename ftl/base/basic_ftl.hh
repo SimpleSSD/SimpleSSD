@@ -39,6 +39,8 @@ class BasicFTL : public AbstractFTL {
     ReadModifyWriteContext(Event e, uint64_t t)
         : originalEvent(e),
           originalTag(t),
+          readPending(false),
+          writePending(false),
           readTag(0),
           writeTag(0),
           offset(InvalidLPN),

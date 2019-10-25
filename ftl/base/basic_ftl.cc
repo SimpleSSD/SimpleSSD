@@ -84,8 +84,15 @@ void BasicFTL::write_find(Command &cmd) {
       // Not submitted yet
       if (!entry->readPending && !entry->writePending) {
         if (entry->offset == alignedBegin) {
+          merged = true;
+
           // Merge with this request
-          rmwList.emplace(++entry, ReadModifyWriteContext(cmd.eid, cmd.tag));
+          ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
+
+          // Record how many completion is needed
+          ctx.writeTag = cmd.length;
+
+          rmwList.emplace(++entry, ctx);
 
           break;
         }
@@ -198,30 +205,42 @@ void BasicFTL::write_readModifyDone() {
 
 void BasicFTL::write_rmwDone() {
   auto &job = rmwList.front();
-  uint8_t completed = 0;
+  LPN completed = 0;
 
-  auto &wcmd = commandManager->getCommand(job.writeTag);
+  if (job.readTag > 0) {
+    auto &wcmd = commandManager->getCommand(job.writeTag);
 
-  for (auto &iter : wcmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      completed++;
+    for (auto &iter : wcmd.subCommandList) {
+      if (iter.status == Status::Done) {
+        completed++;
+      }
+      else {
+        completed++;
+
+        iter.status = Status::Done;
+
+        break;
+      }
+    }
+
+    if (wcmd.counter < completed) {
+      scheduleNow(job.originalEvent, job.originalTag);
+    }
+  }
+  else {
+    // We stored original length (cmd.length) to writeTag
+    if (job.writeTag-- > 0) {
+      // Complete cmd.length count
+      scheduleNow(job.originalEvent, job.originalTag);
+      scheduleNow(eventWriteDone);
     }
     else {
-      completed++;
-
-      iter.status = Status::Done;
-
-      break;
+      // We are done
+      completed = mappingGranularity;
     }
   }
 
-  if (wcmd.counter < completed) {
-    wcmd.counter++;
-
-    scheduleNow(job.originalEvent, job.originalTag);
-  }
-
-  if (completed == wcmd.length) {
+  if (completed == mappingGranularity) {
     if (job.readTag > 0) {
       commandManager->destroyCommand(job.readTag);
       commandManager->destroyCommand(job.writeTag);
