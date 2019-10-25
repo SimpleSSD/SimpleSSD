@@ -17,7 +17,7 @@ namespace SimpleSSD {
 
 Bitset::Bitset() : pointer(nullptr), dataSize(0), allocSize(0) {}
 
-Bitset::Bitset(uint32_t size) : Bitset() {
+Bitset::Bitset(uint64_t size) : Bitset() {
   if (size > 0) {
     dataSize = size;
     allocSize = DIVCEIL(dataSize, 8);
@@ -42,11 +42,11 @@ Bitset::~Bitset() {
   allocSize = 0;
 }
 
-bool Bitset::test(uint32_t idx) noexcept {
+bool Bitset::test(uint64_t idx) noexcept {
   return const_cast<const Bitset *>(this)->test(idx);
 }
 
-bool Bitset::test(uint32_t idx) const noexcept {
+bool Bitset::test(uint64_t idx) const noexcept {
   auto data = getBuffer();
 
   return data[idx / 8] & (0x01 << (idx % 8));
@@ -174,7 +174,7 @@ void Bitset::set() noexcept {
   data[allocSize - 1] = mask;
 }
 
-void Bitset::set(uint32_t idx, bool value) noexcept {
+void Bitset::set(uint64_t idx, bool value) noexcept {
   auto data = getBuffer();
 
   data[idx / 8] &= ~(0x01 << (idx % 8));
@@ -192,7 +192,7 @@ void Bitset::reset() noexcept {
   }
 }
 
-void Bitset::reset(uint32_t idx) noexcept {
+void Bitset::reset(uint64_t idx) noexcept {
   auto data = getBuffer();
 
   data[idx / 8] &= ~(0x01 << (idx % 8));
@@ -209,18 +209,18 @@ void Bitset::flip() noexcept {
   data[allocSize - 1] &= mask;
 }
 
-void Bitset::flip(uint32_t idx) noexcept {
+void Bitset::flip(uint64_t idx) noexcept {
   auto data = getBuffer();
 
   data[idx / 8] = (~data[idx / 8] & (0x01 << (idx % 8))) |
                   (data[idx / 8] & ~(0x01 << (idx % 8)));
 }
 
-bool Bitset::operator[](uint32_t idx) noexcept {
+bool Bitset::operator[](uint64_t idx) noexcept {
   return const_cast<const Bitset *>(this)->test(idx);
 }
 
-bool Bitset::operator[](uint32_t idx) const noexcept {
+bool Bitset::operator[](uint64_t idx) const noexcept {
   return test(idx);
 }
 

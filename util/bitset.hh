@@ -29,8 +29,8 @@ class Bitset {
     uint8_t buffer[sizeof(uint8_t *)];
   };
 
-  uint32_t dataSize;
-  uint32_t allocSize;
+  uint64_t dataSize;
+  uint64_t allocSize;
 
   inline uint8_t *getBuffer() const {
     if (allocSize > sizeof(buffer)) {
@@ -42,13 +42,13 @@ class Bitset {
 
  public:
   Bitset();
-  Bitset(uint32_t);
+  Bitset(uint64_t);
   Bitset(const Bitset &) = delete;
   Bitset(Bitset &&) noexcept;
   ~Bitset();
 
-  bool test(uint32_t) noexcept;
-  bool test(uint32_t) const noexcept;
+  bool test(uint64_t) noexcept;
+  bool test(uint64_t) const noexcept;
   bool all() noexcept;
   bool all() const noexcept;
   bool any() noexcept;
@@ -67,14 +67,14 @@ class Bitset {
   uint32_t size() const noexcept;
 
   void set() noexcept;
-  void set(uint32_t, bool = true) noexcept;
+  void set(uint64_t, bool = true) noexcept;
   void reset() noexcept;
-  void reset(uint32_t) noexcept;
+  void reset(uint64_t) noexcept;
   void flip() noexcept;
-  void flip(uint32_t) noexcept;
+  void flip(uint64_t) noexcept;
 
-  bool operator[](uint32_t) noexcept;
-  bool operator[](uint32_t) const noexcept;
+  bool operator[](uint64_t) noexcept;
+  bool operator[](uint64_t) const noexcept;
   Bitset &operator&=(const Bitset &);
   Bitset &operator|=(const Bitset &);
   Bitset &operator^=(const Bitset &);
