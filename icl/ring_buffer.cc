@@ -299,20 +299,20 @@ void RingBuffer::trigger_readWorker() {
 void RingBuffer::readWorker(uint64_t now) {
   CPU::Function fstat = CPU::initFunction();
 
-  // Pass all read request to FTL
-  std::vector<LPN> pendingLPNs;
-  std::list<LPN> alignedLPN;
-
-  pendingLPNs.reserve(readPendingQueue.size());
-
-  for (auto &iter : readPendingQueue) {
-    if (iter.status == CacheStatus::ReadWait) {
-      // Collect LPNs to merge
-      pendingLPNs.emplace_back(iter.scmd->lpn);
-    }
-  }
-
   if (LIKELY(enabled)) {
+    // Pass all read request to FTL
+    std::vector<LPN> pendingLPNs;
+    std::list<LPN> alignedLPN;
+
+    pendingLPNs.reserve(readPendingQueue.size());
+
+    for (auto &iter : readPendingQueue) {
+      if (iter.status == CacheStatus::ReadWait) {
+        // Collect LPNs to merge
+        pendingLPNs.emplace_back(iter.scmd->lpn);
+      }
+    }
+
     if (pendingLPNs.size() > 0) {
       // Sort
       std::sort(pendingLPNs.begin(), pendingLPNs.end());
@@ -420,23 +420,25 @@ void RingBuffer::readWorker(uint64_t now) {
     for (auto &ctx : readPendingQueue) {
       if (ctx.status == CacheStatus::ReadWait) {
         ctx.status = CacheStatus::ReadPendingWait;
+
+        // Create request
+        uint64_t tag = makeCacheCommandTag();
+
+        commandManager->createICLRead(tag, eventReadWorkerDone, ctx.scmd->lpn,
+                                      1, now);
+
+        // Set skip bytes
+        auto &rcmd = commandManager->getCommand(tag);
+        rcmd.subCommandList.front().skipFront = ctx.scmd->skipFront;
+        rcmd.subCommandList.back().skipEnd = ctx.scmd->skipEnd;
+
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Read  | Internal | LPN %" PRIx64 "h | Skip (%u, %u)",
+                   ctx.scmd->lpn, ctx.scmd->skipFront, ctx.scmd->skipEnd);
+
+        // Store for CPU latency
+        readWorkerTag.emplace_back(tag);
       }
-    }
-
-    // Submit
-    readWorkerTag.reserve(pendingLPNs.size());
-
-    for (auto &iter : pendingLPNs) {
-      // Create request
-      uint64_t tag = makeCacheCommandTag();
-
-      commandManager->createICLRead(tag, eventReadWorkerDone, iter, 1, now);
-
-      debugprint(Log::DebugID::ICL_RingBuffer,
-                 "Read  | Internal | LPN %" PRIx64 "h", iter);
-
-      // Store for CPU latency
-      readWorkerTag.emplace_back(tag);
     }
   }
 
@@ -490,26 +492,49 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
 
       // Update address
       lastReadDoneAddress = cmd.offset + cmd.length;
-    }
 
-    // Handle completion of pending request
-    for (auto iter = readPendingQueue.begin();
-         iter != readPendingQueue.end();) {
-      if (iter->status == CacheStatus::ReadPendingWait &&
-          iter->scmd->lpn >= cmd.offset &&
-          iter->scmd->lpn < cmd.offset + cmd.length) {
-        // This pending read is completed
-        iter->scmd->status = Status::Done;
+      // Handle completion of pending request
+      for (auto iter = readPendingQueue.begin();
+           iter != readPendingQueue.end();) {
+        if (iter->status == CacheStatus::ReadPendingWait &&
+            iter->scmd->lpn >= cmd.offset &&
+            iter->scmd->lpn < cmd.offset + cmd.length) {
+          // This pending read is completed
+          iter->scmd->status = Status::Done;
 
-        // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
-        object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
-                          eventReadDRAMDone, iter->scmd->tag);
+          // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
+          object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
+                            eventReadDRAMDone, iter->scmd->tag);
 
-        // Done!
-        iter = readPendingQueue.erase(iter);
+          // Done!
+          iter = readPendingQueue.erase(iter);
+        }
+        else {
+          ++iter;
+        }
       }
-      else {
-        ++iter;
+    }
+    else {
+      // Handle completion of pending request
+      for (auto iter = readPendingQueue.begin();
+           iter != readPendingQueue.end();) {
+        if (iter->status == CacheStatus::ReadPendingWait &&
+            iter->scmd->lpn == cmd.offset &&
+            iter->scmd->skipFront == cmd.subCommandList.front().skipFront &&
+            iter->scmd->skipEnd == cmd.subCommandList.back().skipEnd) {
+          // This pending read is completed
+          iter->scmd->status = Status::Done;
+
+          // Apply DRAM -> PCIe latency (Completion on RingBuffer::read_done)
+          object.dram->read(getDRAMAddress(iter->scmd->lpn), pageSize,
+                            eventReadDRAMDone, iter->scmd->tag);
+
+          // Done!
+          iter = readPendingQueue.erase(iter);
+        }
+        else {
+          ++iter;
+        }
       }
     }
 
