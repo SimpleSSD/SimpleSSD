@@ -226,7 +226,7 @@ class RingBuffer : public AbstractCache {
     bool dirty = false;
 
     for (auto &iter : list) {
-      if (iter.dirty || iter.wpending) {
+      if (iter.dirty || iter.wpending || iter.rpending) {
         dirty = true;
 
         break;
