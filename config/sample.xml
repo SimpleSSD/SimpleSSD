@@ -631,16 +631,21 @@
         Set order of address (PPN) decomposition
         C for channel, W for way, D for die and P for package
 
-        If you set page allocation strategy as CWDP, the PPN will look like:
+        If you set page allocation strategy as CWDP, the PPN looks like:
         MSB .................. LSB
         [Plane][Die][Way][Channel]
         So that the consecutive page I/O goes to next channel.
 
-        In SimpleSSD, first-level parallelism group should be channel in above
-        example.
-        Example) Each page in first-level parallelism group ->
-                 Each page across the channel ->
-                 Can be accessed in parallel
+        In SimpleSSD, we use a term: parallelism group.
+        From the above example - CWDP:
+         First-level parallelism group is Channel,
+         Second-level parallelism group is Way,
+         Third-level parallelism group is Die and
+         Fourth-level parallelism group is Plane.
+
+        The parallelism group is stored in array named
+        FIL::Config::NANDStructure::pageAllocation[4], [0] is first-level
+        parallelism group (FIL::PageAllocation::Channel if CWDP).
 
         See following paper for more details and impacts:
         M. Jung and M. Kandemir, "An Evaluation of Different Page Allocation
