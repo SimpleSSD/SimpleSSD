@@ -120,6 +120,10 @@ void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
   eventStat.busy += busy;
   eventStat.handledFunction++;
 
+  if (UNLIKELY(eid == InvalidEventID)) {
+    return;
+  }
+
   if (jobQueue.size() == 0) {
     parent->scheduleAbs(jobEvent, 0ull, beginAt + busy);
   }
@@ -625,10 +629,6 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
   uint16_t begin = 0;
   uint16_t end = hilCore;
   uint64_t curTick = engine->getTick();
-
-  if (UNLIKELY(eid == InvalidEventID)) {
-    return;
-  }
 
   // Determine core number range
   switch (group) {
