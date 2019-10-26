@@ -1046,7 +1046,16 @@ void RingBuffer::write_find(SubCommand &scmd) {
       // Move aligned LPN + minPages to writeWaitingQueue
       LPN begin =
           alignToMinPage(wcmd.length == scmd.id + 1 ? scmd.lpn : scmd.lpn - 1);
+      LPN end = begin + minPages;
       uint64_t tag = 0;
+      LPN found = 0;
+
+      if (begin < wcmd.offset) {
+        begin = wcmd.offset;
+      }
+      if (end > wcmd.offset + wcmd.length) {
+        end = wcmd.offset + wcmd.length;
+      }
 
       for (auto iter = writePendingQueue.begin();
            iter != writePendingQueue.end();) {
@@ -1057,11 +1066,19 @@ void RingBuffer::write_find(SubCommand &scmd) {
           writeWaitingQueue.emplace_back(iter->second);
 
           iter = writePendingQueue.erase(iter);
+
+          found++;
+
+          if (found == end - begin) {
+            break;
+          }
         }
         else {
           ++iter;
         }
       }
+
+      panic_if(tag == 0, "Unexpected command tag.");
 
       writeWorkerTag.emplace_back(tag);
 
