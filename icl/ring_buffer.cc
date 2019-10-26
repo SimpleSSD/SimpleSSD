@@ -1035,7 +1035,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
         for (LPN j = offset; j < offset + length; j++) {
           writePendingQueue.emplace_back(std::make_pair(
               tag,
-              CacheContext(&wcmd.subCommandList.at(j - alignedBegin),
+              CacheContext(&wcmd.subCommandList.at(j - alignedBegin - front),
                            cacheEntry.end(), CacheStatus::WriteCacheWait)));
         }
       }
