@@ -24,16 +24,33 @@ using namespace SimpleSSD;
 
 Latency::Latency(ConfigReader *config)
     : timing(config->getNANDTiming()), power(config->getNANDPower()) {
-  uint64_t cmdlatch = timing->tCS + timing->tDH;
-  uint64_t address = cmdlatch + (timing->tDS + timing->tDH) * 5;
-  auto pagesize = config->getNANDStructure()->pageSize;
+  auto structure = config->getNANDStructure();
 
-  readdma0 = cmdlatch + address + cmdlatch;
-  readdma1 = timing->tWP + timing->tWC * pagesize + timing->tDH;
-  writedma0 =
-      cmdlatch + address + timing->tADL + timing->tRC * pagesize + cmdlatch;
-  writedma1 = timing->tWP + timing->tDH;
-  erasedma0 = cmdlatch + address;
+  uint64_t pageAddressCycle =
+      (uint64_t)(log2(structure->die) + log2(structure->plane) +
+                 log2(structure->block) + log2(structure->page));
+  uint64_t columnAddressCycle =
+      (uint64_t)(log2(structure->pageSize + structure->spareSize));
+  uint64_t width =
+      config->readUint(Section::FlashInterface, FIL::Config::Key::DMAWidth);
+
+  pageAddressCycle = DIVCEIL(pageAddressCycle, width);
+  columnAddressCycle = DIVCEIL(columnAddressCycle, width);
+
+  // From NandFlashSim
+  uint64_t cmdlatch = timing->tWP + timing->tDS + timing->tDH;
+  uint64_t addressBlock = timing->tCS - timing->tDS +
+                          (timing->tDS + timing->tDH) * pageAddressCycle;
+  uint64_t addressPage =
+      timing->tCS - timing->tDS +
+      (timing->tDS + timing->tDH) * (pageAddressCycle + columnAddressCycle);
+  auto pagesize = DIVCEIL(structure->pageSize + structure->spareSize, width);
+
+  readdma0 = cmdlatch + addressPage;
+  readdma1 = timing->tRR + timing->tRC * pagesize;
+  writedma0 = cmdlatch + addressPage + timing->tADL + timing->tWC * pagesize;
+  writedma1 = timing->tDS + timing->tRC;
+  erasedma0 = cmdlatch + addressBlock;
   erasedma1 = writedma1;
 
   powerbus = power->pVCC * power->current.pICC5;
