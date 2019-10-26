@@ -149,6 +149,7 @@ class RingBuffer : public AbstractCache {
   } stat;
 
   std::list<CacheContext> readPendingQueue;
+  std::list<std::pair<uint64_t, CacheContext>> writePendingQueue;
   std::list<CacheContext> writeWaitingQueue;
 
   // Helper API

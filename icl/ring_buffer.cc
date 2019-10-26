@@ -1012,7 +1012,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
       LPN back = alignedEnd - alignedBegin - wcmd.length - front;
 
       for (LPN i = alignedBegin; i < alignedEnd; i += minPages) {
-        LPN offset = alignedBegin;
+        LPN offset = i;
         LPN length = minPages;
         uint32_t skipFront = 0;
         uint32_t skipEnd = 0;
@@ -1033,16 +1033,38 @@ void RingBuffer::write_find(SubCommand &scmd) {
                                        skipFront, skipEnd, getTick());
 
         for (LPN j = offset; j < offset + length; j++) {
-          writeWaitingQueue.emplace_back(
-              CacheContext(&wcmd.subCommandList.at(j - offset),
-                           cacheEntry.end(), CacheStatus::WriteCacheWait));
+          writePendingQueue.emplace_back(std::make_pair(
+              tag,
+              CacheContext(&wcmd.subCommandList.at(j - alignedBegin),
+                           cacheEntry.end(), CacheStatus::WriteCacheWait)));
         }
-
-        writeWorkerTag.emplace_back(tag);
       }
     }
 
-    if (wcmd.length == scmd.id + 1) {
+    // Last request or first aligned sub command
+    if (wcmd.length == scmd.id + 1 || (isAligned(scmd.lpn) && scmd.id != 0)) {
+      // Move aligned LPN + minPages to writeWaitingQueue
+      LPN begin =
+          alignToMinPage(wcmd.length == scmd.id + 1 ? scmd.lpn : scmd.lpn - 1);
+      uint64_t tag = 0;
+
+      for (auto iter = writePendingQueue.begin();
+           iter != writePendingQueue.end();) {
+        if (begin <= iter->second.scmd->lpn &&
+            iter->second.scmd->lpn < begin + minPages) {
+          tag = iter->first;
+
+          writeWaitingQueue.emplace_back(iter->second);
+
+          iter = writePendingQueue.erase(iter);
+        }
+        else {
+          ++iter;
+        }
+      }
+
+      writeWorkerTag.emplace_back(tag);
+
       scheduleNow(eventWriteWorkerDoFTL);
     }
   }
@@ -1348,6 +1370,23 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
+  size = writePendingQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writePendingQueue) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.status);
+    BACKUP_SCALAR(out, iter.second.scmd->tag);
+    BACKUP_SCALAR(out, iter.second.scmd->id);
+
+    if (iter.second.entry != cacheEntry.end()) {
+      BACKUP_SCALAR(out, iter.second.entry->first);
+    }
+    else {
+      BACKUP_SCALAR(out, InvalidLPN);
+    }
+  }
+
   size = writeWaitingQueue.size();
   BACKUP_SCALAR(out, size);
 
@@ -1457,13 +1496,13 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
-  writeWorkerTag.reserve(size);
+  flushWorkerLPN.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
 
     RESTORE_SCALAR(in, tag);
-    writeWorkerTag.emplace_back(tag);
+    flushWorkerLPN.emplace(tag);
   }
 
   RESTORE_EVENT(in, flushTag.first);
@@ -1493,6 +1532,37 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
       panic_if(iter == cacheEntry.end(), "Entry not found while restore.");
 
       readPendingQueue.emplace_back(CacheContext(&scmd, iter, cs));
+    }
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t ctag;
+    CacheStatus cs;
+    uint64_t tag;
+    uint32_t id;
+    LPN offset;
+
+    RESTORE_SCALAR(in, ctag);
+    RESTORE_SCALAR(in, cs);
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, offset);
+
+    auto &scmd = commandManager->getSubCommand(tag).at(id);
+
+    if (offset == InvalidLPN) {
+      writePendingQueue.emplace_back(
+          std::make_pair(ctag, CacheContext(&scmd, cacheEntry.end(), cs)));
+    }
+    else {
+      auto iter = cacheEntry.find(offset);
+
+      panic_if(iter == cacheEntry.end(), "Entry not found while restore.");
+
+      writePendingQueue.emplace_back(
+          std::make_pair(ctag, CacheContext(&scmd, iter, cs)));
     }
   }
 
