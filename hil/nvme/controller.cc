@@ -105,9 +105,9 @@ Controller::~Controller() {
   // delete interconnect;
 }
 
-void Controller::notifySubsystem(uint64_t limit) {
+void Controller::notifySubsystem() {
   // NVMe::Controller always has NVMe::Subsystem
-  ((Subsystem *)subsystem)->triggerDispatch(controllerData, limit);
+  ((Subsystem *)subsystem)->triggerDispatch();
 }
 
 void Controller::shutdownComplete() {

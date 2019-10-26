@@ -38,6 +38,11 @@ Subsystem::Subsystem(ObjectData &o)
   commandRead = new Read(object, this);
   commandCompare = new Compare(object, this);
   commandDatasetManagement = new DatasetManagement(object, this);
+
+  // Create event
+  eventDispatch = createEvent([this](uint64_t, uint64_t) {
+    dispatch();
+  }, "NVMe::Subsystem::eventDispatch");
 }
 
 Subsystem::~Subsystem() {
@@ -290,37 +295,54 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
   return true;
 }
 
+void Subsystem::dispatch() {
+  CPU::Function fstat = CPU::initFunction();
+  Event nextEvent = eventDispatch;
+  bool one = false;
+
+  // Check all controller's queue
+  for (auto &iter : controllerList) {
+    auto sqc = iter.second->arbitrator->dispatch();
+
+    if (LIKELY(sqc)) {
+      one = true;
+
+      if (UNLIKELY(!submitCommand(iter.second, sqc))) {
+        debugprint(Log::DebugID::HIL_NVMe_Command,
+                   "CTRL %-3u | SQ %2u:%-5u | Unexpected OPCODE %u",
+                   iter.second->controller->getControllerID(), sqc->getSQID(),
+                   sqc->getCommandID(), sqc->getData()->dword0.opcode);
+
+        auto cqc = new CQContext();
+
+        cqc->update(sqc);
+        cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                        GenericCommandStatusCode::Invalid_Opcode);
+
+        iter.second->arbitrator->complete(cqc);
+      }
+    }
+  }
+
+  if (UNLIKELY(!one)) {
+    dispatching = false;
+    nextEvent = InvalidEventID;
+  }
+
+  scheduleFunction(CPU::CPUGroup::HostInterface, nextEvent, fstat);
+}
+
 void Subsystem::shutdownCompleted(ControllerID ctrlid) {
   // We need remove aenCommands of current controller
   commandAsyncEventRequest->clearPendingRequests(ctrlid);
 }
 
-void Subsystem::triggerDispatch(ControllerData &cdata, uint64_t limit) {
-  // For performance optimization, use ControllerData instead of ControllerID
-  for (uint64_t i = 0; i < limit; i++) {
-    auto sqc = cdata.arbitrator->dispatch();
-
-    // No request anymore
-    if (!sqc) {
-      break;
-    }
-
-    // Do command handling
-    if (!submitCommand(&cdata, sqc)) {
-      debugprint(Log::DebugID::HIL_NVMe_Command,
-                 "CTRL %-3u | SQ %2u:%-5u | Unexpected OPCODE %u",
-                 cdata.controller->getControllerID(), sqc->getSQID(),
-                 sqc->getCommandID(), sqc->getData()->dword0.opcode);
-
-      auto cqc = new CQContext();
-
-      cqc->update(sqc);
-      cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                      GenericCommandStatusCode::Invalid_Opcode);
-
-      cdata.arbitrator->complete(cqc);
-    }
+void Subsystem::triggerDispatch() {
+  if (!dispatching) {
+    scheduleNow(eventDispatch);
   }
+
+  dispatching = true;
 }
 
 void Subsystem::complete(CommandTag command) {
@@ -848,6 +870,8 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   commandCompare->createCheckpoint(out);
   commandDatasetManagement->createCheckpoint(out);
 
+  BACKUP_EVENT(out, eventDispatch);
+
   // Store HIL
   pHIL->createCheckpoint(out);
 }
@@ -931,6 +955,8 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   commandRead->restoreCheckpoint(in);
   commandCompare->restoreCheckpoint(in);
   commandDatasetManagement->restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventDispatch);
 
   pHIL->restoreCheckpoint(in);
 }

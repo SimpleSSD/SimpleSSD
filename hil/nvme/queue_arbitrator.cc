@@ -700,7 +700,7 @@ void Arbitrator::collect_done() {
   if (collectQueue.size() == 0) {
     running = false;
 
-    controller->controller->notifySubsystem(internalQueueSize);
+    controller->controller->notifySubsystem();
   }
 }
 
@@ -745,7 +745,7 @@ bool Arbitrator::collectWeightedRoundRobin() {
   uint16_t reqcount = 0;
   uint16_t oldcount = 0;
 
-  while (true) {
+  while (count <= internalQueueSize) {
     // Check urgent queues
     for (uint16_t i = 0; i < sqSize; i++) {
       if (sqList[i] && sqList[i]->getPriority() == QueuePriority::Urgent) {

@@ -66,6 +66,12 @@ class Subsystem : public AbstractSubsystem {
   Compare *commandCompare;
   DatasetManagement *commandDatasetManagement;
 
+  // Command dispatcher
+  bool dispatching;
+  Event eventDispatch;
+
+  void dispatch();
+
   bool _createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
   bool _destroyNamespace(uint32_t);
 
@@ -76,8 +82,9 @@ class Subsystem : public AbstractSubsystem {
   virtual ~Subsystem();
 
   void shutdownCompleted(ControllerID);
-  void triggerDispatch(ControllerData &, uint64_t);
   void complete(CommandTag);
+
+  void triggerDispatch();
 
   void init() override;
 
