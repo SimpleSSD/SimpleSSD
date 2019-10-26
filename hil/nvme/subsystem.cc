@@ -15,7 +15,10 @@
 namespace SimpleSSD::HIL::NVMe {
 
 Subsystem::Subsystem(ObjectData &o)
-    : AbstractSubsystem(o), controllerID(0), allocatedLogicalPages(0) {
+    : AbstractSubsystem(o),
+      controllerID(0),
+      allocatedLogicalPages(0),
+      dispatching(false) {
   pHIL = new HIL(o);
 
   // Create commands
@@ -40,9 +43,8 @@ Subsystem::Subsystem(ObjectData &o)
   commandDatasetManagement = new DatasetManagement(object, this);
 
   // Create event
-  eventDispatch = createEvent([this](uint64_t, uint64_t) {
-    dispatch();
-  }, "NVMe::Subsystem::eventDispatch");
+  eventDispatch = createEvent([this](uint64_t, uint64_t) { dispatch(); },
+                              "NVMe::Subsystem::eventDispatch");
 }
 
 Subsystem::~Subsystem() {

@@ -95,7 +95,7 @@ void DMAEngine::DMASession::deallocateBuffer() {
 }
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
-    : Object(o), interface(i), pageSize(0) {
+    : Object(o), interface(i), sessionID(0), pageSize(0) {
   eventDMADone = createEvent([this](uint64_t, uint64_t d) { dmaDone(d); },
                              "HIL::DMAEngine::dmaHandler");
   eventPRDTInitDone =

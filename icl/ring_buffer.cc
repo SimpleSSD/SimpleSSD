@@ -57,10 +57,13 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
           readConfigUint(Section::InternalCache, Config::Key::PrefetchCount),
           readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio) *
               pageSize),
+      clock(0),
       readTriggered(false),
       writeTriggered(false),
       writeRetrying(false),
       readWaitsEviction(0),
+      lastReadPendingAddress(std::numeric_limits<uint64_t>::max()),
+      lastReadDoneAddress(std::numeric_limits<uint64_t>::max()),
       flushTag({InvalidEventID, 0}) {
   auto param = pFTL->getInfo();
 
