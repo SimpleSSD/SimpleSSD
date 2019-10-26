@@ -347,7 +347,7 @@ void RingBuffer::readWorker(uint64_t now) {
 
       debugprint(Log::DebugID::ICL_RingBuffer,
                  "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64 "h",
-                 last + minPages, last + limit * minPages);
+                 last + minPages, limit * minPages);
 
       for (uint32_t i = 1; i <= limit; i++) {
         alignedLPN.emplace_back(last + i * minPages);
@@ -361,7 +361,7 @@ void RingBuffer::readWorker(uint64_t now) {
     }
 
     // Update last read address
-    lastReadPendingAddress = alignedLPN.back();
+    lastReadPendingAddress = alignedLPN.back() + minPages;
 
     // Check capacity
     readWaitsEviction = alignedLPN.size();
@@ -380,8 +380,20 @@ void RingBuffer::readWorker(uint64_t now) {
       }
 
       // Create entry
-      for (auto &lpn : alignedLPN) {
-        auto ret = cacheEntry.emplace(lpn, Entry(lpn, minPages, iobits));
+      for (auto lpn = alignedLPN.begin(); lpn != alignedLPN.end();) {
+        auto ret = cacheEntry.emplace(
+            std::make_pair(*lpn, Entry(*lpn, minPages, iobits)));
+
+        if (UNLIKELY(!ret.second)) {
+          // Entry already exists, but it may created by write caching
+          // Check this entry is in reading
+          if (isReadPending(ret.first->second.list)) {
+            lpn = alignedLPN.erase(lpn);
+
+            continue;
+          }
+        }
+
         auto &entry = ret.first->second;
 
         // As we got data from FTL, all SubEntries are valid
@@ -397,6 +409,9 @@ void RingBuffer::readWorker(uint64_t now) {
         if (ret.second) {
           entry.insertedAt = clock;
         }
+
+        // Next
+        ++lpn;
       }
 
       // Submit
@@ -470,6 +485,9 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
       // Read done
       auto iter = cacheEntry.find(cmd.offset);
       auto &entry = iter->second;
+
+      panic_if(iter == cacheEntry.end(),
+               "Entry erased while in read pending state.");
 
       debugprint(Log::DebugID::ICL_RingBuffer,
                  "Read  | Internal | LPN %" PRIx64 "h + %" PRIx64 "h | %" PRIu64
@@ -615,7 +633,7 @@ void RingBuffer::writeWorker(uint64_t now) {
       auto iter = chooseEntry(SelectionMode::Clean);
 
       if (UNLIKELY(iter == cacheEntry.end())) {
-        // All entry is write pending
+        // All entry is read/write pending
         break;
       }
 
@@ -853,8 +871,7 @@ void RingBuffer::read_find(Command &cmd) {
     if (trigger.triggered() &&
         lastReadDoneAddress != std::numeric_limits<uint64_t>::max()) {
       if (cmd.offset < lastReadPendingAddress &&
-          (lastReadPendingAddress + minPages) - cmd.offset <=
-              prefetchPages * 0.5f) {
+          lastReadPendingAddress - cmd.offset <= prefetchPages * 0.5f) {
         trigger_readWorker();
       }
     }

@@ -251,6 +251,20 @@ class RingBuffer : public AbstractCache {
     return good;
   }
 
+  inline bool isReadPending(std::vector<SubEntry> &list) {
+    bool yes = false;
+
+    for (auto &iter : list) {
+      if (iter.rpending) {
+        yes = true;
+
+        break;
+      }
+    }
+
+    return yes;
+  }
+
   // Workers
   bool readTriggered;
   bool writeTriggered;
