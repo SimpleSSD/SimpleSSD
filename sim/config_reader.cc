@@ -142,6 +142,9 @@ void ConfigReader::save(const char *path) noexcept {
 
     abort();
   }
+
+  // Close
+  file.reset();
 }
 
 //! Save configuration to file
