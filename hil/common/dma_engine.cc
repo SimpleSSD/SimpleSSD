@@ -110,11 +110,11 @@ DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
 }
 
 DMAEngine::~DMAEngine() {
-  warn_if(sessionList.size() > 0, "Not all DMA Session destoryed.");
+  warn_if(sessionList.size() > 0, "Not all DMA Session destroyed.");
 
   sessionList.clear();
 
-  warn_if(tagList.size() > 0, "Not all DMA Tag destoryed.");
+  warn_if(tagList.size() > 0, "Not all DMA Tag destroyed.");
 
   for (auto &iter : tagList) {
     delete iter;
