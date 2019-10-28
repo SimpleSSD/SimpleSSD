@@ -510,17 +510,10 @@
        -->
       <config name="EraseThreshold">100k</config>
       <!--
-        <bool> Use superpage
-
-        Superpage can be used to reduce size of mapping table by grouping pages
-        in same parallelism group. See PageAllocation for more details on
-        parallelism group.
-       -->
-      <config name="UseSuperpage">true</config>
-      <!--
         <str> Superpage configuration
 
         Specify level of parallelism group to group pages in one super page.
+        Leave empty to disable superpage.
         Example) Specify 'C' to group a page in same page index in different
         channel.
        -->

@@ -41,8 +41,7 @@ Config::Config() {
   gcMode = GCBlockReclaimMode::ByCount;
   gcReclaimBlocks = 1;
   gcReclaimThreshold = 0.1f;
-  useSuperpage = false;
-  superpageAllocation = FIL::PageAllocation::Channel;
+  superpageAllocation = FIL::PageAllocation::None;
   pmTableRatio = 0.3f;
   mergeBeginThreshold = 0.1f;
   mergeEndThreshold = 0.2f;
@@ -73,7 +72,6 @@ void Config::loadFrom(pugi::xml_node &section) {
 
         LOAD_NAME_FLOAT(node2, NAME_OVERPROVISION_RATIO, overProvision);
         LOAD_NAME_UINT(node2, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
-        LOAD_NAME_BOOLEAN(node2, NAME_USE_SUPERPAGE, useSuperpage);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
 
         if (strcmp(name2, "warmup") == 0 && isSection(node)) {
@@ -128,7 +126,6 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
   STORE_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
-  STORE_NAME_BOOLEAN(node, NAME_USE_SUPERPAGE, useSuperpage);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
 
   STORE_SECTION(node, "warmup", node2);
@@ -244,18 +241,6 @@ float Config::readFloat(uint32_t idx) {
   return ret;
 }
 
-bool Config::readBoolean(uint32_t idx) {
-  bool ret = false;
-
-  switch (idx) {
-    case UseSuperpage:
-      ret = useSuperpage;
-      break;
-  }
-
-  return ret;
-}
-
 bool Config::writeUint(uint32_t idx, uint64_t value) {
   bool ret = true;
 
@@ -319,21 +304,6 @@ bool Config::writeFloat(uint32_t idx, float value) {
       break;
     case MergeEndThreshold:
       mergeEndThreshold = value;
-      break;
-    default:
-      ret = false;
-      break;
-  }
-
-  return ret;
-}
-
-bool Config::writeBoolean(uint32_t idx, bool value) {
-  bool ret = true;
-
-  switch (idx) {
-    case UseSuperpage:
-      useSuperpage = value;
       break;
     default:
       ret = false;

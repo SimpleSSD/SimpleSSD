@@ -74,14 +74,8 @@ class AbstractMapping : public Object {
       }
     }
 
-    if (readConfigBoolean(Section::FlashTranslation,
-                          Config::Key::UseSuperpage)) {
-      param.superpageLevel = (uint8_t)readConfigUint(
-          Section::FlashTranslation, Config::Key::SuperpageAllocation);
-    }
-    else {
-      param.superpageLevel = FIL::PageAllocation::None;
-    }
+    param.superpageLevel = (uint8_t)readConfigUint(
+        Section::FlashTranslation, Config::Key::SuperpageAllocation);
 
     // Validate superpage level
     uint8_t mask = FIL::PageAllocation::None;

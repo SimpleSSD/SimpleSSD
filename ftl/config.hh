@@ -36,7 +36,6 @@ class Config : public BaseConfig {
     GCReclaimThreshold,
 
     // Common FTL setting
-    UseSuperpage,
     SuperpageAllocation,
 
     // VLFTL
@@ -82,7 +81,6 @@ class Config : public BaseConfig {
   GCBlockReclaimMode gcMode;
   uint64_t gcReclaimBlocks;
   float gcReclaimThreshold;
-  bool useSuperpage;
   uint8_t superpageAllocation;
   float pmTableRatio;
   float mergeBeginThreshold;
@@ -101,10 +99,8 @@ class Config : public BaseConfig {
 
   uint64_t readUint(uint32_t) override;
   float readFloat(uint32_t) override;
-  bool readBoolean(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
   bool writeFloat(uint32_t, float) override;
-  bool writeBoolean(uint32_t, bool) override;
 };
 
 }  // namespace SimpleSSD::FTL
