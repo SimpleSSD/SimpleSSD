@@ -30,7 +30,8 @@ class RingBuffer : public AbstractCache {
         uint8_t dirty : 1;
         uint8_t rpending : 1;  // Wait for NVM Read done
         uint8_t wpending : 1;  // Wait for NVM Write done
-        uint8_t rsvd : 5;
+        uint8_t prefetch : 1;  // Prefetched entry (should not erased)
+        uint8_t rsvd : 4;
       };
     };
 
@@ -227,7 +228,7 @@ class RingBuffer : public AbstractCache {
     bool dirty = false;
 
     for (auto &iter : list) {
-      if (iter.dirty || iter.wpending || iter.rpending) {
+      if (iter.dirty || iter.wpending || iter.rpending || iter.prefetch) {
         dirty = true;
 
         break;

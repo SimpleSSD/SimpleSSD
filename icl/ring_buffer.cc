@@ -306,6 +306,7 @@ void RingBuffer::readWorker(uint64_t now) {
     // Pass all read request to FTL
     std::vector<LPN> pendingLPNs;
     std::list<LPN> alignedLPN;
+    LPN lpnNotPrefetch = InvalidLPN;
 
     pendingLPNs.reserve(readPendingQueue.size());
 
@@ -338,11 +339,13 @@ void RingBuffer::readWorker(uint64_t now) {
 
       if (alignedLPN.size() > 0) {
         last = alignedLPN.back();
+        lpnNotPrefetch = last;
         limit =
             limit > alignedLPN.size() ? limit - (uint32_t)alignedLPN.size() : 0;
       }
       else {
-        last = lastReadPendingAddress;
+        last = lastReadPendingAddress - minPages;
+        lpnNotPrefetch = last - 1;
       }
 
       debugprint(Log::DebugID::ICL_RingBuffer,
@@ -401,6 +404,11 @@ void RingBuffer::readWorker(uint64_t now) {
         for (auto &iter : entry.list) {
           iter.valid.set();
           iter.rpending = true;
+
+          // If this entry is part of prefetch/read-ahead, mark as prefetch
+          if (lpnNotPrefetch < *lpn && trigger.triggered()) {
+            iter.prefetch = true;
+          }
         }
 
         // Update clock
@@ -834,8 +842,7 @@ void RingBuffer::read_find(Command &cmd) {
       auto iter = cacheEntry.find(lpn);
 
       if (iter != cacheEntry.end()) {
-        // Accessed
-        iter->second.accessedAt = clock;
+        bool ok = false;
 
         // Mark as done
         for (auto &scmd : cmd.subCommandList) {
@@ -863,7 +870,15 @@ void RingBuffer::read_find(Command &cmd) {
             }
 
             updateCapacity(true, scmd.skipFront + scmd.skipEnd);
+
+            sentry.prefetch = false;
+            ok = true;
           }
+        }
+
+        if (ok) {
+          // Accessed
+          iter->second.accessedAt = clock;
         }
       }
     }
