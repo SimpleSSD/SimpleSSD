@@ -395,6 +395,7 @@ void BasicFTL::gc_read() {
 
   cmd.eid = eventGCErase;
   cmd.opcode = Operation::Erase;
+  cmd.counter = 0;
 
   debugprint(Log::DebugID::FTL,
              "GC    | Erase | PPN %" PRIx64 "h + %" PRIx64 "h",
@@ -445,7 +446,13 @@ void BasicFTL::gc_writeDone() {
 }
 
 void BasicFTL::gc_erase() {
-  pAllocator->reclaimBlocks(gcCopyList.blockID, eventGCEraseDone);
+  auto &cmd = commandManager->getCommand(gcCopyList.eraseTag);
+
+  cmd.counter++;
+
+  if (cmd.counter == cmd.length) {
+    pAllocator->reclaimBlocks(gcCopyList.blockID, eventGCEraseDone);
+  }
 }
 
 void BasicFTL::gc_eraseDone() {
