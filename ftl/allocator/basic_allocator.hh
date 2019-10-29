@@ -19,24 +19,17 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 class BasicAllocator : public AbstractAllocator {
  protected:
-  struct BlockMetadata {
-    PPN blockID;
-    uint64_t erasedCount;
-
-    BlockMetadata() : blockID(InvalidPPN), erasedCount(0) {}
-    BlockMetadata(PPN id) : blockID(id), erasedCount(0) {}
-    BlockMetadata(PPN id, uint64_t e) : blockID(id), erasedCount(e) {}
-  };
-
   uint64_t parallelism;
   uint64_t totalSuperblock;
 
-  PPN lastAllocated;             // Used for pMapper->initialize
-  BlockMetadata *inUseBlockMap;  // Allocated free blocks
+  uint32_t *eraseCountList;
 
-  uint64_t freeBlockCount;               // Shortcut
-  std::list<BlockMetadata> *freeBlocks;  // Free blocks sorted
-  std::list<BlockMetadata> fullBlocks;   // Sorted in erased count
+  PPN lastAllocated;   // Used for pMapper->initialize
+  PPN *inUseBlockMap;  // Allocated free blocks
+
+  uint64_t freeBlockCount;     // Shortcut
+  std::list<PPN> *freeBlocks;  // Free blocks sorted in erased count
+  std::multimap<uint32_t, PPN> fullBlocks;
 
   Config::VictimSelectionMode selectionMode;
   Config::GCBlockReclaimMode countMode;

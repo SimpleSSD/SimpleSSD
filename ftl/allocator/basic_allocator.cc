@@ -39,7 +39,8 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 }
 
 BasicAllocator::~BasicAllocator() {
-  delete[] inUseBlockMap;
+  free(eraseCountList);
+  free(inUseBlockMap);
   delete[] freeBlocks;
 }
 
@@ -51,8 +52,9 @@ void BasicAllocator::initialize(Parameter *p) {
   freeBlockCount = totalSuperblock;
 
   // Allocate data
-  inUseBlockMap = new BlockMetadata[parallelism]();
-  freeBlocks = new std::list<BlockMetadata>[parallelism]();
+  eraseCountList = (uint32_t *)calloc(totalSuperblock, sizeof(uint32_t));
+  inUseBlockMap = (PPN *)calloc(parallelism, sizeof(PPN));
+  freeBlocks = new std::list<PPN>[parallelism]();
 
   lastAllocated = 0;
 
@@ -73,18 +75,12 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   if (LIKELY(blockUsed != InvalidPPN)) {
     idx = getParallelismFromSPPN(blockUsed);
 
-    panic_if(inUseBlockMap[idx].blockID != blockUsed, "Unexpected block ID.");
+    panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
 
     // Insert to full block list
-    auto iter = fullBlocks.begin();
+    uint32_t erased = eraseCountList[blockUsed];
 
-    for (; iter != fullBlocks.end(); ++iter) {
-      if (iter->erasedCount > inUseBlockMap[idx].erasedCount) {
-        break;
-      }
-    }
-
-    fullBlocks.emplace(iter, inUseBlockMap[idx]);
+    fullBlocks.emplace(std::make_pair(erased, blockUsed));
   }
   else {
     lastAllocated++;
@@ -99,7 +95,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
 
   // Allocate new block
   inUseBlockMap[idx] = std::move(freeBlocks[idx].front());
-  blockUsed = inUseBlockMap[idx].blockID;
+  blockUsed = inUseBlockMap[idx];
 
   freeBlocks[idx].pop_front();
   freeBlockCount--;
@@ -109,7 +105,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
 
 PPN BasicAllocator::getBlockAt(PPN idx) {
   if (idx == InvalidPPN) {
-    PPN ppn = inUseBlockMap[lastAllocated++].blockID;
+    PPN ppn = inUseBlockMap[lastAllocated++];
 
     if (lastAllocated == parallelism) {
       lastAllocated = 0;
@@ -118,9 +114,9 @@ PPN BasicAllocator::getBlockAt(PPN idx) {
     return ppn;
   }
 
-  panic_if(idx >= parallelism, "Invalid block index.");
+  panic_if(idx >= parallelism, "Invalid parallelism index.");
 
-  return inUseBlockMap[idx].blockID;
+  return inUseBlockMap[idx];
 }
 
 bool BasicAllocator::checkGCThreshold() {
@@ -151,7 +147,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
   if (UNLIKELY(fullBlocks.size() <= blocksToReclaim * dchoice)) {
     // Copy usedBlocks to list from front (sorted!)
     for (auto &iter : fullBlocks) {
-      list.emplace_back(iter.blockID);
+      list.emplace_back(iter.second);
 
       if (list.size() == blocksToReclaim) {
         break;
@@ -197,7 +193,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
 
         for (uint64_t i = 0; i < size; i++) {
           if (i == offsets.at(list.size())) {
-            list.emplace_back(iter->blockID);
+            list.emplace_back(iter->second);
           }
 
           ++iter;
@@ -216,7 +212,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
           // Greedy
           for (auto &iter : fullBlocks) {
             valid.emplace_back(std::make_pair(
-                iter.blockID, pMapper->getValidPages(iter.blockID)));
+                iter.second, pMapper->getValidPages(iter.second)));
           }
         }
         else {
@@ -254,27 +250,34 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
 void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   CPU::Function fstat = CPU::initFunction();
 
-  // Find PPN in full block list
-  for (auto iter = fullBlocks.begin(); iter != fullBlocks.end(); ++iter) {
-    if (iter->blockID == blockID) {
-      iter->erasedCount++;
+  panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
-      // Push to free block list
-      PPN idx = getParallelismFromSPPN(blockID);
-      auto fb = freeBlocks[idx].begin();
+  // Remove PPN from full block list
+  uint32_t erased = eraseCountList[blockID];
+  auto range = fullBlocks.equal_range(erased);
 
-      for (; fb != freeBlocks[idx].end(); ++fb) {
-        if (fb->erasedCount > iter->erasedCount) {
-          break;
-        }
-      }
-
-      freeBlocks[idx].emplace(fb, *iter);
+  for (auto iter = range.first; iter != range.second; ++iter) {
+    if (iter->second == blockID) {
       fullBlocks.erase(iter);
+    }
+  }
 
+  // Erased!
+  erased++;
+
+  // Insert PPN to free block list
+  PPN idx = getParallelismFromSPPN(blockID);
+  auto fb = freeBlocks[idx].begin();
+
+  for (; fb != freeBlocks[idx].end(); ++fb) {
+    if (eraseCountList[*fb] > erased) {
       break;
     }
   }
+
+  freeBlocks[idx].emplace(fb, blockID);
+
+  eraseCountList[blockID] = erased;
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
@@ -289,7 +292,8 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, totalSuperblock);
   BACKUP_SCALAR(out, lastAllocated);
-  BACKUP_BLOB(out, inUseBlockMap, sizeof(BlockMetadata) * parallelism);
+  BACKUP_BLOB(out, eraseCountList, sizeof(uint32_t) * totalSuperblock);
+  BACKUP_BLOB(out, inUseBlockMap, sizeof(PPN) * parallelism);
   BACKUP_SCALAR(out, freeBlockCount);
 
   uint64_t size;
@@ -299,8 +303,7 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, size);
 
     for (auto &iter : freeBlocks[i]) {
-      BACKUP_SCALAR(out, iter.blockID);
-      BACKUP_SCALAR(out, iter.erasedCount);
+      BACKUP_SCALAR(out, iter);
     }
   }
 
@@ -308,8 +311,8 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : fullBlocks) {
-    BACKUP_SCALAR(out, iter.blockID);
-    BACKUP_SCALAR(out, iter.erasedCount);
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
   }
 
   BACKUP_SCALAR(out, selectionMode);
@@ -330,7 +333,8 @@ void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != totalSuperblock, "FTL configuration mismatch.");
 
   RESTORE_SCALAR(in, lastAllocated);
-  RESTORE_BLOB(in, inUseBlockMap, sizeof(BlockMetadata) * parallelism);
+  RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
+  RESTORE_BLOB(in, inUseBlockMap, sizeof(PPN) * parallelism);
   RESTORE_SCALAR(in, freeBlockCount);
 
   uint64_t size;
@@ -340,12 +344,10 @@ void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
 
     for (uint64_t j = 0; j < size; j++) {
       PPN id;
-      uint64_t e;
 
       RESTORE_SCALAR(in, id);
-      RESTORE_SCALAR(in, e);
 
-      freeBlocks[i].emplace_back(BlockMetadata(id, e));
+      freeBlocks[i].emplace_back(id);
     }
   }
 
@@ -355,10 +357,10 @@ void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
     PPN id;
     uint64_t e;
 
-    RESTORE_SCALAR(in, id);
     RESTORE_SCALAR(in, e);
+    RESTORE_SCALAR(in, id);
 
-    fullBlocks.emplace_back(BlockMetadata(id, e));
+    fullBlocks.emplace(id, e);
   }
 
   RESTORE_SCALAR(in, selectionMode);
