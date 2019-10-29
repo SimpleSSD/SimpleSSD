@@ -454,7 +454,7 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
            "Try to erase not-full block.");
 
   // For the valid pages in target block, create I/O operation
-  copy.commandList.reserve(filparam->page);
+  copy.commandList.reserve(block->validPages.count());
 
   for (uint32_t i = 0; i < filparam->page; i++) {
     if (block->validPages.test(i)) {
