@@ -545,7 +545,11 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
 
   // For the target block, create erase operation
   copy.eraseTag = pFTL->makeFTLCommandTag();
+
   auto &erasecmd = commandManager->createFTLCommand(copy.eraseTag);
+
+  erasecmd.offset = InvalidLPN;  // Erase has no LPN
+  erasecmd.length = param.superpage;
 
   for (uint32_t i = 0; i < param.superpage; i++) {
     commandManager->appendTranslation(erasecmd, InvalidLPN,
