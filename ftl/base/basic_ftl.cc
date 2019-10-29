@@ -65,6 +65,14 @@ BasicFTL::~BasicFTL() {}
 void BasicFTL::read_find(Command &cmd) {
   Command *pcmd = &cmd;
 
+  // Check write pending queue
+  for (auto &iter : writePendingQueue) {
+    if (iter->offset <= cmd.offset &&
+        cmd.offset + cmd.length <= iter->offset + iter->length) {
+      // Current read command can be served by write pending queue
+    }
+  }
+
   // If we don't allow page-level read,
   if (!allowPageRead) {
     // Check this request is aligned to mapping granularity
@@ -114,12 +122,9 @@ void BasicFTL::write_find(Command &cmd) {
   if (UNLIKELY(!pMapper->writeable(cmd))) {
     writePendingQueue.push_back(&cmd);
 
-    return;
-  }
+    triggerGC();
 
-  // Check GC threshold for On-demand GC
-  if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
-    scheduleNow(eventGCTrigger);
+    return;
   }
 
   // Check this request is aligned to mapping granularity
@@ -242,6 +247,8 @@ void BasicFTL::write_findDone() {
 void BasicFTL::write_doFIL(uint64_t tag) {
   // Now we have PPN
   pFIL->submit(tag);
+
+  triggerGC();
 }
 
 void BasicFTL::write_readModifyDone() {
@@ -312,6 +319,8 @@ void BasicFTL::write_rmwDone() {
         scheduleNow(eventWriteFindDone);
       }
     }
+
+    triggerGC();
   }
 }
 
@@ -503,6 +512,8 @@ void BasicFTL::gc_done(uint64_t now) {
       ++iter;
     }
   }
+
+  triggerGC();
 }
 
 void BasicFTL::submit(uint64_t tag) {

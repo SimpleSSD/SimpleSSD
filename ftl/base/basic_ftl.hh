@@ -63,6 +63,13 @@ class BasicFTL : public AbstractFTL {
 
   std::list<ReadModifyWriteContext> rmwList;
 
+  inline void triggerGC() {
+    if ((pAllocator->checkGCThreshold() || writePendingQueue.size() > 0) &&
+        formatInProgress == 0) {
+      scheduleNow(eventGCTrigger);
+    }
+  }
+
   void read_find(Command &);
 
   Event eventReadDoFIL;
