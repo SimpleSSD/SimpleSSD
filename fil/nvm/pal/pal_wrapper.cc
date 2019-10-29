@@ -45,6 +45,10 @@ PALOLD::PALOLD(ObjectData &o, CommandManager *m)
   stats = new PALStatistics(object.config, lat);
   pal = new PAL2(stats, object.config, lat);
 
+  // Reserve with total physical page count
+  spareList.reserve(stats->channel * stats->package * param->die *
+                    param->plane * param->block * param->die);
+
   completeEvent = createEvent([this](uint64_t t, uint64_t) { completion(t); },
                               "FIL::PALOLD::completeEvent");
 
@@ -161,11 +165,7 @@ void PALOLD::completion(uint64_t) {
 }
 
 void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
-  if (list.size() == 0) {
-    list.resize(param->spareSize);
-  }
-
-  panic_if(list.size() != param->spareSize, "Unexpected size of spare data.");
+  panic_if(list.size() > param->spareSize, "Unexpected size of spare data.");
 
   // Find PPN
   auto iter = spareList.find(ppn);
@@ -173,27 +173,23 @@ void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
   panic_if(iter == spareList.end(),
            "PPN %" PRIx64 "h does not written and no spare data.", ppn);
 
-  memcpy(list.data(), iter->second.data(), param->spareSize);
+  // Copy
+  list = iter->second;
 }
 
 void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
-  if (list.size() == 0) {
-    return;
-  }
-
-  panic_if(list.size() != param->spareSize, "Unexpected size of spare data.");
+  panic_if(list.size() > param->spareSize, "Unexpected size of spare data.");
 
   // Find PPN
   auto iter = spareList.find(ppn);
 
   if (iter == spareList.end()) {
-    iter = spareList
-               .emplace(std::make_pair(
-                   ppn, std::vector<uint8_t>(param->spareSize, 0)))
-               .first;
+    iter = spareList.emplace(std::make_pair(ppn, list)).first;
   }
-
-  memcpy(iter->second.data(), list.data(), param->spareSize);
+  else {
+    // Move
+    iter->second = std::move(list);
+  }
 }
 
 void PALOLD::eraseSpare(PPN ppn) {

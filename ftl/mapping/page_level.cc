@@ -139,8 +139,8 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
 }
 
 void PageLevel::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
-  if (UNLIKELY(spare.size() != filparam->spareSize)) {
-    spare.resize(filparam->spareSize);
+  if (spare.size() != sizeof(LPN)) {
+    spare.resize(sizeof(LPN));
   }
 
   memcpy(spare.data(), &lpn, sizeof(LPN));
@@ -149,7 +149,7 @@ void PageLevel::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
 LPN PageLevel::readSpare(std::vector<uint8_t> &spare) {
   LPN lpn = InvalidLPN;
 
-  panic_if(spare.size() != filparam->spareSize, "Empty spare data.");
+  panic_if(spare.size() < sizeof(LPN), "Empty spare data.");
 
   memcpy(&lpn, spare.data(), sizeof(LPN));
 
