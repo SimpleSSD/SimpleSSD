@@ -47,6 +47,7 @@ class AbstractAllocator : public Object {
 
   // For FTL
   virtual bool checkGCThreshold() = 0;
+  virtual bool stallRequest() = 0;
   virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
   virtual void reclaimBlocks(PPN, Event) = 0;
 

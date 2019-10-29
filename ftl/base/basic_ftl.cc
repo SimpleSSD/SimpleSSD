@@ -119,7 +119,7 @@ void BasicFTL::write_find(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
   // Check we have blocks (we need to stall writes)
-  if (UNLIKELY(!pMapper->writeable(cmd))) {
+  if (UNLIKELY(pAllocator->stallRequest())) {
     writePendingQueue.push_back(&cmd);
 
     triggerGC();
@@ -503,7 +503,7 @@ void BasicFTL::gc_done(uint64_t now) {
     auto pcmd = *iter;
 
     // Check writable
-    if (pMapper->writeable(*pcmd)) {
+    if (!pAllocator->stallRequest()) {
       iter = writePendingQueue.erase(iter);
 
       write_find(*pcmd);
