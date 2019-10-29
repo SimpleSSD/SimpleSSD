@@ -314,6 +314,7 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   }
 
   freeBlocks[idx].emplace(fb, blockID);
+  freeBlockCount++;
 
   eraseCountList[blockID] = erased;
 
