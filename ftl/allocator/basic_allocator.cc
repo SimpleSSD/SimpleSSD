@@ -284,6 +284,8 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   uint32_t erased = eraseCountList[blockID];
   auto range = fullBlocks.equal_range(erased);
 
+  panic_if(range.first == range.second, "Full block list corrupted.");
+
   for (auto iter = range.first; iter != range.second; ++iter) {
     if (iter->second == blockID) {
       fullBlocks.erase(iter);
