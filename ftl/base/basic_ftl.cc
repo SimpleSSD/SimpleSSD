@@ -379,6 +379,10 @@ void BasicFTL::gc_read() {
     cmd.opcode = Operation::Read;
     cmd.counter = 0;
 
+    debugprint(Log::DebugID::FTL,
+               "GC    | Read  | PPN %" PRIx64 "h + %" PRIx64 "h",
+               cmd.subCommandList.front().ppn, cmd.length);
+
     pFIL->submit(cmd.tag);
 
     return;
@@ -399,7 +403,14 @@ void BasicFTL::gc_write() {
   cmd.counter++;
 
   if (cmd.counter == cmd.length) {
+    PPN old = cmd.subCommandList.front().ppn;
+
     pMapper->writeMapping(cmd, eventGCWrite);
+
+    debugprint(Log::DebugID::FTL,
+               "GC    | Write | PPN %" PRIx64 "h (LPN %" PRIx64
+               "h) -> PPN %" PRIx64 "h + %" PRIx64 "h",
+               old, cmd.offset, cmd.subCommandList.front().ppn, cmd.length);
   }
 }
 
