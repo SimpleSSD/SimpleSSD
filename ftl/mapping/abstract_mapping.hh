@@ -157,6 +157,7 @@ class AbstractMapping : public Object {
   virtual uint32_t getValidPages(PPN) = 0;
 
   // I/O interfaces
+  virtual bool writeable(Command &) = 0;
   virtual CPU::Function readMapping(Command &) = 0;
   virtual CPU::Function writeMapping(Command &) = 0;
   virtual CPU::Function invalidateMapping(Command &) = 0;

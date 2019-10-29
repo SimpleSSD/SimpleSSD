@@ -79,42 +79,56 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
   return std::move(fstat);
 }
 
-CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
+CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool dry) {
   CPU::Function fstat = CPU::initFunction();
 
   panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
 
-  if (validEntry.test(lpn)) {
-    // This is valid entry, invalidate block
-    PPN old = readEntry(lpn);
-    PPN block = getSBFromSPPN(old);
-    PPN page = getPageIndexFromSPPN(old);
+  if (UNLIKELY(dry)) {
+    // Check next block to write
+    PPN idx = allocator->getBlockAt(InvalidPPN, true);
 
-    blockMetadata[block].validPages.reset(page);
+    auto block = &blockMetadata[idx];
+
+    if (block->nextPageToWrite == block->validPages.size()) {
+      fstat += allocator->allocateBlock(idx, true);
+    }
+
+    ppn = idx;
   }
   else {
-    validEntry.set(lpn);
+    if (validEntry.test(lpn)) {
+      // This is valid entry, invalidate block
+      PPN old = readEntry(lpn);
+      PPN block = getSBFromSPPN(old);
+      PPN page = getPageIndexFromSPPN(old);
+
+      blockMetadata[block].validPages.reset(page);
+    }
+    else {
+      validEntry.set(lpn);
+    }
+
+    // Get block from allocated block pool
+    PPN idx = allocator->getBlockAt(InvalidPPN);
+
+    auto block = &blockMetadata[idx];
+
+    // Check we have to get new block
+    if (block->nextPageToWrite == block->validPages.size()) {
+      // Get a new block
+      fstat += allocator->allocateBlock(idx);
+
+      block = &blockMetadata[idx];
+    }
+
+    // Get new page
+    block->validPages.set(block->nextPageToWrite);
+    ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
+
+    // Write entry
+    writeEntry(lpn, ppn);
   }
-
-  // Get block from allocated block pool
-  PPN idx = allocator->getBlockAt(InvalidPPN);
-
-  auto block = &blockMetadata[idx];
-
-  // Check we have to get new block
-  if (block->nextPageToWrite == block->validPages.size()) {
-    // Get a new block
-    fstat += allocator->allocateBlock(idx);
-
-    block = &blockMetadata[idx];
-  }
-
-  // Get new page
-  block->validPages.set(block->nextPageToWrite);
-  ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
-
-  // Write entry
-  writeEntry(lpn, ppn);
 
   return std::move(fstat);
 }
@@ -326,6 +340,31 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
 
 uint32_t PageLevel::getValidPages(PPN ppn) {
   return (uint32_t)blockMetadata[getSBFromSPPN(ppn)].validPages.count();
+}
+
+bool PageLevel::writeable(Command &cmd) {
+  // Check current request can be successfully written
+  panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
+
+  // Perform write translation
+  LPN lpn = InvalidLPN;
+  PPN ppn = InvalidPPN;
+
+  for (auto &scmd : cmd.subCommandList) {
+    LPN currentLPN = scmd.lpn / param.superpage;
+
+    if (lpn != currentLPN) {
+      lpn = currentLPN;
+
+      writeMappingInternal(lpn, ppn, true);
+
+      if (ppn == InvalidPPN) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 CPU::Function PageLevel::readMapping(Command &cmd) {
