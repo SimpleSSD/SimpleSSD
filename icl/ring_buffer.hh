@@ -124,7 +124,6 @@ class RingBuffer : public AbstractCache {
 
   // Evict unit
   float triggerThreshold;
-  bool noPageLimit;     // FTL allows any write size (in pageSize granularity)
   uint32_t minPages;    // FTL prefered write granularity
   uint32_t evictPages;  // Request evict pages
   std::random_device rd;

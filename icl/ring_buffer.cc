@@ -90,15 +90,6 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   // Calculate FTL's write granularity
   minPages = (uint32_t)param->superpage;
 
-  if (minPages == 1) {
-    noPageLimit = true;
-
-    minPages = param->parallelismLevel[0];  // First parallelism level
-  }
-  else {
-    noPageLimit = false;
-  }
-
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::PrefetchMode)) {
     case Config::Granularity::SuperpageLevel:
@@ -604,13 +595,11 @@ void RingBuffer::writeWorker(uint64_t now) {
       bool notfound = true;
       auto iter = cacheEntry.end();
 
-      if (!noPageLimit) {
-        // Collect full-sized request when FTL wants minPages write
-        iter = chooseEntry(SelectionMode::FullSized);
+      // Collect full-sized request
+      iter = chooseEntry(SelectionMode::FullSized);
 
-        if (LIKELY(iter != cacheEntry.end())) {
-          notfound = false;
-        }
+      if (LIKELY(iter != cacheEntry.end())) {
+        notfound = false;
       }
 
       if (notfound) {
@@ -1346,7 +1335,6 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dirtyEntryCount);
   BACKUP_SCALAR(out, enabled);
   BACKUP_SCALAR(out, prefetchEnabled);
-  BACKUP_SCALAR(out, noPageLimit);
   BACKUP_SCALAR(out, minPages);
 
   uint64_t size = cacheEntry.size();
@@ -1479,9 +1467,6 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, dirtyEntryCount);
   RESTORE_SCALAR(in, enabled);
   RESTORE_SCALAR(in, prefetchEnabled);
-
-  RESTORE_SCALAR(in, tmp8);
-  panic_if((bool)tmp8 != noPageLimit, "FTL not matched while restore.");
 
   RESTORE_SCALAR(in, tmp32);
   panic_if(tmp32 != minPages, "FTL not matched while restore.");
