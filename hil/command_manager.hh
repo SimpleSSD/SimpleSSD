@@ -96,7 +96,8 @@ struct Command {
         opcode(Operation::None),
         offset(InvalidLPN),
         length(InvalidLPN),
-        counter(0) {}
+        counter(0),
+        beginAt(0) {}
 };
 
 class CommandManager : public Object {

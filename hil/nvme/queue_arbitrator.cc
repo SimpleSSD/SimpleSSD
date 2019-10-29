@@ -741,7 +741,7 @@ bool Arbitrator::collectRoundRobin() {
 }
 
 bool Arbitrator::collectWeightedRoundRobin() {
-  uint16_t count;
+  uint16_t count = 0;
   uint16_t reqcount = 0;
   uint16_t oldcount = 0;
 
