@@ -35,6 +35,9 @@ Config::Config() {
   fillRatio = 1.f;
   invalidFillRatio = 0.f;
 
+  mergeRMW = false;
+  allowPageLevelRead = false;
+
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
   gcThreshold = 0.05f;
