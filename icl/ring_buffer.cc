@@ -1459,7 +1459,6 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
 void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t tmp64;
   uint32_t tmp32;
-  uint8_t tmp8;
 
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != maxEntryCount, "Cache size not matched while restore.");
