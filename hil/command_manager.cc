@@ -185,7 +185,8 @@ void CommandManager::createICLWrite(uint64_t tag, Event eid, LPN slpn, LPN nlp,
 SubCommand &CommandManager::appendTranslation(Command &cmd, LPN lpn, PPN ppn) {
   auto &scmd = createSubCommand(cmd);
 
-  panic_if(scmd.id != lpn - cmd.offset, "Invalid LPN specified.");
+  panic_if(lpn != InvalidLPN && scmd.id != lpn - cmd.offset,
+           "Invalid LPN specified.");
 
   scmd.lpn = lpn;
   scmd.ppn = ppn;
