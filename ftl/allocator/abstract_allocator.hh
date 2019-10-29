@@ -42,8 +42,8 @@ class AbstractAllocator : public Object {
   virtual void initialize(Parameter *p) { param = p; };
 
   // For AbstractMapping
-  virtual CPU::Function allocateBlock(PPN &, bool = false) = 0;
-  virtual PPN getBlockAt(PPN, bool = false) = 0;
+  virtual CPU::Function allocateBlock(PPN &) = 0;
+  virtual PPN getBlockAt(PPN) = 0;
 
   // For FTL
   virtual bool checkGCThreshold() = 0;

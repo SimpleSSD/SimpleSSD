@@ -74,64 +74,65 @@ void BasicAllocator::initialize(Parameter *p) {
   }
 }
 
-CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, bool dry) {
+CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   CPU::Function fstat = CPU::initFunction();
   PPN idx = lastAllocated;
 
-  if (UNLIKELY(dry)) {
-    if (LIKELY(blockUsed != InvalidPPN)) {
-      idx = getParallelismFromSPPN(blockUsed);
-    }
+  if (LIKELY(blockUsed != InvalidPPN)) {
+    idx = getParallelismFromSPPN(blockUsed);
 
-    if (freeBlocks[idx].size() <= 1) {
-      blockUsed = InvalidPPN;
-    }
+    panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
+
+    // Insert to full block list
+    uint32_t erased = eraseCountList[blockUsed];
+
+    fullBlocks.emplace(std::make_pair(erased, blockUsed));
   }
   else {
-    if (LIKELY(blockUsed != InvalidPPN)) {
-      idx = getParallelismFromSPPN(blockUsed);
+    lastAllocated++;
 
-      panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
-
-      // Insert to full block list
-      uint32_t erased = eraseCountList[blockUsed];
-
-      fullBlocks.emplace(std::make_pair(erased, blockUsed));
+    if (lastAllocated == parallelism) {
+      lastAllocated = 0;
     }
-    else {
-      lastAllocated++;
+  }
 
-      if (lastAllocated == parallelism) {
-        lastAllocated = 0;
+  if (UNLIKELY(freeBlocks[idx].size() == 0)) {
+    // Find next index
+    PPN i = idx;
+
+    while (true) {
+      i++;
+
+      if (i == parallelism) {
+        i = 0;
+      }
+
+      if (i == idx) {
+        break;
+      }
+
+      if (freeBlocks[i].size() > 0) {
+        idx = i;
+
+        break;
       }
     }
-
-    panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
-             idx);
-
-    // Allocate new block
-    inUseBlockMap[idx] = std::move(freeBlocks[idx].front());
-    blockUsed = inUseBlockMap[idx];
-
-    freeBlocks[idx].pop_front();
-    freeBlockCount--;
   }
+
+  panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
+           idx);
+
+  // Allocate new block
+  inUseBlockMap[idx] = freeBlocks[idx].front();
+  blockUsed = inUseBlockMap[idx];
+
+  freeBlocks[idx].pop_front();
+  freeBlockCount--;
 
   return std::move(fstat);
 }
 
-PPN BasicAllocator::getBlockAt(PPN idx, bool dry) {
-  if (UNLIKELY(dry)) {
-    if (idx == InvalidPPN) {
-      return inUseBlockMap[lastAllocated];
-    }
-    else {
-      panic_if(idx >= parallelism, "Invalid parallelism index.");
-
-      return inUseBlockMap[idx];
-    }
-  }
-
+PPN BasicAllocator::getBlockAt(PPN idx) {
   if (idx == InvalidPPN) {
     PPN ppn = inUseBlockMap[lastAllocated++];
 
