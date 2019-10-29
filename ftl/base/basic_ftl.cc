@@ -459,6 +459,7 @@ void BasicFTL::gc_eraseDone() {
   scheduleNow(eventGCGetBlockList);
 
   pMapper->releaseCopyList(gcCopyList);
+  gcCopyList.commandList.clear();
 }
 
 void BasicFTL::gc_done(uint64_t now) {
