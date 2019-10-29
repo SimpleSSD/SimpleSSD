@@ -281,16 +281,24 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
   // Remove PPN from full block list
+  bool ok = false;
   uint32_t erased = eraseCountList[blockID];
-  auto range = fullBlocks.equal_range(erased);
+  auto iter = fullBlocks.find(erased);
 
-  panic_if(range.first == range.second, "Full block list corrupted.");
+  panic_if(iter == fullBlocks.end(), "Full block list corrupted.");
 
-  for (auto iter = range.first; iter != range.second; ++iter) {
+  for (; iter != fullBlocks.end(); ++iter) {
+    if (iter->first != erased) {
+      break;
+    }
+
     if (iter->second == blockID) {
+      ok = true;
       fullBlocks.erase(iter);
     }
   }
+
+  panic_if(!ok, "Full block list corrupted.");
 
   // Erased!
   erased++;
