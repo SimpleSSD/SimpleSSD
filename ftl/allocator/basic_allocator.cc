@@ -96,6 +96,8 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
     }
   }
 
+  // It would be better to perform GC in balanced way - equally distributed in
+  // each parallelism level. But that is hard to implement.
   if (UNLIKELY(freeBlocks[idx].size() == 0)) {
     // Find next index
     PPN i = idx;
