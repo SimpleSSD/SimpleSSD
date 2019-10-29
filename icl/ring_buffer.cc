@@ -685,8 +685,8 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
       commandManager->createICLWrite(
           tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-          (uint32_t)iter->second.list.at(offset).valid.clz() * minIO,
-          (uint32_t)iter->second.list.at(offset + length - 1).valid.ctz() *
+          (uint32_t)iter->second.list.at(offset).valid.ctz() * minIO,
+          (uint32_t)iter->second.list.at(offset + length - 1).valid.clz() *
               minIO,
           now);
 
@@ -707,8 +707,8 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
 
     commandManager->createICLWrite(
         tag, eventWriteWorkerDone, iter->second.offset + offset, length,
-        (uint32_t)iter->second.list.at(offset).valid.clz() * minIO,
-        (uint32_t)iter->second.list.at(offset + length - 1).valid.ctz() * minIO,
+        (uint32_t)iter->second.list.at(offset).valid.ctz() * minIO,
+        (uint32_t)iter->second.list.at(offset + length - 1).valid.clz() * minIO,
         now);
 
     debugprint(Log::DebugID::ICL_RingBuffer,
