@@ -510,6 +510,31 @@
         channel.
        -->
       <config name="SuperpageAllocation">C</config>
+      <!--
+        <bool> Merge duplicated read-modify-write operation
+
+        If request size is smaller than (super)page, we need to read old data
+        from underlying NVM (Read), update with partial data (Modify) and write
+        updated (super)page-sized data to NVM (Write).
+
+        In FTL::Base::BasicFTL, it maintains read-modify-write queue. If two or
+        more read-modify-write operations have same PPN, it merges into one
+        read-modify-write operation to improve performance. If this config value
+        is false, BasicFTL will not perform merge operation.
+       -->
+      <config name="MergeReadModifyWrite">true</config>
+      <!--
+        <bool> Allow page-granularity read when using superpage
+
+        When using superpage, the FTL reads data in superpage granularity. If
+        this config value is true, FTL reads data in page granularity even if
+        FTL is using superpage-level mapping.
+
+        To observe performance impacts of this configuration, you may need to
+        disable data cache (ICL::RingBuffer always reads data in superpage
+        granularity to fill one buffer entry).
+       -->
+      <config name="AllowPageGranularityRead">true</config>
       <!-- Filling/Warm-up configuration -->
       <section name="warmup">
         <!--

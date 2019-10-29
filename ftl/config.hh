@@ -19,7 +19,6 @@ class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
     MappingMode,
-    OverProvisioningRatio,
 
     // Filling
     FillingMode,
@@ -35,7 +34,10 @@ class Config : public BaseConfig {
     GCReclaimThreshold,
 
     // Common FTL setting
+    OverProvisioningRatio,
     SuperpageAllocation,
+    MergeReadModifyWrite,
+    AllowPageLevelRead,
 
     // VLFTL
     VLTableRatio,
@@ -73,6 +75,9 @@ class Config : public BaseConfig {
   float fillRatio;
   float invalidFillRatio;
 
+  bool mergeRMW;
+  bool allowPageLevelRead;
+
   VictimSelectionMode gcBlockSelection;
   uint64_t dChoiceParam;
   float gcThreshold;
@@ -97,8 +102,10 @@ class Config : public BaseConfig {
 
   uint64_t readUint(uint32_t) override;
   float readFloat(uint32_t) override;
+  bool readBoolean(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
   bool writeFloat(uint32_t, float) override;
+  bool writeBoolean(uint32_t, bool) override;
 };
 
 }  // namespace SimpleSSD::FTL
