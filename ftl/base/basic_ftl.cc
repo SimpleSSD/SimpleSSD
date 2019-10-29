@@ -315,7 +315,6 @@ void BasicFTL::gc_blockinfo() {
 
     gcBlockList.pop_front();
     gcCopyList.blockID = block;
-    nextCopyIndex = 0;
 
     pMapper->getCopyList(gcCopyList, eventGCRead);
   }
@@ -440,7 +439,6 @@ void BasicFTL::resetStatValues() noexcept {}
 
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, gcInProgress);
-  BACKUP_SCALAR(out, nextCopyIndex);
   BACKUP_SCALAR(out, gcBeginAt);
 
   BACKUP_SCALAR(out, formatInProgress);
@@ -474,7 +472,6 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, gcInProgress);
-  RESTORE_SCALAR(in, nextCopyIndex);
   RESTORE_SCALAR(in, gcBeginAt);
 
   RESTORE_SCALAR(in, formatInProgress);

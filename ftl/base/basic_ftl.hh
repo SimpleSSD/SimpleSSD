@@ -52,7 +52,6 @@ class BasicFTL : public AbstractFTL {
   bool gcInProgress;
   std::deque<PPN> gcBlockList;
   CopyList gcCopyList;
-  uint32_t nextCopyIndex;
   uint64_t gcBeginAt;
 
   uint8_t formatInProgress;
