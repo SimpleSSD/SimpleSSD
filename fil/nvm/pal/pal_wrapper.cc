@@ -162,7 +162,7 @@ void PALOLD::completion(uint64_t) {
 
 void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
   if (list.size() == 0) {
-    return;
+    list.resize(param->spareSize);
   }
 
   panic_if(list.size() != param->spareSize, "Unexpected size of spare data.");
