@@ -108,6 +108,11 @@ void BasicFTL::read_readDone(uint64_t tag) {
 void BasicFTL::write_find(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
+  // Check GC threshold for On-demand GC
+  if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
+    scheduleNow(eventGCTrigger);
+  }
+
   // Check this request is aligned to mapping granularity
   LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
   LPN alignedEnd = alignedBegin +
@@ -228,11 +233,6 @@ void BasicFTL::write_findDone() {
 void BasicFTL::write_doFIL(uint64_t tag) {
   // Now we have PPN
   pFIL->submit(tag);
-
-  // Check GC threshold for On-demand GC
-  if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
-    scheduleNow(eventGCTrigger);
-  }
 }
 
 void BasicFTL::write_readModifyDone() {
