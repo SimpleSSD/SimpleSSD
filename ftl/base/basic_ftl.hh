@@ -51,6 +51,8 @@ class BasicFTL : public AbstractFTL {
   bool allowPageRead;
   LPN mappingGranularity;
 
+  std::list<Command *> writePendingQueue;
+
   bool gcInProgress;
   std::deque<PPN> gcBlockList;
   CopyList gcCopyList;

@@ -110,6 +110,13 @@ void BasicFTL::read_readDone(uint64_t tag) {
 void BasicFTL::write_find(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
 
+  // Check we have blocks (we need to stall writes)
+  if (UNLIKELY(!pMapper->writeable(cmd))) {
+    writePendingQueue.push_back(&cmd);
+
+    return;
+  }
+
   // Check GC threshold for On-demand GC
   if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
     scheduleNow(eventGCTrigger);
@@ -480,6 +487,22 @@ void BasicFTL::gc_done(uint64_t now) {
   }
 
   gcInProgress = false;
+
+  // Check write pending queue
+  for (auto iter = writePendingQueue.begin();
+       iter != writePendingQueue.end();) {
+    auto pcmd = *iter;
+
+    // Check writable
+    if (pMapper->writeable(*pcmd)) {
+      iter = writePendingQueue.erase(iter);
+
+      write_find(*pcmd);
+    }
+    else {
+      ++iter;
+    }
+  }
 }
 
 void BasicFTL::submit(uint64_t tag) {
