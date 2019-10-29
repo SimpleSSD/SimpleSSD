@@ -103,6 +103,9 @@ class BasicFTL : public AbstractFTL {
   Event eventGCWrite;
   void gc_writeDoFIL();
 
+  Event eventGCWriteDone;
+  void gc_writeDone();
+
   Event eventGCErase;
   void gc_erase();
 

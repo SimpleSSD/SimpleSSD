@@ -44,6 +44,8 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                                     "FTL::BasicFTL::eventGCWriteMapping");
   eventGCWrite = createEvent([this](uint64_t, uint64_t) { gc_writeDoFIL(); },
                              "FTL::BasicFTL::eventGCWrite");
+  eventGCWriteDone = createEvent([this](uint64_t, uint64_t) { gc_writeDone(); },
+                                 "FTL::BasicFTL::eventGCWriteDone");
   eventGCErase = createEvent([this](uint64_t, uint64_t) { gc_erase(); },
                              "FTL::BasicFTL::eventGCErase");
   eventGCEraseDone = createEvent([this](uint64_t, uint64_t) { gc_eraseDone(); },
@@ -418,13 +420,24 @@ void BasicFTL::gc_writeDoFIL() {
   // Update completion info
   auto &cmd = commandManager->getCommand(*gcCopyList.iter);
 
-  cmd.eid = eventGCRead;
+  cmd.eid = eventGCWriteDone;
   cmd.opcode = Operation::Write;
+  cmd.counter = 0;
 
   pFIL->submit(cmd.tag);
+}
 
-  // Next!
-  ++gcCopyList.iter;
+void BasicFTL::gc_writeDone() {
+  auto &cmd = commandManager->getCommand(*gcCopyList.iter);
+
+  cmd.counter++;
+
+  if (cmd.counter == cmd.length) {
+    // Next!
+    ++gcCopyList.iter;
+
+    scheduleNow(eventGCRead);
+  }
 }
 
 void BasicFTL::gc_erase() {
@@ -527,6 +540,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventGCRead);
   BACKUP_EVENT(out, eventGCWriteMapping);
   BACKUP_EVENT(out, eventGCWrite);
+  BACKUP_EVENT(out, eventGCWriteDone);
   BACKUP_EVENT(out, eventGCErase);
   BACKUP_EVENT(out, eventGCEraseDone);
   BACKUP_EVENT(out, eventGCDone);
@@ -566,6 +580,7 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventGCRead);
   RESTORE_EVENT(in, eventGCWriteMapping);
   RESTORE_EVENT(in, eventGCWrite);
+  RESTORE_EVENT(in, eventGCWriteDone);
   RESTORE_EVENT(in, eventGCErase);
   RESTORE_EVENT(in, eventGCEraseDone);
   RESTORE_EVENT(in, eventGCDone);
