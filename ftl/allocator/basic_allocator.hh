@@ -47,8 +47,8 @@ class BasicAllocator : public AbstractAllocator {
 
   void initialize(Parameter *) override;
 
-  CPU::Function allocateBlock(PPN &) override;
-  PPN getBlockAt(PPN) override;
+  CPU::Function allocateBlock(PPN &, bool = false) override;
+  PPN getBlockAt(PPN, bool = false) override;
 
   bool checkGCThreshold() override;
   void getVictimBlocks(std::deque<PPN> &, Event) override;

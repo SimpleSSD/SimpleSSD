@@ -74,42 +74,64 @@ void BasicAllocator::initialize(Parameter *p) {
   }
 }
 
-CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
+CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, bool dry) {
   CPU::Function fstat = CPU::initFunction();
   PPN idx = lastAllocated;
 
-  if (LIKELY(blockUsed != InvalidPPN)) {
-    idx = getParallelismFromSPPN(blockUsed);
+  if (UNLIKELY(dry)) {
+    if (LIKELY(blockUsed != InvalidPPN)) {
+      idx = getParallelismFromSPPN(blockUsed);
+    }
 
-    panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
-
-    // Insert to full block list
-    uint32_t erased = eraseCountList[blockUsed];
-
-    fullBlocks.emplace(std::make_pair(erased, blockUsed));
-  }
-  else {
-    lastAllocated++;
-
-    if (lastAllocated == parallelism) {
-      lastAllocated = 0;
+    if (freeBlocks[idx].size() == 0) {
+      blockUsed = InvalidPPN;
     }
   }
+  else {
+    if (LIKELY(blockUsed != InvalidPPN)) {
+      idx = getParallelismFromSPPN(blockUsed);
 
-  panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
-           idx);
+      panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
 
-  // Allocate new block
-  inUseBlockMap[idx] = std::move(freeBlocks[idx].front());
-  blockUsed = inUseBlockMap[idx];
+      // Insert to full block list
+      uint32_t erased = eraseCountList[blockUsed];
 
-  freeBlocks[idx].pop_front();
-  freeBlockCount--;
+      fullBlocks.emplace(std::make_pair(erased, blockUsed));
+    }
+    else {
+      lastAllocated++;
+
+      if (lastAllocated == parallelism) {
+        lastAllocated = 0;
+      }
+    }
+
+    panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
+             idx);
+
+    // Allocate new block
+    inUseBlockMap[idx] = std::move(freeBlocks[idx].front());
+    blockUsed = inUseBlockMap[idx];
+
+    freeBlocks[idx].pop_front();
+    freeBlockCount--;
+  }
 
   return std::move(fstat);
 }
 
-PPN BasicAllocator::getBlockAt(PPN idx) {
+PPN BasicAllocator::getBlockAt(PPN idx, bool dry) {
+  if (UNLIKELY(dry)) {
+    if (idx == InvalidPPN) {
+      return inUseBlockMap[lastAllocated];
+    }
+    else {
+      panic_if(idx >= parallelism, "Invalid parallelism index.");
+
+      return inUseBlockMap[idx];
+    }
+  }
+
   if (idx == InvalidPPN) {
     PPN ppn = inUseBlockMap[lastAllocated++];
 
