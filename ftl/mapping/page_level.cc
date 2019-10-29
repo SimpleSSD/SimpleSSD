@@ -216,7 +216,10 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       writeMappingInternal(i, ppn);
       makeSpare(i, spare);
-      pFTL->writeSpare(ppn, spare);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        pFTL->writeSpare(ppn * param.superpage + i, spare);
+      }
     }
   }
   else {
@@ -230,7 +233,10 @@ void PageLevel::initialize(AbstractFTL *f,
 
       writeMappingInternal(lpn, ppn);
       makeSpare(lpn, spare);
-      pFTL->writeSpare(ppn, spare);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        pFTL->writeSpare(ppn * param.superpage + i, spare);
+      }
     }
   }
 
@@ -240,7 +246,10 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       writeMappingInternal(i, ppn);
       makeSpare(i, spare);
-      pFTL->writeSpare(ppn, spare);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        pFTL->writeSpare(ppn * param.superpage + i, spare);
+      }
     }
   }
   else if (mode == Config::FillingType::SequentialRandom) {
@@ -252,7 +261,14 @@ void PageLevel::initialize(AbstractFTL *f,
     std::uniform_int_distribution<uint64_t> dist(0, nPagesToWarmup - 1);
 
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(dist(gen), ppn);
+      LPN lpn = dist(gen);
+
+      writeMappingInternal(lpn, ppn);
+      makeSpare(lpn, spare);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        pFTL->writeSpare(ppn * param.superpage + i, spare);
+      }
     }
   }
   else {
@@ -266,7 +282,10 @@ void PageLevel::initialize(AbstractFTL *f,
 
       writeMappingInternal(lpn, ppn);
       makeSpare(lpn, spare);
-      pFTL->writeSpare(ppn, spare);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        pFTL->writeSpare(ppn * param.superpage + i, spare);
+      }
     }
   }
 
