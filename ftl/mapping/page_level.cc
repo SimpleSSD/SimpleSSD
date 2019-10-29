@@ -455,6 +455,9 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
       uint64_t tag = pFTL->makeFTLCommandTag();
       auto &copycmd = commandManager->createFTLCommand(tag);
 
+      copycmd.offset = InvalidLPN;  // writeMapping will fill this
+      copycmd.length = param.superpage;
+
       // At this stage, we don't know LPN
       for (uint64_t j = 0; j < param.superpage; j++) {
         commandManager->appendTranslation(copycmd, InvalidLPN,

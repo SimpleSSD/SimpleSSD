@@ -317,6 +317,7 @@ void BasicFTL::gc_blockinfo() {
     gcCopyList.blockID = block;
 
     pMapper->getCopyList(gcCopyList, eventGCRead);
+    gcCopyList.resetIterator();
   }
   else {
     scheduleNow(eventGCDone);
@@ -341,6 +342,7 @@ void BasicFTL::gc_read() {
   auto &cmd = commandManager->getCommand(gcCopyList.eraseTag);
 
   cmd.eid = eventGCErase;
+  cmd.opcode = Operation::Erase;
 
   pFIL->submit(gcCopyList.eraseTag);
 }
