@@ -149,6 +149,8 @@ void PageLevel::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
 LPN PageLevel::readSpare(std::vector<uint8_t> &spare) {
   LPN lpn = InvalidLPN;
 
+  panic_if(spare.size() != filparam->spareSize, "Empty spare data.");
+
   memcpy(&lpn, spare.data(), sizeof(LPN));
 
   return lpn;
@@ -344,6 +346,27 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
 
   panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
 
+  // Check command
+  if (UNLIKELY(cmd.offset == InvalidLPN)) {
+    // This is GC write request and this request must have spare field
+    auto iter = cmd.subCommandList.begin();
+
+    iter->lpn = readSpare(iter->spare);
+    LPN slpn = getSLPNfromLPN(iter->lpn);
+
+    cmd.offset = iter->lpn;
+
+    // Read all
+    ++iter;
+
+    for (; iter != cmd.subCommandList.end(); ++iter) {
+      iter->lpn = readSpare(iter->spare);
+
+      panic_if(slpn != getSLPNfromLPN(iter->lpn),
+               "Command has two or more superpages.");
+    }
+  }
+
   // Perform write translation
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
@@ -362,6 +385,7 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
     }
 
     scmd.ppn = ppn * param.superpage + superpageIndex;
+    makeSpare(scmd.lpn, scmd.spare);
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
@@ -431,6 +455,7 @@ void PageLevel::getCopyList(CopyList &copy, Event eid) {
       uint64_t tag = pFTL->makeFTLCommandTag();
       auto &copycmd = commandManager->createFTLCommand(tag);
 
+      // At this stage, we don't know LPN
       for (uint64_t j = 0; j < param.superpage; j++) {
         commandManager->appendTranslation(copycmd, InvalidLPN,
                                           makePPN(copy.blockID, j, i));
