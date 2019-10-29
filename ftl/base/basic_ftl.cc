@@ -377,6 +377,7 @@ void BasicFTL::gc_read() {
 
     cmd.eid = eventGCWriteMapping;
     cmd.opcode = Operation::Read;
+    cmd.counter = 0;
 
     pFIL->submit(cmd.tag);
 
@@ -395,7 +396,11 @@ void BasicFTL::gc_read() {
 void BasicFTL::gc_write() {
   auto &cmd = commandManager->getCommand(*gcCopyList.iter);
 
-  pMapper->writeMapping(cmd, eventGCWrite);
+  cmd.counter++;
+
+  if (cmd.counter == cmd.length) {
+    pMapper->writeMapping(cmd, eventGCWrite);
+  }
 }
 
 void BasicFTL::gc_writeDoFIL() {
