@@ -327,8 +327,10 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
 
       readMappingInternal(lpn, ppn);
 
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
+      if (param.superpage != 1) {
+        debugprint(Log::DebugID::FTL_PageLevel,
+                   "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
+      }
     }
 
     scmd.ppn = ppn * param.superpage + superpageIndex;
@@ -380,8 +382,10 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
 
       fstat += writeMappingInternal(lpn, ppn);
 
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 "Write | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
+      if (param.superpage != 1) {
+        debugprint(Log::DebugID::FTL_PageLevel,
+                   "Write | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
+      }
     }
 
     scmd.ppn = ppn * param.superpage + superpageIndex;
@@ -417,9 +421,11 @@ CPU::Function PageLevel::invalidateMapping(Command &cmd) {
 
       fstat += invalidateMappingInternal(lpn, ppn);
 
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 "Trim/Format | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn,
-                 ppn);
+      if (param.superpage != 1) {
+        debugprint(Log::DebugID::FTL_PageLevel,
+                   "Trim/Format | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn,
+                   ppn);
+      }
     }
 
     ippn = ppn * param.superpage + superpageIndex;
