@@ -123,6 +123,16 @@ bool BasicAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
 }
 
+bool BasicAllocator::stopWriteRequest() {
+  for (uint64_t i = 0; i < parallelism; i++) {
+    if (freeBlocks[i].size() == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
   CPU::Function fstat = CPU::initFunction();
   uint64_t blocksToReclaim = 0;
