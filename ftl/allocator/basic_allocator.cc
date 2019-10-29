@@ -51,6 +51,12 @@ void BasicAllocator::initialize(Parameter *p) {
   totalSuperblock = param->totalPhysicalBlocks / param->superpage;
   freeBlockCount = totalSuperblock;
 
+  if ((float)parallelism / totalSuperblock >= gcThreshold) {
+    warn("GC threshold cannot hold minimum blocks. Adjust threshold.");
+
+    gcThreshold = (float)(parallelism + 1) / totalSuperblock;
+  }
+
   // Allocate data
   eraseCountList = (uint32_t *)calloc(totalSuperblock, sizeof(uint32_t));
   inUseBlockMap = (PPN *)calloc(parallelism, sizeof(PPN));
