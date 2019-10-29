@@ -11,7 +11,6 @@ namespace SimpleSSD::FTL {
 
 const char NAME_MAPPING_MODE[] = "MappingMode";
 const char NAME_OVERPROVISION_RATIO[] = "OverProvisioningRatio";
-const char NAME_BAD_BLOCK_THRESHOLD[] = "EraseThreshold";
 const char NAME_FILLING_MODE[] = "FillingMode";
 const char NAME_FILL_RATIO[] = "FillRatio";
 const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
@@ -30,7 +29,6 @@ const char NAME_MERGE_END_THRESHOLD[] = "MergeEndThreshold";
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
   overProvision = 0.2f;
-  eraseThreshold = 100000;
   fillingMode = FillingType::SequentialSequential;
   fillRatio = 1.f;
   invalidFillRatio = 0.f;
@@ -71,7 +69,6 @@ void Config::loadFrom(pugi::xml_node &section) {
         auto name2 = node2.attribute("name").value();
 
         LOAD_NAME_FLOAT(node2, NAME_OVERPROVISION_RATIO, overProvision);
-        LOAD_NAME_UINT(node2, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
 
         if (strcmp(name2, "warmup") == 0 && isSection(node)) {
@@ -125,7 +122,6 @@ void Config::storeTo(pugi::xml_node &section) {
 
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
-  STORE_NAME_UINT(node, NAME_BAD_BLOCK_THRESHOLD, eraseThreshold);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
 
   STORE_SECTION(node, "warmup", node2);
@@ -181,9 +177,6 @@ uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
     case MappingMode:
       ret = (uint64_t)mappingMode;
-      break;
-    case EraseThreshold:
-      ret = eraseThreshold;
       break;
     case FillingMode:
       ret = (uint64_t)fillingMode;
@@ -247,9 +240,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   switch (idx) {
     case MappingMode:
       mappingMode = (MappingType)value;
-      break;
-    case EraseThreshold:
-      eraseThreshold = value;
       break;
     case FillingMode:
       fillingMode = (FillingType)value;

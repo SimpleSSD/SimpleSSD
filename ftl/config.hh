@@ -20,7 +20,6 @@ class Config : public BaseConfig {
   enum Key : uint32_t {
     MappingMode,
     OverProvisioningRatio,
-    EraseThreshold,
 
     // Filling
     FillingMode,
@@ -70,7 +69,6 @@ class Config : public BaseConfig {
  private:
   MappingType mappingMode;
   float overProvision;
-  uint64_t eraseThreshold;
   FillingType fillingMode;
   float fillRatio;
   float invalidFillRatio;

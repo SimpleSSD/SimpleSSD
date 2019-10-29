@@ -502,14 +502,6 @@
        -->
       <config name="OverProvisioningRatio">0.2</config>
       <!--
-        <int> Bad block threshold
-
-        Set P/E cycle threshold to mark block as bad.
-
-        TODO: Add error model and change this value to BER or ECC retry count.
-       -->
-      <config name="EraseThreshold">100k</config>
-      <!--
         <str> Superpage configuration
 
         Specify level of parallelism group to group pages in one super page.
