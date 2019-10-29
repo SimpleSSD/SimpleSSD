@@ -51,10 +51,10 @@ void BasicAllocator::initialize(Parameter *p) {
   totalSuperblock = param->totalPhysicalBlocks / param->superpage;
   freeBlockCount = totalSuperblock;
 
-  if ((float)parallelism / totalSuperblock >= gcThreshold) {
+  if ((float)parallelism / totalSuperblock * 2.f >= gcThreshold) {
     warn("GC threshold cannot hold minimum blocks. Adjust threshold.");
 
-    gcThreshold = (float)(parallelism + 1) / totalSuperblock;
+    gcThreshold = (float)(parallelism + 1) / totalSuperblock * 2.f;
   }
 
   // Allocate data
@@ -83,7 +83,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, bool dry) {
       idx = getParallelismFromSPPN(blockUsed);
     }
 
-    if (freeBlocks[idx].size() == 0) {
+    if (freeBlocks[idx].size() <= 1) {
       blockUsed = InvalidPPN;
     }
   }
