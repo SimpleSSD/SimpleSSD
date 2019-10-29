@@ -48,6 +48,7 @@ class BasicFTL : public AbstractFTL {
   };
 
   bool mergeReadModifyWrite;
+  bool allowPageRead;
   LPN mappingGranularity;
 
   bool gcInProgress;
@@ -64,6 +65,9 @@ class BasicFTL : public AbstractFTL {
 
   Event eventReadDoFIL;
   void read_doFIL(uint64_t);
+
+  Event eventReadFull;
+  void read_readDone(uint64_t);
 
   void write_find(Command &);
 

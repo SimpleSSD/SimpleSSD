@@ -16,6 +16,9 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
+  eventReadFull =
+      createEvent([this](uint64_t, uint64_t d) { read_readDone(d); },
+                  "FTL::BasicFTL::eventReadFull");
   eventWriteFindDone =
       createEvent([this](uint64_t, uint64_t) { write_findDone(); },
                   "FTL::BasicFTL::eventWriteFindDone");
@@ -51,17 +54,55 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   mappingGranularity = pMapper->mappingGranularity();
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
+  allowPageRead = readConfigBoolean(Section::FlashTranslation,
+                                    Config::Key::AllowPageLevelRead);
 }
 
 BasicFTL::~BasicFTL() {}
 
 void BasicFTL::read_find(Command &cmd) {
-  pMapper->readMapping(cmd, eventReadDoFIL);
+  Command *pcmd = &cmd;
+
+  // If we don't allow page-level read,
+  if (!allowPageRead) {
+    // Check this request is aligned to mapping granularity
+    LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
+    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, mappingGranularity) *
+                                        mappingGranularity;
+
+    if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd) {
+      // If not aligned, we need to read full-sized superpage
+      uint64_t tag = makeFTLCommandTag();
+
+      commandManager->createICLRead(tag, eventReadFull, alignedBegin,
+                                    alignedEnd - alignedBegin, 0);
+
+      auto &rcmd = commandManager->getCommand(tag);
+
+      // Store original command in counter variable
+      rcmd.counter = cmd.tag;
+
+      // Override pcmd
+      pcmd = &rcmd;
+    }
+  }
+
+  pMapper->readMapping(*pcmd, eventReadDoFIL);
 }
 
 void BasicFTL::read_doFIL(uint64_t tag) {
   // Now we have PPN
   pFIL->submit(tag);
+}
+
+void BasicFTL::read_readDone(uint64_t tag) {
+  auto &rcmd = commandManager->getCommand(tag);
+  auto &cmd = commandManager->getCommand(rcmd.counter);
+
+  // Full-sized read done
+  scheduleNow(cmd.eid, cmd.tag);
+
+  commandManager->destroyCommand(tag);
 }
 
 void BasicFTL::write_find(Command &cmd) {
@@ -462,6 +503,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventReadDoFIL);
+  BACKUP_EVENT(out, eventReadFull);
   BACKUP_EVENT(out, eventWriteDoFIL);
   BACKUP_EVENT(out, eventInvalidateDoFIL);
   BACKUP_EVENT(out, eventGCTrigger);
@@ -500,6 +542,7 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_EVENT(in, eventReadDoFIL);
+  RESTORE_EVENT(in, eventReadFull);
   RESTORE_EVENT(in, eventWriteDoFIL);
   RESTORE_EVENT(in, eventInvalidateDoFIL);
   RESTORE_EVENT(in, eventGCTrigger);
