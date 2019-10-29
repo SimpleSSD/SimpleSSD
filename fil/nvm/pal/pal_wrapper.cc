@@ -170,9 +170,10 @@ void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
   // Find PPN
   auto iter = spareList.find(ppn);
 
-  if (iter != spareList.end()) {
-    memcpy(list.data(), iter->second.data(), param->spareSize);
-  }
+  panic_if(iter == spareList.end(),
+           "PPN %" PRIx64 "h does not written and no spare data.", ppn);
+
+  memcpy(list.data(), iter->second.data(), param->spareSize);
 }
 
 void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
@@ -185,9 +186,14 @@ void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
   // Find PPN
   auto iter = spareList.find(ppn);
 
-  if (iter != spareList.end()) {
-    memcpy(iter->second.data(), list.data(), param->spareSize);
+  if (iter == spareList.end()) {
+    iter = spareList
+               .emplace(std::make_pair(
+                   ppn, std::vector<uint8_t>(param->spareSize, 0)))
+               .first;
   }
+
+  memcpy(iter->second.data(), list.data(), param->spareSize);
 }
 
 void PALOLD::eraseSpare(PPN ppn) {
