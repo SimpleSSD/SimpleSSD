@@ -47,6 +47,7 @@ class BasicFTL : public AbstractFTL {
           length(InvalidLPN) {}
   };
 
+  bool mergeReadModifyWrite;
   LPN mappingGranularity;
 
   bool gcInProgress;

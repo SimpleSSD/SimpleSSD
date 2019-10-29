@@ -49,6 +49,8 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                             "FTL::BasicFTL::eventGCDone");
 
   mappingGranularity = pMapper->mappingGranularity();
+  mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
+                                           Config::Key::MergeReadModifyWrite);
 }
 
 BasicFTL::~BasicFTL() {}
@@ -80,21 +82,23 @@ void BasicFTL::write_find(Command &cmd) {
             "Merge might fail. (I/O size > one mapping granularity)");
 
     // 1. Check merge
-    for (auto entry = rmwList.begin(); entry != rmwList.end(); ++entry) {
-      // Not submitted yet
-      if (!entry->readPending && !entry->writePending) {
-        if (entry->offset == alignedBegin) {
-          merged = true;
+    if (mergeReadModifyWrite) {
+      for (auto entry = rmwList.begin(); entry != rmwList.end(); ++entry) {
+        // Not written yet
+        if (!entry->writePending) {
+          if (entry->offset == alignedBegin) {
+            merged = true;
 
-          // Merge with this request
-          ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
+            // Merge with this request
+            ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
 
-          // Record how many completion is needed
-          ctx.writeTag = cmd.length;
+            // Record how many completion is needed
+            ctx.writeTag = cmd.length;
 
-          rmwList.emplace(++entry, ctx);
+            rmwList.emplace(++entry, ctx);
 
-          break;
+            break;
+          }
         }
       }
     }
@@ -440,6 +444,7 @@ void BasicFTL::getStatValues(std::vector<double> &) noexcept {}
 void BasicFTL::resetStatValues() noexcept {}
 
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, mergeReadModifyWrite);
   BACKUP_SCALAR(out, gcInProgress);
   BACKUP_SCALAR(out, gcBeginAt);
 
@@ -473,6 +478,7 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, mergeReadModifyWrite);
   RESTORE_SCALAR(in, gcInProgress);
   RESTORE_SCALAR(in, gcBeginAt);
 
