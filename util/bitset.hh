@@ -14,6 +14,8 @@
 #include <iostream>
 #include <vector>
 
+#include "util/algorithm.hh"
+
 namespace SimpleSSD {
 
 /**
@@ -31,6 +33,7 @@ class Bitset {
 
   uint64_t dataSize;
   uint64_t allocSize;
+  uint64_t loopSize;
 
   inline uint8_t *getBuffer() const {
     if (allocSize > sizeof(buffer)) {
@@ -38,6 +41,11 @@ class Bitset {
     }
 
     return (uint8_t *)buffer;
+  }
+
+  inline uint64_t getLoopCount() const {
+    // 8 byte memory consumption vs. do calculation everytime?
+    return (allocSize <= 8 ? 0 : DIVCEIL(allocSize, 8) - 1) << 3;
   }
 
  public:
@@ -56,9 +64,9 @@ class Bitset {
   bool none() noexcept;
   bool none() const noexcept;
 
-  uint64_t clz() noexcept;  // Leading zero
+  uint64_t clz() noexcept;
   uint64_t clz() const noexcept;
-  uint64_t ctz() noexcept;  // Trailing zero
+  uint64_t ctz() noexcept;
   uint64_t ctz() const noexcept;
 
   uint64_t count() noexcept;
