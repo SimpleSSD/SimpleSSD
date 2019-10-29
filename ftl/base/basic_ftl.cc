@@ -396,6 +396,10 @@ void BasicFTL::gc_read() {
   cmd.eid = eventGCErase;
   cmd.opcode = Operation::Erase;
 
+  debugprint(Log::DebugID::FTL,
+             "GC    | Erase | PPN %" PRIx64 "h + %" PRIx64 "h",
+             cmd.subCommandList.front().ppn, cmd.length);
+
   pFIL->submit(gcCopyList.eraseTag);
 }
 
