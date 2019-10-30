@@ -177,8 +177,6 @@ void BasicFTL::write_find(Command &cmd) {
 
       auto &rcmd = commandManager->getCommand(tag);
 
-      fstat += pMapper->readMapping(rcmd);
-
       // 2-1. Prepare exclude [cmd.offset, cmd.offset + cmd.length)
       LPN excludeBegin = cmd.offset;
       LPN excludeEnd = cmd.offset + cmd.length;
@@ -215,8 +213,6 @@ void BasicFTL::write_find(Command &cmd) {
 
       wcmd.counter = mappingGranularity - cmd.length;
 
-      fstat += pMapper->writeMapping(wcmd);
-
       ctx.writeTag = tag;
 
       rmwList.emplace_back(ctx);
@@ -239,6 +235,10 @@ void BasicFTL::write_findDone() {
     if (!job.readPending) {
       job.readPending = true;
 
+      // Translate
+      auto &rcmd = commandManager->getCommand(job.readTag);
+      pMapper->readMapping(rcmd);
+
       pFIL->submit(job.readTag);
     }
   }
@@ -259,6 +259,10 @@ void BasicFTL::write_readModifyDone() {
 
   if (rcmd.counter == rcmd.length) {
     job.writePending = true;
+
+    // Translate
+    auto &wcmd = commandManager->getCommand(job.writeTag);
+    pMapper->writeMapping(wcmd);
 
     pFIL->submit(job.writeTag);
   }
