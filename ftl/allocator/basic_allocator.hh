@@ -19,6 +19,9 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 class BasicAllocator : public AbstractAllocator {
  protected:
+  using BlockSelection =
+      std::function<CPU::Function(uint64_t, std::deque<PPN> &)>;
+
   uint64_t parallelism;
   uint64_t totalSuperblock;
 
@@ -27,19 +30,19 @@ class BasicAllocator : public AbstractAllocator {
   PPN lastAllocated;   // Used for pMapper->initialize
   PPN *inUseBlockMap;  // Allocated free blocks
 
-  uint64_t freeBlockCount;     // Shortcut
+  uint64_t freeBlockCount;     // Free block count shortcut
+  uint64_t fullBlockCount;     // Full block count shortcut
   std::list<PPN> *freeBlocks;  // Free blocks sorted in erased count
-  std::multimap<uint32_t, PPN> fullBlocks;
+  std::list<PPN> *fullBlocks;  // Full blocks sorted in erased count
 
   Config::VictimSelectionMode selectionMode;
-  Config::GCBlockReclaimMode countMode;
   float gcThreshold;
-  float blockRatio;
-  uint64_t blockCount;
   uint64_t dchoice;
 
   std::random_device rd;
   std::mt19937 mtengine;
+
+  BlockSelection victimSelectionFunction;
 
  public:
   BasicAllocator(ObjectData &, Mapping::AbstractMapping *);

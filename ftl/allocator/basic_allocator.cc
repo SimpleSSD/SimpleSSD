@@ -18,20 +18,6 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       mtengine(rd()) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
-  countMode = (Config::GCBlockReclaimMode)readConfigUint(
-      Section::FlashTranslation, Config::Key::GCMode);
-
-  switch (countMode) {
-    case Config::GCBlockReclaimMode::ByCount:
-      blockCount = readConfigUint(Section::FlashTranslation,
-                                  Config::Key::GCReclaimBlocks);
-      break;
-    case Config::GCBlockReclaimMode::ByRatio:
-      blockRatio = readConfigFloat(Section::FlashTranslation,
-                                   Config::Key::GCReclaimThreshold);
-      break;
-  }
-
   dchoice =
       readConfigUint(Section::FlashTranslation, Config::Key::DChoiceParam);
   gcThreshold =
@@ -42,6 +28,7 @@ BasicAllocator::~BasicAllocator() {
   free(eraseCountList);
   free(inUseBlockMap);
   delete[] freeBlocks;
+  delete[] fullBlocks;
 }
 
 void BasicAllocator::initialize(Parameter *p) {
@@ -50,6 +37,7 @@ void BasicAllocator::initialize(Parameter *p) {
   parallelism = param->parallelism / param->superpage;
   totalSuperblock = param->totalPhysicalBlocks / param->superpage;
   freeBlockCount = totalSuperblock;
+  fullBlockCount = 0;
 
   if ((float)parallelism / totalSuperblock * 2.f >= gcThreshold) {
     warn("GC threshold cannot hold minimum blocks. Adjust threshold.");
@@ -61,6 +49,7 @@ void BasicAllocator::initialize(Parameter *p) {
   eraseCountList = (uint32_t *)calloc(totalSuperblock, sizeof(uint32_t));
   inUseBlockMap = (PPN *)calloc(parallelism, sizeof(PPN));
   freeBlocks = new std::list<PPN>[parallelism]();
+  fullBlocks = new std::list<PPN>[parallelism]();
 
   lastAllocated = 0;
 
@@ -85,39 +74,22 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
 
     // Insert to full block list
     uint32_t erased = eraseCountList[blockUsed];
+    auto iter = fullBlocks[idx].begin();
 
-    fullBlocks.emplace(std::make_pair(erased, blockUsed));
+    for (; iter != fullBlocks[idx].end(); ++iter) {
+      if (eraseCountList[*iter] > erased) {
+        break;
+      }
+    }
+
+    fullBlocks[idx].emplace(iter, blockUsed);
+    fullBlockCount++;
   }
   else {
     lastAllocated++;
 
     if (lastAllocated == parallelism) {
       lastAllocated = 0;
-    }
-  }
-
-  // It would be better to perform GC in balanced way - equally distributed in
-  // each parallelism level. But that is hard to implement.
-  if (UNLIKELY(freeBlocks[idx].size() == 0)) {
-    // Find next index
-    PPN i = idx;
-
-    while (true) {
-      i++;
-
-      if (i == parallelism) {
-        i = 0;
-      }
-
-      if (i == idx) {
-        break;
-      }
-
-      if (freeBlocks[i].size() > 0) {
-        idx = i;
-
-        break;
-      }
     }
   }
 
@@ -160,121 +132,22 @@ bool BasicAllocator::stallRequest() {
 
 void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
   CPU::Function fstat = CPU::initFunction();
-  uint64_t blocksToReclaim = 0;
 
   list.clear();
 
-  switch (countMode) {
-    case Config::GCBlockReclaimMode::ByCount:
-      blocksToReclaim = blockCount;
+  if (UNLIKELY(fullBlockCount <= parallelism * dchoice)) {
+    // Just return least erased blocks
+    for (uint64_t i = 0; i < parallelism; i++) {
+      list.emplace_back(fullBlocks[i].front());
 
-      break;
-    case Config::GCBlockReclaimMode::ByRatio:
-      panic_if(totalSuperblock * blockRatio < freeBlockCount,
-               "GC should not triggered.");
-
-      blocksToReclaim =
-          (uint64_t)(totalSuperblock * blockRatio) - freeBlockCount;
-
-      break;
-  }
-
-  if (UNLIKELY(fullBlocks.size() <= blocksToReclaim * dchoice)) {
-    // Copy usedBlocks to list from front (sorted!)
-    for (auto &iter : fullBlocks) {
-      list.emplace_back(iter.second);
-
-      if (list.size() == blocksToReclaim) {
-        break;
-      }
+      fullBlocks[i].pop_front();
+      fullBlockCount--;
     }
   }
   else {
     // Select victim blocks
-    // We can optimize this by using lambda function, but to calculate firmware
-    // latency just use switch-case statement.
-    switch (selectionMode) {
-      case Config::VictimSelectionMode::DChoice:
-        blocksToReclaim *= dchoice;
-
-        /* fallthrough */
-      case Config::VictimSelectionMode::Random: {
-        uint64_t size = fullBlocks.size();
-        std::vector<uint64_t> offsets;
-        std::uniform_int_distribution<uint64_t> dist(0, size - 1);
-
-        // Collect offsets
-        offsets.reserve(blocksToReclaim);
-
-        while (offsets.size() < blocksToReclaim) {
-          uint64_t idx = dist(mtengine);
-          bool unique = true;
-
-          for (auto &iter : offsets) {
-            if (iter == idx) {
-              unique = false;
-
-              break;
-            }
-          }
-
-          if (unique) {
-            offsets.emplace_back(idx);
-          }
-        }
-
-        // Select front blocksToReclaim blocks
-        auto iter = fullBlocks.begin();
-
-        for (uint64_t i = 0; i < size; i++) {
-          if (i == offsets.at(list.size())) {
-            list.emplace_back(iter->second);
-          }
-
-          ++iter;
-        }
-
-        if (selectionMode == Config::VictimSelectionMode::Random) {
-          break;
-        }
-      }
-      /* fallthrough */
-      case Config::VictimSelectionMode::Greedy: {
-        // We need valid page ratio
-        std::vector<std::pair<PPN, uint32_t>> valid;
-
-        if (list.size() == 0) {
-          // Greedy
-          for (auto &iter : fullBlocks) {
-            valid.emplace_back(iter.second,
-                               pMapper->getValidPages(iter.second));
-          }
-        }
-        else {
-          // D-Choice
-          valid.reserve(list.size());
-
-          for (auto &iter : list) {
-            valid.emplace_back(iter, pMapper->getValidPages(iter));
-          }
-
-          list.clear();
-        }
-
-        // Sort
-        std::sort(valid.begin(), valid.end(),
-                  [](std::pair<PPN, uint32_t> &a, std::pair<PPN, uint32_t> &b) {
-                    return a.second < b.second;
-                  });
-
-        // Return front blocksToReclaim PPNs
-        for (uint64_t i = 0; i < blocksToReclaim; i++) {
-          list.emplace_back(valid.at(i).first);
-        }
-      } break;
-      default:
-        panic("Unexpected victim block selection mode.");
-        break;
+    for (uint64_t i = 0; i < parallelism; i++) {
+      fstat += victimSelectionFunction(i, list);
     }
   }
 
@@ -286,43 +159,19 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
 
   panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
-  // Remove PPN from full block list
-  bool ok = false;
-  uint32_t erased = eraseCountList[blockID];
-  auto iter = fullBlocks.find(erased);
-
-  panic_if(iter == fullBlocks.end(), "Full block list corrupted.");
-
-  for (; iter != fullBlocks.end(); ++iter) {
-    if (iter->first != erased) {
-      break;
-    }
-
-    if (iter->second == blockID) {
-      ok = true;
-      fullBlocks.erase(iter);
-    }
-  }
-
-  panic_if(!ok, "Full block list corrupted.");
-
-  // Erased!
-  erased++;
-
   // Insert PPN to free block list
   PPN idx = getParallelismFromSPPN(blockID);
-  auto fb = freeBlocks[idx].begin();
+  uint32_t erased = ++eraseCountList[blockID];
+  auto iter = freeBlocks[idx].begin();
 
-  for (; fb != freeBlocks[idx].end(); ++fb) {
-    if (eraseCountList[*fb] > erased) {
+  for (; iter != freeBlocks[idx].end(); ++iter) {
+    if (eraseCountList[*iter] > erased) {
       break;
     }
   }
 
-  freeBlocks[idx].emplace(fb, blockID);
+  freeBlocks[idx].emplace(iter, blockID);
   freeBlockCount++;
-
-  eraseCountList[blockID] = erased;
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
@@ -352,19 +201,17 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  size = fullBlocks.size();
-  BACKUP_SCALAR(out, size);
+  for (uint64_t i = 0; i < parallelism; i++) {
+    size = fullBlocks[i].size();
+    BACKUP_SCALAR(out, size);
 
-  for (auto &iter : fullBlocks) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
+    for (auto &iter : fullBlocks[i]) {
+      BACKUP_SCALAR(out, iter);
+    }
   }
 
   BACKUP_SCALAR(out, selectionMode);
-  BACKUP_SCALAR(out, countMode);
   BACKUP_SCALAR(out, gcThreshold);
-  BACKUP_SCALAR(out, blockRatio);
-  BACKUP_SCALAR(out, blockCount);
   BACKUP_SCALAR(out, dchoice);
 }
 
@@ -396,23 +243,20 @@ void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
     }
   }
 
-  RESTORE_SCALAR(in, size);
+  for (uint64_t i = 0; i < parallelism; i++) {
+    RESTORE_SCALAR(in, size);
 
-  for (uint64_t i = 0; i < size; i++) {
-    PPN id;
-    uint64_t e;
+    for (uint64_t j = 0; j < size; j++) {
+      PPN id;
 
-    RESTORE_SCALAR(in, e);
-    RESTORE_SCALAR(in, id);
+      RESTORE_SCALAR(in, id);
 
-    fullBlocks.emplace(id, e);
+      fullBlocks[i].emplace_back(id);
+    }
   }
 
   RESTORE_SCALAR(in, selectionMode);
-  RESTORE_SCALAR(in, countMode);
   RESTORE_SCALAR(in, gcThreshold);
-  RESTORE_SCALAR(in, blockRatio);
-  RESTORE_SCALAR(in, blockCount);
   RESTORE_SCALAR(in, dchoice);
 }
 
