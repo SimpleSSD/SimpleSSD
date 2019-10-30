@@ -106,6 +106,10 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       break;
   }
 
+  // Limit concurrent write count
+  pendingWriteCount = 0;
+  writeLimit = param->parallelism;
+
   enabled = readConfigBoolean(Section::InternalCache, Config::Key::EnableCache);
   prefetchEnabled =
       readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
@@ -569,7 +573,7 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
 
 void RingBuffer::trigger_writeWorker() {
   if ((float)cacheEntry.size() / maxEntryCount >= triggerThreshold &&
-      !writeTriggered) {
+      !writeTriggered && pendingWriteCount < writeLimit) {
     writeTriggered = true;
 
     scheduleNow(eventWriteWorker);
@@ -1332,6 +1336,7 @@ void RingBuffer::resetStatValues() noexcept {
 void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, maxEntryCount);
   BACKUP_SCALAR(out, dirtyEntryCount);
+  BACKUP_SCALAR(out, pendingWriteCount);
   BACKUP_SCALAR(out, enabled);
   BACKUP_SCALAR(out, prefetchEnabled);
   BACKUP_SCALAR(out, minPages);
@@ -1463,6 +1468,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != maxEntryCount, "Cache size not matched while restore.");
 
   RESTORE_SCALAR(in, dirtyEntryCount);
+  RESTORE_SCALAR(in, pendingWriteCount);
   RESTORE_SCALAR(in, enabled);
   RESTORE_SCALAR(in, prefetchEnabled);
 
