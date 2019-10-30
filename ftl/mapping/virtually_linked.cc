@@ -313,7 +313,6 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
 
   LPN slpn = getSLPNfromLPN(lpn);
   LPN sidx = getSPIndexFromPPN(lpn);
-  PPN ppn = InvalidPPN;
   uint64_t ptr = readPointer(slpn);
 
   if (pointerValid.test(slpn) && partialTable[ptr].isValid(sidx)) {
@@ -321,9 +320,9 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
 
     partialTable[ptr].resetEntry(sidx);
 
-    ppn = sppn * param.superpage + sidx;
+    old = sppn * param.superpage + sidx;
 
-    blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
+    blockMetadata[getBlockFromPPN(old)].validPages.reset(
         getPageIndexFromSPPN(sppn));
 
     // Check partial table is empty
@@ -366,11 +365,11 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
       }
     }
 
-    ppn = sppn * param.superpage + sidx;
+    old = sppn * param.superpage + sidx;
 
     partialTable[ptr].resetEntry(sidx);
-    blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
-        getPageIndexFromSPPN(sppn));
+    blockMetadata[getBlockFromPPN(old)].validPages.reset(
+        getPageIndexFromSPPN(old));
 
     validEntry.reset(slpn);
   }
