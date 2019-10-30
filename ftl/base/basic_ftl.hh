@@ -71,7 +71,7 @@ class BasicFTL : public AbstractFTL {
     uint64_t pages;
   } stat;
 
-  inline void triggerGC() {
+  virtual inline void triggerGC() {
     if ((pAllocator->checkGCThreshold() || writePendingQueue.size() > 0) &&
         formatInProgress == 0) {
       scheduleNow(eventGCTrigger);
@@ -135,7 +135,7 @@ class BasicFTL : public AbstractFTL {
  public:
   BasicFTL(ObjectData &, CommandManager *, FIL::FIL *,
            Mapping::AbstractMapping *, BlockAllocator::AbstractAllocator *);
-  ~BasicFTL();
+  virtual ~BasicFTL();
 
   void submit(uint64_t) override;
   bool isGC() override;
