@@ -72,6 +72,9 @@ void BasicFTL::read_find(Command &cmd) {
     if (iter->offset <= cmd.offset &&
         cmd.offset + cmd.length <= iter->offset + iter->length) {
       // Current read command can be served by write pending queue
+      scheduleNow(cmd.eid, cmd.tag);
+
+      return;
     }
   }
 
