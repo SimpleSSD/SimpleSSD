@@ -349,7 +349,7 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
     if (lpn != currentLPN) {
       lpn = currentLPN;
 
-      readMappingInternal(lpn, ppn);
+      fstat += readMappingInternal(lpn, ppn);
 
       if (param.superpage != 1) {
         debugprint(Log::DebugID::FTL_PageLevel,
