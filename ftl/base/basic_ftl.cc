@@ -13,6 +13,8 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
                    Mapping::AbstractMapping *m,
                    BlockAllocator::AbstractAllocator *a)
     : AbstractFTL(o, c, f, m, a), gcInProgress(false), formatInProgress(0) {
+  memset(&stat, 0, sizeof(stat));
+
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
@@ -369,6 +371,8 @@ void BasicFTL::gc_trigger(uint64_t now) {
   formatInProgress = 100;
   gcBeginAt = now;
 
+  stat.count++;
+
   // Get block list from allocator
   pAllocator->getVictimBlocks(gcBlockList, eventGCGetBlockList);
 
@@ -458,6 +462,9 @@ void BasicFTL::gc_writeDone() {
   cmd.counter++;
 
   if (cmd.counter == cmd.length) {
+    stat.superpages++;
+    stat.pages += mappingGranularity;
+
     // Next!
     ++gcCopyList.iter;
 
@@ -477,6 +484,8 @@ void BasicFTL::gc_erase() {
 
 void BasicFTL::gc_eraseDone() {
   scheduleNow(eventGCGetBlockList);
+
+  stat.blocks++;
 
   pMapper->releaseCopyList(gcCopyList);
   gcCopyList.commandList.clear();
@@ -557,11 +566,26 @@ uint8_t BasicFTL::isFormat() {
   }
 }
 
-void BasicFTL::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void BasicFTL::getStatList(std::vector<Stat> &list,
+                           std::string prefix) noexcept {
+  list.emplace_back(prefix + "ftl.gc.count", "Total GC count");
+  list.emplace_back(prefix + "ftl.gc.reclaimed_blocks",
+                    "Total reclaimed blocks in GC");
+  list.emplace_back(prefix + "ftl.gc.superpage_copies",
+                    "Total valid superpage copy");
+  list.emplace_back(prefix + "ftl.gc.page_copies", "Total valid page copy");
+}
 
-void BasicFTL::getStatValues(std::vector<double> &) noexcept {}
+void BasicFTL::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)stat.count);
+  values.push_back((double)stat.blocks);
+  values.push_back((double)stat.superpages);
+  values.push_back((double)stat.pages);
+}
 
-void BasicFTL::resetStatValues() noexcept {}
+void BasicFTL::resetStatValues() noexcept {
+  memset(&stat, 0, sizeof(stat));
+}
 
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, mergeReadModifyWrite);

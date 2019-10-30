@@ -63,6 +63,14 @@ class BasicFTL : public AbstractFTL {
 
   std::list<ReadModifyWriteContext> rmwList;
 
+  // Statistics
+  struct {
+    uint64_t count;
+    uint64_t blocks;
+    uint64_t superpages;
+    uint64_t pages;
+  } stat;
+
   inline void triggerGC() {
     if ((pAllocator->checkGCThreshold() || writePendingQueue.size() > 0) &&
         formatInProgress == 0) {
