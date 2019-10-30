@@ -41,6 +41,7 @@ class Log {
     ICL_RingBuffer,
     FTL,
     FTL_PageLevel,
+    FTL_VLFTL,
     FIL,
     FIL_PALOLD,
   };

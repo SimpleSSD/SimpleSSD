@@ -29,6 +29,7 @@ const std::string idPrefix[] = {
     "ICL::RingBuffer",
     "FTL",
     "FTL::Mapping::PageLevel",
+    "FTL::*::VirtuallyLinked",
     "FIL",
     "FIL::PALOLD",
 };
