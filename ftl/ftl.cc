@@ -8,8 +8,11 @@
 #include "ftl/ftl.hh"
 
 #include "ftl/allocator/basic_allocator.hh"
+#include "ftl/allocator/two_block_allocator.hh"
 #include "ftl/base/basic_ftl.hh"
+#include "ftl/base/vlftl.hh"
 #include "ftl/mapping/page_level.hh"
+#include "ftl/mapping/virtually_linked.hh"
 
 namespace SimpleSSD {
 
@@ -18,8 +21,10 @@ namespace FTL {
 FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   pFIL = new FIL::FIL(object, commandManager);
 
-  switch ((Config::MappingType)readConfigUint(Section::FlashTranslation,
-                                              Config::Key::MappingMode)) {
+  auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
+                                                     Config::Key::MappingMode);
+
+  switch (mapping) {
     case Config::MappingType::PageLevelFTL:
       pMapper = new Mapping::PageLevel(object, commandManager);
 
@@ -28,21 +33,28 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
     //   pMapper = new Mapping::BlockLevel(object);
 
     //   break;
-    // case Config::MappingType::VLFTL:
-    //   pMapper = new Mapping::VLFTL(object);
+    case Config::MappingType::VLFTL:
+      pMapper = new Mapping::VirtuallyLinked(object, commandManager);
 
-    //   break;
+      break;
     default:
       panic("Unsupported mapping type.");
 
       break;
   }
 
-  // Currently, we only have default block allocator
-  pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
+  switch (mapping) {
+    case Config::MappingType::VLFTL:
+      pAllocator = new BlockAllocator::TwoBlockAllocator(object, pMapper);
+      pFTL = new VLFTL(object, commandManager, pFIL, pMapper, pAllocator);
 
-  // Currently, we only have default FTL
-  pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
+      break;
+    default:
+      pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
+      pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
+
+      break;
+  }
 
   // Initialize all
   pAllocator->initialize(pMapper->getInfo());
