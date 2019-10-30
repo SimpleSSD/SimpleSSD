@@ -680,16 +680,16 @@ void VirtuallyLinked::getCopyList(CopyList &copy, Event eid) {
   for (uint32_t i = 0; i < filparam->page; i++) {
     uint64_t tag = pFTL->makeFTLCommandTag();
     auto &copycmd = commandManager->createFTLCommand(tag);
-    bool added = false;
 
     copycmd.offset = InvalidLPN;  // writeMapping will fill this
     copycmd.length = param.superpage;
+    copycmd.counter = 0;
 
     for (uint64_t j = 0; j < param.superpage; j++) {
       auto block = &blockMetadata[copy.blockID * param.superpage + j];
 
       if (block->validPages.test(i)) {
-        added = true;
+        copycmd.counter++;
 
         // At this stage, we don't know LPN
         commandManager->appendTranslation(copycmd, InvalidLPN,
@@ -700,7 +700,7 @@ void VirtuallyLinked::getCopyList(CopyList &copy, Event eid) {
       }
     }
 
-    if (added) {
+    if (copycmd.counter > 0) {
       copy.commandList.emplace_back(tag);
     }
     else {
