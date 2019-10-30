@@ -16,7 +16,7 @@
 namespace SimpleSSD::FTL::Mapping {
 
 class PageLevel : public AbstractMapping {
- protected:
+ private:
   const uint64_t totalPhysicalSuperPages;
   const uint64_t totalPhysicalSuperBlocks;
   const uint64_t totalLogicalSuperPages;
