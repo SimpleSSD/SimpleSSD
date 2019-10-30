@@ -73,6 +73,8 @@ class VirtuallyLinked : public AbstractMapping {
 
   // No way to construct array without default constructor -> just use vector
   std::vector<PartialTableEntry> partialTable;
+  float mergeBeginThreshold;
+  float mergeEndThreshold;
 
   BlockMetadata *blockMetadata;
 
@@ -214,6 +216,11 @@ class VirtuallyLinked : public AbstractMapping {
   CPU::Function invalidateMapping(Command &) override;
   void getCopyList(CopyList &, Event) override;
   void releaseCopyList(CopyList &) override;
+
+  bool triggerMerge(bool);
+  uint64_t getMergeReadCommand();
+  uint64_t getMergeWriteCommand(uint64_t);
+  void destroyMergeCommand(uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

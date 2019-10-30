@@ -49,6 +49,10 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
   uint64_t partialTableSize = (uint64_t)(
       totalLogicalSuperPages *
       readConfigFloat(Section::FlashTranslation, Config::Key::VLTableRatio));
+  mergeBeginThreshold = readConfigFloat(Section::FlashTranslation,
+                                        Config::Key::MergeBeginThreshold);
+  mergeEndThreshold = readConfigFloat(Section::FlashTranslation,
+                                      Config::Key::MergeEndThreshold);
 
   // Fill partial table
   partialTable.reserve(partialTableSize);
@@ -744,6 +748,102 @@ void VirtuallyLinked::releaseCopyList(CopyList &copy) {
 
   debugprint(Log::DebugID::FTL_VLFTL, "Erase | SPPN %" PRIx64 "h",
              copy.blockID);
+}
+
+bool VirtuallyLinked::triggerMerge(bool first) {
+  uint64_t count = 0;
+
+  for (auto &iter : partialTable) {
+    if (iter.slpn != InvalidLPN) {
+      count++;
+    }
+  }
+
+  if (first) {
+    return (float)count / partialTable.size() >= mergeBeginThreshold;
+  }
+  else {
+    return (float)count / partialTable.size() >= mergeEndThreshold;
+  }
+}
+
+uint64_t VirtuallyLinked::getMergeReadCommand() {
+  uint64_t tag = pFTL->makeFTLCommandTag();
+
+  // TODO: Fix this with lambda functions
+
+  // Select partial table entry to erase
+  auto iter = partialTable.begin();
+
+  for (; iter != partialTable.end(); ++iter) {
+    if (iter->slpn != InvalidLPN) {
+      break;
+    }
+  }
+
+  PPN sppn = InvalidPPN;
+
+  if (validEntry.test(iter->slpn)) {
+    sppn = readEntry(iter->slpn);
+  }
+
+  // Create Command
+  auto &cmd = commandManager->createFTLCommand(tag);
+
+  cmd.counter = 0;
+
+  for (uint32_t i = 0; i < param.superpage; i++) {
+    if (iter->isValid(i)) {
+      cmd.counter++;
+
+      commandManager->appendTranslation(
+          cmd, InvalidLPN, iter->getEntry(i) * param.superpage + i);
+    }
+    else if (sppn != InvalidPPN) {
+      cmd.counter++;
+
+      commandManager->appendTranslation(cmd, InvalidLPN,
+                                        sppn * param.superpage + i);
+    }
+    else {
+      commandManager->appendTranslation(cmd, InvalidLPN, InvalidPPN);
+    }
+  }
+
+  return tag;
+}
+
+uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
+  auto &cmd = commandManager->getCommand(tag);
+
+  // Validate and fill LPN
+  auto iter = cmd.subCommandList.begin();
+
+  iter->lpn = readSpare(iter->spare);
+  LPN slpn = getSLPNfromLPN(iter->lpn);
+
+  cmd.offset = iter->lpn;
+
+  // Read all
+  ++iter;
+
+  for (; iter != cmd.subCommandList.end(); ++iter) {
+    iter->lpn = readSpare(iter->spare);
+
+    panic_if(slpn != getSLPNfromLPN(iter->lpn),
+             "Command has two or more superpages.");
+  }
+
+  // Write mapping
+  for (auto &scmd : cmd.subCommandList) {
+    writeMappingInternal(scmd.lpn, true, scmd.ppn);
+  }
+
+  return tag;
+}
+
+void VirtuallyLinked::destroyMergeCommand(uint64_t tag) {
+  commandManager->destroyCommand(tag);
 }
 
 void VirtuallyLinked::getStatList(std::vector<Stat> &, std::string) noexcept {}
