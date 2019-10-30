@@ -40,6 +40,8 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         std::advance(iter, ridx);
 
         list.emplace_back(*iter);
+        currentList.erase(iter);
+        fullBlockCount--;
 
         return std::move(fstat);
       };
@@ -49,15 +51,16 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
         CPU::Function fstat = CPU::initFunction();
         auto &currentList = fullBlocks[idx];
-        std::vector<std::pair<PPN, uint32_t>> valid;
+        std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
 
         // Collect valid pages
-        for (auto &iter : currentList) {
-          valid.emplace_back(iter, pMapper->getValidPages(iter));
+        for (auto iter = currentList.begin(); iter != currentList.end();
+             ++iter) {
+          valid.emplace_back(iter, pMapper->getValidPages(*iter));
         }
 
         // Find min value
-        PPN minIndex = InvalidPPN;
+        auto minIndex = currentList.end();
         uint32_t min = std::numeric_limits<uint32_t>::max();
 
         for (auto &iter : valid) {
@@ -68,7 +71,9 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         }
 
         // Get block ID from sorted list
-        list.emplace_back(minIndex);
+        list.emplace_back(*minIndex);
+        currentList.erase(minIndex);
+        fullBlockCount--;
 
         return std::move(fstat);
       };
@@ -80,19 +85,20 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
               uint64_t idx, std::deque<PPN> &list) {
             CPU::Function fstat = CPU::initFunction();
             auto &currentList = fullBlocks[idx];
-            std::vector<std::pair<PPN, float>> valid;
+            std::vector<std::pair<std::list<PPN>::iterator, float>> valid;
 
             // Collect valid pages
-            for (auto &iter : currentList) {
-              float util = pMapper->getValidPages(iter) / pageCount;
+            for (auto iter = currentList.begin(); iter != currentList.end();
+                 ++iter) {
+              float util = pMapper->getValidPages(*iter) / pageCount;
 
-              util = util / ((1.f - util) * pMapper->getAge(iter));
+              util = util / ((1.f - util) * pMapper->getAge(*iter));
 
               valid.emplace_back(iter, util);
             }
 
             // Find min value
-            PPN minIndex = InvalidPPN;
+            auto minIndex = currentList.end();
             float min = std::numeric_limits<float>::max();
 
             for (auto &iter : valid) {
@@ -103,7 +109,9 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
             }
 
             // Get block ID from sorted list
-            list.emplace_back(minIndex);
+            list.emplace_back(*minIndex);
+            currentList.erase(minIndex);
+            fullBlockCount--;
 
             return std::move(fstat);
           };
@@ -115,7 +123,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         auto &currentList = fullBlocks[idx];
         std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
         std::vector<uint64_t> offsets;
-        std::vector<std::pair<PPN, uint32_t>> valid;
+        std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
 
         // Select dchoice number of blocks from current full block list
         offsets.reserve(dchoice);
@@ -144,14 +152,14 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
         for (uint64_t i = 0; i < currentList.size(); i++) {
           if (i == offsets.at(valid.size())) {
-            valid.emplace_back(i, pMapper->getValidPages(i));
+            valid.emplace_back(iter, pMapper->getValidPages(*iter));
           }
 
           ++iter;
         }
 
         // Greedy
-        PPN minIndex = InvalidPPN;
+        auto minIndex = currentList.end();
         uint32_t min = std::numeric_limits<uint32_t>::max();
 
         for (auto &iter : valid) {
@@ -162,7 +170,9 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         }
 
         // Get block ID from sorted list
-        list.emplace_back(minIndex);
+        list.emplace_back(*minIndex);
+        currentList.erase(minIndex);
+        fullBlockCount--;
 
         return std::move(fstat);
       };
