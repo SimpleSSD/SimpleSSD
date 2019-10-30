@@ -155,6 +155,7 @@ class AbstractMapping : public Object {
 
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
+  virtual uint16_t getAge(PPN) = 0;
 
   // I/O interfaces
   virtual CPU::Function readMapping(Command &) = 0;

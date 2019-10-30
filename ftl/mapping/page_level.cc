@@ -21,7 +21,8 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
       table(nullptr),
       validEntry(totalLogicalSuperPages),
-      blockMetadata(nullptr) {
+      blockMetadata(nullptr),
+      clock(0) {
   // Check spare size
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
 
@@ -71,6 +72,9 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
 
   if (validEntry.test(lpn)) {
     ppn = readEntry(lpn);
+
+    // Update accessed time
+    blockMetadata[getSBFromSPPN(ppn)].clock = clock;
   }
   else {
     ppn = InvalidPPN;
@@ -112,6 +116,8 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   // Get new page
   block->validPages.set(block->nextPageToWrite);
   ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
+
+  block->clock = clock;
 
   // Write entry
   writeEntry(lpn, ppn);
@@ -339,8 +345,14 @@ uint32_t PageLevel::getValidPages(PPN ppn) {
   return (uint32_t)blockMetadata[getSBFromSPPN(ppn)].validPages.count();
 }
 
+uint16_t PageLevel::getAge(PPN ppn) {
+  return (uint16_t)(clock - blockMetadata[getSBFromSPPN(ppn)].clock);
+}
+
 CPU::Function PageLevel::readMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
+
+  clock++;
 
   panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
 
@@ -375,6 +387,8 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
 
 CPU::Function PageLevel::writeMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
+
+  clock++;
 
   panic_if(cmd.subCommandList.size() != cmd.length, "Unexpected sub commands.");
 
@@ -431,6 +445,8 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
 
 CPU::Function PageLevel::invalidateMapping(Command &cmd) {
   CPU::Function fstat = CPU::initFunction();
+
+  clock++;
 
   panic_if(cmd.subCommandList.size() > 0, "Unexpected sub commands.");
 
@@ -548,11 +564,13 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalSuperPages);
   BACKUP_SCALAR(out, entrySize);
   BACKUP_BLOB(out, table, totalLogicalSuperPages * entrySize);
+  BACKUP_SCALAR(out, clock);
 
   validEntry.createCheckpoint(out);
 
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     BACKUP_SCALAR(out, blockMetadata[i].nextPageToWrite);
+    BACKUP_SCALAR(out, blockMetadata[i].clock);
 
     blockMetadata[i].validPages.createCheckpoint(out);
   }
@@ -577,11 +595,13 @@ void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != entrySize, "Invalid FTL configuration while restore.");
 
   RESTORE_BLOB(in, table, totalLogicalSuperPages * entrySize);
+  RESTORE_SCALAR(in, clock);
 
   validEntry.restoreCheckpoint(in);
 
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     RESTORE_SCALAR(in, blockMetadata[i].nextPageToWrite);
+    RESTORE_SCALAR(in, blockMetadata[i].clock);
 
     blockMetadata[i].validPages.restoreCheckpoint(in);
   }
