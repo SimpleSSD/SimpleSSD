@@ -147,12 +147,15 @@ set(SRC_FTL
 )
 set(SRC_FTL_ALLOC
   ftl/allocator/basic_allocator.cc
+  ftl/allocator/two_block_allocator.cc
 )
 set(SRC_FTL_BASE
   ftl/base/basic_ftl.cc
+  ftl/base/vlftl.cc
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/page_level.cc
+  ftl/mapping/virtually_linked.cc
 )
 set(SRC_FIL
   fil/config.cc
