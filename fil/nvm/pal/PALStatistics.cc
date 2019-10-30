@@ -1276,7 +1276,7 @@ void PALStatistics::restore(std::istream &in) {
     RESTORE_SCALAR(in, t);
     ptr->restore(in);
 
-    Ticks_Total_snapshot.emplace(std::make_pair(t, ptr));
+    Ticks_Total_snapshot.emplace(t, ptr);
   }
 
   Ticks_TotalOpti.restore(in);
@@ -1308,7 +1308,7 @@ void PALStatistics::restore(std::istream &in) {
     RESTORE_SCALAR(in, t);
     ptr->restore(in);
 
-    Access_Capacity_snapshot.emplace(std::make_pair(t, ptr));
+    Access_Capacity_snapshot.emplace(t, ptr);
   }
 
   Access_Bandwidth.restore(in);

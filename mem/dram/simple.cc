@@ -76,7 +76,7 @@ uint64_t SimpleDRAM::allocate(uint64_t size) {
     ret = addressMap.back().first + addressMap.back().second;
   }
 
-  addressMap.emplace_back(std::make_pair(ret, size));
+  addressMap.emplace_back(ret, size);
 
   return ret;
 }
@@ -141,7 +141,7 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, a);
     RESTORE_SCALAR(in, s);
 
-    addressMap.emplace_back(std::make_pair(a, s));
+    addressMap.emplace_back(a, s);
   }
 
   scheduler.restoreCheckpoint(in);

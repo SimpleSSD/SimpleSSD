@@ -130,7 +130,7 @@ void PALOLD::reschedule(Complete &&cplt) {
   uint64_t tick = object.cpu->when(completeEvent);
 
   // Find insertion slot
-  completionQueue.emplace(std::make_pair(cplt.finishedAt, cplt));
+  completionQueue.emplace(cplt.finishedAt, cplt);
 
   if (tick > completionQueue.begin()->first) {
     schedule = true;
@@ -184,7 +184,7 @@ void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
   auto iter = spareList.find(ppn);
 
   if (iter == spareList.end()) {
-    iter = spareList.emplace(std::make_pair(ppn, list)).first;
+    iter = spareList.emplace(ppn, list).first;
   }
   else {
     // Move
@@ -437,7 +437,7 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp.beginAt);
     RESTORE_SCALAR(in, tmp.finishedAt);
 
-    completionQueue.emplace(std::make_pair(tmp.finishedAt, tmp));
+    completionQueue.emplace(tmp.finishedAt, tmp);
   }
 
   lat->restore(in);

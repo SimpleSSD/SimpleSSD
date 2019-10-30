@@ -2164,7 +2164,7 @@ uint64_t TimingDRAM::allocate(uint64_t size) {
     ret = addressMap.back().first + addressMap.back().second;
   }
 
-  addressMap.emplace_back(std::make_pair(ret, size));
+  addressMap.emplace_back(ret, size);
 
   return ret;
 }
@@ -2371,7 +2371,7 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, f);
     RESTORE_SCALAR(in, s);
 
-    addressMap.emplace_back(std::make_pair(f, s));
+    addressMap.emplace_back(f, s);
   }
 
   RESTORE_SCALAR(in, size);

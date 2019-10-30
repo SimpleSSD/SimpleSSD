@@ -969,7 +969,7 @@ void PAL2::restore(std::istream &in) {
       RESTORE_SCALAR(in, f);
       RESTORE_SCALAR(in, s);
 
-      OpTimeStamp[i].emplace(std::make_pair(f, s));
+      OpTimeStamp[i].emplace(f, s);
     }
   }
 
@@ -998,10 +998,10 @@ void PAL2::restore(std::istream &in) {
         RESTORE_SCALAR(in, f);
         RESTORE_SCALAR(in, s);
 
-        ptr->emplace(std::make_pair(f, s));
+        ptr->emplace(f, s);
       }
 
-      ChFreeSlots[i].emplace(std::make_pair(key, ptr));
+      ChFreeSlots[i].emplace(key, ptr);
     }
   }
 
@@ -1031,10 +1031,10 @@ void PAL2::restore(std::istream &in) {
         RESTORE_SCALAR(in, f);
         RESTORE_SCALAR(in, s);
 
-        ptr->emplace(std::make_pair(f, s));
+        ptr->emplace(f, s);
       }
 
-      DieFreeSlots[i].emplace(std::make_pair(key, ptr));
+      DieFreeSlots[i].emplace(key, ptr);
     }
   }
 

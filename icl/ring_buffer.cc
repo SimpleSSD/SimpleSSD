@@ -375,8 +375,7 @@ void RingBuffer::readWorker(uint64_t now) {
 
       // Create entry
       for (auto lpn = alignedLPN.begin(); lpn != alignedLPN.end();) {
-        auto ret = cacheEntry.emplace(
-            std::make_pair(*lpn, Entry(*lpn, minPages, iobits)));
+        auto ret = cacheEntry.emplace(*lpn, Entry(*lpn, minPages, iobits));
 
         if (UNLIKELY(!ret.second)) {
           // Entry already exists, but it may created by write caching
@@ -1057,10 +1056,10 @@ void RingBuffer::write_find(SubCommand &scmd) {
                                        skipFront, skipEnd, getTick());
 
         for (LPN j = offset; j < offset + length; j++) {
-          writePendingQueue.emplace_back(std::make_pair(
+          writePendingQueue.emplace_back(
               tag,
               CacheContext(&wcmd.subCommandList.at(j - alignedBegin - front),
-                           cacheEntry.end(), CacheStatus::WriteCacheWait)));
+                           cacheEntry.end(), CacheStatus::WriteCacheWait));
         }
       }
     }
@@ -1589,16 +1588,15 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     auto &scmd = commandManager->getSubCommand(tag).at(id);
 
     if (offset == InvalidLPN) {
-      writePendingQueue.emplace_back(
-          std::make_pair(ctag, CacheContext(&scmd, cacheEntry.end(), cs)));
+      writePendingQueue.emplace_back(ctag,
+                                     CacheContext(&scmd, cacheEntry.end(), cs));
     }
     else {
       auto iter = cacheEntry.find(offset);
 
       panic_if(iter == cacheEntry.end(), "Entry not found while restore.");
 
-      writePendingQueue.emplace_back(
-          std::make_pair(ctag, CacheContext(&scmd, iter, cs)));
+      writePendingQueue.emplace_back(ctag, CacheContext(&scmd, iter, cs));
     }
   }
 

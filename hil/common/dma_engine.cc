@@ -680,7 +680,7 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
       newTag->prList.emplace_back(pr);
     }
 
-    oldTagList.emplace(std::make_pair(oldTag, newTag));
+    oldTagList.emplace(oldTag, newTag);
   }
 
   RESTORE_SCALAR(in, size);
@@ -713,7 +713,7 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, session.regionIndex);
 
-    sessionList.emplace(std::make_pair(tag, session));
+    sessionList.emplace(tag, session);
   }
 }
 

@@ -406,7 +406,7 @@ uint8_t Arbitrator::deleteIOSQ(uint16_t id, Event eid, uint64_t gcid) {
   }
 
   // Push current event to wait all aborted commands to complete
-  abortSQList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
+  abortSQList.emplace(id, std::make_pair(eid, gcid));
 
   if (!aborted) {
     // We don't have aborted commands
@@ -458,7 +458,7 @@ uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid,
 
     delete iter->second;
 
-    abortCommandList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
+    abortCommandList.emplace(id, std::make_pair(eid, gcid));
 
     return 0u;
   }
@@ -536,13 +536,13 @@ void Arbitrator::abort_SQDone() {
 
   // Check pending queue
   for (auto &iter : dispatchedQueue) {
-    auto count = countList.emplace(std::make_pair(iter.second->sqID, 0));
+    auto count = countList.emplace(iter.second->sqID, 0);
     count.first->second++;
   }
 
   // Check completion queue
   for (auto &iter : completionQueue) {
-    auto count = countList.emplace(std::make_pair(iter->getSQID(), 0));
+    auto count = countList.emplace(iter->getSQID(), 0);
     count.first->second++;
   }
 
@@ -1024,7 +1024,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_EVENT(in, eid);
     RESTORE_SCALAR(in, gcid);
 
-    abortSQList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
+    abortSQList.emplace(id, std::make_pair(eid, gcid));
   }
 
   RESTORE_SCALAR(in, size);
@@ -1038,7 +1038,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_EVENT(in, eid);
     RESTORE_SCALAR(in, gcid);
 
-    abortCommandList.emplace(std::make_pair(id, std::make_pair(eid, gcid)));
+    abortCommandList.emplace(id, std::make_pair(eid, gcid));
   }
 }
 

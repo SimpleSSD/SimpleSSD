@@ -77,7 +77,7 @@ void Command::addTagToList(CommandTag tag) {
   auto key = tag->getGCID();
 
   // 64bit command unique ID is unique across the SSD
-  tagList.emplace(std::make_pair(key, tag));
+  tagList.emplace(key, tag);
 }
 
 void Command::completeRequest(CommandTag tag) {
@@ -162,7 +162,7 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
     newTag->restoreCheckpoint(in);
 
     // Insert to tagList
-    tagList.emplace(std::make_pair(uid, newTag));
+    tagList.emplace(uid, newTag);
   }
 }
 

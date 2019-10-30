@@ -876,7 +876,7 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
   for (uint64_t i = 0; i < size; i++) {
     RESTORE_SCALAR(in, eid);
 
-    oldEventList.emplace(std::make_pair(eid, eventList[i]));
+    oldEventList.emplace(eid, eventList[i]);
   }
 
   for (auto &core : coreList) {

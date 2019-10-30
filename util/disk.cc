@@ -226,7 +226,7 @@ uint32_t CoWDisk::write(uint64_t offset, uint32_t size,
       data.resize(SECTOR_SIZE);
       memcpy(data.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
 
-      table.emplace(std::make_pair(lba, data));
+      table.emplace(lba, data);
     }
 
     write++;
@@ -331,7 +331,7 @@ uint32_t MemDisk::write(uint64_t offset, uint32_t size,
       data.resize(SECTOR_SIZE);
       memcpy(data.data(), buffer + i * SECTOR_SIZE, SECTOR_SIZE);
 
-      table.emplace(std::make_pair(lba, data));
+      table.emplace(lba, data);
     }
 
     write++;

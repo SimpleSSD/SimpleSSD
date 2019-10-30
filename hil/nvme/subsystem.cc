@@ -448,8 +448,8 @@ ControllerID Subsystem::createController(Interface *interface) noexcept {
         iter->second->attach(controllerID);
 
         // Controller -> Namespace
-        auto mapping = attachmentTable.emplace(
-            std::make_pair(controllerID, std::set<uint32_t>()));
+        auto mapping =
+            attachmentTable.emplace(controllerID, std::set<uint32_t>());
 
         mapping.first->second.emplace(iter->first);
       }
@@ -552,8 +552,7 @@ uint8_t Subsystem::attachNamespace(ControllerID ctrlid, uint32_t nsid,
   ns->second->attach(ctrlid);
 
   // Controller -> Namespace
-  auto iter =
-      attachmentTable.emplace(std::make_pair(ctrlid, std::set<uint32_t>()));
+  auto iter = attachmentTable.emplace(ctrlid, std::set<uint32_t>());
 
   iter.first->second.emplace(nsid);
 

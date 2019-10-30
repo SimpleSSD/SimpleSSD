@@ -204,8 +204,8 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
         if (list.size() == 0) {
           // Greedy
           for (auto &iter : fullBlocks) {
-            valid.emplace_back(std::make_pair(
-                iter.second, pMapper->getValidPages(iter.second)));
+            valid.emplace_back(iter.second,
+                               pMapper->getValidPages(iter.second));
           }
         }
         else {
@@ -213,8 +213,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
           valid.reserve(list.size());
 
           for (auto &iter : list) {
-            valid.emplace_back(
-                std::make_pair(iter, pMapper->getValidPages(iter)));
+            valid.emplace_back(iter, pMapper->getValidPages(iter));
           }
 
           list.clear();

@@ -64,7 +64,7 @@ void DatasetManagement::dmaComplete(uint64_t gcid) {
 
     slpn += range.first;
 
-    trimList.emplace_back(std::make_pair(slpn, nlp));
+    trimList.emplace_back(slpn, nlp);
 
     if (disk) {
       disk->erase(trimRange->slba * lbaSize, trimRange->nlb * lbaSize);

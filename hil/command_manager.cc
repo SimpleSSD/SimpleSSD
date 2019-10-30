@@ -37,7 +37,7 @@ std::vector<SubCommand> &CommandManager::getSubCommand(uint64_t tag) {
 }
 
 Command &CommandManager::createCommand(uint64_t tag, Event eid) {
-  auto iter = commandList.emplace(std::make_pair(tag, Command(tag, eid)));
+  auto iter = commandList.emplace(tag, Command(tag, eid));
 
   panic_if(!iter.second, "Command with tag %" PRIu64 " already exists.", tag);
 
@@ -298,7 +298,7 @@ void CommandManager::restoreCheckpoint(std::istream &in) noexcept {
       cmd.subCommandList.emplace_back(scmd);
     }
 
-    commandList.emplace(std::make_pair(tag, cmd));
+    commandList.emplace(tag, cmd);
   }
 }
 

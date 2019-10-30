@@ -180,7 +180,7 @@ void map_list<Key, T, U>::eraseMap(const key_type &key) noexcept {
 SORTED_MAP_TEMPLATE
 bool map_list<Key, T, U>::insertMap(const key_type &key,
                                     list_item *value) noexcept {
-  auto result = map.emplace(std::make_pair(key, value));
+  auto result = map.emplace(key, value);
 
   return result.second;
 }
