@@ -24,31 +24,12 @@ void AbstractSRAM::rangeCheck(uint64_t address, uint64_t length) noexcept {
 
 void AbstractSRAM::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
-  Stat temp;
-
-  temp.name = prefix + "read.request_count";
-  temp.desc = "Read request count";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.bytes";
-  temp.desc = "Read data size in byte";
-  list.push_back(temp);
-
-  temp.name = prefix + "write.request_count";
-  temp.desc = "Write request count";
-  list.push_back(temp);
-
-  temp.name = prefix + "write.bytes";
-  temp.desc = "Write data size in byte";
-  list.push_back(temp);
-
-  temp.name = prefix + "request_count";
-  temp.desc = "Total request count";
-  list.push_back(temp);
-
-  temp.name = prefix + "bytes";
-  temp.desc = "Total data size in byte";
-  list.push_back(temp);
+  list.emplace_back(prefix + "read.request_count", "Read request count");
+  list.emplace_back(prefix + "read.bytes", "Read data size in byte");
+  list.emplace_back(prefix + "write.request_count", "Write request count");
+  list.emplace_back(prefix + "write.bytes", "Write data size in byte");
+  list.emplace_back(prefix + "request_count", "Total request count");
+  list.emplace_back(prefix + "bytes", "Total data size in byte");
 }
 
 void AbstractSRAM::getStatValues(std::vector<double> &values) noexcept {

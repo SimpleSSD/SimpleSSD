@@ -722,7 +722,6 @@ void CPU::destroyEvent(Event) noexcept {
 }
 
 void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  Stat temp;
   std::string number;
   std::string prefix2;
   uint32_t totalCore = hilCore + iclCore + ftlCore;
@@ -747,37 +746,24 @@ void CPU::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
 
     number = std::to_string(ncore++);
 
-    temp.name = prefix + prefix2 + number + ".busy";
-    temp.desc = "CPU core " + number + " busy ticks";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".handled_function";
-    temp.desc = "CPU core " + number + " total functions executed";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.branch";
-    temp.desc = "CPU core " + number + " executed branch instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.load";
-    temp.desc = "CPU core " + number + " executed load instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.store";
-    temp.desc = "CPU core " + number + " executed store instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.arithmetic";
-    temp.desc = "CPU core " + number + " executed arithmetic instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.fp";
-    temp.desc = "CPU core " + number + " executed floating point instructions";
-    list.push_back(temp);
-
-    temp.name = prefix + prefix2 + number + ".insts.others";
-    temp.desc = "CPU core " + number + " executed other instructions";
-    list.push_back(temp);
+    list.emplace_back(prefix + prefix2 + number + ".busy",
+                      "CPU core " + number + " busy ticks");
+    list.emplace_back(prefix + prefix2 + number + ".handled_function",
+                      "CPU core " + number + " total functions executed");
+    list.emplace_back(prefix + prefix2 + number + ".insts.branch",
+                      "CPU core " + number + " executed branch instructions");
+    list.emplace_back(prefix + prefix2 + number + ".insts.load",
+                      "CPU core " + number + " executed load instructions");
+    list.emplace_back(prefix + prefix2 + number + ".insts.store",
+                      "CPU core " + number + " executed store instructions");
+    list.emplace_back(
+        prefix + prefix2 + number + ".insts.arithmetic",
+        "CPU core " + number + " executed arithmetic instructions");
+    list.emplace_back(
+        prefix + prefix2 + number + ".insts.fp",
+        "CPU core " + number + " executed floating point instructions");
+    list.emplace_back(prefix + prefix2 + number + ".insts.others",
+                      "CPU core " + number + " executed other instructions");
   }
 }
 

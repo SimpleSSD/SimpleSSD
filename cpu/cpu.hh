@@ -26,6 +26,9 @@ class Log;
 struct Stat {
   std::string name;
   std::string desc;
+
+  Stat(const std::string &n) : name(n) {}
+  Stat(const std::string &n, const std::string &d) : name(n), desc(d) {}
 };
 
 namespace CPU {

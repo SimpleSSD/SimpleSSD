@@ -207,131 +207,54 @@ void PALOLD::eraseSpare(PPN ppn) {
 }
 
 void PALOLD::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  Stat temp;
-
-  temp.name = prefix + "energy.read";
-  temp.desc = "Consumed energy by NAND read operation (uJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.program";
-  temp.desc = "Consumed energy by NAND program operation (uJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.erase";
-  temp.desc = "Consumed energy by NAND erase operation (uJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "energy.total";
-  temp.desc = "Total consumed energy by NAND (uJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "power";
-  temp.desc = "Average power consumed by NAND (uW)";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.count";
-  temp.desc = "Total read operation count";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.count";
-  temp.desc = "Total program operation count";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.count";
-  temp.desc = "Total erase operation count";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.bytes";
-  temp.desc = "Total read operation bytes";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.bytes";
-  temp.desc = "Total program operation bytes";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.bytes";
-  temp.desc = "Total erase operation bytes";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.dma0.wait";
-  temp.desc = "Average dma0 wait time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.dma0";
-  temp.desc = "Average dma0 time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.mem";
-  temp.desc = "Average memory operation time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.dma1.wait";
-  temp.desc = "Average dma1 wait time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.dma1";
-  temp.desc = "Average dma1 time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "read.time.total";
-  temp.desc = "Average time of read";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.dma0.wait";
-  temp.desc = "Average dma0 wait time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.dma0";
-  temp.desc = "Average dma0 time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.mem";
-  temp.desc = "Average memory operation time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.dma1.wait";
-  temp.desc = "Average dma1 wait time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.dma1";
-  temp.desc = "Average dma1 time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "program.time.total";
-  temp.desc = "Average time of program";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.dma0.wait";
-  temp.desc = "Average dma0 wait time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.dma0";
-  temp.desc = "Average dma0 time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.mem";
-  temp.desc = "Average memory operation time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.dma1.wait";
-  temp.desc = "Average dma1 wait time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.dma1";
-  temp.desc = "Average dma1 time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "erase.time.total";
-  temp.desc = "Average time of erase";
-  list.push_back(temp);
-
-  temp.name = prefix + "channel.time.active";
-  temp.desc = "Average active time of all channels";
-  list.push_back(temp);
-
-  temp.name = prefix + "die.time.active";
-  temp.desc = "Average active time of all dies";
-  list.push_back(temp);
+  list.emplace_back(prefix + "energy.read",
+                    "Consumed energy by NAND read operation (uJ)");
+  list.emplace_back(prefix + "energy.program",
+                    "Consumed energy by NAND program operation (uJ)");
+  list.emplace_back(prefix + "energy.erase",
+                    "Consumed energy by NAND erase operation (uJ)");
+  list.emplace_back(prefix + "energy.total",
+                    "Total consumed energy by NAND (uJ)");
+  list.emplace_back(prefix + "power", "Average power consumed by NAND (uW)");
+  list.emplace_back(prefix + "read.count", "Total read operation count");
+  list.emplace_back(prefix + "program.count", "Total program operation count");
+  list.emplace_back(prefix + "erase.count", "Total erase operation count");
+  list.emplace_back(prefix + "read.bytes", "Total read operation bytes");
+  list.emplace_back(prefix + "program.bytes", "Total program operation bytes");
+  list.emplace_back(prefix + "erase.bytes", "Total erase operation bytes");
+  list.emplace_back(prefix + "read.time.dma0.wait",
+                    "Average dma0 wait time of read");
+  list.emplace_back(prefix + "read.time.dma0", "Average dma0 time of read");
+  list.emplace_back(prefix + "read.time.mem",
+                    "Average memory operation time of read");
+  list.emplace_back(prefix + "read.time.dma1.wait",
+                    "Average dma1 wait time of read");
+  list.emplace_back(prefix + "read.time.dma1", "Average dma1 time of read");
+  list.emplace_back(prefix + "read.time.total", "Average time of read");
+  list.emplace_back(prefix + "program.time.dma0.wait",
+                    "Average dma0 wait time of program");
+  list.emplace_back(prefix + "program.time.dma0",
+                    "Average dma0 time of program");
+  list.emplace_back(prefix + "program.time.mem",
+                    "Average memory operation time of program");
+  list.emplace_back(prefix + "program.time.dma1.wait",
+                    "Average dma1 wait time of program");
+  list.emplace_back(prefix + "program.time.dma1",
+                    "Average dma1 time of program");
+  list.emplace_back(prefix + "program.time.total", "Average time of program");
+  list.emplace_back(prefix + "erase.time.dma0.wait",
+                    "Average dma0 wait time of erase");
+  list.emplace_back(prefix + "erase.time.dma0", "Average dma0 time of erase");
+  list.emplace_back(prefix + "erase.time.mem",
+                    "Average memory operation time of erase");
+  list.emplace_back(prefix + "erase.time.dma1.wait",
+                    "Average dma1 wait time of erase");
+  list.emplace_back(prefix + "erase.time.dma1", "Average dma1 time of erase");
+  list.emplace_back(prefix + "erase.time.total", "Average time of erase");
+  list.emplace_back(prefix + "channel.time.active",
+                    "Average active time of all channels");
+  list.emplace_back(prefix + "die.time.active",
+                    "Average active time of all dies");
 }
 
 void PALOLD::getStatValues(std::vector<double> &values) noexcept {

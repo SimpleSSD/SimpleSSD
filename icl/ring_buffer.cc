@@ -1303,23 +1303,12 @@ bool RingBuffer::getCache() {
 
 void RingBuffer::getStatList(std::vector<Stat> &list,
                              std::string prefix) noexcept {
-  Stat temp;
-
-  temp.name = prefix + "ring_buffer.read.bytes";
-  temp.desc = "Read request volume";
-  list.push_back(temp);
-
-  temp.name = prefix + "ring_buffer.read.bytes_from_cache";
-  temp.desc = "Read requests that served from cache";
-  list.push_back(temp);
-
-  temp.name = prefix + "ring_buffer.write.bytes";
-  temp.desc = "Write request volume";
-  list.push_back(temp);
-
-  temp.name = prefix + "ring_buffer.write.bytes_from_cache";
-  temp.desc = "Write requests that served to cache";
-  list.push_back(temp);
+  list.emplace_back(prefix + "ring_buffer.read.bytes", "Read request volume");
+  list.emplace_back(prefix + "ring_buffer.read.bytes_from_cache",
+                    "Read requests that served from cache");
+  list.emplace_back(prefix + "ring_buffer.write.bytes", "Write request volume");
+  list.emplace_back(prefix + "ring_buffer.write.bytes_from_cache",
+                    "Write requests that served to cache");
 }
 
 void RingBuffer::getStatValues(std::vector<double> &values) noexcept {

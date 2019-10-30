@@ -828,59 +828,29 @@ RankStats::RankStats(Rank *p) : parent(p) {}
 
 void RankStats::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
-  Stat temp;
-
-  temp.name = prefix + "actEnergy";
-  temp.desc = "Energy for activate commands per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "preEnergy";
-  temp.desc = "Energy for precharge commands per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "readEnergy";
-  temp.desc = "Energy for read commands per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "writeEnergy";
-  temp.desc = "Energy for write commands per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "refreshEnergy";
-  temp.desc = "Energy for refresh commands per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "actBackEnergy";
-  temp.desc = "Energy for active background per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "preBackEnergy";
-  temp.desc = "Energy for precharge background per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "actPowerDownEnergy";
-  temp.desc = "Energy for active power-down per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "prePowerDownEnergy";
-  temp.desc = "Energy for precharge power-down per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "selfRefreshEnergy";
-  temp.desc = "Energy for self refresh per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "totalEnergy";
-  temp.desc = "Total energy per rank (pJ)";
-  list.push_back(temp);
-
-  temp.name = prefix + "averagePower";
-  temp.desc = "Core power per rank (mW)";
-  list.push_back(temp);
-
-  temp.name = prefix + "totalIdleTime";
-  temp.desc = "Total Idle time Per DRAM Rank";
-  list.push_back(temp);
+  list.emplace_back(prefix + "actEnergy",
+                    "Energy for activate commands per rank (pJ)");
+  list.emplace_back(prefix + "preEnergy",
+                    "Energy for precharge commands per rank (pJ)");
+  list.emplace_back(prefix + "readEnergy",
+                    "Energy for read commands per rank (pJ)");
+  list.emplace_back(prefix + "writeEnergy",
+                    "Energy for write commands per rank (pJ)");
+  list.emplace_back(prefix + "refreshEnergy",
+                    "Energy for refresh commands per rank (pJ)");
+  list.emplace_back(prefix + "actBackEnergy",
+                    "Energy for active background per rank (pJ)");
+  list.emplace_back(prefix + "preBackEnergy",
+                    "Energy for precharge background per rank (pJ)");
+  list.emplace_back(prefix + "actPowerDownEnergy",
+                    "Energy for active power-down per rank (pJ)");
+  list.emplace_back(prefix + "prePowerDownEnergy",
+                    "Energy for precharge power-down per rank (pJ)");
+  list.emplace_back(prefix + "selfRefreshEnergy",
+                    "Energy for self refresh per rank (pJ)");
+  list.emplace_back(prefix + "totalEnergy", "Total energy per rank (pJ)");
+  list.emplace_back(prefix + "averagePower", "Core power per rank (mW)");
+  list.emplace_back(prefix + "totalIdleTime", "Total Idle time Per DRAM Rank");
 }
 
 void RankStats::getStatValues(std::vector<double> &values) noexcept {
@@ -951,102 +921,49 @@ DRAMStats::DRAMStats(TimingDRAM *p) : parent(p) {}
 
 void DRAMStats::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
-  Stat temp;
-
-  temp.name = prefix + "readReqs";
-  temp.desc = "Number of read requests accepted";
-  list.push_back(temp);
-
-  temp.name = prefix + "writeReqs";
-  temp.desc = "Number of write requests accepted";
-  list.push_back(temp);
-
-  temp.name = prefix + "readBursts";
-  temp.desc =
-      "Number of DRAM read bursts, including those serviced by the write queue";
-  list.push_back(temp);
-
-  temp.name = prefix + "writeBursts";
-  temp.desc =
-      "Number of DRAM write bursts, including those merged in the write queue";
-  list.push_back(temp);
-
-  temp.name = prefix + "servicedByWrQ";
-  temp.desc = "Number of DRAM read bursts serviced by the write queue";
-  list.push_back(temp);
-
-  temp.name = prefix + "mergedWrBursts";
-  temp.desc = "Number of DRAM write bursts merged with an existing one";
-  list.push_back(temp);
-
-  temp.name = prefix + "neitherReadNorWriteReqs";
-  temp.desc = "Number of requests that are neither read nor write";
-  list.push_back(temp);
-
-  temp.name = prefix + "totQLat";
-  temp.desc = "Total ticks spent queuing";
-  list.push_back(temp);
-
-  temp.name = prefix + "totBusLat";
-  temp.desc = "Total ticks spent in databus transfers";
-  list.push_back(temp);
-
-  temp.name = prefix + "totMemAccLat";
-  temp.desc =
-      "Total ticks spent from burst creation until serviced by the DRAM";
-  list.push_back(temp);
-
-  temp.name = prefix + "numRdRetry";
-  temp.desc = "Number of times read queue was full causing retry";
-  list.push_back(temp);
-
-  temp.name = prefix + "numWrRetry";
-  temp.desc = "Number of times write queue was full causing retry";
-  list.push_back(temp);
-
-  temp.name = prefix + "bytesReadDRAM";
-  temp.desc = "Total number of bytes read from DRAM";
-  list.push_back(temp);
-
-  temp.name = prefix + "bytesReadWrQ";
-  temp.desc = "Total number of bytes read from write queue";
-  list.push_back(temp);
-
-  temp.name = prefix + "bytesWritten";
-  temp.desc = "Total number of bytes written to DRAM";
-  list.push_back(temp);
-
-  temp.name = prefix + "avgRdBW";
-  temp.desc = "Average DRAM read bandwidth in MiByte/s";
-  list.push_back(temp);
-
-  temp.name = prefix + "avgWrBW";
-  temp.desc = "Average achieved write bandwidth in MiByte/s";
-  list.push_back(temp);
-
-  temp.name = prefix + "peakBW";
-  temp.desc = "Theoretical peak bandwidth in MiByte/s";
-  list.push_back(temp);
-
-  temp.name = prefix + "busUtil";
-  temp.desc = "Data bus utilization in percentage";
-  list.push_back(temp);
-
-  temp.name = prefix + "busUtilRead";
-  temp.desc = "Data bus utilization in percentage for reads";
-  list.push_back(temp);
-
-  temp.name = prefix + "busUtilWrite";
-  temp.desc = "Data bus utilization in percentage for writes";
-  list.push_back(temp);
-
-  temp.name = prefix + "totGap";
-  temp.desc = "Total gap between requests";
-  list.push_back(temp);
-
-  temp.name = prefix + "avgGap";
-  temp.desc = "Average gap between requests";
-  list.push_back(temp);
+  list.emplace_back(prefix + "readReqs", "Number of read requests accepted");
+  list.emplace_back(prefix + "writeReqs", "Number of write requests accepted");
+  list.emplace_back(prefix + "readBursts",
+                    "Number of DRAM read bursts, including those serviced by "
+                    "the write queue");
+  list.emplace_back(
+      prefix + "writeBursts",
+      "Number of DRAM write bursts, including those merged in the write queue");
+  list.emplace_back(prefix + "servicedByWrQ",
+                    "Number of DRAM read bursts serviced by the write queue");
+  list.emplace_back(prefix + "mergedWrBursts",
+                    "Number of DRAM write bursts merged with an existing one");
+  list.emplace_back(prefix + "neitherReadNorWriteReqs",
+                    "Number of requests that are neither read nor write");
+  list.emplace_back(prefix + "totQLat", "Total ticks spent queuing");
+  list.emplace_back(prefix + "totBusLat",
+                    "Total ticks spent in databus transfers");
+  list.emplace_back(
+      prefix + "totMemAccLat",
+      "Total ticks spent from burst creation until serviced by the DRAM");
+  list.emplace_back(prefix + "numRdRetry",
+                    "Number of times read queue was full causing retry");
+  list.emplace_back(prefix + "numWrRetry",
+                    "Number of times write queue was full causing retry");
+  list.emplace_back(prefix + "bytesReadDRAM",
+                    "Total number of bytes read from DRAM");
+  list.emplace_back(prefix + "bytesReadWrQ",
+                    "Total number of bytes read from write queue");
+  list.emplace_back(prefix + "bytesWritten",
+                    "Total number of bytes written to DRAM");
+  list.emplace_back(prefix + "avgRdBW",
+                    "Average DRAM read bandwidth in MiByte/s");
+  list.emplace_back(prefix + "avgWrBW",
+                    "Average achieved write bandwidth in MiByte/s");
+  list.emplace_back(prefix + "peakBW",
+                    "Theoretical peak bandwidth in MiByte/s");
+  list.emplace_back(prefix + "busUtil", "Data bus utilization in percentage");
+  list.emplace_back(prefix + "busUtilRead",
+                    "Data bus utilization in percentage for reads");
+  list.emplace_back(prefix + "busUtilWrite",
+                    "Data bus utilization in percentage for writes");
+  list.emplace_back(prefix + "totGap", "Total gap between requests");
+  list.emplace_back(prefix + "avgGap", "Average gap between requests");
 }
 
 void DRAMStats::getStatValues(std::vector<double> &values,

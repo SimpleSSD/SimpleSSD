@@ -722,24 +722,24 @@ void Subsystem::getStatList(std::vector<Stat> &list,
   }
 
   // All commands
-  commandDeleteSQ->getStatList(list, prefix + "admin.deletesq");
-  commandCreateSQ->getStatList(list, prefix + "admin.createsq");
-  commandGetLogPage->getStatList(list, prefix + "admin.getlogpage");
-  commandDeleteCQ->getStatList(list, prefix + "admin.deletecq");
-  commandCreateCQ->getStatList(list, prefix + "admin.createcq");
-  commandIdentify->getStatList(list, prefix + "admin.identify");
-  commandAbort->getStatList(list, prefix + "admin.abort");
-  commandSetFeature->getStatList(list, prefix + "admin.setfeature");
-  commandGetFeature->getStatList(list, prefix + "admin.getfeature");
-  commandAsyncEventRequest->getStatList(list, prefix + "admin.asynceventreq");
-  commandNamespaceManagement->getStatList(list, prefix + "admin.nsmgmt");
-  commandNamespaceAttachment->getStatList(list, prefix + "admin.nsattach");
-  commandFormatNVM->getStatList(list, prefix + "admin.format");
-  commandFlush->getStatList(list, prefix + "nvm.flush");
-  commandWrite->getStatList(list, prefix + "nvm.write");
-  commandRead->getStatList(list, prefix + "nvm.read");
-  commandCompare->getStatList(list, prefix + "nvm.compare");
-  commandDatasetManagement->getStatList(list, prefix + "nvm.datasetmgmt");
+  commandDeleteSQ->getStatList(list, prefix + "admin.deletesq.");
+  commandCreateSQ->getStatList(list, prefix + "admin.createsq.");
+  commandGetLogPage->getStatList(list, prefix + "admin.getlogpage.");
+  commandDeleteCQ->getStatList(list, prefix + "admin.deletecq.");
+  commandCreateCQ->getStatList(list, prefix + "admin.createcq.");
+  commandIdentify->getStatList(list, prefix + "admin.identify.");
+  commandAbort->getStatList(list, prefix + "admin.abort.");
+  commandSetFeature->getStatList(list, prefix + "admin.setfeature.");
+  commandGetFeature->getStatList(list, prefix + "admin.getfeature.");
+  commandAsyncEventRequest->getStatList(list, prefix + "admin.asynceventreq.");
+  commandNamespaceManagement->getStatList(list, prefix + "admin.nsmgmt.");
+  commandNamespaceAttachment->getStatList(list, prefix + "admin.nsattach.");
+  commandFormatNVM->getStatList(list, prefix + "admin.format.");
+  commandFlush->getStatList(list, prefix + "nvm.flush.");
+  commandWrite->getStatList(list, prefix + "nvm.write.");
+  commandRead->getStatList(list, prefix + "nvm.read.");
+  commandCompare->getStatList(list, prefix + "nvm.compare.");
+  commandDatasetManagement->getStatList(list, prefix + "nvm.datasetmgmt.");
 
   // HIL
   pHIL->getStatList(list, prefix);
