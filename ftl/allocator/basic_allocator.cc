@@ -13,7 +13,6 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
     : AbstractAllocator(o, m),
-      inUseBlockMap(nullptr),
       freeBlocks(nullptr),
       mtengine(rd()) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
@@ -40,7 +39,6 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
 BasicAllocator::~BasicAllocator() {
   free(eraseCountList);
-  free(inUseBlockMap);
   delete[] freeBlocks;
 }
 
@@ -59,7 +57,6 @@ void BasicAllocator::initialize(Parameter *p) {
 
   // Allocate data
   eraseCountList = (uint32_t *)calloc(totalSuperblock, sizeof(uint32_t));
-  inUseBlockMap = (PPN *)calloc(parallelism, sizeof(PPN));
   freeBlocks = new std::list<PPN>[parallelism]();
 
   lastAllocated = 0;
@@ -78,76 +75,37 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   CPU::Function fstat = CPU::initFunction();
   PPN idx = lastAllocated;
 
-  if (LIKELY(blockUsed != InvalidPPN)) {
-    idx = getParallelismFromSPPN(blockUsed);
+  lastAllocated++;
 
-    panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
+  if (lastAllocated == parallelism) {
+    lastAllocated = 0;
+  }
 
-    // Insert to full block list
-    uint32_t erased = eraseCountList[blockUsed];
-
-    fullBlocks.emplace(std::make_pair(erased, blockUsed));
+  if (freeBlocks[idx].size() == 0) {
+    blockUsed = InvalidPPN;
   }
   else {
-    lastAllocated++;
+    // Allocate new block
+    blockUsed = freeBlocks[idx].front();
 
-    if (lastAllocated == parallelism) {
-      lastAllocated = 0;
-    }
+    freeBlocks[idx].pop_front();
+    freeBlockCount--;
   }
-
-  // It would be better to perform GC in balanced way - equally distributed in
-  // each parallelism level. But that is hard to implement.
-  if (UNLIKELY(freeBlocks[idx].size() == 0)) {
-    // Find next index
-    PPN i = idx;
-
-    while (true) {
-      i++;
-
-      if (i == parallelism) {
-        i = 0;
-      }
-
-      if (i == idx) {
-        break;
-      }
-
-      if (freeBlocks[i].size() > 0) {
-        idx = i;
-
-        break;
-      }
-    }
-  }
-
-  panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
-           idx);
-
-  // Allocate new block
-  inUseBlockMap[idx] = freeBlocks[idx].front();
-  blockUsed = inUseBlockMap[idx];
-
-  freeBlocks[idx].pop_front();
-  freeBlockCount--;
 
   return std::move(fstat);
 }
 
-PPN BasicAllocator::getBlockAt(PPN idx) {
-  if (idx == InvalidPPN) {
-    PPN ppn = inUseBlockMap[lastAllocated++];
+CPU::Function BasicAllocator::setBlockFull(PPN block) {
+  CPU::Function fstat = CPU::initFunction();
 
-    if (lastAllocated == parallelism) {
-      lastAllocated = 0;
-    }
+  PPN idx = getParallelismFromSPPN(block);
 
-    return ppn;
-  }
+  // Insert to full block list
+  uint32_t erased = eraseCountList[block];
 
-  panic_if(idx >= parallelism, "Invalid parallelism index.");
+  fullBlocks.emplace(erased, block);
 
-  return inUseBlockMap[idx];
+  return std::move(fstat);
 }
 
 bool BasicAllocator::checkGCThreshold() {
@@ -339,7 +297,6 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalSuperblock);
   BACKUP_SCALAR(out, lastAllocated);
   BACKUP_BLOB(out, eraseCountList, sizeof(uint32_t) * totalSuperblock);
-  BACKUP_BLOB(out, inUseBlockMap, sizeof(PPN) * parallelism);
   BACKUP_SCALAR(out, freeBlockCount);
 
   uint64_t size;
@@ -380,7 +337,6 @@ void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, lastAllocated);
   RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
-  RESTORE_BLOB(in, inUseBlockMap, sizeof(PPN) * parallelism);
   RESTORE_SCALAR(in, freeBlockCount);
 
   uint64_t size;

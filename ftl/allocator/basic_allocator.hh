@@ -24,8 +24,7 @@ class BasicAllocator : public AbstractAllocator {
 
   uint32_t *eraseCountList;
 
-  PPN lastAllocated;   // Used for pMapper->initialize
-  PPN *inUseBlockMap;  // Allocated free blocks
+  PPN lastAllocated;
 
   uint64_t freeBlockCount;     // Shortcut
   std::list<PPN> *freeBlocks;  // Free blocks sorted in erased count
@@ -48,7 +47,7 @@ class BasicAllocator : public AbstractAllocator {
   void initialize(Parameter *) override;
 
   CPU::Function allocateBlock(PPN &) override;
-  PPN getBlockAt(PPN) override;
+  CPU::Function setBlockFull(PPN) override;
 
   bool checkGCThreshold() override;
   bool stallRequest() override;
