@@ -139,73 +139,76 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
   uint64_t ptr = readPointer(slpn);
 
   if (full) {
-    panic_if(
-        sidx != 0,
-        "You should call this function only once when request is full-size.");
+    if (sidx == 0) {
+      // this request is full-size (superpage-size)
+      if (validEntry.test(slpn)) {
+        PPN sppn = readEntry(slpn);
+        PPN pg = getPageIndexFromSPPN(sppn);
+        bool ptrvalid = pointerValid.test(slpn);
 
-    // this request is full-size (superpage-size)
-    if (validEntry.test(slpn)) {
-      PPN sppn = readEntry(slpn);
-      PPN pg = getPageIndexFromSPPN(sppn);
-      bool ptrvalid = pointerValid.test(slpn);
-
-      for (uint32_t i = 0; i < param.superpage; i++) {
-        if (!ptrvalid || !partialTable[ptr].isValid(i)) {
-          blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
-              .validPages.reset(pg);
+        for (uint32_t i = 0; i < param.superpage; i++) {
+          if (!ptrvalid || !partialTable[ptr].isValid(i)) {
+            blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
+                .validPages.reset(pg);
+          }
         }
       }
-    }
-    if (pointerValid.test(slpn)) {
-      // Unlink
-      partialTable[ptr].slpn = InvalidLPN;
-      pointerValid.reset(slpn);
+      if (pointerValid.test(slpn)) {
+        // Unlink
+        partialTable[ptr].slpn = InvalidLPN;
+        pointerValid.reset(slpn);
 
-      // Mark as invalid
-      for (uint32_t i = 0; i < param.superpage; i++) {
-        if (partialTable[ptr].isValid(i)) {
-          PPN sppn = partialTable[ptr].getEntry(i);
+        // Mark as invalid
+        for (uint32_t i = 0; i < param.superpage; i++) {
+          if (partialTable[ptr].isValid(i)) {
+            PPN sppn = partialTable[ptr].getEntry(i);
 
-          blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
-              .validPages.reset(getPageIndexFromSPPN(sppn));
+            blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
+                .validPages.reset(getPageIndexFromSPPN(sppn));
 
-          partialTable[ptr].resetEntry(i);
+            partialTable[ptr].resetEntry(i);
+          }
         }
       }
+
+      validEntry.set(slpn);
+
+      // Get block from first allocated block pool
+      PPN blk = allocator->getBlockAt(InvalidPPN);
+      uint32_t next = blockMetadata[getBlockFromSB(blk, 0)].nextPageToWrite;
+
+      for (uint32_t i = 1; i < param.superpage; i++) {
+        panic_if(next != blockMetadata[getBlockFromSB(blk, i)].nextPageToWrite,
+                 "Block metadata corrupted.");
+      }
+
+      // Check we have to get new block
+      if (next == filparam->page) {
+        // Get a new block
+        fstat += allocator->allocateBlock(blk);
+
+        next = 0;
+      }
+
+      ppn = makeSPPN(blk, next);
+
+      for (uint32_t i = 0; i < param.superpage; i++) {
+        blockMetadata[getBlockFromSB(blk, i)].validPages.set(next);
+        blockMetadata[getBlockFromSB(blk, i)].nextPageToWrite++;
+        blockMetadata[getBlockFromSB(blk, i)].clock = clock;
+      }
+
+      // Write entry
+      writeEntry(lpn, ppn);
+
+      // SPPN -> PPN
+      ppn *= param.superpage;
     }
+    else {
+      panic_if(!validEntry.test(slpn), "Not a full-size request?");
 
-    validEntry.set(slpn);
-
-    // Get block from first allocated block pool
-    PPN blk = allocator->getBlockAt(InvalidPPN);
-    uint32_t next = blockMetadata[getBlockFromSB(blk, 0)].nextPageToWrite;
-
-    for (uint32_t i = 1; i < param.superpage; i++) {
-      panic_if(next != blockMetadata[getBlockFromSB(blk, i)].nextPageToWrite,
-               "Block metadata corrupted.");
+      ppn = readEntry(slpn) * param.superpage + sidx;
     }
-
-    // Check we have to get new block
-    if (next == filparam->page) {
-      // Get a new block
-      fstat += allocator->allocateBlock(blk);
-
-      next = 0;
-    }
-
-    ppn = makeSPPN(blk, next);
-
-    for (uint32_t i = 0; i < param.superpage; i++) {
-      blockMetadata[getBlockFromSB(blk, i)].validPages.set(next);
-      blockMetadata[getBlockFromSB(blk, i)].nextPageToWrite++;
-      blockMetadata[getBlockFromSB(blk, i)].clock = clock;
-    }
-
-    // Write entry
-    writeEntry(lpn, ppn);
-
-    // SPPN -> PPN
-    ppn *= param.superpage;
   }
   else {
     if (pointerValid.test(slpn)) {
