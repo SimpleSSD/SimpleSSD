@@ -688,14 +688,13 @@ void VirtuallyLinked::getCopyList(CopyList &copy, Event eid) {
     auto &copycmd = commandManager->createFTLCommand(tag);
 
     copycmd.offset = InvalidLPN;  // writeMapping will fill this
-    copycmd.length = param.superpage;
-    copycmd.counter = 0;
+    copycmd.length = 0;
 
     for (uint64_t j = 0; j < param.superpage; j++) {
       auto block = &blockMetadata[copy.blockID * param.superpage + j];
 
       if (block->validPages.test(i)) {
-        copycmd.counter++;
+        copycmd.length++;
 
         // At this stage, we don't know LPN
         commandManager->appendTranslation(copycmd, InvalidLPN,
@@ -706,7 +705,7 @@ void VirtuallyLinked::getCopyList(CopyList &copy, Event eid) {
       }
     }
 
-    if (copycmd.counter > 0) {
+    if (copycmd.length > 0) {
       copy.commandList.emplace_back(tag);
     }
     else {
@@ -789,17 +788,18 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
   // Create Command
   auto &cmd = commandManager->createFTLCommand(tag);
 
-  cmd.counter = 0;
+  cmd.offset = InvalidLPN;
+  cmd.length = 0;
 
   for (uint32_t i = 0; i < param.superpage; i++) {
     if (iter->isValid(i)) {
-      cmd.counter++;
+      cmd.length++;
 
       commandManager->appendTranslation(
           cmd, InvalidLPN, iter->getEntry(i) * param.superpage + i);
     }
     else if (sppn != InvalidPPN) {
-      cmd.counter++;
+      cmd.length++;
 
       commandManager->appendTranslation(cmd, InvalidLPN,
                                         sppn * param.superpage + i);
@@ -822,6 +822,8 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
   LPN slpn = getSLPNfromLPN(iter->lpn);
 
   cmd.offset = iter->lpn;
+  cmd.length = param.superpage;
+  cmd.counter = 0;
 
   // Read all
   ++iter;

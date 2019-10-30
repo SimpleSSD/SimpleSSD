@@ -54,9 +54,9 @@ void VLFTL::merge_trigger() {
 void VLFTL::merge_readDone() {
   auto &cmd = commandManager->getCommand(mergeTag);
 
-  cmd.counter--;
+  cmd.counter++;
 
-  if (cmd.counter == 0) {
+  if (cmd.counter == cmd.length) {
     mergeTag =
         ((Mapping::VirtuallyLinked *)pMapper)->getMergeWriteCommand(mergeTag);
 
