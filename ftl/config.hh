@@ -29,9 +29,6 @@ class Config : public BaseConfig {
     VictimSelectionPolicy,
     DChoiceParam,
     GCThreshold,
-    GCMode,
-    GCReclaimBlocks,
-    GCReclaimThreshold,
 
     // Common FTL setting
     OverProvisioningRatio,
@@ -63,11 +60,6 @@ class Config : public BaseConfig {
     DChoice,
   };
 
-  enum class GCBlockReclaimMode : uint8_t {
-    ByCount,
-    ByRatio,
-  };
-
  private:
   MappingType mappingMode;
   float overProvision;
@@ -81,9 +73,6 @@ class Config : public BaseConfig {
   VictimSelectionMode gcBlockSelection;
   uint64_t dChoiceParam;
   float gcThreshold;
-  GCBlockReclaimMode gcMode;
-  uint64_t gcReclaimBlocks;
-  float gcReclaimThreshold;
   uint8_t superpageAllocation;
   float pmTableRatio;
   float mergeBeginThreshold;

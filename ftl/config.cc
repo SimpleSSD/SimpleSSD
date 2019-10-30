@@ -17,9 +17,6 @@ const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
 const char NAME_GC_D_CHOICE_PARAM[] = "DChoiceParam";
 const char NAME_GC_THRESHOLD[] = "GCThreshold";
-const char NAME_GC_MODE[] = "GCMode";
-const char NAME_GC_RECLAIM_BLOCK[] = "GCReclaimBlocks";
-const char NAME_GC_RECLAIM_THRESHOLD[] = "GCReclaimThreshold";
 const char NAME_USE_SUPERPAGE[] = "UseSuperpage";
 const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
 const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
@@ -41,9 +38,6 @@ Config::Config() {
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
   gcThreshold = 0.05f;
-  gcMode = GCBlockReclaimMode::ByCount;
-  gcReclaimBlocks = 1;
-  gcReclaimThreshold = 0.1f;
   superpageAllocation = FIL::PageAllocation::None;
   pmTableRatio = 0.3f;
   mergeBeginThreshold = 0.1f;
@@ -63,9 +57,6 @@ void Config::loadFrom(pugi::xml_node &section) {
                             gcBlockSelection);
         LOAD_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
         LOAD_NAME_FLOAT(node2, NAME_GC_THRESHOLD, gcThreshold);
-        LOAD_NAME_UINT_TYPE(node2, NAME_GC_MODE, GCBlockReclaimMode, gcMode);
-        LOAD_NAME_UINT(node2, NAME_GC_RECLAIM_BLOCK, gcReclaimBlocks);
-        LOAD_NAME_FLOAT(node2, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
       }
     }
     else if (strcmp(name, "common") == 0 && isSection(node)) {
@@ -124,9 +115,6 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
   STORE_NAME_UINT(node, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
   STORE_NAME_FLOAT(node, NAME_GC_THRESHOLD, gcThreshold);
-  STORE_NAME_UINT(node, NAME_GC_MODE, gcMode);
-  STORE_NAME_UINT(node, NAME_GC_RECLAIM_BLOCK, gcReclaimBlocks);
-  STORE_NAME_FLOAT(node, NAME_GC_RECLAIM_THRESHOLD, gcReclaimThreshold);
 
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
@@ -149,13 +137,6 @@ void Config::update() {
   panic_if((uint8_t)mappingMode > 2, "Invalid MappingMode.");
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
-  panic_if((uint8_t)gcMode > 1, "Invalid GCMode.");
-
-  panic_if(gcMode == GCBlockReclaimMode::ByCount && gcReclaimBlocks == 0,
-           "Invalid GCReclaimBlocks.");
-  panic_if(
-      gcMode == GCBlockReclaimMode::ByRatio && gcReclaimThreshold < gcThreshold,
-      "Invalid GCReclaimThreshold.");
 
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
@@ -197,12 +178,6 @@ uint64_t Config::readUint(uint32_t idx) {
     case DChoiceParam:
       ret = dChoiceParam;
       break;
-    case GCMode:
-      ret = (uint64_t)gcMode;
-      break;
-    case GCReclaimBlocks:
-      ret = gcReclaimBlocks;
-      break;
     case SuperpageAllocation:
       ret = superpageAllocation;
       break;
@@ -226,9 +201,6 @@ float Config::readFloat(uint32_t idx) {
       break;
     case GCThreshold:
       ret = gcThreshold;
-      break;
-    case GCReclaimThreshold:
-      ret = gcReclaimThreshold;
       break;
     case VLTableRatio:
       ret = pmTableRatio;
@@ -273,12 +245,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
     case DChoiceParam:
       dChoiceParam = value;
       break;
-    case GCMode:
-      gcMode = (GCBlockReclaimMode)value;
-      break;
-    case GCReclaimBlocks:
-      gcReclaimBlocks = value;
-      break;
     case SuperpageAllocation:
       superpageAllocation = (uint8_t)value;
       break;
@@ -305,9 +271,6 @@ bool Config::writeFloat(uint32_t idx, float value) {
       break;
     case GCThreshold:
       gcThreshold = value;
-      break;
-    case GCReclaimThreshold:
-      gcReclaimThreshold = value;
       break;
     case VLTableRatio:
       pmTableRatio = value;

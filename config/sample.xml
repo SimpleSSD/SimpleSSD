@@ -473,18 +473,6 @@
         On-demand GC (Foreground GC) will triggered.
        -->
       <config name="GCThreshold">0.05</config>
-      <!--
-        <int> Victim block count selection policy
-
-        Possible values:
-          0: Reclaim #GCReclaimBlocks blocks
-          1: Reclaim blocks until GCReclaimThreshold
-       -->
-      <config name="GCMode">0</config>
-      <!-- <int> # blocks to reclaim -->
-      <config name="GCReclaimBlocks">1</config>
-      <!-- <int> threshold until reclaim (See GCThresold for definition) -->
-      <config name="GCReclaimThreshold">0.1</config>
     </section>
     <!--
       Common FTL algorithm configurations
