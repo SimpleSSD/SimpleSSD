@@ -24,6 +24,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
                                                      Config::Key::MappingMode);
 
+  // Mapping algorithm
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
       pMapper = new Mapping::PageLevel(object, commandManager);
@@ -43,14 +44,25 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
       break;
   }
 
+  // Block allocator
   switch (mapping) {
     case Config::MappingType::VLFTL:
       pAllocator = new BlockAllocator::TwoBlockAllocator(object, pMapper);
-      pFTL = new VLFTL(object, commandManager, pFIL, pMapper, pAllocator);
 
       break;
     default:
       pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
+
+      break;
+  }
+
+  // Base FTL routine
+  switch (mapping) {
+    case Config::MappingType::VLFTL:
+      pFTL = new VLFTL(object, commandManager, pFIL, pMapper, pAllocator);
+
+      break;
+    default:
       pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
 
       break;
