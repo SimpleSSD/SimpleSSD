@@ -106,7 +106,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   auto block = &blockMetadata[idx];
 
   // Check we have to get new block
-  if (block->nextPageToWrite == block->validPages.size()) {
+  if (block->nextPageToWrite == filparam->page) {
     // Get a new block
     fstat += allocator->allocateBlock(idx);
 
