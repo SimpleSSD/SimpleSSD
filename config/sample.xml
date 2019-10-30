@@ -445,7 +445,7 @@
       Possible values:
         0: Page-level Mapping (Supports superpage)
         1: Block-level Mapping
-        2: Virtually-Linked FTL (Extended version of FTL released with Amber)
+        2: Virtually-Linked FTL
      -->
     <config name="MappingMode">0</config>
     <!-- Garbage Collection configuration -->
