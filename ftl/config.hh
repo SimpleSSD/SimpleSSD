@@ -57,6 +57,7 @@ class Config : public BaseConfig {
   enum class VictimSelectionMode : uint8_t {
     Greedy,
     Random,
+    CostBenefit,
     DChoice,
   };
 
