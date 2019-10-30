@@ -164,6 +164,11 @@ class AbstractMapping : public Object {
     return sppn % (param.totalPhysicalBlocks / param.superpage);
   }
 
+  //! PPN -> BLK
+  virtual inline PPN getBlockFromPPN(PPN ppn) {
+    return ppn % param.totalPhysicalBlocks;
+  }
+
   //! SPPN -> Page (Page index in (super)block)
   virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
     return sppn / (param.totalPhysicalBlocks / param.superpage);
