@@ -337,9 +337,26 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void BasicAllocator::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void BasicAllocator::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  list.emplace_back(prefix + "wear_leveling", "Wear-leveling factor");
+}
 
-void BasicAllocator::getStatValues(std::vector<double> &) noexcept {}
+void BasicAllocator::getStatValues(std::vector<double> &values) noexcept {
+  double total = 0.;
+  double square = 0.;
+  double result = 0.;
+
+  for (uint64_t i = 0; i < totalSuperblock; i++) {
+    total += (double)eraseCountList[i];
+    square += pow((double)eraseCountList[i], 2.);
+  }
+
+  if (square > 0.) {
+    result = total * total / square / (double)totalSuperblock;
+  }
+
+  values.push_back(result);
+}
 
 void BasicAllocator::resetStatValues() noexcept {}
 
