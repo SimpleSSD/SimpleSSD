@@ -26,6 +26,18 @@ class AbstractAllocator;
 
 namespace Mapping {
 
+struct BlockMetadata {
+  PPN blockID;
+
+  uint32_t nextPageToWrite;
+  uint16_t clock;  // For cost benefit
+  Bitset validPages;
+
+  BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0), clock(0) {}
+  BlockMetadata(PPN id, uint32_t s)
+      : blockID(id), nextPageToWrite(0), clock(0), validPages(s) {}
+};
+
 class AbstractMapping : public Object {
  protected:
   CommandManager *commandManager;
@@ -35,6 +47,24 @@ class AbstractMapping : public Object {
 
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
+
+  virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
+    if (spare.size() != sizeof(LPN)) {
+      spare.resize(sizeof(LPN));
+    }
+
+    memcpy(spare.data(), &lpn, sizeof(LPN));
+  }
+
+  virtual LPN readSpare(std::vector<uint8_t> &spare) {
+    LPN lpn = InvalidLPN;
+
+    panic_if(spare.size() < sizeof(LPN), "Empty spare data.");
+
+    memcpy(&lpn, spare.data(), sizeof(LPN));
+
+    return lpn;
+  }
 
  public:
   AbstractMapping(ObjectData &o, CommandManager *c)

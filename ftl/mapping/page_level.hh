@@ -17,18 +17,6 @@ namespace SimpleSSD::FTL::Mapping {
 
 class PageLevel : public AbstractMapping {
  protected:
-  struct BlockMetadata {
-    PPN blockID;
-
-    uint32_t nextPageToWrite;
-    uint16_t clock;  // For cost benefit
-    Bitset validPages;
-
-    BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0), clock(0) {}
-    BlockMetadata(PPN id, uint32_t s)
-        : blockID(id), nextPageToWrite(0), clock(0), validPages(s) {}
-  };
-
   const uint64_t totalPhysicalSuperPages;
   const uint64_t totalPhysicalSuperBlocks;
   const uint64_t totalLogicalSuperPages;
@@ -99,10 +87,6 @@ class PageLevel : public AbstractMapping {
   CPU::Function readMappingInternal(LPN, PPN &);
   CPU::Function writeMappingInternal(LPN, PPN &);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
-
-  // We will store reverse mapping (PPN -> LPN) at spare area
-  void makeSpare(LPN, std::vector<uint8_t> &);
-  LPN readSpare(std::vector<uint8_t> &);
 
  public:
   PageLevel(ObjectData &, CommandManager *);
