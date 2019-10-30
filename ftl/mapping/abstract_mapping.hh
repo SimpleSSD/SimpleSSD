@@ -156,7 +156,7 @@ class AbstractMapping : public Object {
     return ppn % param.superpage;
   }
 
-  //! SLPN -> LPN
+  //! LPN -> SLPN / PPN -> SPPN
   virtual inline LPN getSLPNfromLPN(LPN slpn) { return slpn / param.superpage; }
 
   //! SPPN -> SBLK
@@ -167,6 +167,11 @@ class AbstractMapping : public Object {
   //! PPN -> BLK
   virtual inline PPN getBlockFromPPN(PPN ppn) {
     return ppn % param.totalPhysicalBlocks;
+  }
+
+  //! SBLK/SPIndex -> BLK
+  virtual inline PPN getBlockFromSB(PPN sblk, PPN sp) {
+    return sblk * param.superpage + sp;
   }
 
   //! SPPN -> Page (Page index in (super)block)
