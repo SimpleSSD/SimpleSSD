@@ -31,13 +31,13 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
 
         // Select one block from current full block list
-        uint64_t idx = dist(mtengine);
+        uint64_t ridx = dist(mtengine);
 
         // Get block ID from list
         auto iter = currentList.begin();
 
         // O(n)
-        std::advance(iter, idx);
+        std::advance(iter, ridx);
 
         list.emplace_back(*iter);
 
@@ -121,11 +121,11 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         offsets.reserve(dchoice);
 
         while (offsets.size() < dchoice) {
-          uint64_t idx = dist(mtengine);
+          uint64_t ridx = dist(mtengine);
           bool unique = true;
 
           for (auto &iter : offsets) {
-            if (iter == idx) {
+            if (iter == ridx) {
               unique = false;
 
               break;
@@ -133,7 +133,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
           }
 
           if (unique) {
-            offsets.emplace_back(idx);
+            offsets.emplace_back(ridx);
           }
         }
 
