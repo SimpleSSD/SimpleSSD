@@ -83,7 +83,7 @@ void VLFTL::merge_writeDone() {
 
   cmd.counter++;
 
-  if (cmd.counter == 0) {
+  if (cmd.counter == cmd.length) {
     ((Mapping::VirtuallyLinked *)pMapper)->destroyMergeCommand(mergeTag);
 
     mergeTriggered = false;
