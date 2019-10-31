@@ -567,9 +567,9 @@
     <!-- VLFTL configuration -->
     <section name="vlftl">
       <!-- <float> Ratio of partial-mapping table -->
-      <section name="VLTableRatio">0.3</section>
+      <config name="VLTableRatio">0.3</config>
       <!-- <float> Merge threshold -->
-      <section name="MergeThreshold">0.1</section>
+      <config name="MergeThreshold">0.1</config>
     </section>
   </section>
   <!--
