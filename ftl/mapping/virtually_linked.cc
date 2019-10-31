@@ -148,13 +148,10 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       if (validEntry.test(slpn)) {
         PPN sppn = readEntry(slpn);
         PPN pg = getPageIndexFromSPPN(sppn);
-        bool ptrvalid = pointerValid.test(slpn);
 
         for (uint32_t i = 0; i < param.superpage; i++) {
-          if (!ptrvalid || !partialTable[ptr].isValid(i)) {
-            blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
-                .validPages.reset(pg);
-          }
+          blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
+              .validPages.reset(pg);
         }
       }
       if (pointerValid.test(slpn)) {
