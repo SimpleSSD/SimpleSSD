@@ -818,24 +818,28 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   // Validate and fill LPN
-  auto iter = cmd.subCommandList.begin();
+  LPN slpn = InvalidLPN;
+  uint32_t found = 0;
 
-  iter->lpn = readSpare(iter->spare);
-  LPN slpn = getSLPNfromLPN(iter->lpn);
+  for (LPN i = 0; i < param.superpage; i++) {
+    auto &scmd = cmd.subCommandList.at(i);
 
-  cmd.offset = iter->lpn;
-  cmd.length = param.superpage;
-  cmd.counter = 0;
+    if (scmd.ppn != InvalidPPN) {
+      found++;
 
-  // Read all
-  ++iter;
+      scmd.lpn = readSpare(scmd.spare);
 
-  for (; iter != cmd.subCommandList.end(); ++iter) {
-    iter->lpn = readSpare(iter->spare);
-
-    panic_if(slpn != getSLPNfromLPN(iter->lpn),
-             "Command has two or more superpages.");
+      if (slpn == InvalidLPN) {
+        slpn = getSLPNfromLPN(scmd.lpn);
+      }
+      else {
+        panic_if(slpn != getSLPNfromLPN(scmd.lpn),
+                 "Command has two or more superpages.");
+      }
+    }
   }
+
+  panic_if(found != cmd.length, "Command not completed.");
 
   // Write mapping
   for (auto &scmd : cmd.subCommandList) {
