@@ -783,6 +783,32 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
 
   panic_if(idx == partialTable.end(), "No partial table entry exists.");
 
+  // Check switch merge
+  if (idx->valid.all()) {
+    bool ok = true;
+    LPN sppn = idx->getEntry(0);
+
+    for (uint32_t i = 1; i < param.superpage; i++) {
+      if (sppn != idx->getEntry(i)) {
+        ok = false;
+
+        break;
+      }
+    }
+
+    if (ok) {
+      // Reconstruct table
+      validEntry.set(idx->slpn);
+      writeEntry(idx->slpn, sppn);
+
+      // Invalidate partial table entry
+      pointerValid.reset(idx->slpn);
+      idx->slpn = InvalidLPN;
+
+      return 0;
+    }
+  }
+
   PPN sppn = InvalidPPN;
   PPN ppn = InvalidPPN;
 

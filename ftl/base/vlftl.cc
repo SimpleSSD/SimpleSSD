@@ -48,11 +48,17 @@ void VLFTL::triggerGC() {
 void VLFTL::merge_trigger() {
   mergeTag = ((Mapping::VirtuallyLinked *)pMapper)->getMergeReadCommand();
 
-  auto &cmd = commandManager->getCommand(mergeTag);
-  cmd.opcode = Operation::Read;
-  cmd.eid = eventMergeReadDone;
+  if (mergeTag != 0) {
+    auto &cmd = commandManager->getCommand(mergeTag);
+    cmd.opcode = Operation::Read;
+    cmd.eid = eventMergeReadDone;
 
-  pFIL->submit(mergeTag);
+    pFIL->submit(mergeTag);
+  }
+  else {
+    // Current entry has been switch merged
+    mergeTriggered = false;
+  }
 }
 
 void VLFTL::merge_readDone() {
