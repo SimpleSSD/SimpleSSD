@@ -59,6 +59,7 @@ void VLFTL::merge_readDone() {
 
   if (cmd.counter == cmd.length) {
     cmd.opcode = Operation::Write;
+    cmd.eid = eventMergeWriteDone;
     cmd.counter = 0;
 
     mergeTag =
