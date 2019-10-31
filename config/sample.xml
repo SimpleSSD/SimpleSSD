@@ -584,15 +584,6 @@
     <!-- <int> # packages / channel (way) -->
     <config name="Way">4</config>
     <!--
-      <int> Channel speed
-
-      Specify channel speed in transfers / second (T/s)
-      One transfer has size of DMAWidth.
-     -->
-    <config name="DMASpeed">200m</config>
-    <!-- <int> Channel width -->
-    <config name="DMAWidth">8</config>
-    <!--
       <int> Select NVM model
 
       Possible values:
@@ -616,6 +607,17 @@
       <config name="PageSize">16K</config>
       <!-- <int> page size in byte - spare -->
       <config name="SpareSize">1216</config>
+      <!--
+        <int> Channel speed
+
+        Only for PAL (Other model uses tWC/tRC parameter)
+
+        Specify channel speed in transfers / second (T/s)
+        One transfer has size of DataWidth.
+       -->
+      <config name="DMASpeed">333m</config>
+      <!-- <int> data width in bits -->
+      <config name="DataWidth">8</config>
       <!--
         <int> NAND type
 

@@ -22,8 +22,6 @@ class Config : public BaseConfig {
   enum Key : uint32_t {
     Channel,
     Way,
-    DMASpeed,
-    DMAWidth,
     Model,
   };
 
@@ -48,6 +46,8 @@ class Config : public BaseConfig {
     uint32_t page;
     uint32_t pageSize;
     uint32_t spareSize;
+    uint32_t dmaSpeed;
+    uint32_t dmaWidth;
   };
 
   struct NANDTiming {
@@ -84,11 +84,9 @@ class Config : public BaseConfig {
   };
 
  private:
-  uint32_t channel;   //!< Default: 8
-  uint32_t package;   //!< Default: 4
-  uint32_t dmaSpeed;  //!< Default: 400
-  uint32_t dmaWidth;  //!< Default: 8
-  NVMType nvmModel;   //!< Default: NVMType::PAL
+  uint32_t channel;  //!< Default: 8
+  uint32_t package;  //!< Default: 4
+  NVMType nvmModel;  //!< Default: NVMType::PAL
 
   NANDStructure nandStructure;
   NANDTiming nandTiming;

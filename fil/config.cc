@@ -12,7 +12,7 @@ namespace SimpleSSD::FIL {
 const char NAME_CHANNEL[] = "Channel";
 const char NAME_PACKAGE[] = "Way";
 const char NAME_DMA_SPEED[] = "DMASpeed";
-const char NAME_DMA_WIDTH[] = "DMAWidth";
+const char NAME_DMA_WIDTH[] = "DataWidth";
 const char NAME_NVM_MODEL[] = "Model";
 
 /* NAND structure */
@@ -56,8 +56,6 @@ const char NAME_NAND_ISB[] = "ISB";
 Config::Config() {
   channel = 8;
   package = 4;
-  dmaSpeed = 400;
-  dmaWidth = 8;
   nvmModel = NVMType::PAL;
 
   nandStructure.type = NANDType::MLC;
@@ -72,6 +70,8 @@ Config::Config() {
   nandStructure.page = 512;
   nandStructure.pageSize = 16384;
   nandStructure.spareSize = 1216;
+  nandStructure.dmaSpeed = 400;
+  nandStructure.dmaWidth = 8;
 
   nandTiming.tADL = 70000;
   nandTiming.tCS = 20000;
@@ -113,6 +113,8 @@ void Config::loadNANDStructure(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_BLOCK, uint32_t, nandStructure.block);
     LOAD_NAME_UINT_TYPE(node, NAME_PAGE, uint32_t, nandStructure.page);
     LOAD_NAME_UINT_TYPE(node, NAME_PAGE_SIZE, uint32_t, nandStructure.pageSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_DMA_SPEED, uint32_t, nandStructure.dmaSpeed);
+    LOAD_NAME_UINT_TYPE(node, NAME_DMA_WIDTH, uint32_t, nandStructure.dmaWidth);
     LOAD_NAME_UINT_TYPE(node, NAME_SPARE_SIZE, uint32_t,
                         nandStructure.spareSize);
     LOAD_NAME_UINT_TYPE(node, NAME_FLASH_TYPE, NANDType, nandStructure.type);
@@ -186,6 +188,8 @@ void Config::storeNANDStructure(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_PAGE, nandStructure.page);
   STORE_NAME_UINT(section, NAME_PAGE_SIZE, nandStructure.pageSize);
   STORE_NAME_UINT(section, NAME_SPARE_SIZE, nandStructure.spareSize);
+  STORE_NAME_UINT(section, NAME_DMA_SPEED, nandStructure.dmaSpeed);
+  STORE_NAME_UINT(section, NAME_DMA_WIDTH, nandStructure.dmaWidth);
   STORE_NAME_UINT(section, NAME_FLASH_TYPE, nandStructure.type);
   STORE_NAME_STRING(section, NAME_PAGE_ALLOCATION, _pageAllocation);
 
@@ -247,8 +251,6 @@ void Config::loadFrom(pugi::xml_node &section) {
 
     LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint32_t, channel);
     LOAD_NAME_UINT_TYPE(node, NAME_PACKAGE, uint32_t, package);
-    LOAD_NAME_UINT_TYPE(node, NAME_DMA_SPEED, uint32_t, dmaSpeed);
-    LOAD_NAME_UINT_TYPE(node, NAME_DMA_WIDTH, uint32_t, dmaWidth);
     LOAD_NAME_UINT_TYPE(node, NAME_NVM_MODEL, NVMType, nvmModel);
 
     if (strcmp(name, "nand") == 0 && isSection(node)) {
@@ -287,8 +289,6 @@ void Config::storeTo(pugi::xml_node &section) {
 
   STORE_NAME_UINT(section, NAME_CHANNEL, channel);
   STORE_NAME_UINT(section, NAME_PACKAGE, package);
-  STORE_NAME_UINT(section, NAME_DMA_SPEED, dmaSpeed);
-  STORE_NAME_UINT(section, NAME_DMA_WIDTH, dmaWidth);
   STORE_NAME_UINT(section, NAME_NVM_MODEL, nvmModel);
 
   STORE_SECTION(section, "nand", node);
@@ -296,7 +296,7 @@ void Config::storeTo(pugi::xml_node &section) {
 }
 
 void Config::update() {
-  panic_if(dmaWidth & 0x07, "dmaWidth should be multiple of 8.");
+  panic_if(nandStructure.dmaWidth & 0x07, "dmaWidth should be multiple of 8.");
 
   // Parse page allocation setting
   int i = 0;
@@ -356,12 +356,6 @@ uint64_t Config::readUint(uint32_t idx) {
     case Way:
       ret = package;
       break;
-    case DMASpeed:
-      ret = dmaSpeed;
-      break;
-    case DMAWidth:
-      ret = dmaWidth;
-      break;
     case Model:
       ret = (uint64_t)nvmModel;
       break;
@@ -379,12 +373,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case Way:
       package = (uint32_t)value;
-      break;
-    case DMASpeed:
-      dmaSpeed = (uint32_t)value;
-      break;
-    case DMAWidth:
-      dmaWidth = (uint32_t)value;
       break;
     case Model:
       nvmModel = (NVMType)value;

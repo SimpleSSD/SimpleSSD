@@ -26,32 +26,18 @@ Latency::Latency(ConfigReader *config)
     : timing(config->getNANDTiming()), power(config->getNANDPower()) {
   auto structure = config->getNANDStructure();
 
-  uint64_t pageAddressCycle =
-      (uint64_t)(log2(structure->die) + log2(structure->plane) +
-                 log2(structure->block) + log2(structure->page));
-  uint64_t columnAddressCycle =
-      (uint64_t)(log2(structure->pageSize + structure->spareSize));
-  uint64_t width =
-      config->readUint(Section::FlashInterface, FIL::Config::Key::DMAWidth);
+  const uint8_t readCycle = 7;
+  const uint8_t writeCycle = 7;
+  const uint8_t eraseCycle = 5;
+  float tCK = 1.f / (structure->dmaSpeed * 1048576) * 1000 * 1000 * 1000 * 1000;
 
-  pageAddressCycle = DIVCEIL(pageAddressCycle, width);
-  columnAddressCycle = DIVCEIL(columnAddressCycle, width);
-
-  // From NandFlashSim
-  uint64_t cmdlatch = timing->tWP + timing->tDS + timing->tDH;
-  uint64_t addressBlock = timing->tCS - timing->tDS +
-                          (timing->tDS + timing->tDH) * pageAddressCycle;
-  uint64_t addressPage =
-      timing->tCS - timing->tDS +
-      (timing->tDS + timing->tDH) * (pageAddressCycle + columnAddressCycle);
-  auto pagesize = DIVCEIL(structure->pageSize + structure->spareSize, width);
-
-  readdma0 = cmdlatch + addressPage;
-  readdma1 = timing->tRR + timing->tRC * pagesize;
-  writedma0 = cmdlatch + addressPage + timing->tADL + timing->tWC * pagesize;
-  writedma1 = timing->tDS + timing->tRC;
-  erasedma0 = cmdlatch + addressBlock;
-  erasedma1 = writedma1;
+  readdma0 = readCycle * tCK / (structure->dmaWidth / 8);
+  writedma0 =
+      (writeCycle + structure->pageSize) * tCK / (structure->dmaWidth / 8);
+  erasedma0 = eraseCycle * tCK / (structure->dmaWidth / 8);
+  readdma1 = structure->pageSize * tCK / (structure->dmaWidth / 8);
+  writedma1 = 1 * tCK / (structure->dmaWidth / 8);
+  erasedma1 = 1 * tCK / (structure->dmaWidth / 8);
 
   powerbus = power->pVCC * power->current.pICC5;
   powerread = power->pVCC * power->current.pICC1;
