@@ -16,9 +16,7 @@ using namespace SimpleSSD;
 PAL2::PAL2(PALStatistics *statistics, ConfigReader *c, Latency *l)
     : pParam(c->getNANDStructure()), lat(l), stats(statistics) {
   uint32_t OriginalSizes[7];
-  uint32_t SPDIV = (uint32_t)c->readUint(Section::FlashInterface,
-                                         FIL::Config::Key::DMASpeed) /
-                   50;
+  uint32_t SPDIV = (uint32_t)pParam->dmaSpeed / 50;
   uint32_t PGDIV = 16384 / pParam->pageSize;
 
   if (SPDIV == 0 || PGDIV == 0) {
