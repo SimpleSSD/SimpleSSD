@@ -143,20 +143,20 @@ class VirtuallyLinked : public AbstractMapping {
       ret = 2;
 
       readPointer = [this](LPN lpn) {
-        return (uint64_t)(*(uint16_t *)(table + (lpn << 1)));
+        return (uint64_t)(*(uint16_t *)(pointer + (lpn << 1)));
       };
       writePointer = [this](LPN lpn, uint64_t ppn) {
-        *(uint16_t *)(table + (lpn << 1)) = (uint16_t)ppn;
+        *(uint16_t *)(pointer + (lpn << 1)) = (uint16_t)ppn;
       };
     }
     else if (size < std::numeric_limits<uint32_t>::max()) {
       ret = 4;
 
       readPointer = [this](LPN lpn) {
-        return (uint64_t)(*(uint32_t *)(table + (lpn << 2)));
+        return (uint64_t)(*(uint32_t *)(pointer + (lpn << 2)));
       };
       writePointer = [this](LPN lpn, uint64_t ppn) {
-        *(uint32_t *)(table + (lpn << 2)) = (uint32_t)ppn;
+        *(uint32_t *)(pointer + (lpn << 2)) = (uint32_t)ppn;
       };
     }
     else if (size < ((uint64_t)1ull << 48)) {
@@ -164,20 +164,20 @@ class VirtuallyLinked : public AbstractMapping {
       ret = 6;
 
       readPointer = [this, mask](LPN lpn) {
-        return ((uint64_t)(*(uint64_t *)(table + (lpn * 6)))) | mask;
+        return ((uint64_t)(*(uint64_t *)(pointer + (lpn * 6)))) | mask;
       };
       writePointer = [this](LPN lpn, uint64_t ppn) {
-        memcpy(table + lpn * 6, &ppn, 6);
+        memcpy(pointer + lpn * 6, &ppn, 6);
       };
     }
     else {
       ret = 8;
 
       readPointer = [this](LPN lpn) {
-        return (uint64_t)(*(uint64_t *)(table + (lpn << 3)));
+        return (uint64_t)(*(uint64_t *)(pointer + (lpn << 3)));
       };
       writePointer = [this](LPN lpn, uint64_t ppn) {
-        *(uint64_t *)(table + (lpn << 3)) = (uint64_t)ppn;
+        *(uint64_t *)(pointer + (lpn << 3)) = (uint64_t)ppn;
       };
     }
 
