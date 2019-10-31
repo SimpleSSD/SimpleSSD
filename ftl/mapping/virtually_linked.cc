@@ -797,6 +797,10 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
     }
 
     if (ok) {
+      debugprint(Log::DebugID::FTL_VLFTL,
+                 "Merge | PPN %" PRIx64 "h (LPN %" PRIx64 "h) switch merged",
+                 sppn, idx->slpn);
+
       // Reconstruct table
       validEntry.set(idx->slpn);
       writeEntry(idx->slpn, sppn);
