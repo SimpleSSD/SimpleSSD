@@ -16,6 +16,7 @@ namespace SimpleSSD::FTL {
 
 class VLFTL : public BasicFTL {
  private:
+  bool mergeTriggered;
   uint64_t mergeTag;
 
   virtual inline void triggerGC() override;

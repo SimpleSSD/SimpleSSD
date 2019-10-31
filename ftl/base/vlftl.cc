@@ -14,7 +14,7 @@ namespace SimpleSSD::FTL {
 
 VLFTL::VLFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
              Mapping::AbstractMapping *m, BlockAllocator::AbstractAllocator *a)
-    : BasicFTL(o, c, f, m, a), mergeTag(0) {
+    : BasicFTL(o, c, f, m, a), mergeTriggered(false), mergeTag(0) {
   panic_if(
       dynamic_cast<BlockAllocator::TwoBlockAllocator *>(pAllocator) == nullptr,
       "Requires TwoBlockAllocator as block allocator.");
@@ -37,7 +37,10 @@ void VLFTL::triggerGC() {
     scheduleNow(eventGCTrigger);
   }
 
-  if (((Mapping::VirtuallyLinked *)pMapper)->triggerMerge(true)) {
+  if (!mergeTriggered &&
+      ((Mapping::VirtuallyLinked *)pMapper)->triggerMerge(true)) {
+    mergeTriggered = true;
+
     scheduleNow(eventDoMerge);
   }
 }
@@ -80,6 +83,9 @@ void VLFTL::merge_writeDone() {
     if (((Mapping::VirtuallyLinked *)pMapper)->triggerMerge(false)) {
       scheduleNow(eventDoMerge);
     }
+    else {
+      mergeTriggered = false;
+    }
   }
 }
 
@@ -87,6 +93,7 @@ void VLFTL::createCheckpoint(std::ostream &out) const noexcept {
   BasicFTL::createCheckpoint(out);
 
   BACKUP_SCALAR(out, mergeTag);
+  BACKUP_SCALAR(out, mergeTriggered);
 
   BACKUP_EVENT(out, eventDoMerge);
   BACKUP_EVENT(out, eventMergeReadDone);
@@ -97,6 +104,7 @@ void VLFTL::restoreCheckpoint(std::istream &in) noexcept {
   BasicFTL::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, mergeTag);
+  RESTORE_SCALAR(in, mergeTriggered);
 
   RESTORE_EVENT(in, eventDoMerge);
   RESTORE_EVENT(in, eventMergeReadDone);
