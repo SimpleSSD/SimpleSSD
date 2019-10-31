@@ -79,6 +79,7 @@ class VirtuallyLinked : public AbstractMapping {
 
   // No way to construct array without default constructor -> just use vector
   std::vector<PartialTableEntry> partialTable;
+  uint64_t validPTE;
   float mergeThreshold;
 
   BlockMetadata *blockMetadata;

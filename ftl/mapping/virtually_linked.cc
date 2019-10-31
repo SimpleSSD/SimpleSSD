@@ -22,6 +22,7 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
       validEntry(totalLogicalSuperPages),
       pointer(nullptr),
       pointerValid(totalLogicalSuperPages),
+      validPTE(0),
       blockMetadata(nullptr),
       clock(0) {
   // Check spare size
@@ -156,6 +157,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         // Unlink
         partialTable[ptr].slpn = InvalidLPN;
         pointerValid.reset(slpn);
+        validPTE--;
 
         // Mark as invalid
         for (uint32_t i = 0; i < param.superpage; i++) {
@@ -215,6 +217,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         // Invalidate
         PPN sppn = partialTable[ptr].getEntry(sidx);
         ppn = sppn * param.superpage + sidx;
+        validPTE--;
 
         blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
             getPageIndexFromSPPN(sppn));
@@ -239,6 +242,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       // Link
       writePointer(slpn, ptr);
       iter->slpn = slpn;
+      validPTE++;
 
       iter->valid.reset();
     }
@@ -330,6 +334,7 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
       // Unlink
       partialTable[ptr].slpn = InvalidLPN;
       pointerValid.reset(slpn);
+      validPTE--;
     }
   }
   else if (validEntry.test(slpn)) {
@@ -353,6 +358,7 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
       // Link
       writePointer(slpn, ptr);
       iter->slpn = slpn;
+      validPTE++;
 
       iter->valid.reset();
       pointerValid.set(slpn);
@@ -749,19 +755,13 @@ void VirtuallyLinked::releaseCopyList(CopyList &copy) {
 }
 
 bool VirtuallyLinked::triggerMerge() {
-  uint64_t count = 0;
-
-  for (auto &iter : partialTable) {
-    if (iter.slpn != InvalidLPN) {
-      count++;
-    }
-  }
-
-  return (float)count / partialTable.size() >= mergeThreshold;
+  return (float)validPTE / partialTable.size() >= mergeThreshold;
 }
 
 uint64_t VirtuallyLinked::getMergeReadCommand() {
   uint64_t tag = pFTL->makeFTLCommandTag();
+
+  panic_if(validPTE == 0, "No partial table entry exists.");
 
   // Clock PLRU
   uint16_t diff = 0;
@@ -776,8 +776,6 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
       idx = i;
     }
   }
-
-  panic_if(idx == size, "No partial table entry exists.");
 
   // Check switch merge
   auto &iter = partialTable[idx];
@@ -927,6 +925,7 @@ void VirtuallyLinked::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, pointerSize);
   BACKUP_BLOB(out, table, totalLogicalSuperPages * entrySize);
   BACKUP_BLOB(out, pointer, totalLogicalSuperPages * pointerSize);
+  BACKUP_SCALAR(out, validPTE);
   BACKUP_SCALAR(out, clock);
 
   validEntry.createCheckpoint(out);
@@ -970,6 +969,7 @@ void VirtuallyLinked::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_BLOB(in, table, totalLogicalSuperPages * entrySize);
   RESTORE_BLOB(in, pointer, totalLogicalSuperPages * pointerSize);
+  RESTORE_SCALAR(in, validPTE);
   RESTORE_SCALAR(in, clock);
 
   validEntry.restoreCheckpoint(in);
