@@ -269,7 +269,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     if (blockMetadata[getBlockFromSB(blk, sidx)].nextPageToWrite ==
         filparam->page) {
       // Still we don't have writable block -> allocate new block
-      fstat += allocator->allocateBlock(blk);
+      fstat += ((BlockAllocator::TwoBlockAllocator *)allocator)
+                   ->allocateBlockSecond(blk);
     }
 
     // Get new page
