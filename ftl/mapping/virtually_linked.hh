@@ -26,8 +26,10 @@ class VirtuallyLinked : public AbstractMapping {
     uint8_t *data;
     Bitset valid;
 
+    uint16_t clock;
+
     PartialTableEntry(LPN sl, uint32_t sp, uint32_t es)
-        : slpn(sl), superpage(sp), entrySize(es), valid(sp) {
+        : slpn(sl), superpage(sp), entrySize(es), valid(sp), clock(0) {
       data = (uint8_t *)calloc(sp, es);
     }
     PartialTableEntry(const PartialTableEntry &) = delete;
@@ -35,7 +37,8 @@ class VirtuallyLinked : public AbstractMapping {
         : slpn(rhs.slpn),
           superpage(rhs.superpage),
           entrySize(rhs.entrySize),
-          data(nullptr) {
+          data(nullptr),
+          clock(rhs.clock) {
       if (this != &rhs) {
         free(data);
 

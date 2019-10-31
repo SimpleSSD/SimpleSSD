@@ -282,6 +282,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
 
     // Write entry
     partialTable[ptr].setEntry(sidx, ppn);
+    partialTable[ptr].clock = clock;
 
     // SPPN -> PPN
     ppn = ppn * param.superpage + sidx;
@@ -769,36 +770,36 @@ bool VirtuallyLinked::triggerMerge(bool first) {
 uint64_t VirtuallyLinked::getMergeReadCommand() {
   uint64_t tag = pFTL->makeFTLCommandTag();
 
-  // TODO: Fix this with lambda functions
+  // Clock PLRU
+  uint16_t diff = 0;
+  auto idx = partialTable.end();
 
-  // Select partial table entry to erase
-  auto iter = partialTable.begin();
-
-  for (; iter != partialTable.end(); ++iter) {
-    if (iter->slpn != InvalidLPN) {
-      break;
+  for (auto iter = partialTable.begin(); iter != partialTable.end(); ++iter) {
+    if (diff < (uint64_t)(clock - iter->clock)) {
+      diff = clock - iter->clock;
+      idx = iter;
     }
   }
 
-  panic_if(iter == partialTable.end(), "No partial table entry exists.");
+  panic_if(idx == partialTable.end(), "No partial table entry exists.");
 
   PPN sppn = InvalidPPN;
   PPN ppn = InvalidPPN;
 
-  if (validEntry.test(iter->slpn)) {
-    sppn = readEntry(iter->slpn);
+  if (validEntry.test(idx->slpn)) {
+    sppn = readEntry(idx->slpn);
   }
 
   // Create Command
   auto &cmd = commandManager->createFTLCommand(tag);
 
-  cmd.offset = iter->slpn;
+  cmd.offset = idx->slpn;
   cmd.length = 0;
 
   for (uint32_t i = 0; i < param.superpage; i++) {
-    if (iter->isValid(i)) {
+    if (idx->isValid(i)) {
       cmd.length++;
-      ppn = iter->getEntry(i) * param.superpage + i;
+      ppn = idx->getEntry(i) * param.superpage + i;
 
       commandManager->appendTranslation(cmd, InvalidLPN, ppn);
 
