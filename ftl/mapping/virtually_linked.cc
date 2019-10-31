@@ -775,7 +775,7 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
   auto idx = partialTable.end();
 
   for (auto iter = partialTable.begin(); iter != partialTable.end(); ++iter) {
-    if (diff < (uint64_t)(clock - iter->clock)) {
+    if (iter->slpn != InvalidLPN && diff < (uint64_t)(clock - iter->clock)) {
       diff = clock - iter->clock;
       idx = iter;
     }
@@ -878,14 +878,14 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
 
   panic_if(found != cmd.length || found == 0, "Command not completed.");
 
-  if (cmd.subCommandList.front().ppn == InvalidPPN) {
-    cmd.subCommandList.front().lpn = cmd.offset * param.superpage;
-  }
-
   // Write mapping
   for (LPN i = 0; i < param.superpage; i++) {
     auto &scmd = cmd.subCommandList.at(i);
     PPN old = scmd.ppn;
+
+    if (old == InvalidPPN) {
+      scmd.lpn = cmd.offset * param.superpage + i;
+    }
 
     writeMappingInternal(scmd.lpn, true, scmd.ppn);
 
