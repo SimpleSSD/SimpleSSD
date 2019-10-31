@@ -772,9 +772,10 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
 
   // Clock PLRU
   uint16_t diff = 0;
-  uint64_t idx = 0;
+  uint64_t size = partialTable.size();
+  uint64_t idx = size;
 
-  for (uint64_t i = 0; i < partialTable.size(); i++) {
+  for (uint64_t i = 0; i < size; i++) {
     auto &iter = partialTable[i];
 
     if (iter.slpn != InvalidLPN && diff < (uint64_t)(clock - iter.clock)) {
@@ -783,7 +784,7 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
     }
   }
 
-  panic_if(idx == partialTable.size(), "No partial table entry exists.");
+  panic_if(idx == size, "No partial table entry exists.");
 
   // Check switch merge
   auto &iter = partialTable[idx];
