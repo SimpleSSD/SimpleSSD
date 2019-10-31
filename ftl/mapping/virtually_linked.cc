@@ -449,13 +449,13 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, true, ppn);
-
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
 
+        writeMappingInternal(_lpn, true, ppn);
+
         makeSpare(_lpn, spare);
-        pFTL->writeSpare(ppn * param.superpage + j, spare);
+        pFTL->writeSpare(ppn, spare);
       }
     }
   }
@@ -468,13 +468,13 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, true, ppn);
-
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
+        writeMappingInternal(_lpn, true, ppn);
+
         makeSpare(_lpn, spare);
-        pFTL->writeSpare(ppn * param.superpage + j, spare);
+        pFTL->writeSpare(ppn, spare);
       }
     }
   }
@@ -483,13 +483,13 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, true, ppn);
-
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
 
+        writeMappingInternal(_lpn, true, ppn);
+
         makeSpare(_lpn, spare);
-        pFTL->writeSpare(ppn * param.superpage + j, spare);
+        pFTL->writeSpare(ppn, spare);
       }
     }
   }
@@ -504,13 +504,13 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, true, ppn);
-
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
+        writeMappingInternal(_lpn, true, ppn);
+
         makeSpare(_lpn, spare);
-        pFTL->writeSpare(ppn * param.superpage + j, spare);
+        pFTL->writeSpare(ppn, spare);
       }
     }
   }
@@ -523,13 +523,13 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, true, ppn);
-
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
+        writeMappingInternal(_lpn, true, ppn);
+
         makeSpare(_lpn, spare);
-        pFTL->writeSpare(ppn * param.superpage + j, spare);
+        pFTL->writeSpare(ppn, spare);
       }
     }
   }
