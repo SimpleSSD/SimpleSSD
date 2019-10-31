@@ -200,7 +200,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       }
 
       // Write entry
-      writeEntry(lpn, ppn);
+      writeEntry(slpn, ppn);
 
       // SPPN -> PPN
       ppn *= param.superpage;
