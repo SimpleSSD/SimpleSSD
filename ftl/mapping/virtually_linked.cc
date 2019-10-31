@@ -790,7 +790,7 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
   // Create Command
   auto &cmd = commandManager->createFTLCommand(tag);
 
-  cmd.offset = InvalidLPN;
+  cmd.offset = iter->slpn;
   cmd.length = 0;
 
   for (uint32_t i = 0; i < param.superpage; i++) {
@@ -828,7 +828,6 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   // Validate and fill LPN
-  LPN slpn = InvalidLPN;
   uint32_t found = 0;
 
   for (LPN i = 0; i < param.superpage; i++) {
@@ -839,20 +838,15 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
 
       scmd.lpn = readSpare(scmd.spare);
 
-      if (slpn == InvalidLPN) {
-        slpn = getSLPNfromLPN(scmd.lpn);
-      }
-      else {
-        panic_if(slpn != getSLPNfromLPN(scmd.lpn),
-                 "Command has two or more superpages.");
-      }
+      panic_if(cmd.offset != getSLPNfromLPN(scmd.lpn),
+               "Partial table corrupted.");
     }
   }
 
   panic_if(found != cmd.length || found == 0, "Command not completed.");
 
   if (cmd.subCommandList.front().ppn == InvalidPPN) {
-    cmd.subCommandList.front().lpn = slpn * param.superpage;
+    cmd.subCommandList.front().lpn = cmd.offset * param.superpage;
   }
 
   // Write mapping
