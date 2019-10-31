@@ -220,6 +220,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
 
         blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
             getPageIndexFromSPPN(sppn));
+
+        partialTable[ptr].resetEntry(sidx);
       }
     }
     else {
