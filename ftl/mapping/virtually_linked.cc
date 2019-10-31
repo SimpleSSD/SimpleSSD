@@ -58,8 +58,8 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
   partialTable.reserve(partialTableSize);
 
   for (uint64_t i = 0; i < partialTableSize; i++) {
-    partialTable.emplace_back(
-        PartialTableEntry(InvalidLPN, param.superpage, entrySize));
+    partialTable.emplace_back(InvalidLPN, (uint32_t)param.superpage,
+                              (uint32_t)entrySize);
   }
 
   // Allocate pointer table
@@ -109,7 +109,7 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
   LPN slpn = getSLPNfromLPN(lpn);
-  LPN sidx = getSPIndexFromPPN(lpn);
+  uint32_t sidx = (uint32_t)getSPIndexFromPPN(lpn);
   uint64_t ptr = readPointer(slpn);
 
   if (pointerValid.test(slpn) && partialTable[ptr].isValid(sidx)) {
@@ -139,7 +139,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
   LPN slpn = getSLPNfromLPN(lpn);
-  LPN sidx = getSPIndexFromPPN(lpn);
+  uint32_t sidx = (uint32_t)getSPIndexFromPPN(lpn);
   uint64_t ptr = readPointer(slpn);
 
   if (full) {
@@ -312,7 +312,7 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
   LPN slpn = getSLPNfromLPN(lpn);
-  LPN sidx = getSPIndexFromPPN(lpn);
+  uint32_t sidx = (uint32_t)getSPIndexFromPPN(lpn);
   uint64_t ptr = readPointer(slpn);
 
   if (pointerValid.test(slpn) && partialTable[ptr].isValid(sidx)) {
