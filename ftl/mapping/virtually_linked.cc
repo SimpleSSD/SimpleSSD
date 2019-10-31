@@ -224,17 +224,17 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     }
     else {
       // Allocate partial table
-      panic_if(pointerValid.all(), "No partial table entry exists.");
-
       auto iter = partialTable.begin();
 
       for (uint64_t i = 0; iter != partialTable.end(); ++iter, i++) {
-        if (!pointerValid.test(i)) {
+        if (iter->slpn == InvalidLPN) {
           ptr = i;
 
           break;
         }
       }
+
+      panic_if(iter == partialTable.end(), "No entry left in partial table.");
 
       // Link
       writePointer(slpn, ptr);
