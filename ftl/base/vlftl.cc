@@ -46,6 +46,7 @@ void VLFTL::merge_trigger() {
   mergeTag = ((Mapping::VirtuallyLinked *)pMapper)->getMergeReadCommand();
 
   auto &cmd = commandManager->getCommand(mergeTag);
+  cmd.opcode = Operation::Read;
   cmd.eid = eventMergeReadDone;
 
   pFIL->submit(mergeTag);
@@ -57,6 +58,9 @@ void VLFTL::merge_readDone() {
   cmd.counter++;
 
   if (cmd.counter == cmd.length) {
+    cmd.opcode = Operation::Write;
+    cmd.counter = 0;
+
     mergeTag =
         ((Mapping::VirtuallyLinked *)pMapper)->getMergeWriteCommand(mergeTag);
 
