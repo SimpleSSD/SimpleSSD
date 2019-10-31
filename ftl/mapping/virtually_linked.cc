@@ -640,7 +640,7 @@ CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
 
     makeSpare(scmd.lpn, scmd.spare);
 
-    debugprint(Log::DebugID::FTL_PageLevel,
+    debugprint(Log::DebugID::FTL_VLFTL,
                "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
                scmd.ppn);
   }
@@ -664,7 +664,7 @@ CPU::Function VirtuallyLinked::invalidateMapping(Command &cmd) {
   do {
     fstat += invalidateMappingInternal(lpn, ppn);
 
-    debugprint(Log::DebugID::FTL_PageLevel,
+    debugprint(Log::DebugID::FTL_VLFTL,
                "Trim/Format | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn, ppn);
 
     // Add subcommand
@@ -781,7 +781,10 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
     }
   }
 
+  panic_if(iter == partialTable.end(), "No partial table entry exists.");
+
   PPN sppn = InvalidPPN;
+  PPN ppn = InvalidPPN;
 
   if (validEntry.test(iter->slpn)) {
     sppn = readEntry(iter->slpn);
@@ -796,18 +799,28 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
   for (uint32_t i = 0; i < param.superpage; i++) {
     if (iter->isValid(i)) {
       cmd.length++;
+      ppn = iter->getEntry(i) * param.superpage + i;
 
-      commandManager->appendTranslation(
-          cmd, InvalidLPN, iter->getEntry(i) * param.superpage + i);
+      commandManager->appendTranslation(cmd, InvalidLPN, ppn);
+
+      debugprint(Log::DebugID::FTL_VLFTL,
+                 "Merge | Read  | %u: PPN %" PRIx64 "h from partial table", i,
+                 ppn);
     }
     else if (sppn != InvalidPPN) {
       cmd.length++;
+      ppn = sppn * param.superpage + i;
 
-      commandManager->appendTranslation(cmd, InvalidLPN,
-                                        sppn * param.superpage + i);
+      commandManager->appendTranslation(cmd, InvalidLPN, ppn);
+
+      debugprint(Log::DebugID::FTL_VLFTL,
+                 "Merge | Read  | %u: PPN %" PRIx64 "h from mapping table", i,
+                 ppn);
     }
     else {
       commandManager->appendTranslation(cmd, InvalidLPN, InvalidPPN);
+
+      debugprint(Log::DebugID::FTL_VLFTL, "Merge | Read  | %u not valid", i);
     }
   }
 
@@ -839,11 +852,31 @@ uint64_t VirtuallyLinked::getMergeWriteCommand(uint64_t tag) {
     }
   }
 
-  panic_if(found != cmd.length, "Command not completed.");
+  panic_if(found != cmd.length || found == 0, "Command not completed.");
+
+  if (cmd.subCommandList.front().ppn == InvalidPPN) {
+    cmd.subCommandList.front().lpn = slpn * param.superpage;
+  }
 
   // Write mapping
-  for (auto &scmd : cmd.subCommandList) {
+  for (LPN i = 0; i < param.superpage; i++) {
+    auto &scmd = cmd.subCommandList.at(i);
+    PPN old = scmd.ppn;
+
     writeMappingInternal(scmd.lpn, true, scmd.ppn);
+
+    if (LIKELY(old != InvalidPPN)) {
+      debugprint(Log::DebugID::FTL_VLFTL,
+                 "Merge | Write | %u: PPN %" PRIx64 "h (LPN %" PRIx64
+                 "h) -> PPN %" PRIx64 "h",
+                 i, old, scmd.lpn, scmd.ppn);
+    }
+    else {
+      debugprint(Log::DebugID::FTL_VLFTL,
+                 "Merge | Write | %u: Invalid (LPN %" PRIx64
+                 "h) -> PPN %" PRIx64 "h",
+                 i, scmd.lpn, scmd.ppn);
+    }
   }
 
   return tag;
