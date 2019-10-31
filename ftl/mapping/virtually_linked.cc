@@ -295,7 +295,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
 
         // Invalidate superpage
         for (uint32_t i = 0; i < param.superpage; i++) {
-          blockMetadata[sppn * param.superpage + i].validPages.reset(pg);
+          blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
+              .validPages.reset(pg);
         }
 
         validEntry.reset(slpn);
