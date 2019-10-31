@@ -37,7 +37,7 @@ void VLFTL::triggerGC() {
     scheduleNow(eventGCTrigger);
   }
 
-  if (!mergeTriggered &&
+  if (!mergeTriggered && !pAllocator->stallRequest() &&
       ((Mapping::VirtuallyLinked *)pMapper)->triggerMerge()) {
     mergeTriggered = true;
 
