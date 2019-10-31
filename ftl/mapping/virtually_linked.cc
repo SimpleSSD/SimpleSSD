@@ -798,7 +798,7 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
 
     if (ok) {
       debugprint(Log::DebugID::FTL_VLFTL,
-                 "Merge | PPN %" PRIx64 "h (LPN %" PRIx64 "h) switch merged",
+                 "Merge | PPN %" PRIx64 "h (SLPN %" PRIx64 "h) switch merged",
                  sppn, idx->slpn);
 
       // Reconstruct table
@@ -812,6 +812,8 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
       return 0;
     }
   }
+
+  debugprint(Log::DebugID::FTL_VLFTL, "Merge | SLPN %" PRIx64 "h", idx->slpn);
 
   PPN sppn = InvalidPPN;
   PPN ppn = InvalidPPN;
