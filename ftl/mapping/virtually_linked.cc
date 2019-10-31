@@ -772,24 +772,28 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
 
   // Clock PLRU
   uint16_t diff = 0;
-  auto idx = partialTable.end();
+  uint64_t idx = 0;
 
-  for (auto iter = partialTable.begin(); iter != partialTable.end(); ++iter) {
-    if (iter->slpn != InvalidLPN && diff < (uint64_t)(clock - iter->clock)) {
-      diff = clock - iter->clock;
-      idx = iter;
+  for (uint64_t i = 0; i < partialTable.size(); i++) {
+    auto &iter = partialTable[i];
+
+    if (iter.slpn != InvalidLPN && diff < (uint64_t)(clock - iter.clock)) {
+      diff = clock - iter.clock;
+      idx = i;
     }
   }
 
-  panic_if(idx == partialTable.end(), "No partial table entry exists.");
+  panic_if(idx == partialTable.size(), "No partial table entry exists.");
 
   // Check switch merge
-  if (idx->valid.all()) {
+  auto &iter = partialTable[idx];
+
+  if (iter.valid.all()) {
     bool ok = true;
-    LPN sppn = idx->getEntry(0);
+    LPN sppn = iter.getEntry(0);
 
     for (uint32_t i = 1; i < param.superpage; i++) {
-      if (sppn != idx->getEntry(i)) {
+      if (sppn != iter.getEntry(i)) {
         ok = false;
 
         break;
@@ -799,39 +803,42 @@ uint64_t VirtuallyLinked::getMergeReadCommand() {
     if (ok) {
       debugprint(Log::DebugID::FTL_VLFTL,
                  "Merge | PPN %" PRIx64 "h (SLPN %" PRIx64 "h) switch merged",
-                 sppn, idx->slpn);
+                 sppn, iter.slpn);
 
       // Reconstruct table
-      validEntry.set(idx->slpn);
-      writeEntry(idx->slpn, sppn);
+      validEntry.set(iter.slpn);
+      writeEntry(iter.slpn, sppn);
 
       // Invalidate partial table entry
-      pointerValid.reset(idx->slpn);
-      idx->slpn = InvalidLPN;
+      pointerValid.reset(iter.slpn);
+      iter.slpn = InvalidLPN;
 
       return 0;
     }
   }
 
-  debugprint(Log::DebugID::FTL_VLFTL, "Merge | SLPN %" PRIx64 "h", idx->slpn);
+  debugprint(Log::DebugID::FTL_VLFTL, "Merge | SLPN %" PRIx64 "h", iter.slpn);
 
   PPN sppn = InvalidPPN;
   PPN ppn = InvalidPPN;
 
-  if (validEntry.test(idx->slpn)) {
-    sppn = readEntry(idx->slpn);
+  panic_if(!pointerValid.test(iter.slpn) || readPointer(iter.slpn) != idx,
+           "Partial table corrupted.");
+
+  if (validEntry.test(iter.slpn)) {
+    sppn = readEntry(iter.slpn);
   }
 
   // Create Command
   auto &cmd = commandManager->createFTLCommand(tag);
 
-  cmd.offset = idx->slpn;
+  cmd.offset = iter.slpn;
   cmd.length = 0;
 
   for (uint32_t i = 0; i < param.superpage; i++) {
-    if (idx->isValid(i)) {
+    if (iter.isValid(i)) {
       cmd.length++;
-      ppn = idx->getEntry(i) * param.superpage + i;
+      ppn = iter.getEntry(i) * param.superpage + i;
 
       commandManager->appendTranslation(cmd, InvalidLPN, ppn);
 
