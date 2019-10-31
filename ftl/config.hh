@@ -38,8 +38,7 @@ class Config : public BaseConfig {
 
     // VLFTL
     VLTableRatio,
-    MergeBeginThreshold,
-    MergeEndThreshold,
+    MergeThreshold,
   };
 
   enum class MappingType : uint8_t {
@@ -76,8 +75,7 @@ class Config : public BaseConfig {
   float gcThreshold;
   uint8_t superpageAllocation;
   float pmTableRatio;
-  float mergeBeginThreshold;
-  float mergeEndThreshold;
+  float mergeThreshold;
 
   std::string superpage;
 

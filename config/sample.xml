@@ -569,10 +569,7 @@
       <!-- <float> Ratio of partial-mapping table -->
       <section name="VLTableRatio">0.3</section>
       <!-- <float> Merge threshold -->
-      <section name="MergeBeginThreshold">0.1</section>
-      <!-- <float> Merge terminate threshold -->
-      <section name="MergeEndThreshold">0.2</section>
-      <!-- Other param follows GC setting -->
+      <section name="MergeThreshold">0.1</section>
     </section>
   </section>
   <!--

@@ -22,8 +22,7 @@ const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
 const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_ALLOW_PAGE_LEVEL_READ[] = "AllowPageGranularityRead";
 const char NAME_PARTIAL_MAPPING_TABLE_RATIO[] = "VLTableRatio";
-const char NAME_MERGE_BEGIN_THRESHOLD[] = "MergeBeginThreshold";
-const char NAME_MERGE_END_THRESHOLD[] = "MergeEndThreshold";
+const char NAME_MERGE_THRESHOLD[] = "MergeThreshold";
 
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
@@ -40,8 +39,7 @@ Config::Config() {
   gcThreshold = 0.05f;
   superpageAllocation = FIL::PageAllocation::None;
   pmTableRatio = 0.3f;
-  mergeBeginThreshold = 0.1f;
-  mergeEndThreshold = 0.2f;
+  mergeThreshold = 0.8f;
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -85,8 +83,7 @@ void Config::loadFrom(pugi::xml_node &section) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
         LOAD_NAME_FLOAT(node2, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
-        LOAD_NAME_FLOAT(node2, NAME_MERGE_BEGIN_THRESHOLD, mergeBeginThreshold);
-        LOAD_NAME_FLOAT(node2, NAME_MERGE_END_THRESHOLD, mergeEndThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_MERGE_THRESHOLD, mergeThreshold);
       }
     }
   }
@@ -129,8 +126,7 @@ void Config::storeTo(pugi::xml_node &section) {
 
   STORE_SECTION(section, "vlftl", node);
   STORE_NAME_FLOAT(node, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
-  STORE_NAME_FLOAT(node, NAME_MERGE_BEGIN_THRESHOLD, mergeBeginThreshold);
-  STORE_NAME_FLOAT(node, NAME_MERGE_END_THRESHOLD, mergeEndThreshold);
+  STORE_NAME_FLOAT(node, NAME_MERGE_THRESHOLD, mergeThreshold);
 }
 
 void Config::update() {
@@ -141,6 +137,8 @@ void Config::update() {
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
            "Invalid InvalidPageRatio.");
+
+  panic_if(mergeThreshold >= 1.f, "Invalid VLFTL merge threshold");
 
   if (superpage.length() > 0) {
     superpageAllocation = 0;
@@ -205,11 +203,8 @@ float Config::readFloat(uint32_t idx) {
     case VLTableRatio:
       ret = pmTableRatio;
       break;
-    case MergeBeginThreshold:
-      ret = mergeBeginThreshold;
-      break;
-    case MergeEndThreshold:
-      ret = mergeEndThreshold;
+    case MergeThreshold:
+      ret = mergeThreshold;
       break;
   }
 
@@ -275,11 +270,8 @@ bool Config::writeFloat(uint32_t idx, float value) {
     case VLTableRatio:
       pmTableRatio = value;
       break;
-    case MergeBeginThreshold:
-      mergeBeginThreshold = value;
-      break;
-    case MergeEndThreshold:
-      mergeEndThreshold = value;
+    case MergeThreshold:
+      mergeThreshold = value;
       break;
     default:
       ret = false;
