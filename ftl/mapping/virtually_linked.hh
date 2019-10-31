@@ -32,7 +32,10 @@ class VirtuallyLinked : public AbstractMapping {
     }
     PartialTableEntry(const PartialTableEntry &) = delete;
     PartialTableEntry(PartialTableEntry &&rhs) noexcept
-        : slpn(rhs.slpn), superpage(rhs.superpage), entrySize(rhs.entrySize) {
+        : slpn(rhs.slpn),
+          superpage(rhs.superpage),
+          entrySize(rhs.entrySize),
+          data(nullptr) {
       if (this != &rhs) {
         free(data);
 
