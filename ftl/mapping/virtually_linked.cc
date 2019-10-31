@@ -49,10 +49,8 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
   uint64_t partialTableSize = (uint64_t)(
       totalLogicalSuperPages *
       readConfigFloat(Section::FlashTranslation, Config::Key::VLTableRatio));
-  mergeBeginThreshold = readConfigFloat(Section::FlashTranslation,
-                                        Config::Key::MergeBeginThreshold);
-  mergeEndThreshold = readConfigFloat(Section::FlashTranslation,
-                                      Config::Key::MergeEndThreshold);
+  mergeThreshold =
+      readConfigFloat(Section::FlashTranslation, Config::Key::MergeThreshold);
 
   // Fill partial table
   partialTable.reserve(partialTableSize);
@@ -750,7 +748,7 @@ void VirtuallyLinked::releaseCopyList(CopyList &copy) {
              copy.blockID);
 }
 
-bool VirtuallyLinked::triggerMerge(bool first) {
+bool VirtuallyLinked::triggerMerge() {
   uint64_t count = 0;
 
   for (auto &iter : partialTable) {
@@ -759,12 +757,7 @@ bool VirtuallyLinked::triggerMerge(bool first) {
     }
   }
 
-  if (first) {
-    return (float)count / partialTable.size() >= mergeBeginThreshold;
-  }
-  else {
-    return (float)count / partialTable.size() >= mergeEndThreshold;
-  }
+  return (float)count / partialTable.size() >= mergeThreshold;
 }
 
 uint64_t VirtuallyLinked::getMergeReadCommand() {

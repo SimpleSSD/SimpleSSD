@@ -38,7 +38,7 @@ void VLFTL::triggerGC() {
   }
 
   if (!mergeTriggered &&
-      ((Mapping::VirtuallyLinked *)pMapper)->triggerMerge(true)) {
+      ((Mapping::VirtuallyLinked *)pMapper)->triggerMerge()) {
     mergeTriggered = true;
 
     scheduleNow(eventDoMerge);
@@ -86,12 +86,9 @@ void VLFTL::merge_writeDone() {
   if (cmd.counter == 0) {
     ((Mapping::VirtuallyLinked *)pMapper)->destroyMergeCommand(mergeTag);
 
-    if (((Mapping::VirtuallyLinked *)pMapper)->triggerMerge(false)) {
-      scheduleNow(eventDoMerge);
-    }
-    else {
-      mergeTriggered = false;
-    }
+    mergeTriggered = false;
+
+    triggerGC();
   }
 }
 
