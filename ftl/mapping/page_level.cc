@@ -343,6 +343,10 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
   PPN ppn = InvalidPPN;
 
   for (auto &scmd : cmd.subCommandList) {
+    if (UNLIKELY(scmd.lpn == InvalidLPN)) {
+      continue;
+    }
+
     LPN currentLPN = scmd.lpn / param.superpage;
     LPN superpageIndex = scmd.lpn % param.superpage;
 

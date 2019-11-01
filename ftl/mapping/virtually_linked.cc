@@ -593,6 +593,10 @@ CPU::Function VirtuallyLinked::readMapping(Command &cmd) {
 
   // Perform read translation
   for (auto &scmd : cmd.subCommandList) {
+    if (UNLIKELY(scmd.lpn == InvalidLPN)) {
+      continue;
+    }
+
     fstat += readMappingInternal(scmd.lpn, scmd.ppn);
 
     debugprint(Log::DebugID::FTL_VLFTL,
