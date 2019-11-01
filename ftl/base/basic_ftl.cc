@@ -94,8 +94,8 @@ void BasicFTL::read_find(Command &cmd) {
 
       auto &rcmd = commandManager->getCommand(tag);
 
-      // Store original command in counter variable
-      rcmd.counter = cmd.tag;
+      // Store original command in beginAt variable
+      rcmd.beginAt = cmd.tag;
 
       // Override pcmd
       pcmd = &rcmd;
@@ -112,12 +112,17 @@ void BasicFTL::read_doFIL(uint64_t tag) {
 
 void BasicFTL::read_readDone(uint64_t tag) {
   auto &rcmd = commandManager->getCommand(tag);
-  auto &cmd = commandManager->getCommand(rcmd.counter);
 
-  // Full-sized read done
-  scheduleNow(cmd.eid, cmd.tag);
+  rcmd.counter++;
 
-  commandManager->destroyCommand(tag);
+  if (rcmd.counter == rcmd.length) {
+    auto &cmd = commandManager->getCommand(rcmd.beginAt);
+
+    // Full-sized read done
+    scheduleNow(cmd.eid, cmd.tag);
+
+    commandManager->destroyCommand(tag);
+  }
 }
 
 void BasicFTL::write_find(Command &cmd) {
