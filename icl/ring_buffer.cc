@@ -298,6 +298,8 @@ void RingBuffer::readWorker(uint64_t now) {
     std::vector<LPN> pendingLPNs;
     std::list<LPN> alignedLPN;
     LPN lpnNotPrefetch = InvalidLPN;
+    LPN prefetchFrom = InvalidLPN;
+    LPN prefetchLength = 0;
 
     pendingLPNs.reserve(readPendingQueue.size());
 
@@ -335,13 +337,22 @@ void RingBuffer::readWorker(uint64_t now) {
             limit > alignedLPN.size() ? limit - (uint32_t)alignedLPN.size() : 0;
       }
       else {
+        // This worker only performs prefetch/read-ahead
+        if (lastReadDoneAddress != std::numeric_limits<uint64_t>::max() &&
+            lastReadPendingAddress - lastReadDoneAddress >
+                prefetchPages * 0.5f) {
+          // No need to trigger prefetch
+          readTriggered = false;
+
+          return;
+        }
+
         last = lastReadPendingAddress - minPages;
         lpnNotPrefetch = last - 1;
       }
 
-      debugprint(Log::DebugID::ICL_RingBuffer,
-                 "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64 "h",
-                 last + minPages, limit * minPages);
+      prefetchFrom = last + minPages;
+      prefetchLength = limit * minPages;
 
       for (uint32_t i = 1; i <= limit; i++) {
         alignedLPN.emplace_back(last + i * minPages);
@@ -354,9 +365,6 @@ void RingBuffer::readWorker(uint64_t now) {
       return;
     }
 
-    // Update last read address
-    lastReadPendingAddress = alignedLPN.back() + minPages;
-
     // Check capacity
     readWaitsEviction = alignedLPN.size();
 
@@ -366,6 +374,16 @@ void RingBuffer::readWorker(uint64_t now) {
       trigger_writeWorker();
     }
     else {
+      // Update last read address
+      lastReadPendingAddress = alignedLPN.back() + minPages;
+
+      if (prefetchLength > 0) {
+        debugprint(Log::DebugID::ICL_RingBuffer,
+                   "Prefetch/Read-ahead | Fetch LPN %" PRIx64 "h + %" PRIx64
+                   "h",
+                   prefetchFrom, prefetchLength);
+      }
+
       // Mark as submit
       for (auto &ctx : readPendingQueue) {
         if (ctx.status == CacheStatus::ReadWait) {
@@ -873,6 +891,7 @@ void RingBuffer::read_find(Command &cmd) {
 
     if (trigger.triggered() &&
         lastReadDoneAddress != std::numeric_limits<uint64_t>::max()) {
+      // readworker double checks this condition
       if (cmd.offset < lastReadPendingAddress &&
           lastReadPendingAddress - cmd.offset <= prefetchPages * 0.5f) {
         trigger_readWorker();
