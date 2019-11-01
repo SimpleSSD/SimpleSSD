@@ -1065,10 +1065,12 @@ void RingBuffer::write_find(SubCommand &scmd) {
     }
 
     // Last request or first aligned sub command
-    if (wcmd.length == scmd.id + 1 || (isAligned(scmd.lpn) && scmd.id != 0)) {
+    if (wcmd.length == scmd.id + 1 ||
+        (isAligned(scmd.lpn) && (minPages == 1 || scmd.id != 0))) {
       // Move aligned LPN + minPages to writeWaitingQueue
-      LPN begin =
-          alignToMinPage(wcmd.length == scmd.id + 1 ? scmd.lpn : scmd.lpn - 1);
+      LPN begin = alignToMinPage((wcmd.length == scmd.id + 1 || minPages == 1)
+                                     ? scmd.lpn
+                                     : scmd.lpn - 1);
       LPN end = begin + minPages;
       uint64_t tag = 0;
       LPN found = 0;
