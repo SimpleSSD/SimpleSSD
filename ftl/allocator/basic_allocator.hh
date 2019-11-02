@@ -46,7 +46,7 @@ class BasicAllocator : public AbstractAllocator {
 
  public:
   BasicAllocator(ObjectData &, Mapping::AbstractMapping *);
-  ~BasicAllocator();
+  virtual ~BasicAllocator();
 
   void initialize(Parameter *) override;
 

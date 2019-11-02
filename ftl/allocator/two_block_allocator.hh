@@ -24,12 +24,12 @@ class TwoBlockAllocator : public BasicAllocator {
 
  public:
   TwoBlockAllocator(ObjectData &, Mapping::AbstractMapping *);
-  ~TwoBlockAllocator();
+  virtual ~TwoBlockAllocator();
 
   void initialize(Parameter *) override;
 
-  CPU::Function allocateBlockSecond(PPN &);
-  PPN getBlockAtSecond(PPN);
+  virtual CPU::Function allocateBlockSecond(PPN &);
+  virtual PPN getBlockAtSecond(PPN);
 
   bool stallRequest() override;
 };
