@@ -53,7 +53,7 @@ CPU::Function VLAllocator::allocatePartialBlock(LPN lpn, PPN &ppn) {
 // SLPN, SPPN
 PPN VLAllocator::getPartialBlock(LPN lpn, PPN ppn) {
   // If we previously used block with specific lpn?
-  uint64_t idx = parallelism;
+  uint64_t idx = lpn == InvalidLPN ? parallelism : 0;
 
   for (; idx < parallelism; idx++) {
     if (inUseBlockMapLPN[idx] == lpn) {
