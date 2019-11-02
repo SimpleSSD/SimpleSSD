@@ -972,6 +972,7 @@ void RingBuffer::read_nocache(uint64_t tag) {
 
 void RingBuffer::write_find(SubCommand &scmd) {
   CPU::Function fstat = CPU::initFunction();
+  Event endEvent = InvalidEventID;
 
   stat.request[1] += pageSize - scmd.skipFront - scmd.skipEnd;
 
@@ -1021,6 +1022,8 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
           updateSkip(sentry.valid, scmd.skipFront, scmd.skipEnd);
           updateCapacity(false, scmd.skipFront + scmd.skipEnd);
+
+          endEvent = eventWritePreCPUDone;
         }
       }
     }
@@ -1051,6 +1054,8 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
         debugprint(Log::DebugID::ICL_RingBuffer,
                    "Write | LPN %" PRIx64 "h | Cache cold miss", scmd.lpn);
+
+        endEvent = eventWritePreCPUDone;
       }
       else {
         scmd.status = Status::InternalCache;
@@ -1156,8 +1161,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
     }
   }
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventWritePreCPUDone, scmd.tag,
-                   fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, endEvent, scmd.tag, fstat);
 }
 
 void RingBuffer::write_findDone(uint64_t tag) {
