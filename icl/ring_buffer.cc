@@ -66,6 +66,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
       lastReadDoneAddress(std::numeric_limits<uint64_t>::max()),
       flushTag({InvalidEventID, 0}) {
   auto param = pFTL->getInfo();
+  auto superpage = pFTL->getMappingGranularity();
 
   triggerThreshold =
       readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold);
@@ -74,7 +75,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::EvictMode)) {
     case Config::Granularity::SuperpageLevel:
-      evictPages = (uint32_t)param->superpage;
+      evictPages = (uint32_t)superpage;
 
       break;
     case Config::Granularity::AllLevel:
@@ -88,12 +89,12 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   }
 
   // Calculate FTL's write granularity
-  minPages = (uint32_t)param->superpage;
+  minPages = (uint32_t)superpage;
 
   switch ((Config::Granularity)readConfigUint(Section::InternalCache,
                                               Config::Key::PrefetchMode)) {
     case Config::Granularity::SuperpageLevel:
-      prefetchPages = (uint32_t)param->superpage;
+      prefetchPages = (uint32_t)superpage;
 
       break;
     case Config::Granularity::AllLevel:
@@ -960,7 +961,7 @@ void RingBuffer::read_nocache(uint64_t tag) {
 
   scmd.status = Status::Done;
   object.dram->read(getDRAMAddress(scmd.lpn), pageSize, eventReadDRAMDone,
-                     scmd.tag);
+                    scmd.tag);
 
   cmd.counter++;
 

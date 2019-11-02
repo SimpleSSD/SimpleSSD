@@ -50,6 +50,7 @@ class FTL : public Object {
   void submit(uint64_t);
 
   Parameter *getInfo();
+  uint32_t getMappingGranularity();
 
   LPN getPageUsage(LPN, LPN);
   bool isGC();

@@ -90,6 +90,10 @@ Parameter *FTL::getInfo() {
   return pMapper->getInfo();
 }
 
+uint32_t FTL::getMappingGranularity() {
+  return (uint32_t)pMapper->mappingGranularity();
+}
+
 LPN FTL::getPageUsage(LPN lpnBegin, LPN lpnEnd) {
   return pMapper->getPageUsage(lpnBegin, lpnEnd);
 }
