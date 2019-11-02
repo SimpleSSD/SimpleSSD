@@ -9,6 +9,7 @@
 
 #include "ftl/allocator/basic_allocator.hh"
 #include "ftl/allocator/two_block_allocator.hh"
+#include "ftl/allocator/vl_allocator.hh"
 #include "ftl/base/basic_ftl.hh"
 #include "ftl/base/vlftl.hh"
 #include "ftl/mapping/page_level.hh"
@@ -47,7 +48,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   // Block allocator
   switch (mapping) {
     case Config::MappingType::VLFTL:
-      pAllocator = new BlockAllocator::TwoBlockAllocator(object, pMapper);
+      pAllocator = new BlockAllocator::VLAllocator(object, pMapper);
 
       break;
     default:
