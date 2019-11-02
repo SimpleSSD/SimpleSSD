@@ -8,7 +8,7 @@
 #include "ftl/mapping/virtually_linked.hh"
 
 #include "ftl/allocator/abstract_allocator.hh"
-#include "ftl/allocator/two_block_allocator.hh"
+#include "ftl/allocator/vl_allocator.hh"
 #include "ftl/base/abstract_ftl.hh"
 
 namespace SimpleSSD::FTL::Mapping {
@@ -251,8 +251,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     pointerValid.set(slpn);
 
     // Get block from second allocated block pool
-    PPN firstblk = ((BlockAllocator::TwoBlockAllocator *)allocator)
-                       ->getBlockAtSecond(InvalidPPN);
+    PPN firstblk = ((BlockAllocator::VLAllocator *)allocator)
+                       ->getPartialBlock(slpn, InvalidPPN);
 
     // Find writable block
     PPN blk = firstblk;
@@ -263,15 +263,15 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         break;
       }
 
-      blk = ((BlockAllocator::TwoBlockAllocator *)allocator)
-                ->getBlockAtSecond(InvalidPPN);
+      blk = ((BlockAllocator::VLAllocator *)allocator)
+                ->getPartialBlock(InvalidLPN, InvalidPPN);
     } while (blk != firstblk);
 
     if (blockMetadata[getBlockFromSB(blk, sidx)].nextPageToWrite ==
         filparam->page) {
       // Still we don't have writable block -> allocate new block
-      fstat += ((BlockAllocator::TwoBlockAllocator *)allocator)
-                   ->allocateBlockSecond(blk);
+      fstat += ((BlockAllocator::VLAllocator *)allocator)
+                   ->allocatePartialBlock(slpn, blk);
     }
 
     // Get new page
@@ -387,9 +387,8 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
                                  BlockAllocator::AbstractAllocator *a) {
   AbstractMapping::initialize(f, a);
 
-  panic_if(
-      dynamic_cast<BlockAllocator::TwoBlockAllocator *>(allocator) == nullptr,
-      "Requires TwoBlockAllocator as block allocator.");
+  panic_if(dynamic_cast<BlockAllocator::VLAllocator *>(allocator) == nullptr,
+           "Requires VLAllocator as block allocator.");
 
   // Make first free block pool in allocator
   uint64_t parallelism = param.parallelism / param.superpage;
@@ -404,7 +403,8 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
   for (uint64_t i = 0; i < parallelism; i++) {
     PPN tmp = InvalidPPN;
 
-    ((BlockAllocator::TwoBlockAllocator *)allocator)->allocateBlockSecond(tmp);
+    ((BlockAllocator::VLAllocator *)allocator)
+        ->allocatePartialBlock(InvalidLPN, tmp);
   }
 
   // Perform filling
