@@ -148,6 +148,7 @@ set(SRC_FTL
 set(SRC_FTL_ALLOC
   ftl/allocator/basic_allocator.cc
   ftl/allocator/two_block_allocator.cc
+  ftl/allocator/vl_allocator.cc
 )
 set(SRC_FTL_BASE
   ftl/base/basic_ftl.cc
