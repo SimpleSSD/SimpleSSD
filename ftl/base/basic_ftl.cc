@@ -78,8 +78,8 @@ void BasicFTL::read_find(Command &cmd) {
     }
   }
 
-  // If we don't allow page-level read,
-  if (!allowPageRead) {
+  // If we don't allow page-level read, (Always aligned when granularity is 1)
+  if (!allowPageRead && mappingGranularity != 1) {
     // Check this request is aligned to mapping granularity
     LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
     LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, mappingGranularity) *
