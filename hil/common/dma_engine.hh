@@ -71,8 +71,6 @@ class DMAEngine : public Object {
     Event eid;
     uint64_t data;
 
-    bool read;
-
     uint64_t handled;
     uint64_t requested;
     uint64_t bufferSize;
@@ -84,11 +82,12 @@ class DMAEngine : public Object {
     void deallocateBuffer();
 
     DMASession(uint64_t t) : tag(t) {}
-    DMASession(uint64_t, DMATag, Event, uint64_t, bool, uint64_t, uint8_t *);
+    DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *);
   };
 
   DMAInterface *interface;
-  Event eventDMADone;
+  Event eventReadDMADone;
+  Event eventWriteDMADone;
 
   Event eventPRDTInitDone;
   Event eventPRPReadDone;
@@ -102,7 +101,8 @@ class DMAEngine : public Object {
 
   uint64_t pageSize;
 
-  void dmaDone(uint64_t);
+  void dmaReadDone(uint64_t);
+  void dmaWriteDone(uint64_t);
 
   DMATag createTag();
   void destroyTag(DMATag);
@@ -133,10 +133,9 @@ class DMAEngine : public Object {
   }
 
   inline uint64_t createSession(DMATag t, Event e, uint64_t d = 0,
-                                bool r = false, uint64_t s = 0,
-                                uint8_t *b = nullptr) {
+                                uint64_t s = 0, uint8_t *b = nullptr) {
     uint64_t tag = sessionID++;
-    auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, r, s, b));
+    auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, s, b));
 
     panic_if(!iter.second, "Failed to create DMA session.");
 

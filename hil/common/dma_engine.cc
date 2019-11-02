@@ -71,12 +71,11 @@ bool DMAData::isInited() noexcept {
 }
 
 DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
-                                  bool r, uint64_t s, uint8_t *b)
+                                  uint64_t s, uint8_t *b)
     : tag(i),
       parent(t),
       eid(e),
       data(d),
-      read(r),
       handled(0),
       requested(s),
       bufferSize(0),
@@ -96,8 +95,12 @@ void DMAEngine::DMASession::deallocateBuffer() {
 
 DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
     : Object(o), interface(i), sessionID(0), pageSize(0) {
-  eventDMADone = createEvent([this](uint64_t, uint64_t d) { dmaDone(d); },
-                             "HIL::DMAEngine::dmaHandler");
+  eventReadDMADone =
+      createEvent([this](uint64_t, uint64_t d) { dmaReadDone(d); },
+                  "HIL::DMAEngine::eventReadDMADone");
+  eventWriteDMADone =
+      createEvent([this](uint64_t, uint64_t d) { dmaWriteDone(d); },
+                  "HIL::DMAEngine::eventWriteDMADone");
   eventPRDTInitDone =
       createEvent([this](uint64_t, uint64_t d) { prdt_readDone(d); },
                   "HIL::DMAEngine::eventPRDTInitDone");
@@ -123,7 +126,7 @@ DMAEngine::~DMAEngine() {
   tagList.clear();
 }
 
-void DMAEngine::dmaDone(uint64_t tag) {
+void DMAEngine::dmaReadDone(uint64_t tag) {
   auto &session = findSession(tag);
 
   if (session.handled == session.requested) {
@@ -132,12 +135,20 @@ void DMAEngine::dmaDone(uint64_t tag) {
     destroySession(tag);
   }
   else {
-    if (session.read) {
-      readNext(session);
-    }
-    else {
-      writeNext(session);
-    }
+    readNext(session);
+  }
+}
+
+void DMAEngine::dmaWriteDone(uint64_t tag) {
+  auto &session = findSession(tag);
+
+  if (session.handled == session.requested) {
+    scheduleNow(session.eid, session.data);
+
+    destroySession(tag);
+  }
+  else {
+    writeNext(session);
   }
 }
 
@@ -318,7 +329,7 @@ DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size, Event eid,
   size *= sizeof(PRDT);
 
   // Prepare for PRDT read
-  uint64_t tag = createSession(ret, eid, data, false, size, nullptr);
+  uint64_t tag = createSession(ret, eid, data, size, nullptr);
   auto &session = findSession(tag);
 
   session.allocateBuffer(size);
@@ -339,7 +350,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   uint32_t prp1Size = getPRPSize(prp1);
   uint32_t prp2Size = getPRPSize(prp2);
 
-  uint64_t tag = createSession(ret, eid, data, false, size, nullptr);
+  uint64_t tag = createSession(ret, eid, data, size, nullptr);
   auto &session = findSession(tag);
 
   // Determine PRP1 and PRP2
@@ -422,7 +433,7 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
 
   SGLDescriptor desc;
 
-  uint64_t tag = createSession(ret, eid, data, false, size, nullptr);
+  uint64_t tag = createSession(ret, eid, data, size, nullptr);
   auto &session = findSession(tag);
 
   // Create first SGL descriptor from PRP pointers
@@ -478,13 +489,13 @@ void DMAEngine::readNext(DMASession &session) noexcept {
 
     interface->read(iter.address, read,
                     session.buffer ? session.buffer + session.handled : nullptr,
-                    eventDMADone, session.tag);
+                    eventReadDMADone, session.tag);
   }
 
   session.handled += read;
 
   if (!submit) {
-    dmaDone(session.tag);
+    dmaReadDone(session.tag);
   }
 }
 
@@ -496,7 +507,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t read;
   bool submit = false;
 
-  uint64_t dtag = createSession(tag, eid, data, true, size, nullptr);
+  uint64_t dtag = createSession(tag, eid, data, size, nullptr);
   auto &session = findSession(dtag);
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
@@ -510,7 +521,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 
       if (!iter.ignore) {
         interface->read(iter.address + session.handled, read, buffer,
-                        eventDMADone, dtag);
+                        eventReadDMADone, dtag);
 
         submit = true;
       }
@@ -524,7 +535,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   }
 
   if (!submit) {
-    dmaDone(dtag);
+    dmaReadDone(dtag);
   }
 }
 
@@ -542,13 +553,13 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
     interface->write(
         iter.address, written,
         session.buffer ? session.buffer + session.handled : nullptr,
-        eventDMADone, session.tag);
+        eventWriteDMADone, session.tag);
   }
 
   session.handled += written;
 
   if (!submit) {
-    dmaDone(session.tag);
+    dmaWriteDone(session.tag);
   }
 }
 
@@ -560,7 +571,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t written;
   bool submit = false;
 
-  uint64_t dtag = createSession(tag, eid, data, false, size, nullptr);
+  uint64_t dtag = createSession(tag, eid, data, size, nullptr);
   auto &session = findSession(dtag);
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
@@ -575,7 +586,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
         submit = true;
 
         interface->write(iter.address + session.handled, written, buffer,
-                         eventDMADone, dtag);
+                         eventWriteDMADone, dtag);
       }
 
       session.handled = written;
@@ -587,7 +598,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   }
 
   if (!submit) {
-    dmaDone(dtag);
+    dmaWriteDone(dtag);
   }
 }
 
@@ -600,7 +611,8 @@ void DMAEngine::resetStatValues() noexcept {}
 void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
-  BACKUP_EVENT(out, eventDMADone);
+  BACKUP_EVENT(out, eventReadDMADone);
+  BACKUP_EVENT(out, eventWriteDMADone);
   BACKUP_EVENT(out, eventPRDTInitDone);
   BACKUP_EVENT(out, eventPRPReadDone);
   BACKUP_EVENT(out, eventSGLReadDone);
@@ -630,7 +642,6 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_DMATAG(out, iter.second.parent);
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.data);
-    BACKUP_SCALAR(out, iter.second.read);
     BACKUP_SCALAR(out, iter.second.handled);
     BACKUP_SCALAR(out, iter.second.requested);
 
@@ -648,7 +659,8 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
 void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
-  RESTORE_EVENT(in, eventDMADone);
+  RESTORE_EVENT(in, eventReadDMADone);
+  RESTORE_EVENT(in, eventWriteDMADone);
   RESTORE_EVENT(in, eventPRDTInitDone);
   RESTORE_EVENT(in, eventPRPReadDone);
   RESTORE_EVENT(in, eventSGLReadDone);
@@ -700,7 +712,6 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_EVENT(in, session.eid);
     RESTORE_SCALAR(in, session.data);
 
-    RESTORE_SCALAR(in, session.read);
     RESTORE_SCALAR(in, session.handled);
     RESTORE_SCALAR(in, session.requested);
 
