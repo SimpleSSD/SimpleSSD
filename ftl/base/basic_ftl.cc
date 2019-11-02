@@ -112,15 +112,15 @@ void BasicFTL::read_doFIL(uint64_t tag) {
 
 void BasicFTL::read_readDone(uint64_t tag) {
   auto &rcmd = commandManager->getCommand(tag);
+  auto &cmd = commandManager->getCommand(rcmd.beginAt);
 
   rcmd.counter++;
 
-  if (rcmd.counter == rcmd.length) {
-    auto &cmd = commandManager->getCommand(rcmd.beginAt);
-
-    // Full-sized read done
+  if (rcmd.counter + cmd.length > rcmd.length) {
     scheduleNow(cmd.eid, cmd.tag);
+  }
 
+  if (rcmd.counter == rcmd.length) {
     commandManager->destroyCommand(tag);
   }
 }

@@ -271,6 +271,9 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   eventReadDRAMDone =
       createEvent([this](uint64_t, uint64_t d) { read_done(d); },
                   "ICL::RingBuffer::eventReadDRAMDone");
+  eventReadNocache =
+      createEvent([this](uint64_t, uint64_t d) { read_nocache(d); },
+                  "ICL::RingBuffer::eventReadNocache");
   eventWritePreCPUDone =
       createEvent([this](uint64_t, uint64_t d) { write_findDone(d); },
                   "ICL::RingBuffer::eventWritePreCPUDone");
@@ -897,27 +900,33 @@ void RingBuffer::read_find(Command &cmd) {
         trigger_readWorker();
       }
     }
-  }
 
-  // Check we have scmd.status == Submit
-  for (auto &scmd : cmd.subCommandList) {
-    if (scmd.status == Status::Submit) {
-      scmd.status = Status::InternalCache;
+    // Check we have scmd.status == Submit
+    for (auto &scmd : cmd.subCommandList) {
+      if (scmd.status == Status::Submit) {
+        scmd.status = Status::InternalCache;
 
-      readPendingQueue.emplace_back(
-          CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
+        readPendingQueue.emplace_back(
+            CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadWait));
 
-      if (LIKELY(enabled)) {
         debugprint(Log::DebugID::ICL_RingBuffer,
                    "Read  | LPN %" PRIx64 "h | Cache miss", scmd.lpn);
-      }
 
-      trigger_readWorker();
+        trigger_readWorker();
+      }
+      else if (scmd.status == Status::InternalCache) {
+        readPendingQueue.emplace_back(CacheContext(
+            &scmd, cacheEntry.end(), CacheStatus::ReadPendingWait));
+      }
     }
-    else if (scmd.status == Status::InternalCache) {
-      readPendingQueue.emplace_back(
-          CacheContext(&scmd, cacheEntry.end(), CacheStatus::ReadPendingWait));
-    }
+  }
+  else {
+    uint64_t tag = makeCacheCommandTag();
+
+    commandManager->createICLRead(tag, eventReadNocache, cmd.offset, cmd.length,
+                                  cmd.tag);
+
+    pFTL->submit(tag);
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventReadPreCPUDone, cmd.tag,
@@ -942,6 +951,22 @@ void RingBuffer::read_done(uint64_t tag) {
   auto &cmd = commandManager->getCommand(tag);
 
   scheduleNow(cmd.eid, tag);
+}
+
+void RingBuffer::read_nocache(uint64_t tag) {
+  auto &cmd = commandManager->getCommand(tag);
+  auto &rcmd = commandManager->getCommand(cmd.beginAt);
+  auto &scmd = rcmd.subCommandList.at(cmd.counter);
+
+  scmd.status = Status::Done;
+  object.dram->read(getDRAMAddress(scmd.lpn), pageSize, eventReadDRAMDone,
+                     scmd.tag);
+
+  cmd.counter++;
+
+  if (cmd.counter == cmd.length) {
+    commandManager->destroyCommand(tag);
+  }
 }
 
 void RingBuffer::write_find(SubCommand &scmd) {
@@ -1460,6 +1485,7 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventWriteWorkerDone);
   BACKUP_EVENT(out, eventReadPreCPUDone);
   BACKUP_EVENT(out, eventReadDRAMDone);
+  BACKUP_EVENT(out, eventReadNocache);
   BACKUP_EVENT(out, eventWritePreCPUDone);
   BACKUP_EVENT(out, eventWriteDRAMDone);
   BACKUP_EVENT(out, eventWriteNocache);
@@ -1645,6 +1671,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventWriteWorkerDone);
   RESTORE_EVENT(in, eventReadPreCPUDone);
   RESTORE_EVENT(in, eventReadDRAMDone);
+  RESTORE_EVENT(in, eventReadNocache);
   RESTORE_EVENT(in, eventWritePreCPUDone);
   RESTORE_EVENT(in, eventWriteDRAMDone);
   RESTORE_EVENT(in, eventWriteNocache);
