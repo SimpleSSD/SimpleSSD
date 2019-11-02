@@ -428,7 +428,7 @@
     <!--
       <float> On-demand evicition trigger
 
-      In ring buffer, if current cache utilization / cache size >= this value,
+      In ring buffer, if current dirty pages / cache size >= this value,
       background write worker will triggered to evict pages to FTL.
      -->
     <config name="EvictThreshold">0.8</config>
