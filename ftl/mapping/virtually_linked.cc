@@ -217,7 +217,6 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         // Invalidate
         PPN sppn = partialTable[ptr].getEntry(sidx);
         ppn = sppn * param.superpage + sidx;
-        validPTE--;
 
         blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
             getPageIndexFromSPPN(sppn));
