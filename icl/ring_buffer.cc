@@ -260,11 +260,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
   eventWriteWorker =
       createEvent([this](uint64_t t, uint64_t) { writeWorker(t); },
                   "ICL::RingBuffer::eventWriteWorker");
-  eventWriteWorkerDoDRAM =
-      createEvent([this](uint64_t, uint64_t) { writeWorker_doDRAM(); },
-                  "ICL::RingBuffer::eventWriteWorkerDoDRAM");
   eventWriteWorkerDoFTL =
-      createEvent([this](uint64_t, uint64_t d) { writeWorker_doFTL(d); },
+      createEvent([this](uint64_t, uint64_t) { writeWorker_doFTL(); },
                   "ICL::RingBuffer::eventWriteWorkerDoFTL");
   eventWriteWorkerDone =
       createEvent([this](uint64_t t, uint64_t d) { writeWorker_done(t, d); },
@@ -667,7 +664,7 @@ void RingBuffer::writeWorker(uint64_t now) {
     trigger_readWorker();
   }
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoDRAM, fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventWriteWorkerDoFTL, fstat);
 }
 
 CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
@@ -742,22 +739,15 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
   return std::move(fstat);
 }
 
-void RingBuffer::writeWorker_doDRAM() {
+void RingBuffer::writeWorker_doFTL() {
   // Issue writes in writePendingQueue
   for (auto &iter : writeWorkerTag) {
-    auto &cmd = commandManager->getCommand(iter);
-
-    object.dram->read(getDRAMAddress(cmd.offset), cmd.length * pageSize,
-                      eventWriteWorkerDoFTL, cmd.tag);
+    pFTL->submit(iter);
   }
 
   writeTriggered = false;
 
   writeWorkerTag.clear();
-}
-
-void RingBuffer::writeWorker_doFTL(uint64_t tag) {
-  pFTL->submit(tag);
 }
 
 void RingBuffer::writeWorker_done(uint64_t now, uint64_t tag) {
@@ -1167,7 +1157,7 @@ void RingBuffer::write_find(SubCommand &scmd) {
 
       writeWorkerTag.emplace_back(tag);
 
-      scheduleNow(eventWriteWorkerDoDRAM);
+      scheduleNow(eventWriteWorkerDoFTL);
     }
   }
 
@@ -1496,7 +1486,6 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventReadWorkerDoFTL);
   BACKUP_EVENT(out, eventReadWorkerDone);
   BACKUP_EVENT(out, eventWriteWorker);
-  BACKUP_EVENT(out, eventWriteWorkerDoDRAM);
   BACKUP_EVENT(out, eventWriteWorkerDoFTL);
   BACKUP_EVENT(out, eventWriteWorkerDone);
   BACKUP_EVENT(out, eventReadPreCPUDone);
@@ -1683,7 +1672,6 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventReadWorkerDoFTL);
   RESTORE_EVENT(in, eventReadWorkerDone);
   RESTORE_EVENT(in, eventWriteWorker);
-  RESTORE_EVENT(in, eventWriteWorkerDoDRAM);
   RESTORE_EVENT(in, eventWriteWorkerDoFTL);
   RESTORE_EVENT(in, eventWriteWorkerDone);
   RESTORE_EVENT(in, eventReadPreCPUDone);
