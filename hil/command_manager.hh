@@ -83,9 +83,9 @@ struct Command {
   LPN offset;
   LPN length;
 
-  // Used by ICL
+  // These two values are used by HIL,ICL,FTL and FIL
   uint64_t counter;
-  uint64_t beginAt;
+  uint64_t beginAt;  // This value sometimes stores data other than tick value
 
   std::vector<SubCommand> subCommandList;
 
