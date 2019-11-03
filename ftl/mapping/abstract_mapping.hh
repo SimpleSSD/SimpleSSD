@@ -42,12 +42,11 @@ class AbstractMapping : public Object {
  protected:
   struct MemoryEntry {
     Event eid;
-    uint64_t tag;
     uint64_t address;
     uint64_t size;
 
-    MemoryEntry(Event e, uint64_t t, uint64_t a, uint64_t s)
-        : eid(e), tag(t), address(a), size(s) {}
+    MemoryEntry(Event e, uint64_t a, uint64_t s)
+        : eid(e), address(a), size(s) {}
   };
 
   CommandManager *commandManager;
@@ -79,17 +78,16 @@ class AbstractMapping : public Object {
     }
     else {
       memreq.eid = old;
-      memreq.tag = tag;
 
       scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
     }
   }
 
   Event eventDRAMRead;
-  void readDRAM();
+  void readDRAM(uint64_t);
 
   Event eventDRAMWrite;
-  void writeDRAM();
+  void writeDRAM(uint64_t);
 
  public:
   AbstractMapping(ObjectData &, CommandManager *);
