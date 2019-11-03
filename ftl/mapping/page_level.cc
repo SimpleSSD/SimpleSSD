@@ -345,6 +345,9 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
 
+  uint64_t address = std::numeric_limits<uint64_t>::max();
+  uint64_t size = 0;
+
   for (auto &scmd : cmd.subCommandList) {
     if (UNLIKELY(scmd.lpn == InvalidLPN)) {
       continue;
@@ -358,6 +361,12 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
 
       fstat += readMappingInternal(lpn, ppn);
 
+      if (address == std::numeric_limits<uint64_t>::max()) {
+        address = tableBaseAddress + lpn * entrySize;
+      }
+
+      size += entrySize;
+
       if (param.superpage != 1) {
         debugprint(Log::DebugID::FTL_PageLevel,
                    "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
@@ -370,6 +379,8 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
                "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
                scmd.ppn);
   }
+
+  insertMemoryAddress(address, size);
 
   return std::move(fstat);
 }
@@ -406,6 +417,9 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
 
+  uint64_t address = std::numeric_limits<uint64_t>::max();
+  uint64_t size = 0;
+
   for (auto &scmd : cmd.subCommandList) {
     LPN currentLPN = scmd.lpn / param.superpage;
     LPN superpageIndex = scmd.lpn % param.superpage;
@@ -414,6 +428,12 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
       lpn = currentLPN;
 
       fstat += writeMappingInternal(lpn, ppn);
+
+      if (address == std::numeric_limits<uint64_t>::max()) {
+        address = tableBaseAddress + lpn * entrySize;
+      }
+
+      size += entrySize;
 
       if (param.superpage != 1) {
         debugprint(Log::DebugID::FTL_PageLevel,
@@ -428,6 +448,8 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
                "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
                scmd.ppn);
   }
+
+  insertMemoryAddress(address, size);
 
   return std::move(fstat);
 }
@@ -473,6 +495,8 @@ CPU::Function PageLevel::invalidateMapping(Command &cmd) {
 
     i++;
   } while (i < cmd.offset + cmd.length);
+
+  insertMemoryAddress(0, 0);
 
   return std::move(fstat);
 }
