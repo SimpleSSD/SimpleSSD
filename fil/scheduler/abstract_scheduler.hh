@@ -12,6 +12,7 @@
 
 #include <cinttypes>
 
+#include "fil/nvm/abstract_nvm.hh"
 #include "hil/command_manager.hh"
 #include "sim/object.hh"
 
@@ -20,10 +21,11 @@ namespace SimpleSSD::FIL::Scheduler {
 class AbstractScheduler : public Object {
  protected:
   CommandManager *commandManager;
+  NVM::AbstractNVM *pNVM;
 
  public:
-  AbstractScheduler(ObjectData &o, CommandManager *m)
-      : Object(o), commandManager(m) {}
+  AbstractScheduler(ObjectData &o, CommandManager *m, NVM::AbstractNVM *n)
+      : Object(o), commandManager(m), pNVM(n) {}
   virtual ~AbstractScheduler() {}
 
   virtual void enqueue(uint64_t tag) = 0;
