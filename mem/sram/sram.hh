@@ -19,8 +19,6 @@ class SRAM : public AbstractSRAM {
  protected:
   Scheduler<Request *> scheduler;
 
-  std::vector<std::pair<uint64_t, uint64_t>> addressMap;
-
   uint64_t preSubmit(Request *);
   void postDone(Request *);
 
@@ -28,7 +26,7 @@ class SRAM : public AbstractSRAM {
   SRAM(ObjectData &);
   ~SRAM();
 
-  uint64_t allocate(uint64_t) override;
+  uint64_t allocate(uint64_t, std::string &&) override;
 
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;

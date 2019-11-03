@@ -409,7 +409,6 @@ class TimingDRAM : public AbstractDRAM {
   uint32_t readsThisTime;
 
   uint64_t capacity;
-  std::vector<std::pair<uint64_t, uint64_t>> addressMap;
 
   bool retryRdReq;
   bool retryWrReq;
@@ -494,7 +493,7 @@ class TimingDRAM : public AbstractDRAM {
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;
 
-  uint64_t allocate(uint64_t) override;
+  uint64_t allocate(uint64_t, std::string &&) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

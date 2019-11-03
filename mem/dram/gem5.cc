@@ -2065,12 +2065,12 @@ void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
   }
 }
 
-uint64_t TimingDRAM::allocate(uint64_t size) {
+uint64_t TimingDRAM::allocate(uint64_t size, std::string &&name) {
   uint64_t ret = 0;
   uint64_t unallocated = capacity;
 
   for (auto &iter : addressMap) {
-    unallocated -= iter.second;
+    unallocated -= iter.size;
   }
 
   panic_if(unallocated < size,
@@ -2078,10 +2078,10 @@ uint64_t TimingDRAM::allocate(uint64_t size) {
            size, unallocated);
 
   if (addressMap.size() > 0) {
-    ret = addressMap.back().first + addressMap.back().second;
+    ret = addressMap.back().base + addressMap.back().size;
   }
 
-  addressMap.emplace_back(ret, size);
+  addressMap.emplace_back(ret, size, name);
 
   return ret;
 }
@@ -2199,6 +2199,8 @@ void TimingDRAM::restoreQueue(std::istream &in, DRAMPacketQueue *queue) {
 }
 
 void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractDRAM::createCheckpoint(out);
+
   BACKUP_SCALAR(out, rowsPerBank);
   BACKUP_SCALAR(out, writesThisTime);
   BACKUP_SCALAR(out, readsThisTime);
@@ -2229,14 +2231,6 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   backupQueue(out, &writeQueue);
   backupQueue(out, &respQueue);
 
-  size = addressMap.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : addressMap) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
   size = isInWriteQueue.size();
   BACKUP_SCALAR(out, size);
 
@@ -2248,6 +2242,8 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractDRAM::restoreCheckpoint(in);
+
   RESTORE_SCALAR(in, rowsPerBank);
   RESTORE_SCALAR(in, writesThisTime);
   RESTORE_SCALAR(in, readsThisTime);
@@ -2277,19 +2273,6 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   restoreQueue(in, &readQueue);
   restoreQueue(in, &writeQueue);
   restoreQueue(in, &respQueue);
-
-  RESTORE_SCALAR(in, size);
-
-  addressMap.reserve(size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t f, s;
-
-    RESTORE_SCALAR(in, f);
-    RESTORE_SCALAR(in, s);
-
-    addressMap.emplace_back(f, s);
-  }
 
   RESTORE_SCALAR(in, size);
 

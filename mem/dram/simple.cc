@@ -61,22 +61,22 @@ void SimpleDRAM::postDone(Request *req) {
   delete req;
 }
 
-uint64_t SimpleDRAM::allocate(uint64_t size) {
+uint64_t SimpleDRAM::allocate(uint64_t size, std::string &&name) {
   uint64_t ret = 0;
 
   for (auto &iter : addressMap) {
-    unallocated -= iter.second;
+    unallocated -= iter.size;
   }
 
   panic_if(unallocated < size,
-           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in SRAM.",
+           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
            size, unallocated);
 
   if (addressMap.size() > 0) {
-    ret = addressMap.back().first + addressMap.back().second;
+    ret = addressMap.back().base + addressMap.back().size;
   }
 
-  addressMap.emplace_back(ret, size);
+  addressMap.emplace_back(ret, size, name);
 
   return ret;
 }
@@ -112,14 +112,6 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, unallocated);
   BACKUP_SCALAR(out, interfaceBandwidth);
 
-  uint64_t size = addressMap.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : addressMap) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
   scheduler.createCheckpoint(out);
 }
 
@@ -129,20 +121,6 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, pageFetchLatency);
   RESTORE_SCALAR(in, unallocated);
   RESTORE_SCALAR(in, interfaceBandwidth);
-
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  addressMap.reserve(size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t a, s;
-
-    RESTORE_SCALAR(in, a);
-    RESTORE_SCALAR(in, s);
-
-    addressMap.emplace_back(a, s);
-  }
 
   scheduler.restoreCheckpoint(in);
 }

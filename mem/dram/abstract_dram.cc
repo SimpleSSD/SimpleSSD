@@ -46,11 +46,15 @@ void AbstractDRAM::resetStatValues() noexcept {
 }
 
 void AbstractDRAM::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractRAM::createCheckpoint(out);
+
   BACKUP_SCALAR(out, readStat);
   BACKUP_SCALAR(out, writeStat);
 }
 
 void AbstractDRAM::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractRAM::restoreCheckpoint(in);
+
   RESTORE_SCALAR(in, readStat);
   RESTORE_SCALAR(in, writeStat);
 }

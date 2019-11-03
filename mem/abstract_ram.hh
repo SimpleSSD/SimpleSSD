@@ -15,6 +15,18 @@
 namespace SimpleSSD::Memory {
 
 class AbstractRAM : public Object {
+ protected:
+  struct MemoryMap {
+    std::string name;
+    uint64_t base;
+    uint64_t size;
+
+    MemoryMap(std::string &&n, uint64_t b, uint64_t s)
+        : name(std::move(n)), base(b), size(s) {}
+  };
+
+  std::vector<MemoryMap> addressMap;
+
  public:
   AbstractRAM(ObjectData &o) : Object(o) {}
   virtual ~AbstractRAM() {}
@@ -52,9 +64,47 @@ class AbstractRAM : public Object {
    * panic. (You need to configure larger RAM for firmware.)
    *
    * \param[in] size  Requested memory size
+   * \param[in] name  Description of memory range
    * \return address  Beginning address of allocated range
    */
-  virtual uint64_t allocate(uint64_t size) = 0;
+  virtual uint64_t allocate(uint64_t size, std::string &&name) = 0;
+
+  void createCheckpoint(std::ostream &out) const noexcept override {
+    uint64_t size = addressMap.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : addressMap) {
+      size = iter.name.length();
+      BACKUP_SCALAR(out, size);
+
+      BACKUP_BLOB(out, iter.name.data(), size);
+
+      BACKUP_SCALAR(out, iter.base);
+      BACKUP_SCALAR(out, iter.size);
+    }
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept override {
+    uint64_t size;
+    RESTORE_SCALAR(in, size);
+
+    addressMap.reserve(size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      uint64_t l, a, s;
+      std::string name;
+
+      RESTORE_SCALAR(in, l);
+      name.resize(l);
+
+      RESTORE_BLOB(in, name.data(), l);
+
+      RESTORE_SCALAR(in, a);
+      RESTORE_SCALAR(in, s);
+
+      addressMap.emplace_back(a, s, name);
+    }
+  }
 };
 
 class Request {
