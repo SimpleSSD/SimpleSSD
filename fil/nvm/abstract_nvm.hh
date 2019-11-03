@@ -7,8 +7,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_FIL_ABSTRACT_NVM_HH__
-#define __SIMPLESSD_FIL_ABSTRACT_NVM_HH__
+#ifndef __SIMPLESSD_FIL_NVM_ABSTRACT_NVM_HH__
+#define __SIMPLESSD_FIL_NVM_ABSTRACT_NVM_HH__
 
 #include <cinttypes>
 
