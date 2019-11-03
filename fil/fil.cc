@@ -32,12 +32,22 @@ FIL::FIL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
       break;
     // case Config::NVMType::GenericNAND:
     default:
-      panic("Unexpected FIL model.");
+      panic("Unexpected NVM model.");
 
       break;
   }
 
-  pScheduler = new Scheduler::Noop(object, commandManager, pNVM);
+  switch ((Config::SchedulerType)readConfigUint(Section::FlashInterface,
+                                                Config::Key::Scheduler)) {
+    case Config::SchedulerType::Noop:
+      pScheduler = new Scheduler::Noop(object, commandManager, pNVM);
+
+      break;
+    default:
+      panic("Unexpected Scheduler.");
+
+      break;
+  }
 }
 
 FIL::~FIL() {
