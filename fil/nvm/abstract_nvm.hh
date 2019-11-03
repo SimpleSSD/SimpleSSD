@@ -38,6 +38,9 @@ class AbstractNVM : public Object {
 
   /**
    * \brief Write spare data without timing calculation
+   *
+   * This function should only be used in FTL initialization (warm-up)
+   * procedure.
    */
   virtual void writeSpare(PPN, std::vector<uint8_t> &) = 0;
 };
