@@ -173,6 +173,9 @@ set(SRC_FIL_NVM_PAL
   fil/nvm/pal/PALStatistics.cc
   fil/nvm/pal/pal_wrapper.cc
 )
+set(SRC_FIL_SCHEDULER
+  fil/scheduler/noop.cc
+)
 set(SRC_SIM
   sim/base_config.cc
   sim/config_reader.cc
@@ -202,6 +205,7 @@ SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
 SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
+SOURCE_GROUP("Source Files\\fil\\scheduler" FILES ${SRC_FIL_SCHEDULER})
 SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
@@ -220,6 +224,7 @@ add_library(simplessd STATIC
   ${SRC_FTL_MAPPING}
   ${SRC_FIL}
   ${SRC_FIL_NVM_PAL}
+  ${SRC_FIL_SCHEDULER}
   ${SRC_SIM}
   ${SRC_UTIL}
   ${OUTPUT_VERSION_FILE}
