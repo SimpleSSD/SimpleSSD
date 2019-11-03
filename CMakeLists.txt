@@ -155,6 +155,7 @@ set(SRC_FTL_BASE
   ftl/base/vlftl.cc
 )
 set(SRC_FTL_MAPPING
+  ftl/mapping/abstract_mapping.cc
   ftl/mapping/page_level.cc
   ftl/mapping/virtually_linked.cc
 )
