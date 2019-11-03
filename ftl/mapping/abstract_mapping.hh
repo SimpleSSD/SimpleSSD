@@ -71,9 +71,16 @@ class AbstractMapping : public Object {
 
     auto &memreq = memoryQueue.front();
 
-    memreq.eid = old;
+    if (memreq.size == 0) {
+      memoryQueue.pop_front();
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
+      scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, old, tag, fstat);
+    }
+    else {
+      memreq.eid = old;
+
+      scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
+    }
   }
 
   Event eventDRAMRead;
