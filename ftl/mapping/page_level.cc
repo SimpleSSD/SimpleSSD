@@ -42,6 +42,13 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     blockMetadata[i] = std::move(BlockMetadata(i, filparam->page));
   }
+
+  // Valid page bits (packed) + 2byte clock + 2byte page offset
+  metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
+
+  metadataBaseAddress =
+      object.dram->allocate(totalPhysicalSuperBlocks * metadataEntrySize,
+                            "FTL::Mapping::PageLevel::BlockMeta");
 }
 
 PageLevel::~PageLevel() {
@@ -75,9 +82,13 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
 
   if (validEntry.test(lpn)) {
     ppn = readEntry(lpn);
+    insertMemoryAddress(true, tableBaseAddress + lpn * entrySize, entrySize);
 
     // Update accessed time
-    blockMetadata[getSBFromSPPN(ppn)].clock = clock;
+    PPN block = getSBFromSPPN(ppn);
+    blockMetadata[block].clock = clock;
+    insertMemoryAddress(false, metadataBaseAddress + block * metadataEntrySize,
+                        2);
   }
   else {
     ppn = InvalidPPN;
@@ -94,10 +105,15 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   if (validEntry.test(lpn)) {
     // This is valid entry, invalidate block
     PPN old = readEntry(lpn);
+    insertMemoryAddress(true, tableBaseAddress + lpn * entrySize, entrySize);
+
     PPN block = getSBFromSPPN(old);
     PPN page = getPageIndexFromSPPN(old);
 
     blockMetadata[block].validPages.reset(page);
+    insertMemoryAddress(
+        false, metadataBaseAddress + block * metadataEntrySize + 4 + page / 8,
+        1);
   }
   else {
     validEntry.set(lpn);
@@ -118,12 +134,20 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
 
   // Get new page
   block->validPages.set(block->nextPageToWrite);
+  insertMemoryAddress(false,
+                      metadataBaseAddress + block->blockID * metadataEntrySize +
+                          4 + block->nextPageToWrite / 8,
+                      1);
+
   ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
 
   block->clock = clock;
+  insertMemoryAddress(
+      false, metadataBaseAddress + block->blockID * metadataEntrySize, 4);
 
   // Write entry
   writeEntry(lpn, ppn);
+  insertMemoryAddress(false, tableBaseAddress + lpn * entrySize, entrySize);
 
   return std::move(fstat);
 }
@@ -140,8 +164,12 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
     // Invalidate block
     old = readEntry(lpn);
     PPN index = getPageIndexFromSPPN(old);
+    PPN block = getSBFromSPPN(old);
 
-    blockMetadata[getSBFromSPPN(old)].validPages.reset(index);
+    blockMetadata[block].validPages.reset(index);
+    insertMemoryAddress(
+        false, metadataBaseAddress + block * metadataEntrySize + 4 + index / 8,
+        1);
   }
 
   return std::move(fstat);
@@ -345,9 +373,6 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
 
-  uint64_t address = std::numeric_limits<uint64_t>::max();
-  uint64_t size = 0;
-
   for (auto &scmd : cmd.subCommandList) {
     if (UNLIKELY(scmd.lpn == InvalidLPN)) {
       continue;
@@ -361,12 +386,6 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
 
       fstat += readMappingInternal(lpn, ppn);
 
-      if (address == std::numeric_limits<uint64_t>::max()) {
-        address = tableBaseAddress + lpn * entrySize;
-      }
-
-      size += entrySize;
-
       if (param.superpage != 1) {
         debugprint(Log::DebugID::FTL_PageLevel,
                    "Read  | SLPN %" PRIx64 "h -> SPPN %" PRIx64 "h", lpn, ppn);
@@ -379,8 +398,6 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
                "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
                scmd.ppn);
   }
-
-  insertMemoryAddress(address, size);
 
   return std::move(fstat);
 }
@@ -417,9 +434,6 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
   LPN lpn = InvalidLPN;
   PPN ppn = InvalidPPN;
 
-  uint64_t address = std::numeric_limits<uint64_t>::max();
-  uint64_t size = 0;
-
   for (auto &scmd : cmd.subCommandList) {
     LPN currentLPN = scmd.lpn / param.superpage;
     LPN superpageIndex = scmd.lpn % param.superpage;
@@ -428,12 +442,6 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
       lpn = currentLPN;
 
       fstat += writeMappingInternal(lpn, ppn);
-
-      if (address == std::numeric_limits<uint64_t>::max()) {
-        address = tableBaseAddress + lpn * entrySize;
-      }
-
-      size += entrySize;
 
       if (param.superpage != 1) {
         debugprint(Log::DebugID::FTL_PageLevel,
@@ -448,8 +456,6 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
                "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", scmd.lpn,
                scmd.ppn);
   }
-
-  insertMemoryAddress(address, size);
 
   return std::move(fstat);
 }
@@ -495,8 +501,6 @@ CPU::Function PageLevel::invalidateMapping(Command &cmd) {
 
     i++;
   } while (i < cmd.offset + cmd.length);
-
-  insertMemoryAddress(0, 0);
 
   return std::move(fstat);
 }

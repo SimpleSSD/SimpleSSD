@@ -28,6 +28,8 @@ class PageLevel : public AbstractMapping {
   Bitset validEntry;
 
   BlockMetadata *blockMetadata;
+  uint64_t metadataBaseAddress;
+  uint64_t metadataEntrySize;
 
   uint16_t clock;
 
