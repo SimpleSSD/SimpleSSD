@@ -41,10 +41,21 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
   panic_if(!table, "Memory allocation for mapping table failed.");
   panic_if(!blockMetadata, "Memory allocation for block metadata failed.");
 
+  tableBaseAddress =
+      object.dram->allocate(totalLogicalSuperPages * entrySize,
+                            "FTL::Mapping::VirtuallyLinked::Table");
+
   // Fill metadata
   for (uint64_t i = 0; i < param.totalPhysicalBlocks; i++) {
     blockMetadata[i] = std::move(BlockMetadata(i, filparam->page));
   }
+
+  // Valid page bits (packed) + 2byte clock + 2byte page offset
+  metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
+
+  metadataBaseAddress =
+      object.dram->allocate(totalPhysicalSuperBlocks * metadataEntrySize,
+                            "FTL::Mapping::VirtuallyLinked::BlockMeta");
 
   // Allocate partial mapping table
   uint64_t partialTableSize = (uint64_t)(
@@ -61,12 +72,20 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
                               (uint32_t)entrySize);
   }
 
+  partialTableBaseAddress =
+      object.dram->allocate(partialTableSize * entrySize * param.superpage,
+                            "FTL::Mapping::VirtuallyLinked::PartialTable");
+
   // Allocate pointer table
   pointerSize = makePointerSize(partialTableSize);
 
   pointer = (uint8_t *)calloc(totalLogicalSuperPages, pointerSize);
 
   panic_if(!pointer, "Memory allocation for partial table pointer failed.");
+
+  pointerBaseAddress =
+      object.dram->allocate(totalLogicalSuperPages * pointerSize,
+                            "FTL::Mapping::VirtuallyLinked::Pointer");
 }
 
 VirtuallyLinked::~VirtuallyLinked() {
@@ -111,17 +130,29 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
   uint32_t sidx = (uint32_t)getSPIndexFromPPN(lpn);
   uint64_t ptr = readPointer(slpn);
 
+  insertMemoryAddress(true, makePointerSize(slpn), pointerSize);
+
   if (pointerValid.test(slpn) && partialTable[ptr].isValid(sidx)) {
     PPN sppn = partialTable[ptr].getEntry(sidx);
+    insertMemoryAddress(true, makePartialTableAddress(ptr, sidx), entrySize);
+
     ppn = sppn * param.superpage + sidx;
 
-    blockMetadata[getBlockFromPPN(ppn)].clock = clock;
+    PPN block = getBlockFromPPN(ppn);
+
+    blockMetadata[block].clock = clock;
+    insertMemoryAddress(false, makeBlockAddress(block), 2);
   }
   else if (validEntry.test(slpn)) {
     PPN sppn = readEntry(slpn);
+    insertMemoryAddress(true, makeTableAddress(slpn), entrySize);
+
     ppn = sppn * param.superpage + sidx;
 
-    blockMetadata[getBlockFromPPN(ppn)].clock = clock;
+    PPN block = getBlockFromPPN(ppn);
+
+    blockMetadata[block].clock = clock;
+    insertMemoryAddress(false, makeBlockAddress(block), 2);
   }
   else {
     ppn = InvalidPPN;
@@ -146,11 +177,15 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       // this request is full-size (superpage-size)
       if (validEntry.test(slpn)) {
         PPN sppn = readEntry(slpn);
+        insertMemoryAddress(true, makeTableAddress(slpn), entrySize);
+
         PPN pg = getPageIndexFromSPPN(sppn);
 
         for (uint32_t i = 0; i < param.superpage; i++) {
-          blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
-              .validPages.reset(pg);
+          PPN block = getBlockFromPPN(sppn * param.superpage + i);
+
+          blockMetadata[block].validPages.reset(pg);
+          insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
         }
       }
       if (pointerValid.test(slpn)) {
@@ -163,9 +198,14 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         for (uint32_t i = 0; i < param.superpage; i++) {
           if (partialTable[ptr].isValid(i)) {
             PPN sppn = partialTable[ptr].getEntry(i);
+            insertMemoryAddress(true, makePartialTableAddress(ptr, i),
+                                entrySize);
 
-            blockMetadata[getBlockFromPPN(sppn * param.superpage + i)]
-                .validPages.reset(getPageIndexFromSPPN(sppn));
+            PPN block = getBlockFromPPN(sppn * param.superpage + i);
+            PPN pg = getPageIndexFromSPPN(sppn);
+
+            blockMetadata[block].validPages.reset(pg);
+            insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
 
             partialTable[ptr].resetEntry(i);
           }
@@ -194,13 +234,19 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       ppn = makeSPPN(blk, next);
 
       for (uint32_t i = 0; i < param.superpage; i++) {
-        blockMetadata[getBlockFromSB(blk, i)].validPages.set(next);
-        blockMetadata[getBlockFromSB(blk, i)].nextPageToWrite++;
-        blockMetadata[getBlockFromSB(blk, i)].clock = clock;
+        PPN block = getBlockFromSB(blk, i);
+
+        blockMetadata[block].validPages.set(next);
+        insertMemoryAddress(false, makeBlockAddress(block) + 4 + next / 8, 1);
+
+        blockMetadata[block].nextPageToWrite++;
+        blockMetadata[block].clock = clock;
+        insertMemoryAddress(false, makeBlockAddress(block), 4);
       }
 
       // Write entry
       writeEntry(slpn, ppn);
+      insertMemoryAddress(false, makeTableAddress(slpn), entrySize);
 
       // SPPN -> PPN
       ppn *= param.superpage;
@@ -209,6 +255,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       panic_if(!validEntry.test(slpn), "Not a full-size request?");
 
       ppn = readEntry(slpn) * param.superpage + sidx;
+      // No DRAM latency: Assume all entries are written when sidx == 0
     }
   }
   else {
@@ -216,10 +263,14 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       if (partialTable[ptr].isValid(sidx)) {
         // Invalidate
         PPN sppn = partialTable[ptr].getEntry(sidx);
-        ppn = sppn * param.superpage + sidx;
+        insertMemoryAddress(true, makePartialTableAddress(ptr, sidx),
+                            entrySize);
 
-        blockMetadata[getBlockFromPPN(ppn)].validPages.reset(
-            getPageIndexFromSPPN(sppn));
+        PPN block = getBlockFromPPN(sppn * param.superpage + sidx);
+        PPN pg = getPageIndexFromSPPN(sppn);
+
+        blockMetadata[block].validPages.reset(pg);
+        insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
 
         partialTable[ptr].resetEntry(sidx);
       }
@@ -242,6 +293,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       writePointer(slpn, ptr);
       iter->slpn = slpn;
       validPTE++;
+
+      insertMemoryAddress(false, makePointerAddress(slpn), pointerSize);
 
       iter->valid.reset();
     }
@@ -274,16 +327,23 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     }
 
     // Get new page
-    auto &block = blockMetadata[getBlockFromSB(blk, sidx)];
+    PPN bidx = getBlockFromSB(blk, sidx);
+    auto &block = blockMetadata[bidx];
 
     block.validPages.set(block.nextPageToWrite);
+    insertMemoryAddress(
+        false, makeBlockAddress(bidx) + 4 + block.nextPageToWrite / 8, 1);
+
     ppn = makeSPPN(blk, block.nextPageToWrite++);
 
     block.clock = clock;
+    insertMemoryAddress(false, makeBlockAddress(bidx), 4);
 
     // Write entry
     partialTable[ptr].setEntry(sidx, ppn);
     partialTable[ptr].clock = clock;
+
+    insertMemoryAddress(false, makePartialTableAddress(ptr, sidx), entrySize);
 
     // SPPN -> PPN
     ppn = ppn * param.superpage + sidx;
@@ -325,8 +385,11 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
 
     old = sppn * param.superpage + sidx;
 
-    blockMetadata[getBlockFromPPN(old)].validPages.reset(
-        getPageIndexFromSPPN(sppn));
+    PPN block = getBlockFromPPN(old);
+    PPN pg = getPageIndexFromSPPN(sppn);
+
+    blockMetadata[block].validPages.reset(pg);
+    insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
 
     // Check partial table is empty
     if (partialTable[ptr].valid.none()) {
@@ -338,6 +401,7 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
   }
   else if (validEntry.test(slpn)) {
     PPN sppn = readEntry(slpn);
+    insertMemoryAddress(true, makeTableAddress(slpn), entrySize);
 
     if (!pointerValid.test(slpn)) {
       // Allocate partial table

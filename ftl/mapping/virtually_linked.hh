@@ -73,18 +73,40 @@ class VirtuallyLinked : public AbstractMapping {
 
   uint8_t *table;
   Bitset validEntry;
+  uint64_t tableBaseAddress;
 
   uint8_t *pointer;
   Bitset pointerValid;
+  uint64_t pointerBaseAddress;
 
   // No way to construct array without default constructor -> just use vector
   std::vector<PartialTableEntry> partialTable;
   uint64_t validPTE;
   float mergeThreshold;
+  uint64_t partialTableBaseAddress;
 
   BlockMetadata *blockMetadata;
+  uint64_t metadataBaseAddress;
+  uint64_t metadataEntrySize;
 
   uint16_t clock;
+
+  inline uint64_t makeTableAddress(LPN slpn) {
+    return tableBaseAddress + slpn * entrySize;
+  }
+
+  inline uint64_t makePointerAddress(LPN slpn) {
+    return pointerBaseAddress + slpn * pointerSize;
+  }
+
+  inline uint64_t makePartialTableAddress(uint64_t ptr, uint32_t sidx) {
+    return partialTableBaseAddress + ptr * (entrySize * param.pageSize) +
+           sidx * param.pageSize;
+  }
+
+  inline uint64_t makeBlockAddress(PPN block) {
+    return metadataBaseAddress + block * metadataEntrySize;
+  }
 
   inline uint64_t makeEntrySize() {
     uint64_t ret = 8;
@@ -221,9 +243,6 @@ class VirtuallyLinked : public AbstractMapping {
   uint32_t getValidPages(PPN) override;
   uint16_t getAge(PPN) override;
 
-  CPU::Function readMapping(Command &) override;
-  CPU::Function writeMapping(Command &) override;
-  CPU::Function invalidateMapping(Command &) override;
   void getCopyList(CopyList &, Event) override;
   void releaseCopyList(CopyList &) override;
 
