@@ -519,6 +519,10 @@ void RingBuffer::readWorker_done(uint64_t now, uint64_t tag) {
         iter.rpending = false;
       }
 
+      // Apply NVM -> DRAM latency (No completion handler)
+      object.dram->write(getDRAMAddress(entry.offset), minPages * pageSize,
+                         InvalidEventID);
+
       // Update capacity
       if (LIKELY(enabled)) {
         // We need to erase some entry
@@ -956,8 +960,6 @@ void RingBuffer::read_nocache(uint64_t tag) {
   auto &scmd = rcmd.subCommandList.at(cmd.counter);
 
   scmd.status = Status::Done;
-
-  // Apply DRAM -> PCIe latency
   object.dram->read(getDRAMAddress(scmd.lpn), pageSize, eventReadDRAMDone,
                     scmd.tag);
 
@@ -1197,7 +1199,6 @@ void RingBuffer::write_nocache(uint64_t tag) {
           iter->scmd->lpn < cmd.offset + cmd.length) {
         iter->scmd->status = Status::Done;
 
-        // Apply PCIe -> DRAM latency
         object.dram->write(getDRAMAddress(iter->scmd->lpn), pageSize,
                            eventWriteDRAMDone, iter->scmd->tag);
 
