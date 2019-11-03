@@ -76,9 +76,9 @@ AbstractMapping::AbstractMapping(ObjectData &o, CommandManager *c)
   debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
 
   // Create events
-  eventDRAMRead = createEvent([this](uint64_t, uint64_t d) { readDRAM(d); },
+  eventDRAMRead = createEvent([this](uint64_t, uint64_t) { readDRAM(); },
                               "FTL::Mapping::AbstractMapping::eventDRAMRead");
-  eventDRAMWrite = createEvent([this](uint64_t, uint64_t d) { writeDRAM(d); },
+  eventDRAMWrite = createEvent([this](uint64_t, uint64_t) { writeDRAM(); },
                                "FTL::Mapping::AbstractMapping::eventDRAMWrite");
 }
 
@@ -100,18 +100,28 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
   return lpn;
 }
 
-void AbstractMapping::readDRAM(uint64_t tag) {
-  auto memreq = std::move(memoryQueue.front());
+void AbstractMapping::readDRAM() {
+  uint64_t oldtag = memoryQueue.front().tag;
+  Event eid = memoryQueue.front().eid;
 
-  memoryQueue.pop_front();
-  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+  do {
+    auto memreq = std::move(memoryQueue.front());
+
+    memoryQueue.pop_front();
+    object.dram->read(memreq.address, memreq.size, eid, oldtag);
+  } while (memoryQueue.front().tag == oldtag);
 }
 
-void AbstractMapping::writeDRAM(uint64_t tag) {
-  auto memreq = std::move(memoryQueue.front());
+void AbstractMapping::writeDRAM() {
+  uint64_t oldtag = memoryQueue.front().tag;
+  Event eid = memoryQueue.front().eid;
 
-  memoryQueue.pop_front();
-  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+  do {
+    auto memreq = std::move(memoryQueue.front());
+
+    memoryQueue.pop_front();
+    object.dram->write(memreq.address, memreq.size, eid, oldtag);
+  } while (memoryQueue.front().tag == oldtag);
 }
 
 void AbstractMapping::initialize(AbstractFTL *f,
@@ -131,6 +141,7 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : memoryQueue) {
     BACKUP_EVENT(out, iter.eid);
+    BACKUP_EVENT(out, iter.tag);
     BACKUP_SCALAR(out, iter.address);
     BACKUP_SCALAR(out, iter.size);
   }
@@ -146,13 +157,14 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
 
   for (uint64_t i = 0; i < size; i++) {
     Event e;
-    uint64_t a, s;
+    uint64_t t, a, s;
 
     RESTORE_EVENT(in, e);
+    RESTORE_SCALAR(in, t);
     RESTORE_SCALAR(in, a);
     RESTORE_SCALAR(in, s);
 
-    memoryQueue.emplace_back(e, a, s);
+    memoryQueue.emplace_back(e, t, a, s);
   }
 
   RESTORE_EVENT(in, eventDRAMRead);
