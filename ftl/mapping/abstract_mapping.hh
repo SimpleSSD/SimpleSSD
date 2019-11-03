@@ -74,8 +74,11 @@ class AbstractMapping : public Object {
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
 
-  void insertMemoryAddress(bool isRead, uint64_t address, uint32_t size) {
-    memoryQueue.back().commandList.emplace_back(isRead, address, size);
+  void insertMemoryAddress(bool isRead, uint64_t address, uint32_t size,
+                           bool en = true) {
+    if (en) {
+      memoryQueue.back().commandList.emplace_back(isRead, address, size);
+    }
   }
 
   void createMemoryCommand(Event eid, uint64_t tag) {

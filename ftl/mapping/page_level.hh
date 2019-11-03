@@ -88,7 +88,7 @@ class PageLevel : public AbstractMapping {
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
   CPU::Function readMappingInternal(LPN, PPN &);
-  CPU::Function writeMappingInternal(LPN, PPN &);
+  CPU::Function writeMappingInternal(LPN, PPN &, bool = false);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   CPU::Function readMapping(Command &) override;

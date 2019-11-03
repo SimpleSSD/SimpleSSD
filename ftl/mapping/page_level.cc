@@ -97,7 +97,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
   return std::move(fstat);
 }
 
-CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
+CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool init) {
   CPU::Function fstat = CPU::initFunction();
 
   panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
@@ -105,7 +105,8 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   if (validEntry.test(lpn)) {
     // This is valid entry, invalidate block
     PPN old = readEntry(lpn);
-    insertMemoryAddress(true, tableBaseAddress + lpn * entrySize, entrySize);
+    insertMemoryAddress(true, tableBaseAddress + lpn * entrySize, entrySize,
+                        !init);
 
     PPN block = getSBFromSPPN(old);
     PPN page = getPageIndexFromSPPN(old);
@@ -113,7 +114,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
     blockMetadata[block].validPages.reset(page);
     insertMemoryAddress(
         false, metadataBaseAddress + block * metadataEntrySize + 4 + page / 8,
-        1);
+        1, !init);
   }
   else {
     validEntry.set(lpn);
@@ -137,17 +138,19 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn) {
   insertMemoryAddress(false,
                       metadataBaseAddress + block->blockID * metadataEntrySize +
                           4 + block->nextPageToWrite / 8,
-                      1);
+                      1, !init);
 
   ppn = makeSPPN(block->blockID, block->nextPageToWrite++);
 
   block->clock = clock;
-  insertMemoryAddress(
-      false, metadataBaseAddress + block->blockID * metadataEntrySize, 4);
+  insertMemoryAddress(false,
+                      metadataBaseAddress + block->blockID * metadataEntrySize,
+                      4, !init);
 
   // Write entry
   writeEntry(lpn, ppn);
-  insertMemoryAddress(false, tableBaseAddress + lpn * entrySize, entrySize);
+  insertMemoryAddress(false, tableBaseAddress + lpn * entrySize, entrySize,
+                      !init);
 
   return std::move(fstat);
 }
@@ -234,7 +237,7 @@ void PageLevel::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, ppn);
+      writeMappingInternal(i, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -253,7 +256,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -268,7 +271,7 @@ void PageLevel::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, ppn);
+      writeMappingInternal(i, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -289,7 +292,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -308,7 +311,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;

@@ -163,7 +163,7 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
 
 // LPN -> PPN
 CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
-                                                    PPN &ppn) {
+                                                    PPN &ppn, bool init) {
   CPU::Function fstat = CPU::initFunction();
 
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
@@ -177,7 +177,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       // this request is full-size (superpage-size)
       if (validEntry.test(slpn)) {
         PPN sppn = readEntry(slpn);
-        insertMemoryAddress(true, makeTableAddress(slpn), entrySize);
+        insertMemoryAddress(true, makeTableAddress(slpn), entrySize, !init);
 
         PPN pg = getPageIndexFromSPPN(sppn);
 
@@ -185,7 +185,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
           PPN block = getBlockFromPPN(sppn * param.superpage + i);
 
           blockMetadata[block].validPages.reset(pg);
-          insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
+          insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1,
+                              !init);
         }
       }
       if (pointerValid.test(slpn)) {
@@ -199,13 +200,14 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
           if (partialTable[ptr].isValid(i)) {
             PPN sppn = partialTable[ptr].getEntry(i);
             insertMemoryAddress(true, makePartialTableAddress(ptr, i),
-                                entrySize);
+                                entrySize, !init);
 
             PPN block = getBlockFromPPN(sppn * param.superpage + i);
             PPN pg = getPageIndexFromSPPN(sppn);
 
             blockMetadata[block].validPages.reset(pg);
-            insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
+            insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1,
+                                !init);
 
             partialTable[ptr].resetEntry(i);
           }
@@ -237,16 +239,17 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         PPN block = getBlockFromSB(blk, i);
 
         blockMetadata[block].validPages.set(next);
-        insertMemoryAddress(false, makeBlockAddress(block) + 4 + next / 8, 1);
+        insertMemoryAddress(false, makeBlockAddress(block) + 4 + next / 8, 1,
+                            !init);
 
         blockMetadata[block].nextPageToWrite++;
         blockMetadata[block].clock = clock;
-        insertMemoryAddress(false, makeBlockAddress(block), 4);
+        insertMemoryAddress(false, makeBlockAddress(block), 4, !init);
       }
 
       // Write entry
       writeEntry(slpn, ppn);
-      insertMemoryAddress(false, makeTableAddress(slpn), entrySize);
+      insertMemoryAddress(false, makeTableAddress(slpn), entrySize, !init);
 
       // SPPN -> PPN
       ppn *= param.superpage;
@@ -263,14 +266,15 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       if (partialTable[ptr].isValid(sidx)) {
         // Invalidate
         PPN sppn = partialTable[ptr].getEntry(sidx);
-        insertMemoryAddress(true, makePartialTableAddress(ptr, sidx),
-                            entrySize);
+        insertMemoryAddress(true, makePartialTableAddress(ptr, sidx), entrySize,
+                            !init);
 
         PPN block = getBlockFromPPN(sppn * param.superpage + sidx);
         PPN pg = getPageIndexFromSPPN(sppn);
 
         blockMetadata[block].validPages.reset(pg);
-        insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1);
+        insertMemoryAddress(false, makeBlockAddress(block) + 4 + pg / 8, 1,
+                            !init);
 
         partialTable[ptr].resetEntry(sidx);
       }
@@ -294,7 +298,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
       iter->slpn = slpn;
       validPTE++;
 
-      insertMemoryAddress(false, makePointerAddress(slpn), pointerSize);
+      insertMemoryAddress(false, makePointerAddress(slpn), pointerSize, !init);
 
       iter->valid.reset();
     }
@@ -331,19 +335,21 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     auto &block = blockMetadata[bidx];
 
     block.validPages.set(block.nextPageToWrite);
-    insertMemoryAddress(
-        false, makeBlockAddress(bidx) + 4 + block.nextPageToWrite / 8, 1);
+    insertMemoryAddress(false,
+                        makeBlockAddress(bidx) + 4 + block.nextPageToWrite / 8,
+                        1, !init);
 
     ppn = makeSPPN(blk, block.nextPageToWrite++);
 
     block.clock = clock;
-    insertMemoryAddress(false, makeBlockAddress(bidx), 4);
+    insertMemoryAddress(false, makeBlockAddress(bidx), 4, !init);
 
     // Write entry
     partialTable[ptr].setEntry(sidx, ppn);
     partialTable[ptr].clock = clock;
 
-    insertMemoryAddress(false, makePartialTableAddress(ptr, sidx), entrySize);
+    insertMemoryAddress(false, makePartialTableAddress(ptr, sidx), entrySize,
+                        !init);
 
     // SPPN -> PPN
     ppn = ppn * param.superpage + sidx;
@@ -519,7 +525,7 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
 
-        writeMappingInternal(_lpn, true, ppn);
+        writeMappingInternal(_lpn, true, ppn, true);
 
         makeSpare(_lpn, spare);
         pFTL->writeSpare(ppn, spare);
@@ -538,7 +544,7 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
-        writeMappingInternal(_lpn, true, ppn);
+        writeMappingInternal(_lpn, true, ppn, true);
 
         makeSpare(_lpn, spare);
         pFTL->writeSpare(ppn, spare);
@@ -553,7 +559,7 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
 
-        writeMappingInternal(_lpn, true, ppn);
+        writeMappingInternal(_lpn, true, ppn, true);
 
         makeSpare(_lpn, spare);
         pFTL->writeSpare(ppn, spare);
@@ -574,7 +580,7 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
-        writeMappingInternal(_lpn, true, ppn);
+        writeMappingInternal(_lpn, true, ppn, true);
 
         makeSpare(_lpn, spare);
         pFTL->writeSpare(ppn, spare);
@@ -593,7 +599,7 @@ void VirtuallyLinked::initialize(AbstractFTL *f,
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
 
-        writeMappingInternal(_lpn, true, ppn);
+        writeMappingInternal(_lpn, true, ppn, true);
 
         makeSpare(_lpn, spare);
         pFTL->writeSpare(ppn, spare);
