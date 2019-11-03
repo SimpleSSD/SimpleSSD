@@ -28,4 +28,14 @@ void Noop::enqueue(uint64_t tag) {
   }
 }
 
+void Noop::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void Noop::getStatValues(std::vector<double> &) noexcept {}
+
+void Noop::resetStatValues() noexcept {}
+
+void Noop::createCheckpoint(std::ostream &) const noexcept {}
+
+void Noop::restoreCheckpoint(std::istream &) noexcept {}
+
 }  // namespace SimpleSSD::FIL::Scheduler

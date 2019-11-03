@@ -20,6 +20,13 @@ class Noop : public AbstractScheduler {
   ~Noop();
 
   void enqueue(uint64_t tag) override;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FIL::Scheduler
