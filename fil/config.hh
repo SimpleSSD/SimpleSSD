@@ -23,6 +23,7 @@ class Config : public BaseConfig {
     Channel,
     Way,
     Model,
+    Scheduler,
   };
 
   enum class NVMType : uint8_t {
@@ -34,6 +35,10 @@ class Config : public BaseConfig {
     SLC,
     MLC,
     TLC,
+  };
+
+  enum class SchedulerType : uint8_t {
+    Noop,
   };
 
   struct NANDStructure {
@@ -84,9 +89,10 @@ class Config : public BaseConfig {
   };
 
  private:
-  uint32_t channel;  //!< Default: 8
-  uint32_t package;  //!< Default: 4
-  NVMType nvmModel;  //!< Default: NVMType::PAL
+  uint32_t channel;         //!< Default: 8
+  uint32_t package;         //!< Default: 4
+  NVMType nvmModel;         //!< Default: NVMType::PAL
+  SchedulerType scheduler;  //!< Default: SchedulerType::Noop
 
   NANDStructure nandStructure;
   NANDTiming nandTiming;

@@ -588,6 +588,13 @@
         1: NAND: Generic NAND flash
      -->
     <config name="Model">0</config>
+    <!--
+      <int> Select transaction scheduler
+
+      Possible values:
+        0: No-op scheduler (Submit requests in FIFO mannor)
+     -->
+    <config name="Scheduler">0</config>
     <!-- NAND configuration (valid for Model = 0/1) -->
     <section name="nand">
       <!-- <int> Number of partial page programming allowed -->

@@ -14,6 +14,7 @@ const char NAME_PACKAGE[] = "Way";
 const char NAME_DMA_SPEED[] = "DMASpeed";
 const char NAME_DMA_WIDTH[] = "DataWidth";
 const char NAME_NVM_MODEL[] = "Model";
+const char NAME_SCHEDULER[] = "Scheduler";
 
 /* NAND structure */
 const char NAME_NOP[] = "NOP";
@@ -57,6 +58,7 @@ Config::Config() {
   channel = 8;
   package = 4;
   nvmModel = NVMType::PAL;
+  scheduler = SchedulerType::Noop;
 
   nandStructure.type = NANDType::MLC;
   nandStructure.nop = 1;
@@ -252,6 +254,7 @@ void Config::loadFrom(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint32_t, channel);
     LOAD_NAME_UINT_TYPE(node, NAME_PACKAGE, uint32_t, package);
     LOAD_NAME_UINT_TYPE(node, NAME_NVM_MODEL, NVMType, nvmModel);
+    LOAD_NAME_UINT_TYPE(node, NAME_SCHEDULER, SchedulerType, scheduler);
 
     if (strcmp(name, "nand") == 0 && isSection(node)) {
       loadNANDStructure(node);
@@ -290,6 +293,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_CHANNEL, channel);
   STORE_NAME_UINT(section, NAME_PACKAGE, package);
   STORE_NAME_UINT(section, NAME_NVM_MODEL, nvmModel);
+  STORE_NAME_UINT(section, NAME_SCHEDULER, scheduler);
 
   STORE_SECTION(section, "nand", node);
   storeNANDStructure(node);
@@ -359,6 +363,9 @@ uint64_t Config::readUint(uint32_t idx) {
     case Model:
       ret = (uint64_t)nvmModel;
       break;
+    case Scheduler:
+      ret = (uint64_t)scheduler;
+      break;
   }
 
   return ret;
@@ -376,6 +383,9 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case Model:
       nvmModel = (NVMType)value;
+      break;
+    case Scheduler:
+      scheduler = (SchedulerType)value;
       break;
     default:
       ret = false;
