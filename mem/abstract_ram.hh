@@ -102,7 +102,7 @@ class AbstractRAM : public Object {
       RESTORE_SCALAR(in, a);
       RESTORE_SCALAR(in, s);
 
-      addressMap.emplace_back(a, s, name);
+      addressMap.emplace_back(std::move(name), a, s);
     }
   }
 };

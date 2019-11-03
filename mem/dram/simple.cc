@@ -76,7 +76,7 @@ uint64_t SimpleDRAM::allocate(uint64_t size, std::string &&name) {
     ret = addressMap.back().base + addressMap.back().size;
   }
 
-  addressMap.emplace_back(ret, size, name);
+  addressMap.emplace_back(std::move(name), ret, size);
 
   return ret;
 }
