@@ -602,6 +602,32 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   }
 }
 
+DMAEngine::DMASession &DMAEngine::findSession(uint64_t tag) {
+  auto iter = sessionList.find(tag);
+
+  panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
+
+  return iter->second;
+}
+
+uint64_t DMAEngine::createSession(DMATag t, Event e, uint64_t d = 0,
+                                  uint64_t s = 0, uint8_t *b = nullptr) {
+  uint64_t tag = sessionID++;
+  auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, s, b));
+
+  panic_if(!iter.second, "Failed to create DMA session.");
+
+  return tag;
+}
+
+void DMAEngine::destroySession(uint64_t tag) {
+  auto iter = sessionList.find(tag);
+
+  panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
+
+  sessionList.erase(iter);
+}
+
 void DMAEngine::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void DMAEngine::getStatValues(std::vector<double> &) noexcept {}

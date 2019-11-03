@@ -124,31 +124,9 @@ class DMAEngine : public Object {
   void readNext(DMASession &) noexcept;
   void writeNext(DMASession &) noexcept;
 
-  inline DMASession &findSession(uint64_t tag) {
-    auto iter = sessionList.find(tag);
-
-    panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
-
-    return iter->second;
-  }
-
-  inline uint64_t createSession(DMATag t, Event e, uint64_t d = 0,
-                                uint64_t s = 0, uint8_t *b = nullptr) {
-    uint64_t tag = sessionID++;
-    auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, s, b));
-
-    panic_if(!iter.second, "Failed to create DMA session.");
-
-    return tag;
-  }
-
-  inline void destroySession(uint64_t tag) {
-    auto iter = sessionList.find(tag);
-
-    panic_if(iter == sessionList.end(), "Unexpected DMA session ID.");
-
-    sessionList.erase(iter);
-  }
+  inline DMASession &findSession(uint64_t);
+  inline uint64_t createSession(DMATag, Event, uint64_t, uint64_t, uint8_t *);
+  inline void destroySession(uint64_t);
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);
