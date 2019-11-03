@@ -91,6 +91,10 @@ class PageLevel : public AbstractMapping {
   CPU::Function writeMappingInternal(LPN, PPN &);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
+  CPU::Function readMapping(Command &) override;
+  CPU::Function writeMapping(Command &) override;
+  CPU::Function invalidateMapping(Command &) override;
+
  public:
   PageLevel(ObjectData &, CommandManager *);
   ~PageLevel();
@@ -102,9 +106,6 @@ class PageLevel : public AbstractMapping {
   uint32_t getValidPages(PPN) override;
   uint16_t getAge(PPN) override;
 
-  CPU::Function readMapping(Command &) override;
-  CPU::Function writeMapping(Command &) override;
-  CPU::Function invalidateMapping(Command &) override;
   void getCopyList(CopyList &, Event) override;
   void releaseCopyList(CopyList &) override;
 

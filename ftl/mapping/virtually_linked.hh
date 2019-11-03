@@ -194,6 +194,10 @@ class VirtuallyLinked : public AbstractMapping {
   CPU::Function writeMappingInternal(LPN, bool, PPN &);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
+  CPU::Function readMapping(Command &) override;
+  CPU::Function writeMapping(Command &) override;
+  CPU::Function invalidateMapping(Command &) override;
+
  public:
   VirtuallyLinked(ObjectData &, CommandManager *);
   ~VirtuallyLinked();
