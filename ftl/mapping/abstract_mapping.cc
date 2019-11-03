@@ -94,6 +94,35 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
   return lpn;
 }
 
+void AbstractMapping::insertMemoryAddress(uint64_t address, uint64_t size) {
+  memoryQueue.emplace_back(InvalidEventID, address, size);
+}
+
+void AbstractMapping::callFunction(Event eid, Event old, uint64_t tag,
+                                   CPU::Function &fstat) {
+  panic_if(memoryQueue.size() == 0, "FTL APIs must insert memory request.");
+
+  auto &memreq = memoryQueue.front();
+
+  memreq.eid = old;
+
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
+}
+
+void AbstractMapping::readDRAM(uint64_t tag) {
+  auto memreq = std::move(memoryQueue.front());
+
+  memoryQueue.pop_front();
+  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+}
+
+void AbstractMapping::writeDRAM(uint64_t tag) {
+  auto memreq = std::move(memoryQueue.front());
+
+  memoryQueue.pop_front();
+  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+}
+
 void AbstractMapping::initialize(AbstractFTL *f,
                                  BlockAllocator::AbstractAllocator *a) {
   pFTL = f;
@@ -153,19 +182,19 @@ inline LPN AbstractMapping::mappingGranularity() {
 inline void AbstractMapping::readMapping(Command &cmd, Event eid) {
   CPU::Function fstat = readMapping(cmd);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  callFunction(eventDRAMRead, eid, cmd.tag, fstat);
 }
 
 inline void AbstractMapping::writeMapping(Command &cmd, Event eid) {
   CPU::Function fstat = writeMapping(cmd);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
 }
 
 inline void AbstractMapping::invalidateMapping(Command &cmd, Event eid) {
   CPU::Function fstat = invalidateMapping(cmd);
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, cmd.tag, fstat);
+  callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
 }
 
 }  // namespace SimpleSSD::FTL::Mapping

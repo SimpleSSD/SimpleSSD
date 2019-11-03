@@ -40,6 +40,15 @@ struct BlockMetadata {
 
 class AbstractMapping : public Object {
  protected:
+  struct MemoryEntry {
+    Event eid;
+    uint64_t address;
+    uint64_t size;
+
+    MemoryEntry(Event e, uint64_t a, uint64_t s)
+        : eid(e), address(a), size(s) {}
+  };
+
   CommandManager *commandManager;
 
   Parameter param;
@@ -48,8 +57,19 @@ class AbstractMapping : public Object {
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
+  std::list<MemoryEntry> memoryQueue;
+
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
+
+  inline void insertMemoryAddress(uint64_t, uint64_t);
+  inline void callFunction(Event, Event, uint64_t, CPU::Function &);
+
+  Event eventDRAMRead;
+  void readDRAM(uint64_t);
+
+  Event eventDRAMWrite;
+  void writeDRAM(uint64_t);
 
  public:
   AbstractMapping(ObjectData &, CommandManager *);
