@@ -76,10 +76,11 @@ AbstractMapping::AbstractMapping(ObjectData &o, CommandManager *c)
   debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
 
   // Create events
-  eventDRAMRead = createEvent([this](uint64_t, uint64_t d) { readDRAM(d); },
-                              "FTL::Mapping::AbstractMapping::eventDRAMRead");
-  eventDRAMWrite = createEvent([this](uint64_t, uint64_t d) { writeDRAM(d); },
-                               "FTL::Mapping::AbstractMapping::eventDRAMWrite");
+  eventDoDRAM =
+      createEvent([this](uint64_t, uint64_t d) { submitDRAMRequest(d); },
+                  "FTL::Mapping::AbstractMapping::eventDoDRAM");
+  eventDRAMDone = createEvent([this](uint64_t, uint64_t d) { dramDone(d); },
+                              "FTL::Mapping::AbstractMapping::eventDRAMDone");
 }
 
 void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
@@ -100,18 +101,46 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
   return lpn;
 }
 
-void AbstractMapping::readDRAM(uint64_t tag) {
-  auto memreq = std::move(memoryQueue.front());
+void AbstractMapping::submitDRAMRequest(uint64_t tag) {
+  auto iter = memoryQueue.begin();
 
-  memoryQueue.pop_front();
-  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+  while (iter != memoryQueue.end()) {
+    if (iter->tag == tag) {
+      break;
+    }
+  }
+
+  panic_if(iter == memoryQueue.end(), "Memory command not submitted.");
+
+  for (auto &entry : iter->commandList) {
+    if (entry.read) {
+      object.dram->read(entry.address, entry.size, eventDRAMDone, tag);
+    }
+    else {
+      object.dram->write(entry.address, entry.size, eventDRAMDone, tag);
+    }
+  }
 }
 
-void AbstractMapping::writeDRAM(uint64_t tag) {
-  auto memreq = std::move(memoryQueue.front());
+void AbstractMapping::dramDone(uint64_t tag) {
+  auto iter = memoryQueue.begin();
 
-  memoryQueue.pop_front();
-  object.dram->read(memreq.address, memreq.size, memreq.eid, tag);
+  while (iter != memoryQueue.end()) {
+    if (iter->tag == tag) {
+      break;
+    }
+  }
+
+  panic_if(iter == memoryQueue.end(), "Memory command not submitted.");
+
+  iter->counter++;
+
+  if (iter->counter == iter->commandList.size()) {
+    // Done
+    scheduleNow(iter->eid, iter->tag);
+
+    memoryQueue.erase(iter);
+  }
 }
 
 void AbstractMapping::initialize(AbstractFTL *f,
@@ -131,32 +160,54 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : memoryQueue) {
     BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.address);
-    BACKUP_SCALAR(out, iter.size);
+    BACKUP_SCALAR(out, iter.tag);
+    BACKUP_SCALAR(out, iter.counter);
+
+    size = iter.commandList.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &entry : iter.commandList) {
+      BACKUP_SCALAR(out, entry.address);
+      BACKUP_SCALAR(out, entry.size);
+      BACKUP_SCALAR(out, entry.read);
+    }
   }
 
-  BACKUP_EVENT(out, eventDRAMRead);
-  BACKUP_EVENT(out, eventDRAMWrite);
+  BACKUP_EVENT(out, eventDoDRAM);
+  BACKUP_EVENT(out, eventDRAMDone);
 }
 
 void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
-  uint64_t size;
+  uint64_t size, size2;
 
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
     Event e;
-    uint64_t a, s;
+    uint64_t t;
+    uint32_t c;
 
     RESTORE_EVENT(in, e);
-    RESTORE_SCALAR(in, a);
-    RESTORE_SCALAR(in, s);
+    RESTORE_SCALAR(in, t);
+    RESTORE_SCALAR(in, c);
 
-    memoryQueue.emplace_back(e, a, s);
+    memoryQueue.emplace_back(e, t, c);
+
+    RESTORE_SCALAR(in, size2);
+
+    for (uint64_t j = 0; j < size; j++) {
+      bool r;
+
+      RESTORE_SCALAR(in, t);
+      RESTORE_SCALAR(in, c);
+      RESTORE_SCALAR(in, r);
+
+      memoryQueue.back().commandList.emplace_back(r, t, c);
+    }
   }
 
-  RESTORE_EVENT(in, eventDRAMRead);
-  RESTORE_EVENT(in, eventDRAMWrite);
+  RESTORE_EVENT(in, eventDoDRAM);
+  RESTORE_EVENT(in, eventDRAMDone);
 }
 
 }  // namespace SimpleSSD::FTL::Mapping

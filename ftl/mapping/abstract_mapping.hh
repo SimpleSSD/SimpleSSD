@@ -41,12 +41,24 @@ struct BlockMetadata {
 class AbstractMapping : public Object {
  protected:
   struct MemoryEntry {
-    Event eid;
     uint64_t address;
-    uint64_t size;
+    uint32_t size;
+    bool read;
 
-    MemoryEntry(Event e, uint64_t a, uint64_t s)
-        : eid(e), address(a), size(s) {}
+    MemoryEntry(bool r, uint64_t a, uint32_t s)
+        : address(a), size(s), read(r) {}
+  };
+
+  struct MemoryCommand {
+    Event eid;
+    uint64_t tag;
+    uint32_t counter;
+
+    std::vector<MemoryEntry> commandList;
+
+    MemoryCommand(Event e, uint64_t t) : eid(e), tag(t), counter(0) {}
+    MemoryCommand(Event e, uint64_t t, uint32_t c)
+        : eid(e), tag(t), counter(c) {}
   };
 
   CommandManager *commandManager;
@@ -57,37 +69,28 @@ class AbstractMapping : public Object {
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
-  std::list<MemoryEntry> memoryQueue;
+  std::list<MemoryCommand> memoryQueue;
 
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
 
-  void insertMemoryAddress(uint64_t address, uint64_t size) {
-    memoryQueue.emplace_back(InvalidEventID, address, size);
+  void insertMemoryAddress(bool isRead, uint64_t address, uint32_t size) {
+    memoryQueue.back().commandList.emplace_back(isRead, address, size);
   }
 
-  void callFunction(Event eid, Event old, uint64_t tag, CPU::Function &fstat) {
-    panic_if(memoryQueue.size() == 0, "FTL APIs must insert memory request.");
-
-    auto &memreq = memoryQueue.front();
-
-    if (memreq.size == 0) {
-      memoryQueue.pop_front();
-
-      scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, old, tag, fstat);
-    }
-    else {
-      memreq.eid = old;
-
-      scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
-    }
+  void createMemoryCommand(Event eid, uint64_t tag) {
+    memoryQueue.emplace_back(eid, tag);
   }
 
-  Event eventDRAMRead;
-  void readDRAM(uint64_t);
+  Event eventDoDRAM;
+  void submitDRAMRequest(uint64_t);
 
-  Event eventDRAMWrite;
-  void writeDRAM(uint64_t);
+  Event eventDRAMDone;
+  void dramDone(uint64_t);
+
+  virtual CPU::Function readMapping(Command &) = 0;
+  virtual CPU::Function writeMapping(Command &) = 0;
+  virtual CPU::Function invalidateMapping(Command &) = 0;
 
  public:
   AbstractMapping(ObjectData &, CommandManager *);
@@ -150,26 +153,31 @@ class AbstractMapping : public Object {
   virtual uint16_t getAge(PPN) = 0;
 
   // I/O interfaces
-  virtual CPU::Function readMapping(Command &) = 0;
-  virtual CPU::Function writeMapping(Command &) = 0;
-  virtual CPU::Function invalidateMapping(Command &) = 0;
-
   inline void readMapping(Command &cmd, Event eid) {
+    createMemoryCommand(eid, cmd.tag);
+
     CPU::Function fstat = readMapping(cmd);
 
-    callFunction(eventDRAMRead, eid, cmd.tag, fstat);
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+                     fstat);
   }
 
   inline void writeMapping(Command &cmd, Event eid) {
+    createMemoryCommand(eid, cmd.tag);
+
     CPU::Function fstat = writeMapping(cmd);
 
-    callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+                     fstat);
   }
 
   inline void invalidateMapping(Command &cmd, Event eid) {
+    createMemoryCommand(eid, cmd.tag);
+
     CPU::Function fstat = invalidateMapping(cmd);
 
-    callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+                     fstat);
   }
 
   // GC interfaces
