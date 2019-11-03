@@ -26,7 +26,12 @@ class AbstractScheduler : public Object {
  public:
   AbstractScheduler(ObjectData &o, CommandManager *m, NVM::AbstractNVM *n)
       : Object(o), commandManager(m), pNVM(n) {}
+  AbstractScheduler(const AbstractScheduler &) = delete;
+  AbstractScheduler(AbstractScheduler &&) noexcept = default;
   virtual ~AbstractScheduler() {}
+
+  AbstractScheduler &operator=(const AbstractScheduler &) = delete;
+  AbstractScheduler &operator=(AbstractScheduler &&) = default;
 
   virtual void enqueue(uint64_t tag) = 0;
 };
