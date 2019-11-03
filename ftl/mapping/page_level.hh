@@ -23,6 +23,7 @@ class PageLevel : public AbstractMapping {
 
   uint64_t entrySize;
 
+  uint64_t tableBaseAddress;
   uint8_t *table;
   Bitset validEntry;
 

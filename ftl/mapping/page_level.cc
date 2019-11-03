@@ -35,6 +35,9 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
   panic_if(!table, "Memory allocation for mapping table failed.");
   panic_if(!blockMetadata, "Memory allocation for block metadata failed.");
 
+  tableBaseAddress = object.dram->allocate(totalLogicalSuperPages * entrySize,
+                                           "FTL::Mapping::PageLevel::Table");
+
   // Fill metadata
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     blockMetadata[i] = std::move(BlockMetadata(i, filparam->page));

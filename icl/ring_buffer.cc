@@ -123,7 +123,8 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
              "CREATE  | Eviction granularity %u pages", evictPages);
 
   // Allocate DRAM for data
-  dataAddress = object.dram->allocate(totalCapacity);
+  dataAddress =
+      object.dram->allocate(totalCapacity, "ICL::RingBuffer::CacheEntry");
 
   // Create evict policy
   evictPolicy = (Config::EvictModeType)readConfigUint(Section::InternalCache,
