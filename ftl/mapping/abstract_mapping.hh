@@ -111,6 +111,9 @@ class AbstractMapping : public Object {
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace Mapping

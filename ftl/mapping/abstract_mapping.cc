@@ -74,6 +74,12 @@ AbstractMapping::AbstractMapping(ObjectData &o, CommandManager *c)
   debugprint(Log::DebugID::FTL, "Total logical pages %u",
              param.totalLogicalPages);
   debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
+
+  // Create events
+  eventDRAMRead = createEvent([this](uint64_t, uint64_t d) { readDRAM(d); },
+                              "FTL::Mapping::AbstractMapping::eventDRAMRead");
+  eventDRAMWrite = createEvent([this](uint64_t, uint64_t d) { writeDRAM(d); },
+                               "FTL::Mapping::AbstractMapping::eventDRAMWrite");
 }
 
 void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
@@ -195,6 +201,41 @@ inline void AbstractMapping::invalidateMapping(Command &cmd, Event eid) {
   CPU::Function fstat = invalidateMapping(cmd);
 
   callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
+}
+
+void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
+  uint64_t size = memoryQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : memoryQueue) {
+    BACKUP_EVENT(out, iter.eid);
+    BACKUP_SCALAR(out, iter.address);
+    BACKUP_SCALAR(out, iter.size);
+  }
+
+  BACKUP_EVENT(out, eventDRAMRead);
+  BACKUP_EVENT(out, eventDRAMWrite);
+}
+
+void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    Event e;
+    uint64_t a, s;
+
+    RESTORE_EVENT(in, e);
+    RESTORE_SCALAR(in, a);
+    RESTORE_SCALAR(in, s);
+
+    memoryQueue.emplace_back(e, a, s);
+  }
+
+  RESTORE_EVENT(in, eventDRAMRead);
+  RESTORE_EVENT(in, eventDRAMWrite);
 }
 
 }  // namespace SimpleSSD::FTL::Mapping
