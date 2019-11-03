@@ -62,8 +62,19 @@ class AbstractMapping : public Object {
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
 
-  inline void insertMemoryAddress(uint64_t, uint64_t);
-  inline void callFunction(Event, Event, uint64_t, CPU::Function &);
+  void insertMemoryAddress(uint64_t address, uint64_t size) {
+    memoryQueue.emplace_back(InvalidEventID, address, size);
+  }
+
+  void callFunction(Event eid, Event old, uint64_t tag, CPU::Function &fstat) {
+    panic_if(memoryQueue.size() == 0, "FTL APIs must insert memory request.");
+
+    auto &memreq = memoryQueue.front();
+
+    memreq.eid = old;
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
+  }
 
   Event eventDRAMRead;
   void readDRAM(uint64_t);
@@ -85,15 +96,47 @@ class AbstractMapping : public Object {
   Parameter *getInfo();
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  virtual inline PPN getSPIndexFromPPN(PPN);
-  virtual inline LPN getSLPNfromLPN(LPN);
-  virtual inline PPN getSBFromSPPN(PPN);
-  virtual inline PPN getBlockFromPPN(PPN);
-  virtual inline PPN getBlockFromSB(PPN, PPN);
-  virtual inline PPN getPageIndexFromSPPN(PPN);
-  virtual inline PPN makeSPPN(PPN, PPN);
-  virtual inline PPN makePPN(PPN, PPN, PPN);
-  virtual inline LPN mappingGranularity();
+  //! PPN -> SPIndex (Page index in superpage)
+  virtual inline PPN getSPIndexFromPPN(PPN ppn) {
+    return ppn % param.superpage;
+  }
+
+  //! LPN -> SLPN / PPN -> SPPN
+  virtual inline LPN getSLPNfromLPN(LPN slpn) { return slpn / param.superpage; }
+
+  //! SPPN -> SBLK
+  virtual inline PPN getSBFromSPPN(PPN sppn) {
+    return sppn % (param.totalPhysicalBlocks / param.superpage);
+  }
+
+  //! PPN -> BLK
+  virtual inline PPN getBlockFromPPN(PPN ppn) {
+    return ppn % param.totalPhysicalBlocks;
+  }
+
+  //! SBLK/SPIndex -> BLK
+  virtual inline PPN getBlockFromSB(PPN sblk, PPN sp) {
+    return sblk * param.superpage + sp;
+  }
+
+  //! SPPN -> Page (Page index in (super)block)
+  virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
+    return sppn / (param.totalPhysicalBlocks / param.superpage);
+  }
+
+  //! SBLK/Page -> SPPN
+  virtual inline PPN makeSPPN(PPN superblock, PPN page) {
+    return superblock + page * (param.totalPhysicalBlocks / param.superpage);
+  }
+
+  //! SBLK/SPIndex/Page -> PPN
+  virtual inline PPN makePPN(PPN superblock, PPN superpage, PPN page) {
+    return superblock * param.superpage + superpage +
+           page * param.totalPhysicalBlocks;
+  }
+
+  //! Mapping granularity
+  virtual inline LPN mappingGranularity() { return param.superpage; }
 
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
@@ -104,9 +147,23 @@ class AbstractMapping : public Object {
   virtual CPU::Function writeMapping(Command &) = 0;
   virtual CPU::Function invalidateMapping(Command &) = 0;
 
-  inline void readMapping(Command &, Event);
-  inline void writeMapping(Command &, Event);
-  inline void invalidateMapping(Command &, Event);
+  inline void readMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = readMapping(cmd);
+
+    callFunction(eventDRAMRead, eid, cmd.tag, fstat);
+  }
+
+  inline void writeMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = writeMapping(cmd);
+
+    callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
+  }
+
+  inline void invalidateMapping(Command &cmd, Event eid) {
+    CPU::Function fstat = invalidateMapping(cmd);
+
+    callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
+  }
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;

@@ -100,21 +100,6 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
   return lpn;
 }
 
-void AbstractMapping::insertMemoryAddress(uint64_t address, uint64_t size) {
-  memoryQueue.emplace_back(InvalidEventID, address, size);
-}
-
-void AbstractMapping::callFunction(Event eid, Event old, uint64_t tag,
-                                   CPU::Function &fstat) {
-  panic_if(memoryQueue.size() == 0, "FTL APIs must insert memory request.");
-
-  auto &memreq = memoryQueue.front();
-
-  memreq.eid = old;
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, tag, fstat);
-}
-
 void AbstractMapping::readDRAM(uint64_t tag) {
   auto memreq = std::move(memoryQueue.front());
 
@@ -138,70 +123,6 @@ void AbstractMapping::initialize(AbstractFTL *f,
 Parameter *AbstractMapping::getInfo() {
   return &param;
 };
-
-//! PPN -> SPIndex (Page index in superpage)
-inline PPN AbstractMapping::getSPIndexFromPPN(PPN ppn) {
-  return ppn % param.superpage;
-}
-
-//! LPN -> SLPN / PPN -> SPPN
-inline LPN AbstractMapping::getSLPNfromLPN(LPN slpn) {
-  return slpn / param.superpage;
-}
-
-//! SPPN -> SBLK
-inline PPN AbstractMapping::getSBFromSPPN(PPN sppn) {
-  return sppn % (param.totalPhysicalBlocks / param.superpage);
-}
-
-//! PPN -> BLK
-inline PPN AbstractMapping::getBlockFromPPN(PPN ppn) {
-  return ppn % param.totalPhysicalBlocks;
-}
-
-//! SBLK/SPIndex -> BLK
-inline PPN AbstractMapping::getBlockFromSB(PPN sblk, PPN sp) {
-  return sblk * param.superpage + sp;
-}
-
-//! SPPN -> Page (Page index in (super)block)
-inline PPN AbstractMapping::getPageIndexFromSPPN(PPN sppn) {
-  return sppn / (param.totalPhysicalBlocks / param.superpage);
-}
-
-//! SBLK/Page -> SPPN
-inline PPN AbstractMapping::makeSPPN(PPN superblock, PPN page) {
-  return superblock + page * (param.totalPhysicalBlocks / param.superpage);
-}
-
-//! SBLK/SPIndex/Page -> PPN
-inline PPN AbstractMapping::makePPN(PPN superblock, PPN superpage, PPN page) {
-  return superblock * param.superpage + superpage +
-         page * param.totalPhysicalBlocks;
-}
-
-//! Mapping granularity
-inline LPN AbstractMapping::mappingGranularity() {
-  return param.superpage;
-}
-
-inline void AbstractMapping::readMapping(Command &cmd, Event eid) {
-  CPU::Function fstat = readMapping(cmd);
-
-  callFunction(eventDRAMRead, eid, cmd.tag, fstat);
-}
-
-inline void AbstractMapping::writeMapping(Command &cmd, Event eid) {
-  CPU::Function fstat = writeMapping(cmd);
-
-  callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
-}
-
-inline void AbstractMapping::invalidateMapping(Command &cmd, Event eid) {
-  CPU::Function fstat = invalidateMapping(cmd);
-
-  callFunction(eventDRAMWrite, eid, cmd.tag, fstat);
-}
 
 void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
   uint64_t size = memoryQueue.size();
