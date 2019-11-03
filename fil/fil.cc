@@ -8,6 +8,7 @@
 #include "fil/fil.hh"
 
 #include "fil/nvm/pal/pal_wrapper.hh"
+#include "fil/scheduler/noop.hh"
 
 namespace SimpleSSD::FIL {
 
@@ -26,7 +27,7 @@ FIL::FIL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
     case Config::NVMType::PAL:
-      pFIL = new NVM::PALOLD(object, commandManager);
+      pNVM = new NVM::PALOLD(object, commandManager);
 
       break;
     // case Config::NVMType::GenericNAND:
@@ -35,47 +36,45 @@ FIL::FIL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
 
       break;
   }
+
+  pScheduler = new Scheduler::Noop(object, commandManager, pNVM);
 }
 
 FIL::~FIL() {
-  delete pFIL;
+  delete pScheduler;
+  delete pNVM;
 }
 
 void FIL::submit(uint64_t tag) {
-  auto &list = commandManager->getSubCommand(tag);
-
-  panic_if(list.size() == 0, "Unexpected empty subcommands.");
-
-  for (auto &scmd : list) {
-    if (scmd.ppn == InvalidPPN) {
-      continue;
-    }
-
-    pFIL->enqueue(tag, scmd.id);
-  }
+  pScheduler->enqueue(tag);
 }
 
 void FIL::writeSpare(PPN ppn, std::vector<uint8_t> &spare) {
-  pFIL->writeSpare(ppn, spare);
+  pNVM->writeSpare(ppn, spare);
 }
 
 void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  pFIL->getStatList(list, prefix + "fil.");
+  pNVM->getStatList(list, prefix + "fil.nvm.");
+  pScheduler->getStatList(list, prefix + "fil.scheduler.");
 }
 
 void FIL::getStatValues(std::vector<double> &values) noexcept {
-  pFIL->getStatValues(values);
+  pNVM->getStatValues(values);
+  pScheduler->getStatValues(values);
 }
 
 void FIL::resetStatValues() noexcept {
-  pFIL->resetStatValues();
+  pNVM->resetStatValues();
+  pScheduler->resetStatValues();
 }
 
 void FIL::createCheckpoint(std::ostream &out) const noexcept {
-  pFIL->createCheckpoint(out);
+  pNVM->createCheckpoint(out);
+  pScheduler->createCheckpoint(out);
 }
 void FIL::restoreCheckpoint(std::istream &in) noexcept {
-  pFIL->restoreCheckpoint(in);
+  pNVM->restoreCheckpoint(in);
+  pScheduler->restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::FIL

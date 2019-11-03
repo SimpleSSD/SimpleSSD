@@ -12,6 +12,7 @@
 
 #include "fil/def.hh"
 #include "fil/nvm/abstract_nvm.hh"
+#include "fil/scheduler/abstract_scheduler.hh"
 #include "hil/command_manager.hh"
 
 namespace SimpleSSD::FIL {
@@ -24,7 +25,8 @@ namespace SimpleSSD::FIL {
 class FIL : public Object {
  private:
   CommandManager *commandManager;
-  NVM::AbstractNVM *pFIL;
+  NVM::AbstractNVM *pNVM;
+  Scheduler::AbstractScheduler *pScheduler;
 
  public:
   FIL(ObjectData &, CommandManager *);
