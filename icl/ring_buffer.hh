@@ -296,8 +296,11 @@ class RingBuffer : public AbstractCache {
 
   CPU::Function writeWorker_collect(uint64_t, CacheEntry::iterator);
 
+  Event eventWriteWorkerDoDRAM;
+  void writeWorker_doDRAM();
+
   Event eventWriteWorkerDoFTL;
-  void writeWorker_doFTL();
+  void writeWorker_doFTL(uint64_t);
 
   Event eventWriteWorkerDone;
   void writeWorker_done(uint64_t, uint64_t);
