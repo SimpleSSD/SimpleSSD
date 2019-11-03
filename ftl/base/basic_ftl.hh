@@ -91,6 +91,9 @@ class BasicFTL : public AbstractFTL {
   Event eventWriteFindDone;
   void write_findDone();
 
+  Event eventWriteTranslate;
+  void write_translate(uint64_t);
+
   Event eventWriteDoFIL;
   void write_doFIL(uint64_t);
 

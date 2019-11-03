@@ -24,6 +24,9 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   eventWriteFindDone =
       createEvent([this](uint64_t, uint64_t) { write_findDone(); },
                   "FTL::BasicFTL::eventWriteFindDone");
+  eventWriteTranslate =
+      createEvent([this](uint64_t, uint64_t d) { write_translate(d); },
+                  "FTL::BasicFTL::eventWriteTranslate");
   eventWriteDoFIL =
       createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
                   "FTL::BasicFTL::eventWriteDoFIL");
@@ -247,11 +250,13 @@ void BasicFTL::write_findDone() {
 
       // Translate
       auto &rcmd = commandManager->getCommand(job.readTag);
-      pMapper->readMapping(rcmd);
-
-      pFIL->submit(job.readTag);
+      pMapper->readMapping(rcmd, eventWriteTranslate);
     }
   }
+}
+
+void BasicFTL::write_translate(uint64_t tag) {
+  pFIL->submit(tag);
 }
 
 void BasicFTL::write_doFIL(uint64_t tag) {
@@ -272,9 +277,7 @@ void BasicFTL::write_readModifyDone() {
 
     // Translate
     auto &wcmd = commandManager->getCommand(job.writeTag);
-    pMapper->writeMapping(wcmd);
-
-    pFIL->submit(job.writeTag);
+    pMapper->writeMapping(wcmd, eventWriteTranslate);
   }
 }
 
@@ -615,7 +618,11 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_EVENT(out, eventReadDoFIL);
   BACKUP_EVENT(out, eventReadFull);
+  BACKUP_EVENT(out, eventWriteFindDone);
+  BACKUP_EVENT(out, eventWriteTranslate);
   BACKUP_EVENT(out, eventWriteDoFIL);
+  BACKUP_EVENT(out, eventReadModifyDone);
+  BACKUP_EVENT(out, eventWriteDone);
   BACKUP_EVENT(out, eventInvalidateDoFIL);
   BACKUP_EVENT(out, eventGCTrigger);
   BACKUP_EVENT(out, eventGCGetBlockList);
@@ -626,9 +633,6 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventGCErase);
   BACKUP_EVENT(out, eventGCEraseDone);
   BACKUP_EVENT(out, eventGCDone);
-  BACKUP_EVENT(out, eventWriteFindDone);
-  BACKUP_EVENT(out, eventReadModifyDone);
-  BACKUP_EVENT(out, eventWriteDone);
 }
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
@@ -655,7 +659,11 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_EVENT(in, eventReadDoFIL);
   RESTORE_EVENT(in, eventReadFull);
+  RESTORE_EVENT(in, eventWriteFindDone);
+  RESTORE_EVENT(in, eventWriteTranslate);
   RESTORE_EVENT(in, eventWriteDoFIL);
+  RESTORE_EVENT(in, eventReadModifyDone);
+  RESTORE_EVENT(in, eventWriteDone);
   RESTORE_EVENT(in, eventInvalidateDoFIL);
   RESTORE_EVENT(in, eventGCTrigger);
   RESTORE_EVENT(in, eventGCGetBlockList);
@@ -666,9 +674,6 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventGCErase);
   RESTORE_EVENT(in, eventGCEraseDone);
   RESTORE_EVENT(in, eventGCDone);
-  RESTORE_EVENT(in, eventWriteFindDone);
-  RESTORE_EVENT(in, eventReadModifyDone);
-  RESTORE_EVENT(in, eventWriteDone);
 }
 
 }  // namespace SimpleSSD::FTL
