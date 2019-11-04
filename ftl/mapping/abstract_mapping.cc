@@ -112,6 +112,8 @@ void AbstractMapping::submitDRAMRequest(uint64_t tag) {
     if (iter->tag == tag) {
       break;
     }
+
+    ++iter;
   }
 
   panic_if(iter == memoryQueue.end(), "Memory command not submitted.");
@@ -133,6 +135,8 @@ void AbstractMapping::dramDone(uint64_t tag) {
     if (iter->tag == tag) {
       break;
     }
+
+    ++iter;
   }
 
   panic_if(iter == memoryQueue.end(), "Memory command not submitted.");
