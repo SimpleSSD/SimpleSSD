@@ -88,7 +88,8 @@ class AbstractMapping : public Object {
   Event eventDoDRAM;
   void submitDRAMRequest(uint64_t);
 
-  Event eventDRAMDone;
+  Event eventDRAMDone_read;
+  Event eventDRAMDone_write;
   void dramDone(uint64_t);
 
   virtual CPU::Function readMapping(Command &) = 0;

@@ -79,8 +79,12 @@ AbstractMapping::AbstractMapping(ObjectData &o, CommandManager *c)
   eventDoDRAM =
       createEvent([this](uint64_t, uint64_t d) { submitDRAMRequest(d); },
                   "FTL::Mapping::AbstractMapping::eventDoDRAM");
-  eventDRAMDone = createEvent([this](uint64_t, uint64_t d) { dramDone(d); },
-                              "FTL::Mapping::AbstractMapping::eventDRAMDone");
+  eventDRAMDone_read =
+      createEvent([this](uint64_t, uint64_t d) { dramDone(d); },
+                  "FTL::Mapping::AbstractMapping::eventDRAMDone_read");
+  eventDRAMDone_write =
+      createEvent([this](uint64_t, uint64_t d) { dramDone(d); },
+                  "FTL::Mapping::AbstractMapping::eventDRAMDone_write");
 }
 
 void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
@@ -114,10 +118,10 @@ void AbstractMapping::submitDRAMRequest(uint64_t tag) {
 
   for (auto &entry : iter->commandList) {
     if (entry.read) {
-      object.dram->read(entry.address, entry.size, eventDRAMDone, tag);
+      object.dram->read(entry.address, entry.size, eventDRAMDone_read, tag);
     }
     else {
-      object.dram->write(entry.address, entry.size, eventDRAMDone, tag);
+      object.dram->write(entry.address, entry.size, eventDRAMDone_write, tag);
     }
   }
 }
@@ -174,7 +178,8 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventDoDRAM);
-  BACKUP_EVENT(out, eventDRAMDone);
+  BACKUP_EVENT(out, eventDRAMDone_read);
+  BACKUP_EVENT(out, eventDRAMDone_write);
 }
 
 void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
@@ -207,7 +212,8 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_EVENT(in, eventDoDRAM);
-  RESTORE_EVENT(in, eventDRAMDone);
+  RESTORE_EVENT(in, eventDRAMDone_read);
+  RESTORE_EVENT(in, eventDRAMDone_write);
 }
 
 }  // namespace SimpleSSD::FTL::Mapping
