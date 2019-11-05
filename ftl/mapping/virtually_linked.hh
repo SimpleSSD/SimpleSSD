@@ -229,16 +229,16 @@ class VirtuallyLinked : public AbstractMapping {
   LPN getPageUsage(LPN, LPN) override;
 
   //! SPPN -> SBLK
-  virtual inline PPN getSBFromSPPN(PPN sppn) {
+  virtual inline PPN getSBFromSPPN(PPN sppn) override {
     return sppn % totalPhysicalSuperBlocks;
   }
 
   //! SPPN -> Page (Page index in (super)block)
-  virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
+  virtual inline PPN getPageIndexFromSPPN(PPN sppn) override {
     return sppn / totalPhysicalSuperBlocks;
   }
 
-  virtual inline LPN mappingGranularity() { return 1; }
+  virtual inline LPN mappingGranularity() override { return 1; }
 
   uint32_t getValidPages(PPN) override;
   uint16_t getAge(PPN) override;
