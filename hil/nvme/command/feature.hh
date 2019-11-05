@@ -118,11 +118,6 @@ class Feature : public Object {
   // 84h O Namespace Write Protection Config
 
   Feature(ObjectData &);
-  Feature(const Feature &) = delete;
-  Feature(Feature &&) noexcept = default;
-
-  Feature &operator=(const Feature &) = delete;
-  Feature &operator=(Feature &&) = default;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

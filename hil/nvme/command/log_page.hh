@@ -26,11 +26,6 @@ class ChangedNamespaceList : public Object {
 
  public:
   ChangedNamespaceList(ObjectData &);
-  ChangedNamespaceList(const ChangedNamespaceList &) = delete;
-  ChangedNamespaceList(ChangedNamespaceList &&) noexcept = default;
-
-  ChangedNamespaceList &operator=(const ChangedNamespaceList &) = delete;
-  ChangedNamespaceList &operator=(ChangedNamespaceList &&) = default;
 
   void appendList(uint32_t);
   void makeResponse(uint64_t, uint64_t, uint8_t *);
@@ -52,11 +47,6 @@ class LogPage : public Object {
   ChangedNamespaceList cnl;
 
   LogPage(ObjectData &);
-  LogPage(const LogPage &) = delete;
-  LogPage(LogPage &&) noexcept = default;
-
-  LogPage &operator=(const LogPage &) = delete;
-  LogPage &operator=(LogPage &&) = default;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
