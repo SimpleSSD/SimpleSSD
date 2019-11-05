@@ -130,12 +130,7 @@ class DMAEngine : public Object {
 
  public:
   DMAEngine(ObjectData &, DMAInterface *);
-  DMAEngine(const DMAEngine &) = delete;
-  DMAEngine(DMAEngine &&) noexcept = default;
   virtual ~DMAEngine();
-
-  DMAEngine &operator=(const DMAEngine &) = delete;
-  DMAEngine &operator=(DMAEngine &&) = default;
 
   void updatePageSize(uint64_t);
 

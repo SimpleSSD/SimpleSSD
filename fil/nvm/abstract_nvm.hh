@@ -24,12 +24,7 @@ class AbstractNVM : public Object {
  public:
   AbstractNVM(ObjectData &o, CommandManager *m)
       : Object(o), commandManager(m) {}
-  AbstractNVM(const AbstractNVM &) = delete;
-  AbstractNVM(AbstractNVM &&) noexcept = default;
   virtual ~AbstractNVM() {}
-
-  AbstractNVM &operator=(const AbstractNVM &) = delete;
-  AbstractNVM &operator=(AbstractNVM &&) = default;
 
   /**
    * \brief Handle SubCommand

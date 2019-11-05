@@ -29,12 +29,7 @@ class Disk : public Object {
 
  public:
   Disk(ObjectData &);
-  Disk(const Disk &) = delete;
-  Disk(Disk &&) noexcept = default;
   virtual ~Disk();
-
-  Disk &operator=(const Disk &) = delete;
-  Disk &operator=(Disk &&) = default;
 
   virtual uint64_t open(std::string, uint64_t) noexcept;
   virtual void close() noexcept;

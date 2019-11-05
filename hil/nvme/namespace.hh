@@ -88,12 +88,7 @@ class Namespace : public Object {
 
  public:
   Namespace(ObjectData &, Subsystem *);
-  Namespace(const Namespace &) = delete;
-  Namespace(Namespace &&) noexcept = default;
   ~Namespace();
-
-  Namespace &operator=(const Namespace &) = delete;
-  Namespace &operator=(Namespace &&) = default;
 
   uint32_t getNSID();
 

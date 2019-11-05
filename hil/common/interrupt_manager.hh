@@ -50,12 +50,7 @@ class InterruptManager : public Object {
 
  public:
   InterruptManager(ObjectData &, Interface *, ControllerID);
-  InterruptManager(const InterruptManager &) = delete;
-  InterruptManager(InterruptManager &&) noexcept = default;
   ~InterruptManager();
-
-  InterruptManager &operator=(const InterruptManager &) = delete;
-  InterruptManager &operator=(InterruptManager &&) = default;
 
   void postInterrupt(uint16_t, bool);
 

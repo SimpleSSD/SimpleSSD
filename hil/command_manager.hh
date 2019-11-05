@@ -109,12 +109,7 @@ class CommandManager : public Object {
 
  public:
   CommandManager(ObjectData &);
-  CommandManager(const CommandManager &) = delete;
-  CommandManager(CommandManager &&) noexcept = default;
   ~CommandManager();
-
-  CommandManager &operator=(const CommandManager &) = delete;
-  CommandManager &operator=(CommandManager &&) = default;
 
   Command &getCommand(uint64_t);
   std::vector<SubCommand> &getSubCommand(uint64_t);

@@ -30,12 +30,7 @@ class FIL : public Object {
 
  public:
   FIL(ObjectData &, CommandManager *);
-  FIL(const FIL &) = delete;
-  FIL(FIL &&) noexcept = default;
   ~FIL();
-
-  FIL &operator=(const FIL &) = delete;
-  FIL &operator=(FIL &&) = default;
 
   /**
    * \brief Submit Command to FIL

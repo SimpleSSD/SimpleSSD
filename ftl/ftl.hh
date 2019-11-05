@@ -40,12 +40,7 @@ class FTL : public Object {
 
  public:
   FTL(ObjectData &, CommandManager *);
-  FTL(const FTL &) = delete;
-  FTL(FTL &&) noexcept = default;
   ~FTL();
-
-  FTL &operator=(const FTL &) = delete;
-  FTL &operator=(FTL &&) = default;
 
   void submit(uint64_t);
 

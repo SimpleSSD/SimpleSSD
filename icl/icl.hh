@@ -36,12 +36,7 @@ class ICL : public Object {
 
  public:
   ICL(ObjectData &, CommandManager *);
-  ICL(const ICL &) = delete;
-  ICL(ICL &&) noexcept = default;
   ~ICL();
-
-  ICL &operator=(const ICL &) = delete;
-  ICL &operator=(ICL &&) = default;
 
   //! Submit request
   void submit(uint64_t, uint32_t);

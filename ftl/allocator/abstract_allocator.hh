@@ -32,12 +32,7 @@ class AbstractAllocator : public Object {
  public:
   AbstractAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       : Object(o), pMapper(m) {}
-  AbstractAllocator(const AbstractAllocator &) = delete;
-  AbstractAllocator(AbstractAllocator &&) noexcept = default;
   virtual ~AbstractAllocator() {}
-
-  AbstractAllocator &operator=(const AbstractAllocator &) = delete;
-  AbstractAllocator &operator=(AbstractAllocator &&) = default;
 
   virtual void initialize(Parameter *p) { param = p; };
 

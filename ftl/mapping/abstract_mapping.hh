@@ -98,12 +98,7 @@ class AbstractMapping : public Object {
 
  public:
   AbstractMapping(ObjectData &, CommandManager *);
-  AbstractMapping(const AbstractMapping &) = delete;
-  AbstractMapping(AbstractMapping &&) noexcept = default;
   virtual ~AbstractMapping() {}
-
-  AbstractMapping &operator=(const AbstractMapping &) = delete;
-  AbstractMapping &operator=(AbstractMapping &&) = default;
 
   virtual void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *);
 

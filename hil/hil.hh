@@ -51,12 +51,7 @@ class HIL : public Object {
 
  public:
   HIL(ObjectData &);
-  HIL(const HIL &) = delete;
-  HIL(HIL &&) noexcept = default;
   ~HIL();
-
-  HIL &operator=(const HIL &) = delete;
-  HIL &operator=(HIL &&) = default;
 
   /**
    * \brief Submit command

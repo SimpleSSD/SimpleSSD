@@ -53,11 +53,6 @@ class Convert : public Object {
 
  public:
   Convert(ObjectData &, uint64_t, uint64_t);
-  Convert(const Convert &) = delete;
-  Convert(Convert &&) noexcept = default;
-
-  Convert &operator=(const Convert &) = delete;
-  Convert &operator=(Convert &&) = default;
 
   ConvertFunction getConvertion();
 

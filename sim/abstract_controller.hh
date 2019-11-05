@@ -33,12 +33,7 @@ class AbstractController : public Object {
   AbstractController(ObjectData &o, ControllerID id, AbstractSubsystem *s,
                      Interface *i)
       : Object(o), interface(i), subsystem(s), controllerID(id) {}
-  AbstractController(const AbstractController &) = delete;
-  AbstractController(AbstractController &&) noexcept = default;
   virtual ~AbstractController() {}
-
-  AbstractController &operator=(const AbstractController &) = delete;
-  AbstractController &operator=(AbstractController &&) = default;
 
   ControllerID getControllerID() { return controllerID; }
 

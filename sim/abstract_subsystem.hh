@@ -46,12 +46,7 @@ class AbstractSubsystem : public Object {
 
  public:
   AbstractSubsystem(ObjectData &o) : Object(o), inited(false) {}
-  AbstractSubsystem(const AbstractSubsystem &) = delete;
-  AbstractSubsystem(AbstractSubsystem &&) noexcept = default;
   virtual ~AbstractSubsystem() {}
-
-  AbstractSubsystem &operator=(const AbstractSubsystem &) = delete;
-  AbstractSubsystem &operator=(AbstractSubsystem &&) = default;
 
   virtual void init() = 0;
 
