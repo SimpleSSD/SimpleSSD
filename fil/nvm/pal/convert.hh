@@ -69,11 +69,6 @@ class Convert : public Object {
 
  public:
   Convert(ObjectData &);
-  Convert(const Convert &) = delete;
-  Convert(Convert &&) noexcept = default;
-
-  Convert &operator=(const Convert &) = delete;
-  Convert &operator=(Convert &&) = default;
 
   ConvertFunction getConvertion();
 
