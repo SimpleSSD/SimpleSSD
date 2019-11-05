@@ -38,9 +38,8 @@ ConvertFunction Convert::getConvertion() {
   }
   else if (shift == 0) {
     // LBASize == LPNSize
-    return [shift = this->shift, mask = this->mask](
-               uint64_t slba, uint32_t nlb, uint64_t &slpn, uint32_t &nlp,
-               uint32_t *skipFirst, uint32_t *skipLast) {
+    return [](uint64_t slba, uint32_t nlb, uint64_t &slpn, uint32_t &nlp,
+              uint32_t *skipFirst, uint32_t *skipLast) {
       slpn = slba;
       nlp = nlb;
 
@@ -54,9 +53,9 @@ ConvertFunction Convert::getConvertion() {
   }
   else {
     // LBASize > LPNSize
-    return [shift = -this->shift, mask = this->mask](
-               uint64_t slba, uint32_t nlb, uint64_t &slpn, uint32_t &nlp,
-               uint32_t *skipFirst, uint32_t *skipLast) {
+    return [shift = -this->shift](uint64_t slba, uint32_t nlb, uint64_t &slpn,
+                                  uint32_t &nlp, uint32_t *skipFirst,
+                                  uint32_t *skipLast) {
       slpn = slba << shift;
       nlp = nlb << shift;
 
