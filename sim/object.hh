@@ -216,7 +216,12 @@ class Object {
 
  public:
   Object(ObjectData &o) : object(o) {}
+  Object(const Object &) = delete;
+  Object(Object &&) noexcept = delete;
   virtual ~Object() {}
+
+  Object &operator=(const Object &) = delete;
+  Object &operator=(Object &&) = delete;
 
   /* Statistic API */
   virtual void getStatList(std::vector<Stat> &, std::string) noexcept = 0;
