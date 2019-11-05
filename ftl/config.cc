@@ -17,7 +17,6 @@ const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
 const char NAME_GC_D_CHOICE_PARAM[] = "DChoiceParam";
 const char NAME_GC_THRESHOLD[] = "GCThreshold";
-const char NAME_USE_SUPERPAGE[] = "UseSuperpage";
 const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
 const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_ALLOW_PAGE_LEVEL_READ[] = "AllowPageGranularityRead";
