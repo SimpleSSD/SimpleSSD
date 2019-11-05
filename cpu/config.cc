@@ -24,9 +24,6 @@ Config::Config() {
   ftlCore = 1;
 }
 
-//! A destructor
-Config::~Config() {}
-
 void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT(node, NAME_CLOCK, clock);

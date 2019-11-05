@@ -38,7 +38,6 @@ class Config : public BaseConfig {
 
  public:
   Config();
-  ~Config();
 
   const char *getSectionName() override { return "cpu"; }
 
