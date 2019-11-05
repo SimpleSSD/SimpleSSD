@@ -129,7 +129,7 @@ void BasicFTL::read_readDone(uint64_t tag) {
 }
 
 void BasicFTL::write_find(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   // Check we have blocks (we need to stall writes)
   if (UNLIKELY(pAllocator->stallRequest())) {

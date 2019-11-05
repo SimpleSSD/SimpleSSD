@@ -76,7 +76,7 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
 }
 
 CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
 
@@ -98,7 +98,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
 }
 
 CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool init) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
 
@@ -156,7 +156,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool init) {
 }
 
 CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
 
@@ -366,7 +366,7 @@ uint16_t PageLevel::getAge(PPN ppn) {
 }
 
 CPU::Function PageLevel::readMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -406,7 +406,7 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
 }
 
 CPU::Function PageLevel::writeMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -464,7 +464,7 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
 }
 
 CPU::Function PageLevel::invalidateMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -509,7 +509,7 @@ CPU::Function PageLevel::invalidateMapping(Command &cmd) {
 }
 
 void PageLevel::getCopyList(CopyList &copy, Event eid) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(copy.blockID >= totalPhysicalSuperBlocks, "Block out of range.");
 

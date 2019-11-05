@@ -33,7 +33,7 @@ void VLAllocator::initialize(Parameter *p) {
 
 // SLPN, SPPN
 CPU::Function VLAllocator::allocatePartialBlock(LPN lpn, PPN &ppn) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
   PPN idx = lastAllocatedSecond;
 
   // Call allocateBlockAtSecond

@@ -299,7 +299,7 @@ void RingBuffer::trigger_readWorker() {
 }
 
 void RingBuffer::readWorker(uint64_t now) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   if (LIKELY(enabled)) {
     // Pass all read request to FTL
@@ -603,7 +603,7 @@ void RingBuffer::trigger_writeWorker() {
 }
 
 void RingBuffer::writeWorker(uint64_t now) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
   /*
    * Some FTL may require 'minPage'-sized write request to prevent
    * read-modify-write operation. So, in this function, find the full-sized
@@ -673,7 +673,7 @@ void RingBuffer::writeWorker(uint64_t now) {
 
 CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
                                               CacheEntry::iterator iter) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(!isDirty(iter->second.list), "Try to write clean entry.");
 
@@ -838,7 +838,7 @@ void RingBuffer::writeWorker_done(uint64_t now, uint64_t tag) {
 }
 
 void RingBuffer::read_find(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
   uint64_t size = cmd.length * pageSize - cmd.subCommandList.front().skipFront -
                   cmd.subCommandList.back().skipEnd;
 
@@ -982,7 +982,7 @@ void RingBuffer::read_nocache(uint64_t tag) {
 }
 
 void RingBuffer::write_find(SubCommand &scmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
   Event endEvent = InvalidEventID;
 
   stat.request[1] += pageSize - scmd.skipFront - scmd.skipEnd;
@@ -1225,7 +1225,7 @@ void RingBuffer::write_nocache(uint64_t tag) {
 }
 
 void RingBuffer::flush_find(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   if (LIKELY(enabled && flushWorkerLPN.size() == 0)) {
     LPN alignedBegin = alignToMinPage(cmd.offset);

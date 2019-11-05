@@ -122,7 +122,7 @@ void VirtuallyLinked::physicalSuperPageStats(uint64_t &valid,
 
 // LPN -> PPN
 CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
@@ -164,7 +164,7 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
 // LPN -> PPN
 CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
                                                     PPN &ppn, bool init) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
@@ -376,7 +376,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
 
 // LPN -> PPN
 CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(lpn >= param.totalLogicalPages, "LPN out of range.");
 
@@ -654,7 +654,7 @@ uint16_t VirtuallyLinked::getAge(PPN ppn) {
 }
 
 CPU::Function VirtuallyLinked::readMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -677,7 +677,7 @@ CPU::Function VirtuallyLinked::readMapping(Command &cmd) {
 }
 
 CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -726,7 +726,7 @@ CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
 }
 
 CPU::Function VirtuallyLinked::invalidateMapping(Command &cmd) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   clock++;
 
@@ -755,7 +755,7 @@ CPU::Function VirtuallyLinked::invalidateMapping(Command &cmd) {
 
 // SPPN
 void VirtuallyLinked::getCopyList(CopyList &copy, Event eid) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(copy.blockID >= totalPhysicalSuperBlocks, "Block out of range.");
 

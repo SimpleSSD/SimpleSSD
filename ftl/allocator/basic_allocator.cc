@@ -26,7 +26,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
       victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
-        CPU::Function fstat = CPU::initFunction();
+        CPU::Function fstat;
         auto &currentList = fullBlocks[idx];
         std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
 
@@ -49,7 +49,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       break;
     case Config::VictimSelectionMode::Greedy:
       victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
-        CPU::Function fstat = CPU::initFunction();
+        CPU::Function fstat;
         auto &currentList = fullBlocks[idx];
         std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
 
@@ -83,7 +83,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       victimSelectionFunction =
           [this, pageCount = object.config->getNANDStructure()->page](
               uint64_t idx, std::deque<PPN> &list) {
-            CPU::Function fstat = CPU::initFunction();
+            CPU::Function fstat;
             auto &currentList = fullBlocks[idx];
             std::vector<std::pair<std::list<PPN>::iterator, float>> valid;
 
@@ -119,7 +119,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       break;
     case Config::VictimSelectionMode::DChoice:
       victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
-        CPU::Function fstat = CPU::initFunction();
+        CPU::Function fstat;
         auto &currentList = fullBlocks[idx];
         std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
         std::vector<uint64_t> offsets;
@@ -225,7 +225,7 @@ void BasicAllocator::initialize(Parameter *p) {
 }
 
 CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
@@ -292,7 +292,7 @@ bool BasicAllocator::stallRequest() {
 }
 
 void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   list.clear();
 
@@ -316,7 +316,7 @@ void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
 }
 
 void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
-  CPU::Function fstat = CPU::initFunction();
+  CPU::Function fstat;
 
   panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
@@ -337,7 +337,8 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void BasicAllocator::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+void BasicAllocator::getStatList(std::vector<Stat> &list,
+                                 std::string prefix) noexcept {
   list.emplace_back(prefix + "wear_leveling", "Wear-leveling factor");
 }
 
