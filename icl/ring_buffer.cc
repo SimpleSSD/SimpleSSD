@@ -740,7 +740,7 @@ CPU::Function RingBuffer::writeWorker_collect(uint64_t now,
     }
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 void RingBuffer::writeWorker_doDRAM() {

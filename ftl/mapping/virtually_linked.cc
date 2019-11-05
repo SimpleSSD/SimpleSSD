@@ -47,7 +47,7 @@ VirtuallyLinked::VirtuallyLinked(ObjectData &o, CommandManager *c)
 
   // Fill metadata
   for (uint64_t i = 0; i < param.totalPhysicalBlocks; i++) {
-    blockMetadata[i] = std::move(BlockMetadata(i, filparam->page));
+    blockMetadata[i] = BlockMetadata(i, filparam->page);
   }
 
   // Valid page bits (packed) + 2byte clock + 2byte page offset
@@ -158,7 +158,7 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
     ppn = InvalidPPN;
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 // LPN -> PPN
@@ -371,7 +371,7 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
     }
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 // LPN -> PPN
@@ -449,7 +449,7 @@ CPU::Function VirtuallyLinked::invalidateMappingInternal(LPN lpn, PPN &old) {
     validEntry.reset(slpn);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 void VirtuallyLinked::initialize(AbstractFTL *f,
@@ -673,7 +673,7 @@ CPU::Function VirtuallyLinked::readMapping(Command &cmd) {
                scmd.ppn);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
@@ -722,7 +722,7 @@ CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
                scmd.ppn);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function VirtuallyLinked::invalidateMapping(Command &cmd) {
@@ -750,7 +750,7 @@ CPU::Function VirtuallyLinked::invalidateMapping(Command &cmd) {
     lpn++;
   } while (lpn < cmd.offset + cmd.length);
 
-  return std::move(fstat);
+  return fstat;
 }
 
 // SPPN

@@ -40,7 +40,7 @@ PageLevel::PageLevel(ObjectData &o, CommandManager *c)
 
   // Fill metadata
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    blockMetadata[i] = std::move(BlockMetadata(i, filparam->page));
+    blockMetadata[i] = BlockMetadata(i, filparam->page);
   }
 
   // Valid page bits (packed) + 2byte clock + 2byte page offset
@@ -94,7 +94,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lpn, PPN &ppn) {
     ppn = InvalidPPN;
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool init) {
@@ -152,7 +152,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lpn, PPN &ppn, bool init) {
   insertMemoryAddress(false, tableBaseAddress + lpn * entrySize, entrySize,
                       !init);
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
@@ -175,7 +175,7 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
         1);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 void PageLevel::initialize(AbstractFTL *f,
@@ -402,7 +402,7 @@ CPU::Function PageLevel::readMapping(Command &cmd) {
                scmd.ppn);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function PageLevel::writeMapping(Command &cmd) {
@@ -460,7 +460,7 @@ CPU::Function PageLevel::writeMapping(Command &cmd) {
                scmd.ppn);
   }
 
-  return std::move(fstat);
+  return fstat;
 }
 
 CPU::Function PageLevel::invalidateMapping(Command &cmd) {
@@ -505,7 +505,7 @@ CPU::Function PageLevel::invalidateMapping(Command &cmd) {
     i++;
   } while (i < cmd.offset + cmd.length);
 
-  return std::move(fstat);
+  return fstat;
 }
 
 void PageLevel::getCopyList(CopyList &copy, Event eid) {

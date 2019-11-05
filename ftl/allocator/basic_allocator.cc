@@ -43,7 +43,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         currentList.erase(iter);
         fullBlockCount--;
 
-        return std::move(fstat);
+        return fstat;
       };
 
       break;
@@ -75,7 +75,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         currentList.erase(minIndex);
         fullBlockCount--;
 
-        return std::move(fstat);
+        return fstat;
       };
 
       break;
@@ -113,7 +113,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
             currentList.erase(minIndex);
             fullBlockCount--;
 
-            return std::move(fstat);
+            return fstat;
           };
 
       break;
@@ -174,7 +174,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         currentList.erase(minIndex);
         fullBlockCount--;
 
-        return std::move(fstat);
+        return fstat;
       };
 
       break;
@@ -264,7 +264,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   freeBlocks[idx].pop_front();
   freeBlockCount--;
 
-  return std::move(fstat);
+  return fstat;
 }
 
 PPN BasicAllocator::getBlockAt(PPN idx) {

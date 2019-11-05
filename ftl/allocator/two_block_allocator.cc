@@ -71,7 +71,7 @@ CPU::Function TwoBlockAllocator::allocateBlockSecond(PPN &blockUsed) {
   freeBlocks[idx].pop_front();
   freeBlockCount--;
 
-  return std::move(fstat);
+  return fstat;
 }
 
 PPN TwoBlockAllocator::getBlockAtSecond(PPN idx) {

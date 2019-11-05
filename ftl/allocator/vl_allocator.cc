@@ -47,7 +47,7 @@ CPU::Function VLAllocator::allocatePartialBlock(LPN lpn, PPN &ppn) {
   // Record LPN
   inUseBlockMapLPN[idx] = lpn;
 
-  return std::move(fstat);
+  return fstat;
 }
 
 // SLPN, SPPN
