@@ -158,8 +158,6 @@ class RankStats {
  private:
   friend Rank;
 
-  Rank *parent;
-
   double actEnergy;
   double preEnergy;
   double readEnergy;

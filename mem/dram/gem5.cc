@@ -824,7 +824,7 @@ void Rank::restoreCheckpoint(std::istream &in) noexcept {
   stats.restoreCheckpoint(in);
 }
 
-RankStats::RankStats(Rank *p) : parent(p) {}
+RankStats::RankStats(Rank *) {}
 
 void RankStats::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
