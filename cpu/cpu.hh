@@ -66,15 +66,7 @@ class Function {
 
   inline uint64_t sum();
   inline void clear();
-  inline void dummy();
 };
-
-/**
- * \brief Create function object
- *
- * This will become marker for LLVM pass
- */
-Function initFunction();
 
 /**
  * \brief CPU object declaration

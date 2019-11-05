@@ -56,19 +56,6 @@ void Function::clear() {
   cycles = 0;
 }
 
-void Function::dummy() {
-  cycles = 1;
-}
-
-Function initFunction() {
-  // Make dummy function
-  auto fstat = Function();
-
-  fstat.dummy();
-
-  return std::move(fstat);
-}
-
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
 
