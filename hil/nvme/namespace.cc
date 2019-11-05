@@ -33,8 +33,8 @@ HealthInfo::HealthInfo() {
   memset(data, 0, 0x200);
 }
 
-Namespace::Namespace(ObjectData &o, Subsystem *s)
-    : Object(o), subsystem(s), inited(false), disk(nullptr) {}
+Namespace::Namespace(ObjectData &o, Subsystem * /* s */)
+    : Object(o) /* , subsystem(s) */, inited(false), disk(nullptr) {}
 
 Namespace::~Namespace() {
   delete disk;
@@ -240,7 +240,7 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, val1);
   RESTORE_SCALAR(in, val2);
 
-  info.namespaceRange = std::move(LPNRange(val1, val2));
+  info.namespaceRange = LPNRange(val1, val2);
 
   RESTORE_BLOB(in, health.data, 0x200);
 

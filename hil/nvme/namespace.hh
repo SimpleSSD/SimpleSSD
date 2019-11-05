@@ -73,7 +73,7 @@ union HealthInfo {
 
 class Namespace : public Object {
  private:
-  Subsystem *subsystem;
+  // Subsystem *subsystem;
   NamespaceInformation info;
   HealthInfo health;
 
