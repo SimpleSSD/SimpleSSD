@@ -219,6 +219,10 @@ SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
 # All sources
 set(SRCS
+  ${SRC_CPU}
+  ${SRC_MEM}
+  ${SRC_SIM}
+  ${SRC_UTIL}
   ${SRC_HIL}
   ${SRC_HIL_COMMON}
   ${SRC_HIL_NVME}
@@ -232,13 +236,6 @@ set(SRCS
   ${SRC_FIL_NVM_PAL}
   ${SRC_FIL_SCHEDULER}
 )
-set(SRC_EXCLUDE
-  ${SRC_CPU}
-  ${SRC_MEM}
-  ${SRC_SIM}
-  ${SRC_UTIL}
-  ${OUTPUT_VERSION_FILE}
-)
 
 # Must be built from object files
 if (INST_STAT)
@@ -247,15 +244,16 @@ if (INST_STAT)
   string(REGEX REPLACE "([^;]+)" "${BUILD_DIRECTORY}/\\1.o" OBJS "${SRCS}")
 
   # Define target
-  add_library(simplessd STATIC ${SRC_EXCLUDE})
+  add_library(simplessd-objects OBJECT IMPORTED)
+  set_target_properties(simplessd-objects PROPERTIES IMPORTED_LOCATION "${OBJS}")
 
   # We need to build LLVM pass
   add_subdirectory(${PROJECT_SOURCE_DIR}/lib/llvm-simplessd)
 
   # Instruction architecture
-  set(ARCH_FLAGS "-march=arm")
-  set(CPU_FLAGS "-mcpu=cortex-r7")
-  set(ATTR_FLAGS "-mattr=r7")
+  # set(ARCH_FLAGS "-march=arm")
+  # set(CPU_FLAGS "-mcpu=cortex-r7")
+  # set(ATTR_FLAGS "-mattr=r7")
 
   # Make commands
   set(LLVM_PASS "${CMAKE_BINARY_DIR}/libllvm-simplessd.so")
@@ -289,14 +287,16 @@ if (INST_STAT)
     DEPENDS ${OBJS}
   )
 
+  add_library(simplessd STATIC
+    ${OUTPUT_VERSION_FILE}
+    $<TARGET_OBJECTS:simplessd-objects>
+  )
+
   # Make dependency
   add_dependencies(inststat llvm-simplessd)
   add_dependencies(simplessd inststat)
-
-  # Link
-  target_link_libraries(simplessd ${OBJS})
 else ()
-  add_library(simplessd STATIC ${SRC_EXCLUDE} ${SRCS})
+  add_library(simplessd STATIC ${SRCS} ${OUTPUT_VERSION_FILE})
 endif ()
 
 # Force version checking in every build
