@@ -57,10 +57,12 @@ void Function::clear() {
 }
 
 #ifdef __clang__
-[[clang::optnone]] void markFunction(Function &fstat) {}
-#else
-void markFunction(Function &) {}
+// Actually, all C++17 compiler can understand (and ignore correctly).
+// But with -Werror flag, this will generate error (not warning).
+[[clang::optnone]]
 #endif
+void markFunction(Function &) {
+}
 
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
