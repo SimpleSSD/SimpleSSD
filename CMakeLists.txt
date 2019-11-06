@@ -90,18 +90,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Specify source files
-set(SRC_CONFIG
-  cpu/config.cc
-  mem/config.cc
-  hil/config.cc
-  icl/config.cc
-  ftl/config.cc
-  fil/config.cc
-)
 set(SRC_CPU
+  cpu/config.cc
   cpu/cpu.cc
 )
 set(SRC_MEM
+  mem/config.cc
   mem/dram/abstract_dram.cc
   mem/dram/simple.cc
   mem/dram/gem5.cc
@@ -109,6 +103,7 @@ set(SRC_MEM
   mem/sram/sram.cc
 )
 set(SRC_HIL
+  hil/config.cc
   hil/command_manager.cc
   hil/convert.cc
   hil/hil.cc
@@ -149,10 +144,12 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/dataset_management.cc
 )
 set(SRC_ICL
+  icl/config.cc
   icl/icl.cc
   icl/ring_buffer.cc
 )
 set(SRC_FTL
+  ftl/config.cc
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
@@ -170,6 +167,7 @@ set(SRC_FTL_MAPPING
   ftl/mapping/virtually_linked.cc
 )
 set(SRC_FIL
+  fil/config.cc
   fil/fil.cc
 )
 set(SRC_FIL_NVM_PAL
@@ -216,7 +214,7 @@ SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
 SOURCE_GROUP("Source Files\\fil\\scheduler" FILES ${SRC_FIL_SCHEDULER})
-SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM} ${SRC_CONFIG})
+SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
 # All sources
@@ -238,7 +236,6 @@ set(SRC_EXCLUDE
   ${SRC_CPU}
   ${SRC_MEM}
   ${SRC_SIM}
-  ${SRC_CONFIG}
   ${SRC_UTIL}
   ${OUTPUT_VERSION_FILE}
 )
