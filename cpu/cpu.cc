@@ -56,9 +56,11 @@ void Function::clear() {
   cycles = 0;
 }
 
-[[clang::optnone]] void markFunction(Function &fstat) {
-  // Do Nothing
-}
+#ifdef __clang__
+[[clang::optnone]] void markFunction(Function &fstat) {}
+#else
+void markFunction(Function &) {}
+#endif
 
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
