@@ -11,6 +11,7 @@ project(simplessd)
 
 # Add options for debug build
 option(DEBUG_BUILD "Build SimpleSSD in debug mode." OFF)
+option(INST_STAT "Use automatic instruction statistic generation using LLVM." OFF)
 
 # Set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -35,6 +36,12 @@ endif ()
 # Check pugixml is valid
 if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/pugixml/src/pugixml.hpp")
 message(FATAL_ERROR "Failed to find pugixml library. \
+Check you initialized submodules.")
+endif ()
+
+# check llvm-simplessd is valid
+if (INST_STAT AND NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
+message(FATAL_ERROR "Failed to find llvm-simplessd library. \
 Check you initialized submodules.")
 endif ()
 
@@ -210,10 +217,8 @@ SOURCE_GROUP("Source Files\\fil\\scheduler" FILES ${SRC_FIL_SCHEDULER})
 SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
-# Define library
-add_library(simplessd STATIC
-  ${SRC_CPU}
-  ${SRC_MEM}
+# All sources
+set(SRCS
   ${SRC_HIL}
   ${SRC_HIL_COMMON}
   ${SRC_HIL_NVME}
@@ -226,10 +231,70 @@ add_library(simplessd STATIC
   ${SRC_FIL}
   ${SRC_FIL_NVM_PAL}
   ${SRC_FIL_SCHEDULER}
+)
+set(SRC_EXCLUDE
+  ${SRC_CPU}
+  ${SRC_MEM}
   ${SRC_SIM}
   ${SRC_UTIL}
   ${OUTPUT_VERSION_FILE}
 )
+
+# Must be built from object files
+if (INST_STAT)
+  # Make OBJS list
+  set(BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/objects")
+  string(REGEX REPLACE "([^;]+)" "${BUILD_DIRECTORY}/\\1.o" OBJS "${SRCS}")
+
+  # Define target
+  add_library(simplessd STATIC ${SRC_EXCLUDE})
+
+  # We need to build LLVM pass before build SimpleSSD
+  add_subdirectory(${PROJECT_SOURCE_DIR}/lib/llvm-simplessd)
+  add_dependencies(simplessd llvm-simplessd)
+
+  # Instruction architecture
+  set(ARCH_FLAGS "-march=arm")
+  set(CPU_FLAGS "-mcpu=cortex-r7")
+
+  # Make commands
+  set(LLVM_PASS "${PROJECT_BINARY_DIR}/libllvm-simplessd.so")
+
+  list(LENGTH SRCS SRC_LEN)
+  math(EXPR SRC_LEN "${SRC_LEN} - 1")
+
+  foreach (IDX RANGE ${SRC_LEN})
+    list(GET SRCS ${IDX} SRC)
+    list(GET OBJS ${IDX} OBJ)
+
+    get_filename_component(DIR ${OBJ} DIRECTORY)
+
+    add_custom_command(OUTPUT ${OBJ}
+      COMMAND mkdir -p ${DIR}
+      COMMAND clang++ -std=c++17 -g -c -emit-llvm -DEXCLUDE_CPU -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
+      COMMAND opt ${ARCH_FLAGS} ${CPU_FLAGS} --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND llc ${ARCH_FLAGS} ${CPU_FLAGS} -O2 -filetype=asm -o "${OBJ}.S" "${OBJ}.opt.bc"
+      COMMAND touch "${OBJ}.bc.inststat.txt"
+      COMMAND clang++ -std=c++17 -g -c -emit-llvm -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
+      COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND llc -O2 -filetype=obj -o ${OBJ} "${OBJ}.opt.bc"
+      DEPENDS ${SRC}
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+      COMMENT "Instrumenting file ${SRC}"
+    )
+  endforeach ()
+
+  # Make target
+  add_custom_target(inststat ALL
+    DEPENDS ${OBJS}
+  )
+  add_dependencies(simplessd inststat)
+
+  # Link
+  target_link_libraries(simplessd ${OBJS})
+else ()
+  add_library(simplessd STATIC ${SRC_EXCLUDE} ${SRCS})
+endif ()
 
 # Force version checking in every build
 add_dependencies(simplessd ${VERSION_TARGET})
