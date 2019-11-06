@@ -299,6 +299,8 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
 
 void Subsystem::dispatch() {
   CPU::Function fstat;
+  CPU::markFunction(fstat);
+
   Event nextEvent = eventDispatch;
   bool one = false;
 

@@ -33,6 +33,8 @@ void TwoBlockAllocator::initialize(Parameter *p) {
 
 CPU::Function TwoBlockAllocator::allocateBlockSecond(PPN &blockUsed) {
   CPU::Function fstat;
+  CPU::markFunction(fstat);
+
   PPN idx = lastAllocatedSecond;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
