@@ -256,6 +256,7 @@ if (INST_STAT)
   # Instruction architecture
   set(ARCH_FLAGS "-march=arm")
   set(CPU_FLAGS "-mcpu=cortex-r7")
+  set(ATTR_FLAGS "-mattr=r7")
 
   # Make commands
   set(LLVM_PASS "${PROJECT_BINARY_DIR}/libllvm-simplessd.so")
@@ -272,8 +273,8 @@ if (INST_STAT)
     add_custom_command(OUTPUT ${OBJ}
       COMMAND mkdir -p ${DIR}
       COMMAND clang++ -std=c++17 -g -c -emit-llvm -DEXCLUDE_CPU -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
-      COMMAND opt ${ARCH_FLAGS} ${CPU_FLAGS} --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
-      COMMAND llc ${ARCH_FLAGS} ${CPU_FLAGS} -O2 -filetype=asm -o "${OBJ}.S" "${OBJ}.opt.bc"
+      COMMAND opt ${ARCH_FLAGS} ${CPU_FLAGS} ${ATTR_FLAGS} --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND llc ${ARCH_FLAGS} ${CPU_FLAGS} ${ATTR_FLAGS} -O2 -filetype=asm -o "${OBJ}.S" "${OBJ}.opt.bc"
       COMMAND touch "${OBJ}.bc.inststat.txt"
       COMMAND clang++ -std=c++17 -g -c -emit-llvm -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
