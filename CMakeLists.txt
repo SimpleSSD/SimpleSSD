@@ -252,9 +252,8 @@ if (INST_STAT)
   # Define target
   add_library(simplessd STATIC ${SRC_EXCLUDE})
 
-  # We need to build LLVM pass before build SimpleSSD
+  # We need to build LLVM pass
   add_subdirectory(${PROJECT_SOURCE_DIR}/lib/llvm-simplessd)
-  add_dependencies(simplessd llvm-simplessd)
 
   # Instruction architecture
   set(ARCH_FLAGS "-march=arm")
@@ -262,7 +261,7 @@ if (INST_STAT)
   set(ATTR_FLAGS "-mattr=r7")
 
   # Make commands
-  set(LLVM_PASS "${PROJECT_BINARY_DIR}/libllvm-simplessd.so")
+  set(LLVM_PASS "${CMAKE_BINARY_DIR}/libllvm-simplessd.so")
 
   list(LENGTH SRCS SRC_LEN)
   math(EXPR SRC_LEN "${SRC_LEN} - 1")
@@ -292,6 +291,9 @@ if (INST_STAT)
   add_custom_target(inststat ALL
     DEPENDS ${OBJS}
   )
+
+  # Make dependency
+  add_dependencies(inststat llvm-simplessd)
   add_dependencies(simplessd inststat)
 
   # Link
