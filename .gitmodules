@@ -4,3 +4,6 @@
 [submodule "lib/mcpat"]
 	path = lib/mcpat
 	url = git@camel.kaist.ac.kr:simplessd/mcpat
+[submodule "lib/llvm-simplessd"]
+	path = lib/llvm-simplessd
+	url = git@camel.kaist.ac.kr:simplessd/llvm-simplessd
