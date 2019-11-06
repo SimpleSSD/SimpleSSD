@@ -56,8 +56,7 @@ void Function::clear() {
   cycles = 0;
 }
 
-[[clang::optnone]]
-void markFunction(Function &fstat) {
+[[clang::optnone]] void markFunction(Function &fstat) {
   // Do Nothing
 }
 
