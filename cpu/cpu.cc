@@ -56,6 +56,11 @@ void Function::clear() {
   cycles = 0;
 }
 
+[[clang::optnone]]
+void markFunction(Function &fstat) {
+  // Do Nothing
+}
+
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
 

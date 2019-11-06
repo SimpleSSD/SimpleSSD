@@ -69,6 +69,22 @@ class Function {
 };
 
 /**
+ * \brief Marker function for LLVM Pass
+ *
+ * This function should be used at the very beginning of function -- entry basic
+ * block -- to mark as 'basicblock-based firmware execution latency generation'.
+ *
+ * Your function should start with following code:
+ * \code{.cc}
+ * CPU::Function fstat;
+ * CPU::markFunction(fstat);
+ * \endcode
+ *
+ * This function will be removed after LLVM Pass.
+ */
+void markFunction(Function &);
+
+/**
  * \brief CPU object declaration
  *
  * This object manages event scheduling and firmware execution latency.
