@@ -11,7 +11,7 @@ project(simplessd)
 
 # Add options for debug build
 option(DEBUG_BUILD "Build SimpleSSD in debug mode." OFF)
-option(INST_STAT "Use automatic instruction statistic generation using LLVM." OFF)
+option(FW_LATENCY "Use automatic firmware latency generation using LLVM." OFF)
 
 # Set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -36,12 +36,6 @@ endif ()
 # Check pugixml is valid
 if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/pugixml/src/pugixml.hpp")
 message(FATAL_ERROR "Failed to find pugixml library. \
-Check you initialized submodules.")
-endif ()
-
-# check llvm-simplessd is valid
-if (INST_STAT AND NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
-message(FATAL_ERROR "Failed to find llvm-simplessd library. \
 Check you initialized submodules.")
 endif ()
 
@@ -245,7 +239,13 @@ set(SRCS_EXCLUDE
   ${OUTPUT_VERSION_FILE}
 )
 
-if (INST_STAT)
+if (FW_LATENCY)
+  # Check llvm-simplessd is valid
+  if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
+    message(FATAL_ERROR "Failed to find llvm-simplessd library. \
+    Check you initialized submodules.")
+  endif ()
+
   # Make OBJS list
   set(BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/objects")
   string(REGEX REPLACE "([^;]+)" "${BUILD_DIRECTORY}/\\1.o" OBJS "${SRCS}")
@@ -289,19 +289,20 @@ if (INST_STAT)
     )
   endforeach ()
 
-  # Make target
-  add_custom_target(inststat ALL
+  # CMake should run custom commands to create simplessd-objects
+  add_custom_target(build-objects ALL
     DEPENDS ${OBJS}
   )
 
+  # Make target
   add_library(simplessd STATIC
     ${SRCS_EXCLUDE}
     $<TARGET_OBJECTS:simplessd-objects>
   )
 
   # Make dependency
-  add_dependencies(inststat llvm-simplessd)
-  add_dependencies(simplessd inststat)
+  add_dependencies(build-objects llvm-simplessd)
+  add_dependencies(simplessd build-objects)
 else ()
   add_library(simplessd STATIC ${SRCS} ${SRCS_EXCLUDE})
 endif ()
