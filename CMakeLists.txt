@@ -64,6 +64,10 @@ include(${PROJECT_SOURCE_DIR}/util/scripts/simplessd_version.cmake)
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_compile_options(/wd4819)  # Surpress unicode warning
+
+  if (FW_LATENCY)
+    message(WARNING "Automatic firmware latency generation is not tested on Windows")
+  endif ()
 else ()
   add_compile_options(-g)
   add_compile_options(-Wall)
