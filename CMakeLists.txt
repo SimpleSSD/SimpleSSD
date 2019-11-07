@@ -90,12 +90,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Specify source files
-set(SRC_CPU
+set(SRC_CONFIG
   cpu/config.cc
+  mem/config.cc
+  hil/config.cc
+  icl/config.cc
+  ftl/config.cc
+  fil/config.cc
+)
+set(SRC_CPU
   cpu/cpu.cc
 )
 set(SRC_MEM
-  mem/config.cc
   mem/dram/abstract_dram.cc
   mem/dram/simple.cc
   mem/dram/gem5.cc
@@ -103,7 +109,6 @@ set(SRC_MEM
   mem/sram/sram.cc
 )
 set(SRC_HIL
-  hil/config.cc
   hil/command_manager.cc
   hil/convert.cc
   hil/hil.cc
@@ -144,12 +149,10 @@ set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/dataset_management.cc
 )
 set(SRC_ICL
-  icl/config.cc
   icl/icl.cc
   icl/ring_buffer.cc
 )
 set(SRC_FTL
-  ftl/config.cc
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
@@ -167,7 +170,6 @@ set(SRC_FTL_MAPPING
   ftl/mapping/virtually_linked.cc
 )
 set(SRC_FIL
-  fil/config.cc
   fil/fil.cc
 )
 set(SRC_FIL_NVM_PAL
@@ -214,15 +216,11 @@ SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
 SOURCE_GROUP("Source Files\\fil\\scheduler" FILES ${SRC_FIL_SCHEDULER})
-SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM})
+SOURCE_GROUP("Source Files\\sim" FILES ${SRC_SIM} ${SRC_CONFIG})
 SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 
-# All sources
+# All sources with instruction statistics
 set(SRCS
-  ${SRC_CPU}
-  ${SRC_MEM}
-  ${SRC_SIM}
-  ${SRC_UTIL}
   ${SRC_HIL}
   ${SRC_HIL_COMMON}
   ${SRC_HIL_NVME}
@@ -237,7 +235,16 @@ set(SRCS
   ${SRC_FIL_SCHEDULER}
 )
 
-# Must be built from object files
+# All sources without instruction statistics
+set(SRCS_EXCLUDE
+  ${SRC_CPU}
+  ${SRC_MEM}
+  ${SRC_SIM}
+  ${SRC_UTIL}
+  ${SRC_CONFIG}
+  ${OUTPUT_VERSION_FILE}
+)
+
 if (INST_STAT)
   # Make OBJS list
   set(BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/objects")
@@ -245,7 +252,7 @@ if (INST_STAT)
 
   # Define target
   add_library(simplessd-objects OBJECT IMPORTED)
-  set_target_properties(simplessd-objects PROPERTIES IMPORTED_LOCATION "${OBJS}")
+  set_target_properties(simplessd-objects PROPERTIES IMPORTED_OBJECTS "${OBJS}")
 
   # We need to build LLVM pass
   add_subdirectory(${PROJECT_SOURCE_DIR}/lib/llvm-simplessd)
@@ -288,7 +295,7 @@ if (INST_STAT)
   )
 
   add_library(simplessd STATIC
-    ${OUTPUT_VERSION_FILE}
+    ${SRCS_EXCLUDE}
     $<TARGET_OBJECTS:simplessd-objects>
   )
 
@@ -296,7 +303,7 @@ if (INST_STAT)
   add_dependencies(inststat llvm-simplessd)
   add_dependencies(simplessd inststat)
 else ()
-  add_library(simplessd STATIC ${SRCS} ${OUTPUT_VERSION_FILE})
+  add_library(simplessd STATIC ${SRCS} ${SRCS_EXCLUDE})
 endif ()
 
 # Force version checking in every build
