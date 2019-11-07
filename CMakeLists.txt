@@ -11,15 +11,21 @@ project(simplessd)
 
 # Add options for debug build
 option(DEBUG_BUILD "Build SimpleSSD in debug mode." OFF)
+
+# Set cache entry for external library include path
+set(DRAMPOWER_SOURCE_DIR "." CACHE PATH "Source directory to DRAMPower library")
+
+# Add options for firmware latency generation
 option(FW_LATENCY "Use automatic firmware latency generation using LLVM." OFF)
+
+set(FW_CROSS_COMPILE "" CACHE STRING "Set cross-compiler prefix. E.g.: -DFW_CROSS_COMPILE=arm-none-eabi-")
+set(FW_TARGET "" CACHE STRING "Set compile target (clang++ --target=<FW_TARGET>). E.g.: arm-eabi")
+set(FW_CPU "" CACHE STRING "Set CPU to use (clang++ -mcpu=<FW_CPU>). E.g.: cortex-r52")
 
 # Set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-# Set cache entry for external library include path
-set(DRAMPOWER_SOURCE_DIR "." CACHE PATH "Source directory to DRAMPower library")
 
 # Check DRAMPOWER_SOURCE_DIR is valid
 if (NOT EXISTS "${DRAMPOWER_SOURCE_DIR}/libdrampower/LibDRAMPower.h")
@@ -250,6 +256,47 @@ if (FW_LATENCY)
     Check you initialized submodules.")
   endif ()
 
+  # Detects CROSS_COMPILE
+  if (NOT "${FW_CROSS_COMPILE}" STREQUAL "")
+    message("-- Detecting include path from ${FW_CROSS_COMPILE}g++")
+
+    # Get include paths
+    execute_process(COMMAND sh -c "${FW_CROSS_COMPILE}g++ -E -Wp,-v -x c++ - < /dev/null"
+      RESULT_VARIABLE FW_CROSS_RESULT
+      ERROR_VARIABLE FW_CROSS_OUTPUT
+      OUTPUT_QUIET
+    )
+
+    if (NOT ${FW_CROSS_RESULT} EQUAL 0)
+      message(FATAL_ERROR "Command failed with error code: ${FW_CROSS_RESULT}")
+    endif ()
+
+    # Parse
+    string(REPLACE "\n" ";" FW_CROSS_OUTPUT ${FW_CROSS_OUTPUT})
+
+    set(GOOD 0)
+    set(FW_INCLUDE "")
+
+    foreach (LINE IN ITEMS ${FW_CROSS_OUTPUT})
+      if ("${LINE}" STREQUAL "End of search list.")
+        set(GOOD 0)
+      endif ()
+
+      if (${GOOD} EQUAL 1)
+        string(STRIP "${LINE}" LINE)
+        list(APPEND FW_INCLUDE "-I${LINE}")
+      endif ()
+
+      if ("${LINE}" STREQUAL "#include <...> search starts here:")
+        set(GOOD 1)
+      endif ()
+    endforeach ()
+
+    if ("${FW_TARGET}" STREQUAL "")
+      message(FATAL_ERROR "You need to specify FW_TARGET if you use FW_CROSS_COMPILE")
+    endif ()
+  endif ()
+
   # Make OBJS list
   set(BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/objects")
   string(REGEX REPLACE "([^;]+)" "${BUILD_DIRECTORY}/\\1.o" OBJS "${SRCS}")
@@ -261,16 +308,35 @@ if (FW_LATENCY)
   # We need to build LLVM pass
   add_subdirectory(${PROJECT_SOURCE_DIR}/lib/llvm-simplessd)
 
-  # Instruction architecture
-  # set(ARCH_FLAGS "-march=arm")
-  # set(CPU_FLAGS "-mcpu=cortex-r7")
-  # set(ATTR_FLAGS "-mattr=r7")
-
   # Make commands
   set(LLVM_PASS "${CMAKE_BINARY_DIR}/libllvm-simplessd.so")
+  set(STAT_COLLECTOR "${CMAKE_BINARY_DIR}/inststat-generator")
 
   list(LENGTH SRCS SRC_LEN)
   math(EXPR SRC_LEN "${SRC_LEN} - 1")
+
+  # Generate clang++ arguments
+  set(FW_CLANG_ARGS
+    "-std=c++17"
+    "-g"
+    "-c"
+    "-emit-llvm"
+    "-DEXCLUDE_CPU"
+    "-I${PROJECT_SOURCE_DIR}"
+    "-I${DRAMPOWER_SOURCE_DIR}"
+  )
+
+  if (NOT "${FW_TARGET}" STREQUAL "")
+    string(FIND ${FW_TARGET} "-" FW_TARGET_POS)
+    string(SUBSTRING ${FW_TARGET} 0 ${FW_TARGET_POS} FW_ARCH)
+
+    list(APPEND FW_CLANG_ARGS "--target=${FW_TARGET}")
+    list(APPEND FW_CLANG_ARGS "-m${FW_ARCH}")
+  endif ()
+
+  if (NOT "${FW_CPU}" STREQUAL "")
+    list(APPEND FW_CLANG_ARGS "-mcpu=${FW_CPU}")
+  endif ()
 
   foreach (IDX RANGE ${SRC_LEN})
     list(GET SRCS ${IDX} SRC)
@@ -280,10 +346,10 @@ if (FW_LATENCY)
 
     add_custom_command(OUTPUT ${OBJ}
       COMMAND mkdir -p ${DIR}
-      COMMAND clang++ -std=c++17 -g -c -emit-llvm -DEXCLUDE_CPU -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
-      COMMAND opt ${ARCH_FLAGS} ${CPU_FLAGS} ${ATTR_FLAGS} --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
-      COMMAND llc ${ARCH_FLAGS} ${CPU_FLAGS} ${ATTR_FLAGS} -O2 -filetype=asm -o "${OBJ}.S" "${OBJ}.opt.bc"
-      COMMAND touch "${OBJ}.bc.inststat.txt"
+      COMMAND clang++ ${FW_CLANG_ARGS} ${FW_INCLUDE} -o "${OBJ}.bc" ${SRC}
+      COMMAND opt --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND llc -O2 -filetype=asm -o "${OBJ}.bc.S" "${OBJ}.opt.bc"
+      COMMAND ${STAT_COLLECTOR} "${OBJ}.bc" ${FW_CPU}
       COMMAND clang++ -std=c++17 -g -c -emit-llvm -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
       COMMAND llc -O2 -filetype=obj -o ${OBJ} "${OBJ}.opt.bc"
