@@ -295,6 +295,10 @@ if (FW_LATENCY)
     if ("${FW_TARGET}" STREQUAL "")
       message(FATAL_ERROR "You need to specify FW_TARGET if you use FW_CROSS_COMPILE")
     endif ()
+
+    if ("${FW_CPU}" STREQUAL "")
+      message(FATAL_ERROR "You need to specify FW_CPU if you use FW_CROSS_COMPILE")
+    endif ()
   endif ()
 
   # Make OBJS list
