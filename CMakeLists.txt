@@ -335,7 +335,8 @@ if (FW_LATENCY)
   endif ()
 
   if (NOT "${FW_CPU}" STREQUAL "")
-    list(APPEND FW_CLANG_ARGS "-mcpu=${FW_CPU}")
+    set(FW_CPU_ARG "-mcpu=${FW_CPU}")
+    list(APPEND FW_CLANG_ARGS "${FW_CPU_ARG}")
   endif ()
 
   foreach (IDX RANGE ${SRC_LEN})
@@ -348,7 +349,7 @@ if (FW_LATENCY)
       COMMAND mkdir -p ${DIR}
       COMMAND clang++ ${FW_CLANG_ARGS} ${FW_INCLUDE} -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
-      COMMAND llc -O2 -filetype=asm -o "${OBJ}.bc.S" "${OBJ}.opt.bc"
+      COMMAND llc ${FW_CPU_ARG} -O2 -filetype=asm -o "${OBJ}.bc.S" "${OBJ}.opt.bc"
       COMMAND ${STAT_COLLECTOR} "${OBJ}.bc" ${FW_CPU}
       COMMAND clang++ -std=c++17 -g -c -emit-llvm -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
