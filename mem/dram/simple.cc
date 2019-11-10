@@ -61,11 +61,15 @@ void SimpleDRAM::postDone(Request *req) {
   delete req;
 }
 
-uint64_t SimpleDRAM::allocate(uint64_t size, std::string &&name) {
+uint64_t SimpleDRAM::allocate(uint64_t size, std::string &&name, bool dry) {
   uint64_t ret = 0;
 
   for (auto &iter : addressMap) {
     unallocated -= iter.size;
+  }
+
+  if (dry) {
+    return unallocated < size ? std::numeric_limits<uint64_t>::max() : 0;
   }
 
   panic_if(unallocated < size,

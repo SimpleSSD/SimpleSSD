@@ -2065,12 +2065,16 @@ void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
   }
 }
 
-uint64_t TimingDRAM::allocate(uint64_t size, std::string &&name) {
+uint64_t TimingDRAM::allocate(uint64_t size, std::string &&name, bool dry) {
   uint64_t ret = 0;
   uint64_t unallocated = capacity;
 
   for (auto &iter : addressMap) {
     unallocated -= iter.size;
+  }
+
+  if (dry) {
+    return unallocated < size ? std::numeric_limits<uint64_t>::max() : 0;
   }
 
   panic_if(unallocated < size,

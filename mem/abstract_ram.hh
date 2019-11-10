@@ -62,12 +62,16 @@ class AbstractRAM : public Object {
    *
    * Allocate a portion of memory address range. If no space available, it
    * panic. (You need to configure larger RAM for firmware.)
+   * To check memory is available, set dry as true and check address is not
+   * std::numeric_limits<uint64_t>::max().
    *
    * \param[in] size  Requested memory size
    * \param[in] name  Description of memory range
+   * \param[in] dry   Dry-run (to check memory is allocatable)
    * \return address  Beginning address of allocated range
    */
-  virtual uint64_t allocate(uint64_t size, std::string &&name) = 0;
+  virtual uint64_t allocate(uint64_t size, std::string &&name,
+                            bool dry = false) = 0;
 
   void createCheckpoint(std::ostream &out) const noexcept override {
     uint64_t size = addressMap.size();
