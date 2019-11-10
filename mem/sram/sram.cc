@@ -47,7 +47,7 @@ uint64_t SRAM::allocate(uint64_t size, std::string &&name, bool dry) {
   }
 
   if (dry) {
-    return unallocated < size ? std::numeric_limits<uint64_t>::max() : 0;
+    return unallocated < size ? unallocated : 0;
   }
 
   panic_if(unallocated < size,

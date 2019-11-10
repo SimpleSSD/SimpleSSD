@@ -62,8 +62,7 @@ class AbstractRAM : public Object {
    *
    * Allocate a portion of memory address range. If no space available, it
    * panic. (You need to configure larger RAM for firmware.)
-   * To check memory is available, set dry as true and check address is not
-   * std::numeric_limits<uint64_t>::max().
+   * To check memory is available, set dry as true and check address is zero.
    *
    * \param[in] size  Requested memory size
    * \param[in] name  Description of memory range
