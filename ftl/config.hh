@@ -10,6 +10,8 @@
 #ifndef __SIMPLESSD_FTL_CONFIG_HH__
 #define __SIMPLESSD_FTL_CONFIG_HH__
 
+#include <vector>
+
 #include "fil/def.hh"
 #include "sim/base_config.hh"
 
@@ -43,6 +45,7 @@ class Config : public BaseConfig {
 
   enum class MappingType : uint8_t {
     PageLevelFTL,
+    PageLevelWithDemandPaging,
     BlockLevelFTL,
     VLFTL,
   };
@@ -58,6 +61,11 @@ class Config : public BaseConfig {
     Random,
     CostBenefit,
     DChoice,
+  };
+
+  struct PageTableStructure {
+    uint32_t levels;
+    std::vector<LPN> masks;
   };
 
  private:
@@ -77,6 +85,8 @@ class Config : public BaseConfig {
   float pmTableRatio;
   float mergeThreshold;
 
+  PageTableStructure pageTable;
+
   std::string superpage;
 
  public:
@@ -94,6 +104,8 @@ class Config : public BaseConfig {
   bool writeUint(uint32_t, uint64_t) override;
   bool writeFloat(uint32_t, float) override;
   bool writeBoolean(uint32_t, bool) override;
+
+  PageTableStructure *getPageTable();
 };
 
 }  // namespace SimpleSSD::FTL

@@ -22,6 +22,8 @@ const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_ALLOW_PAGE_LEVEL_READ[] = "AllowPageGranularityRead";
 const char NAME_PARTIAL_MAPPING_TABLE_RATIO[] = "VLTableRatio";
 const char NAME_MERGE_THRESHOLD[] = "MergeThreshold";
+const char NAME_LEVEL[] = "Levels";
+const char NAME_BITS[] = "Bits";
 
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
@@ -39,6 +41,7 @@ Config::Config() {
   superpageAllocation = FIL::PageAllocation::None;
   pmTableRatio = 0.3f;
   mergeThreshold = 0.8f;
+  pageTable.levels = 0;
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -74,6 +77,28 @@ void Config::loadFrom(pugi::xml_node &section) {
                                 fillingMode);
             LOAD_NAME_FLOAT(node3, NAME_FILL_RATIO, fillRatio);
             LOAD_NAME_FLOAT(node3, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
+          }
+        }
+      }
+    }
+    else if (strcmp(name, "pagetable") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        auto name2 = node2.attribute("name").value();
+
+        LOAD_NAME_UINT_TYPE(node2, NAME_LEVEL, uint32_t, pageTable.levels);
+
+        if (strcmp(name2, NAME_BITS) == 0 && isKey(node2)) {
+          auto slevel = node2.attribute("level").value();
+
+          if (strlen(slevel) > 0) {
+            auto level = strtoul(slevel, nullptr, 10);
+
+            if (level >= pageTable.masks.size()) {
+              pageTable.masks.resize(level);
+            }
+
+            pageTable.masks.at(level) = (uint64_t)node2.text().as_ullong();
           }
         }
       }
@@ -123,13 +148,24 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
   STORE_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
 
+  STORE_SECTION(node, "pagetable", node2);
+  STORE_NAME_UINT(node2, NAME_LEVEL, pageTable.levels);
+
+  for (uint32_t i = 0; i < pageTable.levels - 1; i++) {
+    auto child = node2.append_child(CONFIG_KEY_NAME);
+    auto level = popcount64(pageTable.masks.at(i));
+
+    child.append_attribute("name").set_name(NAME_BITS);
+    child.append_attribute("level").set_value(level);
+  }
+
   STORE_SECTION(section, "vlftl", node);
   STORE_NAME_FLOAT(node, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
   STORE_NAME_FLOAT(node, NAME_MERGE_THRESHOLD, mergeThreshold);
 }
 
 void Config::update() {
-  panic_if((uint8_t)mappingMode > 2, "Invalid MappingMode.");
+  panic_if((uint8_t)mappingMode > 3, "Invalid MappingMode.");
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
 
@@ -138,6 +174,30 @@ void Config::update() {
            "Invalid InvalidPageRatio.");
 
   panic_if(mergeThreshold >= 1.f, "Invalid VLFTL merge threshold");
+
+  panic_if(pageTable.levels < 2, "Page table needs more than 1 level.");
+  panic_if(pageTable.masks.size() < pageTable.levels - 1,
+           "Not all levels configured.");
+
+  if (pageTable.masks.size() < pageTable.levels) {
+    pageTable.masks.resize(pageTable.levels);
+  }
+
+  uint64_t shift = 0;
+
+  for (uint32_t i = 0; i < pageTable.levels - 1; i++) {
+    panic_if(pageTable.masks.at(i) == 0, "Invalid number of bits.");
+
+    // Convert to mask
+    uint64_t mask = ((1 << pageTable.masks.at(i)) - 1) << shift;
+
+    shift += pageTable.masks.at(i);
+
+    pageTable.masks.at(i) = mask;
+  }
+
+  pageTable.masks.at(pageTable.levels - 1) =
+      std::numeric_limits<uint64_t>::max() << shift;
 
   if (superpage.length() > 0) {
     superpageAllocation = 0;

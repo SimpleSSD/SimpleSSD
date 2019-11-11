@@ -444,8 +444,9 @@
 
       Possible values:
         0: Page-level Mapping (Supports superpage)
-        1: Block-level Mapping
-        2: Virtually-Linked FTL
+        1: Page-level Mapping (N-level page table with demand paging)
+        2: Block-level Mapping
+        3: Virtually-Linked FTL
      -->
     <config name="MappingMode">0</config>
     <!-- Garbage Collection configuration -->
@@ -563,6 +564,28 @@
          -->
         <config name="InvalidFillRatio">0.0</config>
       </section>
+    </section>
+    <!-- Multi-level translation table config -->
+    <section name="pagetable">
+      <!--
+        <int> Total levels in page table
+
+        Specify number of level (directory) in address. Value should be greater
+        than 1.
+
+        MSB ......................... LSB
+        [ZERO][Level 2][Level 1][Level 0]
+
+        # bits of most significant level will be automatically calculated from
+        current logical page address (Ignored when specified).
+
+        * Only for FTLs supporting demand paging
+        Minimum replacement unit of demand paging is lowest (0) level.
+        (2^[bit of level 0] * [PPN size])
+      -->
+      <config name="Levels">3</config>
+      <config name="Bits" level="0">9</config>
+      <config name="Bits" level="1">9</config>
     </section>
     <!-- VLFTL configuration -->
     <section name="vlftl">
