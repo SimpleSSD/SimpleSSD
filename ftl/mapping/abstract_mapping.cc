@@ -69,9 +69,9 @@ AbstractMapping::AbstractMapping(ObjectData &o, CommandManager *c)
   param.superpageLevel = (uint8_t)popcount8(mask);
 
   // Print mapping Information
-  debugprint(Log::DebugID::FTL, "Total physical pages %u",
+  debugprint(Log::DebugID::FTL, "Total physical pages %" PRIu64,
              param.totalPhysicalPages);
-  debugprint(Log::DebugID::FTL, "Total logical pages %u",
+  debugprint(Log::DebugID::FTL, "Total logical pages %" PRIu64,
              param.totalLogicalPages);
   debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
 
