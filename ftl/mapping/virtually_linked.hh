@@ -138,7 +138,7 @@ class VirtuallyLinked : public AbstractMapping {
       ret = 6;
 
       readEntry = [this, mask](LPN lpn) {
-        return ((PPN)(*(uint64_t *)(table + (lpn * 6)))) | mask;
+        return ((PPN)(*(uint64_t *)(table + (lpn * 6)))) & mask;
       };
       writeEntry = [this](LPN lpn, PPN ppn) {
         memcpy(table + lpn * 6, &ppn, 6);
