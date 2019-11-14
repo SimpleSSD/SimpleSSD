@@ -363,7 +363,7 @@ void Config::loadFrom(pugi::xml_node &section) {
           loadDRAMPower(node2);
         }
         else if (strcmp(name2, "gem5") == 0 && isSection(node2)) {
-          loadDRAMTiming(node2);
+          loadTimingDRAM(node2);
         }
 
         LOAD_NAME_UINT_TYPE(node2, NAME_MODEL, Model, dramModel);
