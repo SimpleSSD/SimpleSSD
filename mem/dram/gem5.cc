@@ -1148,8 +1148,8 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   }
 
   if (gem5Config->startWriteThreshold >= gem5Config->forceWriteThreshold)
-    panic("Write buffer low threshold %d must be smaller than the  high "
-          "threshold %d",
+    panic("Write buffer low threshold %.2f must be smaller than the high "
+          "threshold %.2f",
           gem5Config->startWriteThreshold, gem5Config->forceWriteThreshold);
 
   capacity =
