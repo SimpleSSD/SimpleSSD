@@ -1134,6 +1134,12 @@ TimingDRAM::TimingDRAM(ObjectData &o)
       createEvent([this](uint64_t, uint64_t) { processRespondEvent(); },
                   "Memory::DRAM::TimingDRAM::respondEvent");
 
+  warn_if(pStructure->channel > 1,
+          "Timing DRAM model of gem5 assumes only one channel.");
+
+  pStructure->rank *= pStructure->channel;
+  pStructure->channel = 1;
+
   panic_if(popcount32(pStructure->rank) != 1,
            "DRAM rank count of %d is not allowed, must be a power of two",
            pStructure->rank);
