@@ -85,9 +85,19 @@ class AbstractRAM : public Object {
       return unallocated < size ? unallocated : 0;
     }
 
-    panic_if(unallocated < size,
-             "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
-             size, unallocated);
+    if (unallocated < size) {
+      // Print current memory map
+      uint64_t i = 0;
+
+      for (auto &iter : addressMap) {
+        warn_log("%" PRIu64 ": %" PRIx64 "h + %" PRIx64 "h: %s", i, iter.base,
+                 iter.size, iter.name.c_str());
+      }
+
+      // Panic
+      panic("%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
+            size, unallocated);
+    }
 
     if (addressMap.size() > 0) {
       ret = addressMap.back().base + addressMap.back().size;
