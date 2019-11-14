@@ -1144,6 +1144,10 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   eventRequestDone =
       createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
                   "Memory::DRAM::TimingDRAM::eventRequestDone");
+  eventRetryRead = createEvent([this](uint64_t, uint64_t) { retryRead(); },
+                               "Memory::DRAM::TimingDRAM::eventRetryRead");
+  eventRetryWrite = createEvent([this](uint64_t, uint64_t) { retryWrite(); },
+                                "Memory::DRAM::TimingDRAM::eventRetryWrite");
 
   warn_if(pStructure->channel > 1,
           "Timing DRAM model of gem5 assumes only one channel.");
@@ -2019,42 +2023,50 @@ void TimingDRAM::logResponse(BusState dir, uint64_t entries) {
 }
 
 void TimingDRAM::retryRead() {
-  while (readPendingQueue.size() > 0) {
-    auto &req = readPendingQueue.front();
+  if (readPendingQueue.size() == 0) {
+    return;
+  }
 
-    auto ret = receive(req.addr, CACHELINE, true, eventRequestDone, req.id);
+  auto &req = readPendingQueue.front();
 
-    if (retryRdReq) {
-      // Queue full
-      break;
-    }
-    else if (ret) {
-      // Request submitted
-      readPendingQueue.pop_front();
-    }
-    else {
-      // Write queue hit
-      completeRequest(req.id);
-    }
+  auto ret = receive(req.addr, CACHELINE, true, eventRequestDone, req.id);
+
+  if (retryRdReq) {
+    // Queue full
+  }
+  else if (ret) {
+    // Request submitted
+    readPendingQueue.pop_front();
+  }
+  else {
+    // Write queue hit
+    completeRequest(req.id);
+
+    // Schedule next retry
+    scheduleNow(eventRetryRead);
   }
 }
 
 void TimingDRAM::retryWrite() {
-  while (writePendingQueue.size() > 0) {
-    auto &req = writePendingQueue.front();
+  if (writePendingQueue.size() == 0) {
+    return;
+  }
 
-    receive(req.addr, CACHELINE, false, eventRequestDone, req.id);
+  auto &req = writePendingQueue.front();
 
-    if (!retryWrReq) {
-      // Request submitted - write is async
-      writePendingQueue.pop_front();
+  receive(req.addr, CACHELINE, false, eventRequestDone, req.id);
 
-      completeRequest(req.id);
-    }
-    else {
-      // Queue full
-      break;
-    }
+  if (!retryWrReq) {
+    // Request submitted - write is async
+    writePendingQueue.pop_front();
+
+    completeRequest(req.id);
+
+    // Schedule next retry
+    scheduleNow(eventRetryWrite);
+  }
+  else {
+    // Queue full
   }
 }
 
@@ -2250,6 +2262,8 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, nextReqEvent);
   BACKUP_EVENT(out, respondEvent);
   BACKUP_EVENT(out, eventRequestDone);
+  BACKUP_EVENT(out, eventRetryRead);
+  BACKUP_EVENT(out, eventRetryWrite);
 
   uint64_t size = ranks.size();
   BACKUP_SCALAR(out, size);
@@ -2322,6 +2336,8 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, nextReqEvent);
   RESTORE_EVENT(in, respondEvent);
   RESTORE_EVENT(in, eventRequestDone);
+  RESTORE_EVENT(in, eventRetryRead);
+  RESTORE_EVENT(in, eventRetryWrite);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);

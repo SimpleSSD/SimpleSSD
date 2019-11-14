@@ -493,6 +493,8 @@ class TimingDRAM : public AbstractDRAM {
   std::list<RequestChunk> writePendingQueue;
 
   Event eventRequestDone;
+  Event eventRetryRead;
+  Event eventRetryWrite;
 
   void retryRead();
   void retryWrite();
