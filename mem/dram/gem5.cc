@@ -1152,10 +1152,10 @@ TimingDRAM::TimingDRAM(ObjectData &o)
           "threshold %.2f",
           gem5Config->startWriteThreshold, gem5Config->forceWriteThreshold);
 
-  capacity =
+  totalCapacity =
       pStructure->chipSize / (1048576) * pStructure->chip * pStructure->burst;
   rowsPerBank = (uint32_t)(
-      capacity / (rowBufferSize * pStructure->bank * pStructure->burst));
+      totalCapacity / (rowBufferSize * pStructure->bank * pStructure->burst));
 
   if (pTiming->tREFI <= pTiming->tRP || pTiming->tREFI <= pTiming->tRFC) {
     panic("tREFI (%u) must be larger than tRP (%u) and tRFC (%u)",
@@ -2065,31 +2065,6 @@ void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
   }
 }
 
-uint64_t TimingDRAM::allocate(uint64_t size, std::string &&name, bool dry) {
-  uint64_t ret = 0;
-  uint64_t unallocated = capacity;
-
-  for (auto &iter : addressMap) {
-    unallocated -= iter.size;
-  }
-
-  if (dry) {
-    return unallocated < size ? unallocated : 0;
-  }
-
-  panic_if(unallocated < size,
-           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in SRAM.",
-           size, unallocated);
-
-  if (addressMap.size() > 0) {
-    ret = addressMap.back().base + addressMap.back().size;
-  }
-
-  addressMap.emplace_back(std::move(name), ret, size);
-
-  return ret;
-}
-
 void TimingDRAM::getStatList(std::vector<Stat> &list,
                              std::string prefix) noexcept {
   auto size = ranks.size();
@@ -2208,7 +2183,6 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, rowsPerBank);
   BACKUP_SCALAR(out, writesThisTime);
   BACKUP_SCALAR(out, readsThisTime);
-  BACKUP_SCALAR(out, capacity);
   BACKUP_SCALAR(out, retryRdReq);
   BACKUP_SCALAR(out, retryWrReq);
   BACKUP_SCALAR(out, nextBurstAt);
@@ -2251,7 +2225,6 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, rowsPerBank);
   RESTORE_SCALAR(in, writesThisTime);
   RESTORE_SCALAR(in, readsThisTime);
-  RESTORE_SCALAR(in, capacity);
   RESTORE_SCALAR(in, retryRdReq);
   RESTORE_SCALAR(in, retryWrReq);
   RESTORE_SCALAR(in, nextBurstAt);

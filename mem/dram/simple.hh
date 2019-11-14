@@ -20,7 +20,6 @@ class SimpleDRAM : public AbstractDRAM {
   Scheduler<Request *> scheduler;
 
   uint64_t pageFetchLatency;
-  uint64_t unallocated;
   double interfaceBandwidth;
 
   uint64_t preSubmitRead(Request *);
@@ -30,8 +29,6 @@ class SimpleDRAM : public AbstractDRAM {
  public:
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
-
-  uint64_t allocate(uint64_t, std::string &&, bool = false) override;
 
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;

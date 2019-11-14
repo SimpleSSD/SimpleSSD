@@ -25,8 +25,8 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
   pageFetchLatency = pTiming->tRP + pTiming->tRAS;
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;
-  unallocated = pStructure->chipSize * pStructure->chip * pStructure->rank *
-                pStructure->channel;
+  totalCapacity = pStructure->chipSize * pStructure->chip * pStructure->rank *
+                  pStructure->channel;
 }
 
 SimpleDRAM::~SimpleDRAM() {
@@ -61,30 +61,6 @@ void SimpleDRAM::postDone(Request *req) {
   delete req;
 }
 
-uint64_t SimpleDRAM::allocate(uint64_t size, std::string &&name, bool dry) {
-  uint64_t ret = 0;
-
-  for (auto &iter : addressMap) {
-    unallocated -= iter.size;
-  }
-
-  if (dry) {
-    return unallocated < size ? unallocated : 0;
-  }
-
-  panic_if(unallocated < size,
-           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
-           size, unallocated);
-
-  if (addressMap.size() > 0) {
-    ret = addressMap.back().base + addressMap.back().size;
-  }
-
-  addressMap.emplace_back(std::move(name), ret, size);
-
-  return ret;
-}
-
 void SimpleDRAM::read(uint64_t address, uint64_t length, Event eid,
                       uint64_t data) {
   auto req = new Request(address, length, eid, data);
@@ -113,7 +89,6 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractDRAM::createCheckpoint(out);
 
   BACKUP_SCALAR(out, pageFetchLatency);
-  BACKUP_SCALAR(out, unallocated);
   BACKUP_SCALAR(out, interfaceBandwidth);
 
   scheduler.createCheckpoint(out);
@@ -123,7 +98,6 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractDRAM::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, pageFetchLatency);
-  RESTORE_SCALAR(in, unallocated);
   RESTORE_SCALAR(in, interfaceBandwidth);
 
   scheduler.restoreCheckpoint(in);

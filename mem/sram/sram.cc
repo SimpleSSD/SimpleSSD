@@ -22,6 +22,8 @@ SRAM::SRAM(ObjectData &o)
   pStructure->latency =
       (uint64_t)(pStructure->latency * 1000000000000.f /
                  readConfigUint(Section::CPU, CPU::Config::Clock));
+
+  totalCapacity = pStructure->size;
 }
 
 SRAM::~SRAM() {}
@@ -36,31 +38,6 @@ void SRAM::postDone(Request *req) {
   scheduleNow(req->eid, req->data);
 
   delete req;
-}
-
-uint64_t SRAM::allocate(uint64_t size, std::string &&name, bool dry) {
-  uint64_t unallocated = pStructure->size;
-  uint64_t ret = 0;
-
-  for (auto &iter : addressMap) {
-    unallocated -= iter.size;
-  }
-
-  if (dry) {
-    return unallocated < size ? unallocated : 0;
-  }
-
-  panic_if(unallocated < size,
-           "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in SRAM.",
-           size, unallocated);
-
-  if (addressMap.size() > 0) {
-    ret = addressMap.back().base + addressMap.back().size;
-  }
-
-  addressMap.emplace_back(std::move(name), ret, size);
-
-  return ret;
 }
 
 void SRAM::read(uint64_t address, uint64_t length, Event eid, uint64_t data) {

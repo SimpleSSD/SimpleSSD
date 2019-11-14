@@ -26,8 +26,6 @@ class SRAM : public AbstractSRAM {
   SRAM(ObjectData &);
   ~SRAM();
 
-  uint64_t allocate(uint64_t, std::string &&, bool = false) override;
-
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;
 

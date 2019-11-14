@@ -25,10 +25,11 @@ class AbstractRAM : public Object {
         : name(std::move(n)), base(b), size(s) {}
   };
 
+  uint64_t totalCapacity;
   std::vector<MemoryMap> addressMap;
 
  public:
-  AbstractRAM(ObjectData &o) : Object(o) {}
+  AbstractRAM(ObjectData &o) : Object(o), totalCapacity(0) {}
   virtual ~AbstractRAM() {}
 
   /**
@@ -70,10 +71,38 @@ class AbstractRAM : public Object {
    * \return address  Beginning address of allocated range
    */
   virtual uint64_t allocate(uint64_t size, std::string &&name,
-                            bool dry = false) = 0;
+                            bool dry = false) {
+    uint64_t ret = 0;
+    uint64_t unallocated = totalCapacity;
+
+    panic_if(unallocated == 0, "Unexpected memory capacity.");
+
+    for (auto &iter : addressMap) {
+      unallocated -= iter.size;
+    }
+
+    if (dry) {
+      return unallocated < size ? unallocated : 0;
+    }
+
+    panic_if(unallocated < size,
+             "%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
+             size, unallocated);
+
+    if (addressMap.size() > 0) {
+      ret = addressMap.back().base + addressMap.back().size;
+    }
+
+    addressMap.emplace_back(std::move(name), ret, size);
+
+    return ret;
+  }
 
   void createCheckpoint(std::ostream &out) const noexcept override {
+    BACKUP_SCALAR(out, totalCapacity);
+
     uint64_t size = addressMap.size();
+
     BACKUP_SCALAR(out, size);
 
     for (auto &iter : addressMap) {
@@ -88,7 +117,10 @@ class AbstractRAM : public Object {
   }
 
   void restoreCheckpoint(std::istream &in) noexcept override {
+    RESTORE_SCALAR(in, totalCapacity);
+
     uint64_t size;
+
     RESTORE_SCALAR(in, size);
 
     addressMap.reserve(size);
