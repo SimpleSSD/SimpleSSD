@@ -941,6 +941,11 @@ void DRAMStats::getStatList(std::vector<Stat> &list,
   list.emplace_back(
       prefix + "totMemAccLat",
       "Total ticks spent from burst creation until serviced by the DRAM");
+  list.emplace_back(prefix + "avgQLat",
+                    "Average queueing delay per DRAM burst");
+  list.emplace_back(prefix + "avgBusLat", "Average bus latency per DRAM burst");
+  list.emplace_back(prefix + "avgMemAccLat",
+                    "Average memory access latency per DRAM burst");
   list.emplace_back(prefix + "numRdRetry",
                     "Number of times read queue was full causing retry");
   list.emplace_back(prefix + "numWrRetry",
