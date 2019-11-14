@@ -58,6 +58,8 @@
 
 #include "util/algorithm.hh"
 
+#define CACHELINE ((uint64_t)64ull)
+
 namespace SimpleSSD::Memory::DRAM {
 
 inline uint64_t mask(int nbits) {
@@ -1131,7 +1133,8 @@ TimingDRAM::TimingDRAM(ObjectData &o)
       busState(BusState::Read),
       busStateNext(BusState::Read),
       totalReadQueueSize(0),
-      totalWriteQueueSize(0) {
+      totalWriteQueueSize(0),
+      internalRequestID(0) {
   nextReqEvent =
       createEvent([this](uint64_t, uint64_t) { processNextReqEvent(); },
                   "Memory::DRAM::TimingDRAM::nextReqEvent");
@@ -2013,66 +2016,102 @@ void TimingDRAM::logResponse(BusState dir, uint64_t entries) {
 }
 
 void TimingDRAM::retryRead() {
-  while (retryReadQueue.size() > 0) {
-    auto &req = retryReadQueue.front();
-    auto ret = receive(req.addr, req.size, true, req.eid, req.data);
+  while (readPendingQueue.size() > 0) {
+    auto &req = readPendingQueue.front();
+
+    auto ret = receive(req.addr, CACHELINE, true, eventRequestDone, req.id);
 
     if (retryRdReq) {
+      // Queue full
       break;
     }
     else if (ret) {
-      retryReadQueue.pop_front();
+      // Request submitted
+      readPendingQueue.pop_front();
     }
     else {
-      scheduleNow(req.eid, req.data);
+      // Write queue hit
+      completeRequest(req.id);
     }
   }
 }
 
 void TimingDRAM::retryWrite() {
-  while (retryWriteQueue.size() > 0) {
-    auto &req = retryWriteQueue.front();
-    receive(req.addr, req.size, false, req.eid, req.data);
+  while (writePendingQueue.size() > 0) {
+    auto &req = writePendingQueue.front();
+
+    receive(req.addr, CACHELINE, false, eventRequestDone, req.id);
 
     if (!retryWrReq) {
-      scheduleNow(req.eid, req.data);
+      // Request submitted - write is async
+      writePendingQueue.pop_front();
 
-      retryWriteQueue.pop_front();
+      completeRequest(req.id);
     }
     else {
+      // Queue full
       break;
     }
   }
 }
 
-void TimingDRAM::read(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
-  auto ret = receive(addr, (uint32_t)size, true, eid, data);
+void TimingDRAM::submitRequest(uint64_t addr, uint32_t size, bool read,
+                               Event eid, uint64_t data) {
+  // Split request
+  uint64_t alignedBegin = addr / CACHELINE * CACHELINE;
+  uint64_t alignedEnd = alignedBegin + DIVCEIL(size, CACHELINE) * CACHELINE;
 
-  if (!ret) {
-    // Not submitted
-    if (retryRdReq) {
-      // Put request to retry queue
-      retryReadQueue.emplace_back(
-          RetryRequest(addr, (uint32_t)size, eid, data));
-    }
-    else {
-      // Read served by write queue
-      scheduleNow(eid, data);
-    }
+  RequestData req(eid, data);
+
+  req.chunk = (alignedEnd - alignedBegin) / CACHELINE;
+
+  // Generate splitted requests
+  std::list<RequestChunk> *target = nullptr;
+
+  if (read) {
+    target = &readPendingQueue;
+  }
+  else {
+    target = &writePendingQueue;
+  }
+
+  for (uint64_t addr = alignedBegin; addr < alignedEnd; addr += CACHELINE) {
+    target->emplace_back(RequestChunk(internalRequestID, addr));
+  }
+
+  // Insert request data
+  requestData.emplace(internalRequestID++, req);
+
+  // Try submit
+  if (read && !retryRdReq) {
+    retryRead();
+  }
+  else if (!read && !retryWrReq) {
+    retryWrite();
   }
 }
 
-void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
-  receive(addr, (uint32_t)size, false, eid, data);
+void TimingDRAM::completeRequest(uint64_t id) {
+  auto iter = requestData.find(id);
 
-  if (retryWrReq) {
-    // Put request to retry queue
-    retryWriteQueue.emplace_back(RetryRequest(addr, (uint32_t)size, eid, data));
+  panic_if(iter == requestData.end(), "Unexpected request ID.");
+
+  iter->second.counter++;
+
+  if (iter->second.counter == iter->second.chunk) {
+    // All splitted requests are completed
+    scheduleNow(iter->second.eid, iter->second.data);
+
+    requestData.erase(iter);
   }
-  else {
-    // Request successfully pushed to queue (write is async!)
-    scheduleNow(eid, data);
-  }
+}
+
+void TimingDRAM::read(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
+  submitRequest(addr, (uint32_t)size, true, eid, data);
+}
+
+void TimingDRAM::write(uint64_t addr, uint64_t size, Event eid, uint64_t data) {
+  submitRequest(addr, (uint32_t)size, false, eid, data);
 }
 
 void TimingDRAM::getStatList(std::vector<Stat> &list,
@@ -2207,6 +2246,7 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalWriteQueueSize);
   BACKUP_EVENT(out, nextReqEvent);
   BACKUP_EVENT(out, respondEvent);
+  BACKUP_EVENT(out, eventRequestDone);
 
   uint64_t size = ranks.size();
   BACKUP_SCALAR(out, size);
@@ -2227,6 +2267,35 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   stats.createCheckpoint(out);
+
+  BACKUP_SCALAR(out, internalRequestID);
+
+  size = requestData.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : requestData) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.counter);
+    BACKUP_SCALAR(out, iter.second.chunk);
+    BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.data);
+  }
+
+  size = readPendingQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : readPendingQueue) {
+    BACKUP_SCALAR(out, iter.id);
+    BACKUP_SCALAR(out, iter.addr);
+  }
+
+  size = writePendingQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writePendingQueue) {
+    BACKUP_SCALAR(out, iter.id);
+    BACKUP_SCALAR(out, iter.addr);
+  }
 }
 
 void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
@@ -2249,6 +2318,7 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalWriteQueueSize);
   RESTORE_EVENT(in, nextReqEvent);
   RESTORE_EVENT(in, respondEvent);
+  RESTORE_EVENT(in, eventRequestDone);
 
   uint64_t size;
   RESTORE_SCALAR(in, size);
@@ -2274,6 +2344,45 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   stats.restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, internalRequestID);
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t id;
+    RequestData req;
+
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, req.counter);
+    RESTORE_SCALAR(in, req.chunk);
+    RESTORE_EVENT(in, req.eid);
+    RESTORE_SCALAR(in, req.data);
+
+    requestData.emplace(id, req);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t id, a;
+
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, a);
+
+    readPendingQueue.emplace_back(i, a);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t id, a;
+
+    RESTORE_SCALAR(in, id);
+    RESTORE_SCALAR(in, a);
+
+    writePendingQueue.emplace_back(i, a);
+  }
 }
 
 }  // namespace SimpleSSD::Memory::DRAM

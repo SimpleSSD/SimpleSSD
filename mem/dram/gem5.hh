@@ -373,16 +373,6 @@ class DRAMStats {
  */
 class TimingDRAM : public AbstractDRAM {
  private:
-  struct RetryRequest {
-    uint64_t addr;
-    uint32_t size;
-    Event eid;
-    uint64_t data;
-
-    RetryRequest(uint64_t a, uint32_t s, Event e, uint64_t d)
-        : addr(a), size(s), eid(e), data(d) {}
-  };
-
   friend Rank;
   friend DRAMStats;
 
@@ -435,9 +425,6 @@ class TimingDRAM : public AbstractDRAM {
   uint64_t totalReadQueueSize;
   uint64_t totalWriteQueueSize;
 
-  std::deque<RetryRequest> retryReadQueue;
-  std::deque<RetryRequest> retryWriteQueue;
-
   Event nextReqEvent;
   Event respondEvent;
 
@@ -480,8 +467,37 @@ class TimingDRAM : public AbstractDRAM {
   void backupQueue(std::ostream &, const DRAMPacketQueue *) const;
   void restoreQueue(std::istream &, DRAMPacketQueue *);
 
+  // Request splitter - SimpleSSD does not have memory bus and cache
+  struct RequestData {
+    uint32_t counter;
+    uint32_t chunk;
+
+    Event eid;
+    uint64_t data;
+
+    RequestData() {}  // For checkpointing
+    RequestData(Event e, uint64_t d) : counter(0), chunk(0), eid(e), data(d) {}
+  };
+
+  struct RequestChunk {
+    uint64_t id;
+    uint64_t addr;
+
+    RequestChunk(uint64_t i, uint64_t a) : id(i), addr(a) {}
+  };
+
+  uint64_t internalRequestID;
+
+  std::unordered_map<uint64_t, RequestData> requestData;
+  std::list<RequestChunk> readPendingQueue;
+  std::list<RequestChunk> writePendingQueue;
+
+  Event eventRequestDone;
+
   void retryRead();
   void retryWrite();
+  void submitRequest(uint64_t, uint32_t, bool, Event, uint64_t);
+  void completeRequest(uint64_t);
 
  public:
   TimingDRAM(ObjectData &);
