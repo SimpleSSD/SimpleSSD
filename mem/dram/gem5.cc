@@ -974,8 +974,8 @@ void DRAMStats::getStatValues(std::vector<double> &values,
 
   avgRdBW = (bytesReadDRAM / 1000000.) / secs;
   avgWrBW = (bytesWritten / 1000000.) / secs;
-  peakBW = (1000000000000. / parent->pTiming->tBURST) *
-           parent->pStructure->burst / 1000000.;
+  peakBW =
+      (1000000000000. / parent->pTiming->tBURST) * parent->burstSize / 1000000.;
 
   busUtil = (avgRdBW + avgWrBW) / peakBW * 100;
   busUtilRead = avgRdBW / peakBW * 100;
@@ -1138,11 +1138,11 @@ TimingDRAM::TimingDRAM(ObjectData &o)
            "DRAM rank count of %d is not allowed, must be a power of two",
            pStructure->rank);
 
-  panic_if(popcount32(pStructure->burst) != 1,
+  panic_if(popcount32(burstSize) != 1,
            "DRAM burst size %d is not allowed, must be a power of two",
-           pStructure->burst);
+           burstSize);
 
-  for (int i = 0; i < pStructure->burst; i++) {
+  for (int i = 0; i < pStructure->rank; i++) {
     Rank *rank = new Rank(object, this, i);
     ranks.emplace_back(rank);
   }
@@ -1152,10 +1152,9 @@ TimingDRAM::TimingDRAM(ObjectData &o)
           "threshold %.2f",
           gem5Config->startWriteThreshold, gem5Config->forceWriteThreshold);
 
-  totalCapacity =
-      pStructure->chipSize / (1048576) * pStructure->chip * pStructure->burst;
+  totalCapacity = pStructure->chipSize * pStructure->chip * pStructure->rank;
   rowsPerBank = (uint32_t)(
-      totalCapacity / (rowBufferSize * pStructure->bank * pStructure->burst));
+      totalCapacity / (rowBufferSize * pStructure->bank * pStructure->rank));
 
   if (pTiming->tREFI <= pTiming->tRP || pTiming->tREFI <= pTiming->tRFC) {
     panic("tREFI (%u) must be larger than tRP (%u) and tRFC (%u)",
@@ -1222,8 +1221,8 @@ DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
     addr = addr / pStructure->channel;
     bank = addr % pStructure->bank;
     addr = addr / pStructure->bank;
-    rank = addr % pStructure->burst;
-    addr = addr / pStructure->burst;
+    rank = addr % pStructure->rank;
+    addr = addr / pStructure->rank;
     row = addr % rowsPerBank;
   }
   else if (gem5Config->mapping == Config::AddressMapping::RoRaBaCoCh) {
@@ -1232,8 +1231,8 @@ DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
     addr = addr / (columnsPerRowBuffer / columnsPerStripe);
     bank = addr % pStructure->bank;
     addr = addr / pStructure->bank;
-    rank = addr % pStructure->burst;
-    addr = addr / pStructure->burst;
+    rank = addr % pStructure->rank;
+    addr = addr / pStructure->rank;
     row = addr % rowsPerBank;
   }
   else if (gem5Config->mapping == Config::AddressMapping::RoCoRaBaCh) {
@@ -1241,8 +1240,8 @@ DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
     addr = addr / pStructure->channel;
     bank = addr % pStructure->bank;
     addr = addr / pStructure->bank;
-    rank = addr % pStructure->burst;
-    addr = addr / pStructure->burst;
+    rank = addr % pStructure->rank;
+    addr = addr / pStructure->rank;
     addr = addr / (columnsPerRowBuffer / columnsPerStripe);
     row = addr % rowsPerBank;
   }
@@ -1250,7 +1249,7 @@ DRAMPacket *TimingDRAM::decodeAddr(uint64_t dramPktAddr, unsigned size,
     panic("Unknown address mapping policy chosen!");
   }
 
-  assert(rank < pStructure->burst);
+  assert(rank < pStructure->rank);
   assert(bank < pStructure->bank);
   assert(row < rowsPerBank);
   assert(row < Bank::NO_ROW);
@@ -1503,7 +1502,7 @@ TimingDRAM::DRAMPacketQueue::iterator TimingDRAM::chooseNext(
 
 TimingDRAM::DRAMPacketQueue::iterator TimingDRAM::chooseNextFRFCFS(
     DRAMPacketQueue &queue, uint64_t extra_col_delay) {
-  vector<uint32_t> earliest_banks(pStructure->burst, 0);
+  vector<uint32_t> earliest_banks(pStructure->rank, 0);
 
   bool filled_earliest_banks = false;
   bool hidden_bank_prep = false;
@@ -1682,7 +1681,7 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
   uint64_t dly_to_rd_cmd;
   uint64_t dly_to_wr_cmd;
 
-  for (int j = 0; j < pStructure->burst; j++) {
+  for (int j = 0; j < pStructure->rank; j++) {
     for (int i = 0; i < pStructure->bank; i++) {
       if (dram_pkt->rank == j) {
         if (bankGroupArch && (bank.bankgr == ranks[j]->banks[i].bankgr)) {
@@ -1806,7 +1805,7 @@ void TimingDRAM::processNextReqEvent() {
     }
   }
 
-  if (busyRanks == pStructure->burst) {
+  if (busyRanks == pStructure->rank) {
     return;
   }
 
@@ -1933,19 +1932,19 @@ pair<vector<uint32_t>, bool> TimingDRAM::minBankPrep(
   uint64_t min_act_at = std::numeric_limits<uint64_t>::max();
   uint64_t now = getTick();
 
-  vector<uint32_t> bank_mask(pStructure->burst, 0);
+  vector<uint32_t> bank_mask(pStructure->rank, 0);
 
   const uint64_t hidden_act_max = MAX(min_col_at - pTiming->tRCD, now);
   bool found_seamless_bank = false;
   bool hidden_bank_prep = false;
-  vector<bool> got_waiting(pStructure->burst * pStructure->bank, false);
+  vector<bool> got_waiting(pStructure->rank * pStructure->bank, false);
 
   for (const auto &p : queue) {
     if (p->rankRef.inRefIdleState())
       got_waiting[p->bankId] = true;
   }
 
-  for (int i = 0; i < pStructure->burst; i++) {
+  for (int i = 0; i < pStructure->rank; i++) {
     for (int j = 0; j < pStructure->bank; j++) {
       uint16_t bank_id = i * pStructure->bank + j;
 
