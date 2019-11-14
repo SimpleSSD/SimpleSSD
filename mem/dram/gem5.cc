@@ -1141,6 +1141,9 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   respondEvent =
       createEvent([this](uint64_t, uint64_t) { processRespondEvent(); },
                   "Memory::DRAM::TimingDRAM::respondEvent");
+  eventRequestDone =
+      createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
+                  "Memory::DRAM::TimingDRAM::eventRequestDone");
 
   warn_if(pStructure->channel > 1,
           "Timing DRAM model of gem5 assumes only one channel.");
