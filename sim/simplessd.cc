@@ -259,7 +259,7 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
 
 void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
   std::string cpt_file =
-      Path::joinPath(cpt_file.c_str(), SIMPLESSD_CHECKPOINT_NAME);
+      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_NAME);
 
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);
