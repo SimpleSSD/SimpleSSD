@@ -1141,9 +1141,12 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   respondEvent =
       createEvent([this](uint64_t, uint64_t) { processRespondEvent(); },
                   "Memory::DRAM::TimingDRAM::respondEvent");
-  eventRequestDone =
+  eventRequestReadDone =
       createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
-                  "Memory::DRAM::TimingDRAM::eventRequestDone");
+                  "Memory::DRAM::TimingDRAM::eventRequestReadDone");
+  eventRequestWriteDone =
+      createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
+                  "Memory::DRAM::TimingDRAM::eventRequestWriteDone");
   eventRetryRead = createEvent([this](uint64_t, uint64_t) { retryRead(); },
                                "Memory::DRAM::TimingDRAM::eventRetryRead");
   eventRetryWrite = createEvent([this](uint64_t, uint64_t) { retryWrite(); },
@@ -2029,10 +2032,11 @@ void TimingDRAM::retryRead() {
 
   auto &req = readPendingQueue.front();
 
-  auto ret = receive(req.addr, CACHELINE, true, eventRequestDone, req.id);
+  auto ret = receive(req.addr, CACHELINE, true, eventRequestReadDone, req.id);
 
   if (retryRdReq) {
     // Queue full
+    return;
   }
   else if (ret) {
     // Request submitted
@@ -2040,11 +2044,11 @@ void TimingDRAM::retryRead() {
   }
   else {
     // Write queue hit
-    completeRequest(req.id);
-
-    // Schedule next retry
-    scheduleNow(eventRetryRead);
+    scheduleNow(eventRequestReadDone, req.id);
   }
+
+  // Schedule next retry
+  scheduleNow(eventRetryRead);
 }
 
 void TimingDRAM::retryWrite() {
@@ -2054,13 +2058,13 @@ void TimingDRAM::retryWrite() {
 
   auto &req = writePendingQueue.front();
 
-  receive(req.addr, CACHELINE, false, eventRequestDone, req.id);
+  receive(req.addr, CACHELINE, false, eventRequestWriteDone, req.id);
 
   if (!retryWrReq) {
     // Request submitted - write is async
     writePendingQueue.pop_front();
 
-    completeRequest(req.id);
+    scheduleNow(eventRequestWriteDone, req.id);
 
     // Schedule next retry
     scheduleNow(eventRetryWrite);
@@ -2261,7 +2265,8 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalWriteQueueSize);
   BACKUP_EVENT(out, nextReqEvent);
   BACKUP_EVENT(out, respondEvent);
-  BACKUP_EVENT(out, eventRequestDone);
+  BACKUP_EVENT(out, eventRequestReadDone);
+  BACKUP_EVENT(out, eventRequestWriteDone);
   BACKUP_EVENT(out, eventRetryRead);
   BACKUP_EVENT(out, eventRetryWrite);
 
@@ -2335,7 +2340,8 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalWriteQueueSize);
   RESTORE_EVENT(in, nextReqEvent);
   RESTORE_EVENT(in, respondEvent);
-  RESTORE_EVENT(in, eventRequestDone);
+  RESTORE_EVENT(in, eventRequestReadDone);
+  RESTORE_EVENT(in, eventRequestWriteDone);
   RESTORE_EVENT(in, eventRetryRead);
   RESTORE_EVENT(in, eventRetryWrite);
 
