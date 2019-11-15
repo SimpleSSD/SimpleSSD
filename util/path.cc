@@ -38,6 +38,12 @@ std::string makeOutputFilename(ObjectData &object, const char *filename) {
   return outdir;
 }
 
+std::string joinPath(const char *path, const char *filename) {
+  std::filesystem::path fspath(path);
+
+  return fspath / filename;
+}
+
 #ifdef _MSC_VER
 #else
 

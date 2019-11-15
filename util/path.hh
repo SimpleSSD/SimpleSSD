@@ -19,6 +19,7 @@ namespace SimpleSSD::Path {
 
 std::string makeOutputFilename(ObjectData &obj, const std::string &filename);
 std::string makeOutputFilename(ObjectData &obj, const char *filename);
+std::string joinPath(const char *path, const char *filename);
 
 void *openFileMapping(const char *path, uint64_t *psize, bool create = false,
                       bool cow = true);
