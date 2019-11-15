@@ -60,7 +60,6 @@ class Log {
   std::ostream *err;    //!< File for warn/panic
   std::ostream *debug;  //!< File for debug printout
 
-  bool checkStandardIO(std::ostream *) noexcept;
   inline void print(std::ostream *, const char *, va_list) noexcept;
 
  public:

@@ -100,16 +100,6 @@ void Log::init(CPU::CPU *c, std::ostream *outfile, std::ostream *errfile,
 
 //! Deinitialize log system
 void Log::deinit() noexcept {
-  if (!checkStandardIO(out)) {
-    ((std::ofstream *)out)->close();
-  }
-  if (!checkStandardIO(err)) {
-    ((std::ofstream *)err)->close();
-  }
-  if (!checkStandardIO(debug)) {
-    ((std::ofstream *)debug)->close();
-  }
-
   inited = false;
 }
 
@@ -178,20 +168,6 @@ void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
 
     abort();
   }
-}
-
-/**
- * Check file stream is stdout or stderr
- *
- * \param[in]  os std::ofstream object to check
- * \return True if os is stdout or stderr
- */
-bool Log::checkStandardIO(std::ostream *os) noexcept {
-  if (os->rdbuf() == std::cout.rdbuf() || os->rdbuf() == std::cerr.rdbuf()) {
-    return true;
-  }
-
-  return false;
 }
 
 /**

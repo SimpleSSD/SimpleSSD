@@ -71,13 +71,10 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
 
   // Check path is FILE_STDOUT or FILE_STDERR
   if (path.compare(FILE_STDOUT) == 0) {
-    std::streambuf *sb = std::cout.rdbuf();
-    os = new std::ostream(sb);
+    os = &std::cout;
   }
   else if (path.compare(FILE_STDERR) == 0) {
-    std::streambuf *sb = std::cerr.rdbuf();
-
-    os = new std::ostream(sb);
+    os = &std::cerr;
   }
   else {
     std::string filepath = prefix;
@@ -94,6 +91,19 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
   }
 
   return os;
+}
+
+void SimpleSSD::closeStream(std::ostream *os) noexcept {
+  if (os == &std::cout || os == &std::cerr) {
+    // This output stream is standard I/O
+    return;
+  }
+
+  if (auto ofs = dynamic_cast<std::ofstream *>(os)) {
+    ofs->close();
+  }
+
+  delete os;
 }
 
 /**
@@ -181,10 +191,10 @@ void SimpleSSD::deinit() noexcept {
 
     delete object.cpu;
 
-    // outfile, errfile and debugfile are closed by Log::deinit()
-    delete outfile;
-    delete errfile;
-    delete debugfile;
+    // Close files
+    closeStream(outfile);
+    closeStream(errfile);
+    closeStream(debugfile);
 
     outfile = nullptr;
     errfile = nullptr;

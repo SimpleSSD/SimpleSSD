@@ -40,6 +40,7 @@ class SimpleSSD {
 
   void joinPath(std::string &, std::string) const noexcept;
   std::ostream *openStream(std::string &, std::string &) noexcept;
+  void closeStream(std::ostream *) noexcept;
 
  public:
   SimpleSSD();
