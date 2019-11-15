@@ -1142,10 +1142,10 @@ TimingDRAM::TimingDRAM(ObjectData &o)
       createEvent([this](uint64_t, uint64_t) { processRespondEvent(); },
                   "Memory::DRAM::TimingDRAM::respondEvent");
   eventRequestReadDone =
-      createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
+      createEvent([this](uint64_t, uint64_t d) { completeRequest(d, true); },
                   "Memory::DRAM::TimingDRAM::eventRequestReadDone");
   eventRequestWriteDone =
-      createEvent([this](uint64_t, uint64_t d) { completeRequest(d); },
+      createEvent([this](uint64_t, uint64_t d) { completeRequest(d, false); },
                   "Memory::DRAM::TimingDRAM::eventRequestWriteDone");
   eventRetryRead = createEvent([this](uint64_t, uint64_t) { retryRead(); },
                                "Memory::DRAM::TimingDRAM::eventRetryRead");
@@ -2044,7 +2044,12 @@ void TimingDRAM::retryRead() {
   }
   else {
     // Write queue hit
-    scheduleNow(eventRequestReadDone, req.id);
+    // We may have multiple read completion at same time
+    readCompletionQueue.emplace_back(req.id);
+
+    if (!isScheduled(eventRequestReadDone)) {
+      scheduleNow(eventRequestReadDone, req.id);
+    }
   }
 
   // Schedule next retry
@@ -2064,7 +2069,12 @@ void TimingDRAM::retryWrite() {
     // Request submitted - write is async
     writePendingQueue.pop_front();
 
-    scheduleNow(eventRequestWriteDone, req.id);
+    // We may have multiple write completion at same time
+    writeCompletionQueue.emplace_back(req.id);
+
+    if (!isScheduled(eventRequestWriteDone)) {
+      scheduleNow(eventRequestWriteDone, req.id);
+    }
 
     // Schedule next retry
     scheduleNow(eventRetryWrite);
@@ -2110,7 +2120,7 @@ void TimingDRAM::submitRequest(uint64_t addr, uint32_t size, bool read,
   }
 }
 
-void TimingDRAM::completeRequest(uint64_t id) {
+void TimingDRAM::completeRequest(uint64_t id, bool read) {
   auto iter = requestData.find(id);
 
   panic_if(iter == requestData.end(), "Unexpected request ID.");
@@ -2122,6 +2132,23 @@ void TimingDRAM::completeRequest(uint64_t id) {
     scheduleNow(iter->second.eid, iter->second.data);
 
     requestData.erase(iter);
+  }
+
+  if (read) {
+    readCompletionQueue.pop_front();
+
+    // Complete next write request
+    if (readCompletionQueue.size() > 0) {
+      scheduleNow(eventRequestReadDone, readCompletionQueue.front());
+    }
+  }
+  else {
+    writeCompletionQueue.pop_front();
+
+    // Complete next write request
+    if (writeCompletionQueue.size() > 0) {
+      scheduleNow(eventRequestWriteDone, writeCompletionQueue.front());
+    }
   }
 }
 
@@ -2318,6 +2345,20 @@ void TimingDRAM::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.id);
     BACKUP_SCALAR(out, iter.addr);
   }
+
+  size = readCompletionQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : readCompletionQueue) {
+    BACKUP_SCALAR(out, iter);
+  }
+
+  size = writeCompletionQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writeCompletionQueue) {
+    BACKUP_SCALAR(out, iter);
+  }
 }
 
 void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
@@ -2407,6 +2448,26 @@ void TimingDRAM::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, a);
 
     writePendingQueue.emplace_back(i, a);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+
+    readCompletionQueue.emplace_back(tag);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+
+    writeCompletionQueue.emplace_back(tag);
   }
 }
 

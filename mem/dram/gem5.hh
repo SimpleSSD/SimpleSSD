@@ -491,6 +491,8 @@ class TimingDRAM : public AbstractDRAM {
   std::unordered_map<uint64_t, RequestData> requestData;
   std::list<RequestChunk> readPendingQueue;
   std::list<RequestChunk> writePendingQueue;
+  std::list<uint64_t> readCompletionQueue;
+  std::list<uint64_t> writeCompletionQueue;
 
   Event eventRequestReadDone;
   Event eventRequestWriteDone;
@@ -500,7 +502,7 @@ class TimingDRAM : public AbstractDRAM {
   void retryRead();
   void retryWrite();
   void submitRequest(uint64_t, uint32_t, bool, Event, uint64_t);
-  void completeRequest(uint64_t);
+  void completeRequest(uint64_t, bool);
 
  public:
   TimingDRAM(ObjectData &);
