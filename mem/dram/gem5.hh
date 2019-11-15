@@ -506,6 +506,7 @@ class TimingDRAM : public AbstractDRAM {
 
  public:
   TimingDRAM(ObjectData &);
+  ~TimingDRAM();
 
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;

@@ -1222,6 +1222,14 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   nextBurstAt = pTiming->tRP + pTiming->tRCD;
 }
 
+TimingDRAM::~TimingDRAM() {
+  warn_if(requestData.size() > 0, "Not all DRAM requests are handled.");
+  warn_if(readPendingQueue.size() > 0,
+          "Not all DRAM read pending requests are handled.");
+  warn_if(writeCompletionQueue.size() > 0,
+          "Not all DRAM write pending requests are handled.");
+}
+
 bool TimingDRAM::readQueueFull(uint32_t neededEntries) const {
   auto rdsize_new = totalReadQueueSize + respQueue.size() + neededEntries;
   return rdsize_new > gem5Config->readBufferSize;
