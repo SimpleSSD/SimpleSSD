@@ -2057,12 +2057,12 @@ void TimingDRAM::retryRead() {
     // Queue full
     return;
   }
-  else if (ret) {
-    // Request submitted
-    readPendingQueue.pop_front();
-  }
-  else {
-    // Write queue hit
+
+  // Request submitted
+  readPendingQueue.pop_front();
+
+  // Check write queue hit (complete immediately)
+  if (!ret) {
     // We may have multiple read completion at same time
     readCompletionQueue.emplace_back(req.id);
 
@@ -2142,7 +2142,7 @@ void TimingDRAM::submitRequest(uint64_t addr, uint32_t size, bool read,
 void TimingDRAM::completeRequest(uint64_t id, bool read) {
   auto iter = requestData.find(id);
 
-  panic_if(iter == requestData.end(), "Unexpected request ID.");
+  panic_if(iter == requestData.end(), "Unexpected request ID %" PRIu64 ".", id);
 
   iter->second.counter++;
 
