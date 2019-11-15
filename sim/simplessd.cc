@@ -14,6 +14,7 @@
 #include "mem/dram/simple.hh"
 #include "mem/sram/sram.hh"
 #include "sim/version.hh"
+#include "util/path.hh"
 
 #define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
 #define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
@@ -33,26 +34,6 @@ SimpleSSD::~SimpleSSD() {
   if (inited) {
     deinit();
   }
-}
-
-/**
- * \brief Join path
- *
- * Join two path strings
- *
- * \param[in,out] prefix First path string
- * \param[in]     path   Second path string
- */
-void SimpleSSD::joinPath(std::string &prefix, std::string path) const noexcept {
-  if (prefix.back() != '/' && prefix.back() != '\\') {
-    prefix.push_back('/');
-  }
-
-  if (path[0] == '/' || path[0] == '\\') {
-    prefix.push_back('.');
-  }
-
-  prefix += path;
 }
 
 /**
@@ -77,9 +58,7 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
     os = &std::cerr;
   }
   else {
-    std::string filepath = prefix;
-
-    joinPath(filepath, path);
+    std::string filepath = Path::joinPath(prefix.c_str(), path.c_str());
 
     os = new std::ofstream(filepath);
 
@@ -243,11 +222,10 @@ void SimpleSSD::resetStatValues() noexcept {
 }
 
 void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
-  std::string cpt_file(cpt_dir);
-  std::string cpt_config(cpt_dir);
-
-  joinPath(cpt_file, SIMPLESSD_CHECKPOINT_NAME);
-  joinPath(cpt_config, SIMPLESSD_CHECKPOINT_CONFIG);
+  std::string cpt_file =
+      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_NAME);
+  std::string cpt_config =
+      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_CONFIG);
 
   // Try to open file at path
   std::ofstream file(cpt_file, std::ios::binary);
@@ -280,9 +258,8 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
 }
 
 void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
-  std::string cpt_file(cpt_dir);
-
-  joinPath(cpt_file, SIMPLESSD_CHECKPOINT_NAME);
+  std::string cpt_file =
+      Path::joinPath(cpt_file.c_str(), SIMPLESSD_CHECKPOINT_NAME);
 
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);
