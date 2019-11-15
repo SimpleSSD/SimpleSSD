@@ -937,6 +937,10 @@ void DRAMStats::getStatList(std::vector<Stat> &list,
                     "Number of DRAM write bursts merged with an existing one");
   list.emplace_back(prefix + "neitherReadNorWriteReqs",
                     "Number of requests that are neither read nor write");
+  list.emplace_back(prefix + "avgRdQLen",
+                    "Average read queue length when enqueuing");
+  list.emplace_back(prefix + "avgWrQLen",
+                    "Average write queue length when enqueuing");
   list.emplace_back(prefix + "totQLat", "Total ticks spent queuing");
   list.emplace_back(prefix + "totBusLat",
                     "Total ticks spent in databus transfers");
@@ -952,6 +956,13 @@ void DRAMStats::getStatList(std::vector<Stat> &list,
                     "Number of times read queue was full causing retry");
   list.emplace_back(prefix + "numWrRetry",
                     "Number of times write queue was full causing retry");
+  list.emplace_back(prefix + "readRowHits",
+                    "Number of row buffer hits during reads");
+  list.emplace_back(prefix + "writeRowHits",
+                    "Number of row buffer hits during writes");
+  list.emplace_back(prefix + "readRowHitRate", "Row buffer hit rate for reads");
+  list.emplace_back(prefix + "writeRowHitRate",
+                    "Row buffer hit rate for writes");
   list.emplace_back(prefix + "bytesReadDRAM",
                     "Total number of bytes read from DRAM");
   list.emplace_back(prefix + "bytesReadWrQ",
@@ -971,6 +982,8 @@ void DRAMStats::getStatList(std::vector<Stat> &list,
                     "Data bus utilization in percentage for writes");
   list.emplace_back(prefix + "totGap", "Total gap between requests");
   list.emplace_back(prefix + "avgGap", "Average gap between requests");
+  list.emplace_back(prefix + "pageHitRate",
+                    "Row buffer hit rate, read and write combined");
 }
 
 void DRAMStats::getStatValues(std::vector<double> &values,
@@ -990,6 +1003,13 @@ void DRAMStats::getStatValues(std::vector<double> &values,
 
   avgGap = totGap / (readReqs + writeReqs);
 
+  double readRowHitRate = (readRowHits / (readBursts - servicedByWrQ)) * 100;
+  double writeRowHitRate =
+      (writeRowHits / (writeBursts - mergedWrBursts)) * 100;
+  double pageHitRate =
+      (writeRowHits + readRowHits) /
+      (writeBursts - mergedWrBursts + readBursts - servicedByWrQ) * 100;
+
   values.push_back(readReqs);
   values.push_back(writeReqs);
   values.push_back(readBursts);
@@ -997,6 +1017,8 @@ void DRAMStats::getStatValues(std::vector<double> &values,
   values.push_back(servicedByWrQ);
   values.push_back(mergedWrBursts);
   values.push_back(neitherReadNorWriteReqs);
+  values.push_back(avgRdQLen);
+  values.push_back(avgWrQLen);
   values.push_back(totQLat);
   values.push_back(totBusLat);
   values.push_back(totMemAccLat);
@@ -1005,6 +1027,10 @@ void DRAMStats::getStatValues(std::vector<double> &values,
   values.push_back(avgMemAccLat);
   values.push_back(numRdRetry);
   values.push_back(numWrRetry);
+  values.push_back(readRowHits);
+  values.push_back(writeRowHits);
+  values.push_back(readRowHitRate);
+  values.push_back(writeRowHitRate);
   values.push_back(bytesReadDRAM);
   values.push_back(bytesReadWrQ);
   values.push_back(bytesWritten);
@@ -1016,6 +1042,7 @@ void DRAMStats::getStatValues(std::vector<double> &values,
   values.push_back(busUtilWrite);
   values.push_back(totGap);
   values.push_back(avgGap);
+  values.push_back(pageHitRate);
 }
 
 void DRAMStats::resetStatValues() noexcept {
@@ -1043,6 +1070,12 @@ void DRAMStats::resetStatValues() noexcept {
   busUtil = 0.;
   busUtilRead = 0.;
   busUtilWrite = 0.;
+  readRowHits = 0.;
+  writeRowHits = 0.;
+  avgRdQLen = 0.;
+  avgWrQLen = 0.;
+  totGap = 0.;
+  avgGap = 0.;
 }
 
 void DRAMStats::createCheckpoint(std::ostream &out) const noexcept {
@@ -1070,6 +1103,10 @@ void DRAMStats::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, busUtil);
   BACKUP_SCALAR(out, busUtilRead);
   BACKUP_SCALAR(out, busUtilWrite);
+  BACKUP_SCALAR(out, readRowHits);
+  BACKUP_SCALAR(out, writeRowHits);
+  BACKUP_SCALAR(out, avgRdQLen);
+  BACKUP_SCALAR(out, avgWrQLen);
   BACKUP_SCALAR(out, totGap);
   BACKUP_SCALAR(out, avgGap);
 }
@@ -1099,6 +1136,10 @@ void DRAMStats::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, busUtil);
   RESTORE_SCALAR(in, busUtilRead);
   RESTORE_SCALAR(in, busUtilWrite);
+  RESTORE_SCALAR(in, readRowHits);
+  RESTORE_SCALAR(in, writeRowHits);
+  RESTORE_SCALAR(in, avgRdQLen);
+  RESTORE_SCALAR(in, avgWrQLen);
   RESTORE_SCALAR(in, totGap);
   RESTORE_SCALAR(in, avgGap);
 }
@@ -1344,6 +1385,8 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
       ++dram_pkt->rankRef.readEntries;
 
       logRequest(BusState::Read, 1);
+
+      stats.avgRdQLen = totalReadQueueSize + respQueue.size();
     }
 
     addr = (addr | (burstSize - 1)) + 1;
@@ -1385,6 +1428,8 @@ bool TimingDRAM::addToWriteQueue(uint64_t addr, uint32_t pktsize,
       assert(totalWriteQueueSize == isInWriteQueue.size());
 
       ++dram_pkt->rankRef.writeEntries;
+
+      stats.avgWrQLen = totalWriteQueueSize;
     }
     else {
       stats.mergedWrBursts++;
@@ -1708,7 +1753,11 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
 
   Bank &bank = dram_pkt->bankRef;
 
+  bool row_hit = true;
+
   if (bank.openRow != dram_pkt->row) {
+    row_hit = false;
+
     if (bank.openRow != Bank::NO_ROW) {
       prechargeBank(rank, bank, MAX(bank.preAllowedAt, now));
     }
@@ -1809,6 +1858,10 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
   if (dram_pkt->isRead()) {
     ++readsThisTime;
 
+    if (row_hit) {
+      stats.readRowHits++;
+    }
+
     stats.bytesReadDRAM += burstSize;
     stats.totMemAccLat += dram_pkt->readyTime - dram_pkt->entryTime;
     stats.totBusLat += pTiming->tBURST;
@@ -1816,6 +1869,10 @@ void TimingDRAM::doDRAMAccess(DRAMPacket *dram_pkt) {
   }
   else {
     ++writesThisTime;
+
+    if (row_hit) {
+      stats.writeRowHits++;
+    }
 
     stats.bytesWritten += burstSize;
   }

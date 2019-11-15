@@ -350,6 +350,12 @@ class DRAMStats {
   double busUtilRead;
   double busUtilWrite;
 
+  double readRowHits;
+  double writeRowHits;
+
+  double avgRdQLen;
+  double avgWrQLen;
+
   double totGap;
   double avgGap;
 
