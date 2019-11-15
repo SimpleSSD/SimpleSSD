@@ -26,6 +26,9 @@ class VLAllocator : public TwoBlockAllocator {
 
   CPU::Function allocatePartialBlock(LPN, PPN &);
   PPN getPartialBlock(LPN, PPN);
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator

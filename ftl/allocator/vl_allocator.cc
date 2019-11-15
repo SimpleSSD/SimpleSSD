@@ -83,4 +83,16 @@ PPN VLAllocator::getPartialBlock(LPN lpn, PPN ppn) {
   }
 }
 
+void VLAllocator::createCheckpoint(std::ostream &out) const noexcept {
+  TwoBlockAllocator::createCheckpoint(out);
+
+  BACKUP_BLOB(out, inUseBlockMapLPN, sizeof(LPN) * parallelism);
+}
+
+void VLAllocator::restoreCheckpoint(std::istream &in) noexcept {
+  TwoBlockAllocator::restoreCheckpoint(in);
+
+  RESTORE_BLOB(in, inUseBlockMapLPN, sizeof(LPN) * parallelism);
+}
+
 }  // namespace SimpleSSD::FTL::BlockAllocator

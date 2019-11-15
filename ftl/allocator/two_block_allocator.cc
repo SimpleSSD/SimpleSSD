@@ -96,4 +96,18 @@ bool TwoBlockAllocator::stallRequest() {
   return freeBlockCount <= parallelism * 2;
 }
 
+void TwoBlockAllocator::createCheckpoint(std::ostream &out) const noexcept {
+  BasicAllocator::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, lastAllocatedSecond);
+  BACKUP_BLOB(out, inUseBlockMapSecond, sizeof(PPN) * parallelism);
+}
+
+void TwoBlockAllocator::restoreCheckpoint(std::istream &in) noexcept {
+  BasicAllocator::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, lastAllocatedSecond);
+  RESTORE_BLOB(in, inUseBlockMapSecond, sizeof(PPN) * parallelism);
+}
+
 }  // namespace SimpleSSD::FTL::BlockAllocator

@@ -32,6 +32,9 @@ class TwoBlockAllocator : public BasicAllocator {
   virtual PPN getBlockAtSecond(PPN);
 
   bool stallRequest() override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
