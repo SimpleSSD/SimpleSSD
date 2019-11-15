@@ -1346,7 +1346,7 @@ bool TimingDRAM::addToReadQueue(uint64_t addr, uint32_t pktsize,
     addr = (addr | (burstSize - 1)) + 1;
   }
 
-  if (pktsServicedByWrQ == 1) {
+  if (pktsServicedByWrQ == pktCount) {
     return false;
   }
 
