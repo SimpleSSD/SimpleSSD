@@ -2112,10 +2112,10 @@ void TimingDRAM::submitRequest(uint64_t addr, uint32_t size, bool read,
   requestData.emplace(internalRequestID++, req);
 
   // Try submit
-  if (read && !retryRdReq) {
+  if (read && !retryRdReq && !isScheduled(eventRetryRead)) {
     retryRead();
   }
-  else if (!read && !retryWrReq) {
+  else if (!read && !retryWrReq && !isScheduled(eventRetryWrite)) {
     retryWrite();
   }
 }
