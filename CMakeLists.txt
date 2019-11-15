@@ -202,6 +202,7 @@ set(SRC_UTIL
   util/disk.cc
   util/fifo.cc
   util/interface.cc
+  util/path.cc
   util/sorted_map.cc
 )
 
