@@ -186,7 +186,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
 
         // Find line with largest difference
         for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-          if (diff < (uint16_t)(clock - iter->second.insertedAt)) {
+          if (diff <= (uint16_t)(clock - iter->second.insertedAt)) {
             if (sel == SelectionMode::All) {
               if (!isDirty(iter->second.list)) {
                 continue;
@@ -219,7 +219,7 @@ RingBuffer::RingBuffer(ObjectData &o, CommandManager *m, FTL::FTL *p)
 
         // Find line with largest difference
         for (auto iter = cacheEntry.begin(); iter != cacheEntry.end(); ++iter) {
-          if (diff < (uint16_t)(clock - iter->second.accessedAt)) {
+          if (diff <= (uint16_t)(clock - iter->second.accessedAt)) {
             if (sel == SelectionMode::All) {
               if (!isDirty(iter->second.list)) {
                 continue;
@@ -616,7 +616,7 @@ void RingBuffer::writeWorker(uint64_t now) {
   // Do we need to write?
   if ((float)dirtyEntryCount / maxEntryCount >= triggerThreshold) {
     // Iterate evictPages / minPages times
-    uint32_t times = evictPages / minPages;
+    uint32_t times = MIN(evictPages / minPages, dirtyEntryCount);
 
     for (uint32_t i = 0; i < times; i++) {
       bool notfound = true;
