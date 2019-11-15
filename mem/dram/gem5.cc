@@ -2183,10 +2183,11 @@ void TimingDRAM::getStatList(std::vector<Stat> &list,
                              std::string prefix) noexcept {
   auto size = ranks.size();
 
-  stats.getStatList(list, prefix + ".dram");
+  stats.getStatList(list, prefix + "gem5.");
 
   for (uint32_t i = 0; i < size; i++) {
-    ranks.at(i)->getStatList(list, prefix + ".dram.rank" + std::to_string(i));
+    ranks.at(i)->getStatList(list,
+                             prefix + "gem5.rank" + std::to_string(i) + ".");
   }
 }
 
