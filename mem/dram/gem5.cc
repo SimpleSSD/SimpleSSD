@@ -1582,6 +1582,17 @@ TimingDRAM::DRAMPacketQueue::iterator TimingDRAM::chooseNextFRFCFS(
 void TimingDRAM::accessAndRespond(DRAMPacket *dram_pkt,
                                   uint64_t static_latency) {
   if (dram_pkt->eid != InvalidEventID) {
+    if (dram_pkt->eid == eventRequestReadDone) {
+      readCompletionQueue.emplace_back(dram_pkt->data);
+    }
+    else if (dram_pkt->eid == eventRequestWriteDone) {
+      // This case also not possible
+      writeCompletionQueue.emplace_back(dram_pkt->data);
+    }
+    else {
+      panic("Unexpected completion event.");
+    }
+
     scheduleRel(dram_pkt->eid, dram_pkt->data, static_latency);
   }
 
