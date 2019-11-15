@@ -1220,6 +1220,9 @@ TimingDRAM::TimingDRAM(ObjectData &o)
   }
 
   nextBurstAt = pTiming->tRP + pTiming->tRCD;
+
+  // Reset stats
+  resetStatValues();
 }
 
 TimingDRAM::~TimingDRAM() {
