@@ -276,9 +276,9 @@ Rank::Rank(ObjectData &o, TimingDRAM *p, uint8_t r)
 }
 
 void Rank::startup(uint64_t ref_tick) {
-  panic_if(ref_tick <= pwrStateTick, "Invalid referenct tick.");
-
   pwrStateTick = getTick();
+
+  panic_if(ref_tick <= pwrStateTick, "Invalid referesh tick.");
 
   scheduleAbs(refreshEvent, 0ull, ref_tick);
 }
@@ -488,7 +488,7 @@ void Rank::schedulePowerEvent(PowerState pwr_state, uint64_t tick) {
   if (!isScheduled(powerEvent)) {
     pwrStateTrans = pwr_state;
 
-    scheduleNow(powerEvent);
+    scheduleAbs(powerEvent, 0, tick);
   }
   else {
     panic(
