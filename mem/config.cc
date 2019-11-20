@@ -7,6 +7,8 @@
 
 #include "mem/config.hh"
 
+#include "util/algorithm.hh"
+
 namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
@@ -18,30 +20,30 @@ const char NAME_RANK[] = "Rank";
 const char NAME_BANK[] = "Bank";
 const char NAME_CHIP[] = "Chip";
 const char NAME_BUS_WIDTH[] = "BusWidth";
-const char NAME_BURST[] = "BurstLength";
+const char NAME_BURST_CHOP[] = "BurstChop";
+const char NAME_BURST_LENGTH[] = "BurstLength";
 const char NAME_CHIP_SIZE[] = "ChipSize";
+const char NAME_ROWBUFFER_SIZE[] = "RowBufferSize";
+const char NAME_ACTIVATION_LIMIT[] = "ActivationLimit";
+
 const char NAME_TCK[] = "tCK";
-const char NAME_TRCD[] = "tRCD";
-const char NAME_TCL[] = "tCL";
-const char NAME_TRP[] = "tRP";
-const char NAME_TRAS[] = "tRAS";
-const char NAME_TWR[] = "tWR";
-const char NAME_TRTP[] = "tRTP";
-const char NAME_TBURST[] = "tBURST";
-const char NAME_TCCD_L[] = "tCCD_L";
-const char NAME_TCCD_L_WR[] = "tCCD_L_WR";
-const char NAME_TRFC[] = "tRFC";
-const char NAME_TREFI[] = "tREFI";
-const char NAME_TWTR[] = "tWTR";
-const char NAME_TRTW[] = "tRTW";
-const char NAME_TCS[] = "tCS";
 const char NAME_TRRD[] = "tRRD";
-const char NAME_TRRD_L[] = "tRRD_L";
-const char NAME_TXAW[] = "tXAW";
-const char NAME_TXP[] = "tXP";
-const char NAME_TXPDLL[] = "tXPDLL";
-const char NAME_TXS[] = "tXS";
-const char NAME_TXSDLL[] = "tXSDLL";
+const char NAME_TRCD[] = "tRCD";
+const char NAME_TRP[] = "tRP";
+const char NAME_TRPab[] = "tRPab";
+const char NAME_TRL[] = "tRL";
+const char NAME_TWL[] = "tWL";
+const char NAME_TDQSCK[] = "tDQSCK";
+const char NAME_TWR[] = "tWR";
+const char NAME_TWTR[] = "tWTR";
+const char NAME_TRTP[] = "tRTP";
+const char NAME_TRFC[] = "tRFC";
+const char NAME_TRFCab[] = "tRFCab";
+const char NAME_TREFI[] = "tREFI";
+const char NAME_TSR[] = "tSR";
+const char NAME_TXSV[] = "tXSV";
+const char NAME_TFAW[] = "tFAW";
+
 const char NAME_IDD0_0[] = "IDD0_0";
 const char NAME_IDD0_1[] = "IDD0_1";
 const char NAME_IDD2P0_0[] = "IDD2P0_0";
@@ -66,21 +68,12 @@ const char NAME_IDD6_0[] = "IDD6_0";
 const char NAME_IDD6_1[] = "IDD6_1";
 const char NAME_VDD_0[] = "VDD_0";
 const char NAME_VDD_1[] = "VDD_1";
-const char NAME_WRITE_BUFFER_SIZE[] = "WriteBufferSize";
-const char NAME_READ_BUFFER_SIZE[] = "ReadBufferSize";
-const char NAME_FORCE_WRITE_THRESHOLD[] = "ForceWriteThreshold";
-const char NAME_START_WRITE_THRESHOLD[] = "WriteThreshold";
-const char NAME_MIN_WRITE_BURST[] = "MinWriteBurst";
-const char NAME_MEMORY_SCHEDULING[] = "Scheduling";
-const char NAME_ADDRESS_MAPPING[] = "Mapping";
+
+const char NAME_WRITE_QUEUE_SIZE[] = "WriteQueueSize";
+const char NAME_READ_QUEUE_SIZE[] = "ReadQueueSize";
+const char NAME_SCHEDULING[] = "Scheduling";
+const char NAME_MAPPING[] = "Mapping";
 const char NAME_PAGE_POLICY[] = "PagePolicy";
-const char NAME_MAX_ACCESS_PER_ROW[] = "MaxAccessPerRow";
-const char NAME_FRONTEND_LATENCY[] = "FrontendLatency";
-const char NAME_BACKEND_LATENCY[] = "BackendLatency";
-const char NAME_ROW_BUFFER_SIZE[] = "RowbufferSize";
-const char NAME_BANK_GROUP[] = "BankGroup";
-const char NAME_ENABLE_POWERDOWN[] = "EnablePowerdown";
-const char NAME_USE_DLL[] = "DLL";
 
 Config::Config() {
   /* 32MB SRAM */
@@ -88,66 +81,62 @@ Config::Config() {
   sram.size = 33554432;
   sram.latency = 20;
 
-  /* LPDDR3-1600 4Gbit 1x32 */
-  dramModel = Model::Simple;
+  /* MT53B512M32 LPDDR4-3200 512Mb x32 */
+  dramModel = Model::LPDDR4;
 
-  dram.channel = 1;
-  dram.rank = 1;
+  dram.channel = 2;
+  dram.rank = 2;
   dram.bank = 8;
   dram.chip = 1;
-  dram.chipSize = 536870912;
-  dram.width = 32;
-  dram.burst = 8;
+  dram.width = 16;
+  dram.burstChop = 16;
+  dram.burstLength = 32;
+  dram.chipSize = 1073741824;
+  dram.rowSize = 2048;
   dram.activationLimit = 4;
-  dram.useDLL = false;
-  dram.pageSize = 4096;
 
-  timing.tCK = 1250;
-  timing.tRCD = 18000;
-  timing.tCL = 15000;
-  timing.tRP = 18000;
-  timing.tRAS = 42000;
-  timing.tWR = 15000;
-  timing.tRTP = 7500;
-  timing.tBURST = 5000;
-  timing.tCCD_L = 0;
-  timing.tRFC = 130000;
-  timing.tREFI = 3900;
-  timing.tWTR = 7500;
-  timing.tRTW = 2500;
-  timing.tCS = 2500;
-  timing.tRRD = 10000;
-  timing.tRRD_L = 0;
-  timing.tXAW = 50000;
-  timing.tXP = 0;
-  timing.tXPDLL = 0;
-  timing.tXS = 0;
-  timing.tXSDLL = 0;
+  timing.tCK = 625;
+  timing.tRCD = MAX(18000, 4 * timing.tCK);
+  timing.tRP = MAX(18000, 3 * timing.tCK);
+  timing.tRPab = MAX(21000, 3 * timing.tCK);
+  timing.tRRD = MAX(10000, 4 * timing.tCK);
+  timing.tRL = 28 * timing.tCK;
+  timing.tWL = 14 * timing.tCK;
+  timing.tDQSCK = 3500;
+  timing.tWR = MAX(18000, 4 * timing.tCK);
+  timing.tWTR = MAX(10000, 8 * timing.tCK);
+  timing.tRTP = MAX(7500, 8 * timing.tCK);
+  timing.tRFC = 14000;
+  timing.tRFCab = 28000;
+  timing.tREFI = 3904000;
+  timing.tSR = MAX(15000, 3 * timing.tCK);
+  timing.tXSV = MAX(timing.tRFCab + 7500, 2 * timing.tCK);
+  timing.tFAW = 40000;
 
-  power.pIDD0[0] = 8.f;
-  power.pIDD0[1] = 60.f;
-  power.pIDD2P0[0] = 0.f;
-  power.pIDD2P0[1] = 0.f;
-  power.pIDD2P1[0] = 0.8f;
-  power.pIDD2P1[1] = 1.8f;
-  power.pIDD2N[0] = 0.8f;
-  power.pIDD2N[1] = 26.f;
-  power.pIDD3P0[0] = 0.f;
-  power.pIDD3P0[1] = 0.f;
-  power.pIDD3P1[0] = 1.4f;
-  power.pIDD3P1[1] = 11.f;
-  power.pIDD3N[0] = 2.f;
-  power.pIDD3N[1] = 34.f;
-  power.pIDD4R[0] = 2.f;
-  power.pIDD4R[1] = 230.f;
-  power.pIDD4W[0] = 2.f;
-  power.pIDD4W[1] = 190.f;
-  power.pIDD5[0] = 28.f;
-  power.pIDD5[1] = 150.f;
-  power.pIDD6[0] = 0.5f;
-  power.pIDD6[1] = 1.8f;
+  power.pIDD0[0] = 7.f;
+  power.pIDD0[1] = 80.f;
+  power.pIDD2P0[0] = 2.f;
+  power.pIDD2P0[1] = 3.5f;
+  power.pIDD2P1[0] = 2.f;
+  power.pIDD2P1[1] = 3.5f;
+  power.pIDD2N[0] = 2.f;
+  power.pIDD2N[1] = 45.f;
+  power.pIDD3P0[0] = 2.f;
+  power.pIDD3P0[1] = 10.f;
+  power.pIDD3P1[0] = 2.f;
+  power.pIDD3P1[1] = 10.f;
+  power.pIDD3N[0] = 4.f;
+  power.pIDD3N[1] = 57.f;
+  power.pIDD4R[0] = 5.f;
+  power.pIDD4R[1] = 450.f;
+  power.pIDD4W[0] = 5.f;
+  power.pIDD4W[1] = 350.f;
+  power.pIDD5[0] = 20.f;
+  power.pIDD5[1] = 170.f;
+  power.pIDD6[0] = 0.4f;
+  power.pIDD6[1] = 1.7f;
   power.pVDD[0] = 1.8f;
-  power.pVDD[1] = 1.2f;
+  power.pVDD[1] = 1.1f;
 }
 
 void Config::loadSRAM(pugi::xml_node &section) {
@@ -165,35 +154,33 @@ void Config::loadDRAMStructure(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_BANK, uint8_t, dram.bank);
     LOAD_NAME_UINT_TYPE(node, NAME_CHIP, uint8_t, dram.chip);
     LOAD_NAME_UINT_TYPE(node, NAME_BUS_WIDTH, uint16_t, dram.width);
-    LOAD_NAME_UINT_TYPE(node, NAME_BURST, uint16_t, dram.burst);
+    LOAD_NAME_UINT_TYPE(node, NAME_BURST_CHOP, uint16_t, dram.burstChop);
+    LOAD_NAME_UINT_TYPE(node, NAME_BURST_LENGTH, uint16_t, dram.burstLength);
     LOAD_NAME_UINT(node, NAME_CHIP_SIZE, dram.chipSize);
+    LOAD_NAME_UINT(node, NAME_ROWBUFFER_SIZE, dram.rowSize);
+    LOAD_NAME_UINT(node, NAME_ACTIVATION_LIMIT, dram.activationLimit);
   }
 }
 
 void Config::loadDRAMTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TIME_TYPE(node, NAME_TCK, uint32_t, timing.tCK);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRCD, uint32_t, timing.tRCD);
-    LOAD_NAME_TIME_TYPE(node, NAME_TCL, uint32_t, timing.tCL);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRP, uint32_t, timing.tRP);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRAS, uint32_t, timing.tRAS);
-    LOAD_NAME_TIME_TYPE(node, NAME_TWR, uint32_t, timing.tWR);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRTP, uint32_t, timing.tRTP);
-    LOAD_NAME_TIME_TYPE(node, NAME_TBURST, uint32_t, timing.tBURST);
-    LOAD_NAME_TIME_TYPE(node, NAME_TCCD_L, uint32_t, timing.tCCD_L);
-    LOAD_NAME_TIME_TYPE(node, NAME_TCCD_L_WR, uint32_t, timing.tCCD_L_WR);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRFC, uint32_t, timing.tRFC);
-    LOAD_NAME_TIME_TYPE(node, NAME_TREFI, uint32_t, timing.tREFI);
-    LOAD_NAME_TIME_TYPE(node, NAME_TWTR, uint32_t, timing.tWTR);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRTW, uint32_t, timing.tRTW);
-    LOAD_NAME_TIME_TYPE(node, NAME_TCS, uint32_t, timing.tCS);
     LOAD_NAME_TIME_TYPE(node, NAME_TRRD, uint32_t, timing.tRRD);
-    LOAD_NAME_TIME_TYPE(node, NAME_TRRD_L, uint32_t, timing.tRRD_L);
-    LOAD_NAME_TIME_TYPE(node, NAME_TXAW, uint32_t, timing.tXAW);
-    LOAD_NAME_TIME_TYPE(node, NAME_TXP, uint32_t, timing.tXP);
-    LOAD_NAME_TIME_TYPE(node, NAME_TXPDLL, uint32_t, timing.tXPDLL);
-    LOAD_NAME_TIME_TYPE(node, NAME_TXS, uint32_t, timing.tXS);
-    LOAD_NAME_TIME_TYPE(node, NAME_TXSDLL, uint32_t, timing.tXSDLL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRCD, uint32_t, timing.tRCD);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRP, uint32_t, timing.tRP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRPab, uint32_t, timing.tRPab);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRL, uint32_t, timing.tRL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWL, uint32_t, timing.tWL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TDQSCK, uint32_t, timing.tDQSCK);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWR, uint32_t, timing.tWR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWTR, uint32_t, timing.tWTR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRTP, uint32_t, timing.tRTP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRFC, uint32_t, timing.tRFC);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRFCab, uint32_t, timing.tRFCab);
+    LOAD_NAME_TIME_TYPE(node, NAME_TREFI, uint32_t, timing.tREFI);
+    LOAD_NAME_TIME_TYPE(node, NAME_TSR, uint32_t, timing.tSR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TXSV, uint32_t, timing.tXSV);
+    LOAD_NAME_TIME_TYPE(node, NAME_TFAW, uint32_t, timing.tFAW);
   }
 }
 
@@ -228,28 +215,16 @@ void Config::loadDRAMPower(pugi::xml_node &section) {
 
 void Config::loadTimingDRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_BUFFER_SIZE, uint32_t,
-                        gem5.writeBufferSize);
-    LOAD_NAME_UINT_TYPE(node, NAME_READ_BUFFER_SIZE, uint32_t,
-                        gem5.readBufferSize);
-    LOAD_NAME_FLOAT(node, NAME_FORCE_WRITE_THRESHOLD, gem5.forceWriteThreshold);
-    LOAD_NAME_FLOAT(node, NAME_START_WRITE_THRESHOLD, gem5.startWriteThreshold);
-    LOAD_NAME_UINT_TYPE(node, NAME_MIN_WRITE_BURST, uint32_t,
-                        gem5.minWriteBurst);
-    LOAD_NAME_UINT_TYPE(node, NAME_MEMORY_SCHEDULING, MemoryScheduling,
-                        gem5.scheduling);
-    LOAD_NAME_UINT_TYPE(node, NAME_ADDRESS_MAPPING, AddressMapping,
-                        gem5.mapping);
-    LOAD_NAME_UINT_TYPE(node, NAME_PAGE_POLICY, PagePolicy, gem5.policy);
-    LOAD_NAME_UINT(node, NAME_MAX_ACCESS_PER_ROW, gem5.frontendLatency);
-    LOAD_NAME_UINT(node, NAME_FRONTEND_LATENCY, gem5.backendLatency);
-    LOAD_NAME_UINT_TYPE(node, NAME_BACKEND_LATENCY, uint32_t,
-                        gem5.maxAccessesPerRow);
-    LOAD_NAME_UINT_TYPE(node, NAME_ROW_BUFFER_SIZE, uint32_t,
-                        gem5.rowBufferSize);
-    LOAD_NAME_UINT_TYPE(node, NAME_BANK_GROUP, uint32_t, gem5.bankGroup);
-    LOAD_NAME_BOOLEAN(node, NAME_ENABLE_POWERDOWN, gem5.enablePowerdown);
-    LOAD_NAME_BOOLEAN(node, NAME_USE_DLL, gem5.useDLL);
+    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_QUEUE_SIZE, uint32_t,
+                        controller.writeQueueSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_READ_QUEUE_SIZE, uint32_t,
+                        controller.readQueueSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_SCHEDULING, MemoryScheduling,
+                        controller.schedulePolicy);
+    LOAD_NAME_UINT_TYPE(node, NAME_MAPPING, AddressMapping,
+                        controller.addressPolicy);
+    LOAD_NAME_UINT_TYPE(node, NAME_PAGE_POLICY, PagePolicy,
+                        controller.pagePolicy);
   }
 }
 
@@ -265,33 +240,31 @@ void Config::storeDRAMStructure(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_BANK, dram.bank);
   STORE_NAME_UINT(section, NAME_CHIP, dram.chip);
   STORE_NAME_UINT(section, NAME_BUS_WIDTH, dram.width);
-  STORE_NAME_UINT(section, NAME_BURST, dram.burst);
+  STORE_NAME_UINT(section, NAME_BURST_CHOP, dram.burstChop);
+  STORE_NAME_UINT(section, NAME_BURST_LENGTH, dram.burstLength);
   STORE_NAME_UINT(section, NAME_CHIP_SIZE, dram.chipSize);
+  STORE_NAME_UINT(section, NAME_ROWBUFFER_SIZE, dram.rowSize);
+  STORE_NAME_UINT(section, NAME_ACTIVATION_LIMIT, dram.activationLimit);
 }
 
 void Config::storeDRAMTiming(pugi::xml_node &section) {
-  STORE_NAME_UINT(section, NAME_TCK, timing.tCK);
-  STORE_NAME_UINT(section, NAME_TRCD, timing.tRCD);
-  STORE_NAME_UINT(section, NAME_TCL, timing.tCL);
-  STORE_NAME_UINT(section, NAME_TRP, timing.tRP);
-  STORE_NAME_UINT(section, NAME_TRAS, timing.tRAS);
-  STORE_NAME_UINT(section, NAME_TWR, timing.tWR);
-  STORE_NAME_UINT(section, NAME_TRTP, timing.tRTP);
-  STORE_NAME_UINT(section, NAME_TBURST, timing.tBURST);
-  STORE_NAME_UINT(section, NAME_TCCD_L, timing.tCCD_L);
-  STORE_NAME_UINT(section, NAME_TCCD_L_WR, timing.tCCD_L_WR);
-  STORE_NAME_UINT(section, NAME_TRFC, timing.tRFC);
-  STORE_NAME_UINT(section, NAME_TREFI, timing.tREFI);
-  STORE_NAME_UINT(section, NAME_TWTR, timing.tWTR);
-  STORE_NAME_UINT(section, NAME_TRTW, timing.tRTW);
-  STORE_NAME_UINT(section, NAME_TCS, timing.tCS);
-  STORE_NAME_UINT(section, NAME_TRRD, timing.tRRD);
-  STORE_NAME_UINT(section, NAME_TRRD_L, timing.tRRD_L);
-  STORE_NAME_UINT(section, NAME_TXAW, timing.tXAW);
-  STORE_NAME_UINT(section, NAME_TXP, timing.tXP);
-  STORE_NAME_UINT(section, NAME_TXPDLL, timing.tXPDLL);
-  STORE_NAME_UINT(section, NAME_TXS, timing.tXS);
-  STORE_NAME_UINT(section, NAME_TXSDLL, timing.tXSDLL);
+  STORE_NAME_TIME(section, NAME_TCK, timing.tCK);
+  STORE_NAME_TIME(section, NAME_TRRD, timing.tRRD);
+  STORE_NAME_TIME(section, NAME_TRCD, timing.tRCD);
+  STORE_NAME_TIME(section, NAME_TRP, timing.tRP);
+  STORE_NAME_TIME(section, NAME_TRPab, timing.tRPab);
+  STORE_NAME_TIME(section, NAME_TRL, timing.tRL);
+  STORE_NAME_TIME(section, NAME_TWL, timing.tWL);
+  STORE_NAME_TIME(section, NAME_TDQSCK, timing.tDQSCK);
+  STORE_NAME_TIME(section, NAME_TWR, timing.tWR);
+  STORE_NAME_TIME(section, NAME_TWTR, timing.tWTR);
+  STORE_NAME_TIME(section, NAME_TRTP, timing.tRTP);
+  STORE_NAME_TIME(section, NAME_TRFC, timing.tRFC);
+  STORE_NAME_TIME(section, NAME_TRFCab, timing.tRFCab);
+  STORE_NAME_TIME(section, NAME_TREFI, timing.tREFI);
+  STORE_NAME_TIME(section, NAME_TSR, timing.tSR);
+  STORE_NAME_TIME(section, NAME_TXSV, timing.tXSV);
+  STORE_NAME_TIME(section, NAME_TFAW, timing.tFAW);
 }
 
 void Config::storeDRAMPower(pugi::xml_node &section) {
@@ -322,23 +295,11 @@ void Config::storeDRAMPower(pugi::xml_node &section) {
 }
 
 void Config::storeTimingDRAM(pugi::xml_node &section) {
-  STORE_NAME_UINT(section, NAME_WRITE_BUFFER_SIZE, gem5.writeBufferSize);
-  STORE_NAME_UINT(section, NAME_READ_BUFFER_SIZE, gem5.readBufferSize);
-  STORE_NAME_FLOAT(section, NAME_FORCE_WRITE_THRESHOLD,
-                   gem5.forceWriteThreshold);
-  STORE_NAME_FLOAT(section, NAME_START_WRITE_THRESHOLD,
-                   gem5.startWriteThreshold);
-  STORE_NAME_UINT(section, NAME_MIN_WRITE_BURST, gem5.minWriteBurst);
-  STORE_NAME_UINT(section, NAME_MEMORY_SCHEDULING, gem5.scheduling);
-  STORE_NAME_UINT(section, NAME_ADDRESS_MAPPING, gem5.mapping);
-  STORE_NAME_UINT(section, NAME_PAGE_POLICY, gem5.policy);
-  STORE_NAME_UINT(section, NAME_MAX_ACCESS_PER_ROW, gem5.frontendLatency);
-  STORE_NAME_UINT(section, NAME_FRONTEND_LATENCY, gem5.backendLatency);
-  STORE_NAME_UINT(section, NAME_BACKEND_LATENCY, gem5.maxAccessesPerRow);
-  STORE_NAME_UINT(section, NAME_ROW_BUFFER_SIZE, gem5.rowBufferSize);
-  STORE_NAME_UINT(section, NAME_BANK_GROUP, gem5.bankGroup);
-  STORE_NAME_BOOLEAN(section, NAME_ENABLE_POWERDOWN, gem5.enablePowerdown);
-  STORE_NAME_BOOLEAN(section, NAME_USE_DLL, gem5.useDLL);
+  STORE_NAME_UINT(section, NAME_WRITE_QUEUE_SIZE, controller.writeQueueSize);
+  STORE_NAME_UINT(section, NAME_READ_QUEUE_SIZE, controller.readQueueSize);
+  STORE_NAME_UINT(section, NAME_SCHEDULING, controller.schedulePolicy);
+  STORE_NAME_UINT(section, NAME_MAPPING, controller.addressPolicy);
+  STORE_NAME_UINT(section, NAME_PAGE_POLICY, controller.pagePolicy);
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -362,7 +323,7 @@ void Config::loadFrom(pugi::xml_node &section) {
         else if (strcmp(name2, "power") == 0 && isSection(node2)) {
           loadDRAMPower(node2);
         }
-        else if (strcmp(name2, "gem5") == 0 && isSection(node2)) {
+        else if (strcmp(name2, "controller") == 0 && isSection(node2)) {
           loadTimingDRAM(node2);
         }
 
@@ -390,7 +351,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_SECTION(node, "power", node2);
   storeDRAMPower(node2);
 
-  STORE_SECTION(node, "gem5", node2);
+  STORE_SECTION(node, "controller", node2);
   storeTimingDRAM(node2);
 }
 
@@ -444,8 +405,8 @@ Config::DRAMPower *Config::getDRAMPower() {
   return &power;
 }
 
-Config::TimingDRAMConfig *Config::getTimingDRAM() {
-  return &gem5;
+Config::DRAMController *Config::getDRAMController() {
+  return &controller;
 }
 
 }  // namespace SimpleSSD::Memory

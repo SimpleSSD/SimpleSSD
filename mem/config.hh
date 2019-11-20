@@ -26,9 +26,8 @@ class Config : public BaseConfig {
   };
 
   enum Model : uint8_t {
-    Simple,
-    Gem5,
-    Full = 1,
+    Ideal,
+    LPDDR4,
   };
 
   enum class MemoryScheduling : uint8_t {
@@ -58,42 +57,37 @@ class Config : public BaseConfig {
 
   //! DRAM structure parameters.
   struct DRAMStructure {
-    uint8_t channel;  //!< # Channel
-    uint8_t rank;     //!< # Rank / Channel
-    uint8_t bank;     //!< # Bank / Rank
-    uint8_t chip;     //!< # Chip / Rank
-    uint16_t width;   //!< Bus width / Chip
-    uint16_t burst;
-    uint64_t chipSize;
-    uint32_t pageSize;
-    uint32_t useDLL : 1;
-    uint32_t activationLimit : 31;
+    uint8_t channel;           //!< # Channel
+    uint8_t rank;              //!< # Rank / Channel
+    uint8_t bank;              //!< # Bank / Rank
+    uint8_t chip;              //!< # Chip / Rank
+    uint16_t width;            //!< Bus width / Chip
+    uint8_t burstChop;         //!< Burst chop (or smaller BL)
+    uint8_t burstLength;       //!< BL (or larger BL)
+    uint64_t chipSize;         //!< bytes / Chip
+    uint32_t rowSize;         //!< Row buffer size
+    uint32_t activationLimit;  //!< Bank activation limit (tFAW)
   };
 
   //! DRAM timing parameters. Unit is ps
   struct DRAMTiming {
-    uint32_t tCK;        //!< Clock period
-    uint32_t tRCD;       //!< RAS to CAS delay
-    uint32_t tCL;        //!< CAS latency
-    uint32_t tRP;        //!< Row precharge time
-    uint32_t tRAS;       //!< ACT to PRE delay
-    uint32_t tWR;        //!< Write recovery time
-    uint32_t tRTP;       //!< Read to precharge delay
-    uint32_t tBURST;     //!< Burst duration
-    uint32_t tCCD_L;     //!< Same bank group CAS to CAS delay
-    uint32_t tCCD_L_WR;  //!< Same bank group write to writ delay
-    uint32_t tRFC;       //!< Refresh cycle time
-    uint32_t tREFI;      //!< Refresh command interval
-    uint32_t tWTR;       //!< Write to read, same rank switching time
-    uint32_t tRTW;       //!< Read to write, same rank switching time
-    uint32_t tCS;        //!< Rank to rank switching time
-    uint32_t tRRD;       //!< ACT to ACT delay
-    uint32_t tRRD_L;     //!< Same bank group RRD
-    uint32_t tXAW;       //!< X activation window
-    uint32_t tXP;        //!< Power-up delay
-    uint32_t tXPDLL;     //!< Power-up delay with locked DLL
-    uint32_t tXS;        //!< Self-refresh exit latency
-    uint32_t tXSDLL;     //!< Self-refresh exit latency DLL
+    uint32_t tCK;     //!< Clock period
+    uint32_t tRRD;    //!< ACT to ACT delay
+    uint32_t tRCD;    //!< RAS to CAS delay
+    uint32_t tRP;     //!< Row precharge (Per bank)
+    uint32_t tRPab;   //!< Row precharge (All banks)
+    uint32_t tRL;     //!< Read latency
+    uint32_t tWL;     //!< Write latency
+    uint32_t tDQSCK;  //!< DQS Output Access Time from CK
+    uint32_t tWR;     //!< Write recovery
+    uint32_t tWTR;    //!< Write to Read latency
+    uint32_t tRTP;    //!< Read to Precharge
+    uint32_t tRFC;    //!< Refresh time (Per bank)
+    uint32_t tRFCab;  //!< Refresh time (All banks)
+    uint32_t tREFI;   //!< Refresh command interval
+    uint32_t tSR;     //!< Self refresh exit latency
+    uint32_t tXSV;    //!< Exit self refresh to valid commands
+    uint32_t tFAW;    //!< Bank activation limit window
   };
 
   //! DRAM power parameters. Unit is mA
@@ -112,23 +106,13 @@ class Config : public BaseConfig {
     float pVDD[2];     //!< Main voltage (Unit: V)
   };
 
-  //! TimingDRAM parameters
-  struct TimingDRAMConfig {
-    uint32_t writeBufferSize;
-    uint32_t readBufferSize;
-    float forceWriteThreshold;
-    float startWriteThreshold;
-    uint32_t minWriteBurst;
-    MemoryScheduling scheduling;
-    AddressMapping mapping;
-    PagePolicy policy;
-    uint64_t frontendLatency;
-    uint64_t backendLatency;
-    uint32_t maxAccessesPerRow;
-    uint32_t rowBufferSize;
-    uint32_t bankGroup;
-    bool enablePowerdown;
-    bool useDLL;
+  //! DRAM Controller parameters.
+  struct DRAMController {
+    uint32_t readQueueSize;
+    uint32_t writeQueueSize;
+    MemoryScheduling schedulePolicy;
+    AddressMapping addressPolicy;
+    PagePolicy pagePolicy;
   };
 
  private:
@@ -136,7 +120,7 @@ class Config : public BaseConfig {
   DRAMStructure dram;
   DRAMTiming timing;
   DRAMPower power;
-  TimingDRAMConfig gem5;
+  DRAMController controller;
 
   Model dramModel;
 
@@ -167,7 +151,7 @@ class Config : public BaseConfig {
   DRAMStructure *getDRAM();
   DRAMTiming *getDRAMTiming();
   DRAMPower *getDRAMPower();
-  TimingDRAMConfig *getTimingDRAM();
+  DRAMController *getDRAMController();
 };
 
 }  // namespace SimpleSSD::Memory
