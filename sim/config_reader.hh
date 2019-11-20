@@ -83,7 +83,7 @@ class ConfigReader {
   Memory::Config::DRAMStructure *getDRAM();
   Memory::Config::DRAMTiming *getDRAMTiming();
   Memory::Config::DRAMPower *getDRAMPower();
-  Memory::Config::TimingDRAMConfig *getTimingDRAM();
+  Memory::Config::DRAMController *getDRAMController();
 
   // Interface for HIL::Config
   std::vector<HIL::Config::Disk> &getDiskList();
