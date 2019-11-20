@@ -82,14 +82,14 @@
         <int> DRAM model.
 
         Possible values:
-         0: Simple DRAM model based on atomic dram controller of gem5
-         1: DRAM model based on timing dram controller of gem5
+         0: Ideal DRAM model with only DDR bus latency
+         1: LPDDR4 DRAM model
        -->
-      <config name="Model">0</config>
+      <config name="Model">1</config>
       <!-- DRAM structural configuration -->
       <section name="struct">
         <!-- <int> # Channel -->
-        <config name="Channel">1</config>
+        <config name="Channel">2</config>
         <!-- <int> # Rank / Channel -->
         <config name="Rank">1</config>
         <!-- <int> # Bank / Rank -->
@@ -97,11 +97,17 @@
         <!-- <int> # Chip / Rank -->
         <config name="Chip">1</config>
         <!-- <int> # Bus width / Chip -->
-        <config name="BusWidth">32</config>
-        <!-- <int> # Burst length -->
-        <config name="BurstLength">8</config>
+        <config name="BusWidth">16</config>
+        <!-- <int> Burst Chop or Burst Length (small) -->
+        <config name="BurstChop">16</config>
+        <!-- <int> Burst Length (large) -->
+        <config name="BurstLength">32</config>
         <!-- <int> # Chip size in bytes -->
         <config name="ChipSize">1073741824</config>
+        <!-- <int> Row buffersize in bytes -->
+        <config name="RowBufferSize">2048</config>
+        <!-- <int> Bank activation limit in tFAW -->
+        <config name="ActivationLimit">4</config>
       </section>
       <!--
         DRAM timing configuration
@@ -109,27 +115,22 @@
        -->
       <section name="timing">
         <config name="tCK">1250</config>
+        <config name="tRRD">13750</config>
         <config name="tRCD">13750</config>
-        <config name="tCL">13750</config>
         <config name="tRP">13750</config>
-        <config name="tRAS">35000</config>
-        <config name="tWR">15000</config>
-        <config name="tRTP">7500</config>
-        <config name="tBURST"></config>
-        <config name="tCCD_L"></config>
-        <config name="tCCD_L_WR"></config>
-        <config name="tRFC">160000</config>
-        <config name="tREFI">7800000</config>
-        <config name="tWTR">7500</config>
-        <config name="tRTW"></config>
-        <config name="tCS"></config>
-        <config name="tRRD">6000</config>
-        <config name="tRRD_L"></config>
-        <config name="tXAW"></config>
-        <config name="tXP">6000</config>
-        <config name="tXPDLL">24000</config>
-        <config name="tXS">170000</config>
-        <config name="tXSDLL">640000</config>
+        <config name="tRPab">35000</config>
+        <config name="tRL">15000</config>
+        <config name="tWL">7500</config>
+        <config name="tDQSCK"></config>
+        <config name="tWR"></config>
+        <config name="tWTR"></config>
+        <config name="tRTP">160000</config>
+        <config name="tRFC">7800000</config>
+        <config name="tRFCab">7500</config>
+        <config name="tREFI"></config>
+        <config name="tSR"></config>
+        <config name="tXSV">6000</config>
+        <config name="tFAW"></config>
       </section>
       <!--
         DRAM power configuration
@@ -162,19 +163,14 @@
         <config name="VDD_1">0</config>
       </section>
       <!--
-        gem5's DRAM controller configuration
+        DRAM controller configuration
        -->
-      <section name="gem5">
+      <section name="controller">
         <!-- <int> Number of write queue entries -->
-        <config name="WriteBufferSize">64</config>
+        <config name="WriteQueueSize">64</config>
         <!-- <int> Number of read queue entries -->
-        <config name="ReadBufferSize">64</config>
-        <!-- <float> Threshold to force writes -->
-        <config name="ForceWriteThreshold">0.85</config>
-        <!-- <float> Threshold to start writes -->
-        <config name="WriteThreshold">0.5</config>
-        <!-- <int> Minimum write bursts before switching to reads -->
-        <config name="MinWriteBurst">16</config>
+        <config name="ReadQueueSize">64</config>
+
         <!--
           <int> Memory scheduling policy
 
@@ -202,20 +198,6 @@
             3: Close adaptive
          -->
         <config name="PagePolicy">1</config>
-        <!-- <int> Max accesses per row before closing -->
-        <config name="MaxAccessPerRow">16</config>
-        <!-- <time> Static frontend latency -->
-        <config name="FrontendLatency">10ns</config>
-        <!-- <time> Static backend latency -->
-        <config name="BackendLatency">10ns</config>
-        <!-- <int> Page (row buffer) size per device/chip -->
-        <config name="RowbufferSize">4096</config>
-        <!-- <int> Number of bank groups per rank -->
-        <config name="BankGroup">0</config>
-        <!-- <bool> Enable powerdown state -->
-        <config name="EnablePowerdown">false</config>
-        <!-- <bool> DRAM has DLL or not -->
-        <config name="DLL">false</config>
       </section>
     </section>
   </section>
