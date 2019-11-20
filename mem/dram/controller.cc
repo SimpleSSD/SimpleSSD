@@ -500,6 +500,7 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
   auto ret = entries.emplace(internalEntryID++, req);
 
   // Generate splitted requests
+  uint64_t now = getTick();
   std::list<SubEntry *> *target = nullptr;
 
   if (read) {
@@ -514,6 +515,7 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
         internalSubentryID,
         SubEntry(internalSubentryID, &ret.first->second, addr));
 
+    sret.first->second.submitted = now;
     target->emplace_back(&sret.first->second);
   }
 
