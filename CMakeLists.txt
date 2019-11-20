@@ -321,27 +321,30 @@ if (FW_LATENCY)
   math(EXPR SRC_LEN "${SRC_LEN} - 1")
 
   # Generate clang++ arguments
-  set(FW_CLANG_ARGS
+  set(FW_DEFAULT_ARGS
     "-std=c++17"
     "-g"
     "-c"
     "-emit-llvm"
-    "-DEXCLUDE_CPU"
     "-I${PROJECT_SOURCE_DIR}"
     "-I${DRAMPOWER_SOURCE_DIR}"
+  )
+
+  set(FW_FIRST_PASS_ARGS
+    "-DEXCLUDE_CPU"
   )
 
   if (NOT "${FW_TARGET}" STREQUAL "")
     string(FIND ${FW_TARGET} "-" FW_TARGET_POS)
     string(SUBSTRING ${FW_TARGET} 0 ${FW_TARGET_POS} FW_ARCH)
 
-    list(APPEND FW_CLANG_ARGS "--target=${FW_TARGET}")
-    list(APPEND FW_CLANG_ARGS "-m${FW_ARCH}")
+    list(APPEND FW_FIRST_PASS_ARGS "--target=${FW_TARGET}")
+    list(APPEND FW_FIRST_PASS_ARGS "-m${FW_ARCH}")
   endif ()
 
   if (NOT "${FW_CPU}" STREQUAL "")
     set(FW_CPU_ARG "-mcpu=${FW_CPU}")
-    list(APPEND FW_CLANG_ARGS "${FW_CPU_ARG}")
+    list(APPEND FW_FIRST_PASS_ARGS "${FW_CPU_ARG}")
   endif ()
 
   foreach (IDX RANGE ${SRC_LEN})
@@ -352,11 +355,11 @@ if (FW_LATENCY)
 
     add_custom_command(OUTPUT ${OBJ}
       COMMAND mkdir -p ${DIR}
-      COMMAND clang++ ${FW_CLANG_ARGS} ${FW_INCLUDE} -o "${OBJ}.bc" ${SRC}
+      COMMAND clang++ ${FW_DEFAULT_ARGS} ${FW_FIRST_PASS_ARGS} ${FW_INCLUDE} -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
       COMMAND llc ${FW_CPU_ARG} -O2 -filetype=asm -o "${OBJ}.bc.S" "${OBJ}.opt.bc"
       COMMAND ${STAT_COLLECTOR} "${OBJ}.bc"
-      COMMAND clang++ -std=c++17 -g -c -emit-llvm -I${PROJECT_SOURCE_DIR} -I${DRAMPOWER_SOURCE_DIR} -o "${OBJ}.bc" ${SRC}
+      COMMAND clang++ ${FW_DEFAULT_ARGS} -O2 -o "${OBJ}.bc" ${SRC}
       COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
       COMMAND llc -O2 -filetype=obj -o ${OBJ} "${OBJ}.opt.bc"
       DEPENDS ${SRC}
