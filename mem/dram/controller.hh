@@ -95,6 +95,7 @@ class DRAMController : public AbstractRAM {
             uint64_t data = 0) override;
   void write(uint64_t address, uint32_t length, Event eid,
              uint64_t data = 0) override;
+  uint64_t allocate(uint64_t, std::string &&, bool = false) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

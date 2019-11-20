@@ -169,6 +169,16 @@ DRAMController::~DRAMController() {
   }
 }
 
+uint64_t DRAMController::allocate(uint64_t size, std::string &&name, bool dry) {
+  uint64_t address = AbstractRAM::allocate(size, std::move(name), dry);
+
+  if (!dry) {
+    statbin.emplace_back(StatisticBin(address, size));
+  }
+
+  return address;
+}
+
 void DRAMController::getStatList(std::vector<Stat> &list,
                                  std::string prefix) noexcept {
   for (uint8_t i = 0; i < channels.size(); i++) {
