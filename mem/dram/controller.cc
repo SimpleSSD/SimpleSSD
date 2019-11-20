@@ -7,6 +7,7 @@
 
 #include "mem/dram/controller.hh"
 
+#include "mem/dram/abstract_dram.hh"
 #include "mem/dram/ideal.hh"
 
 #define QUEUE_HIT_LATENCY ((uint64_t)10000)  // 10ns
@@ -19,7 +20,7 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
       decodeAddress(p->getDecodeFunction()),
       entrySize(e),
       isInRead(true),
-      writeCount(0),
+      writeCountInWrite(0),
       internalEntryID(0) {
   ctrl = object.config->getDRAMController();
 
@@ -160,15 +161,18 @@ void Channel::submitRequest() {
 
       // Switch to read?
       if (writeQueue.size() == 0 ||
-          (readRequestQueue.size() > 0 && writeCount >= ctrl->minWriteBurst)) {
+          (readRequestQueue.size() > 0 &&
+           writeCountInWrite >= ctrl->minWriteBurst)) {
         switchState = true;
       }
+
+      writeCountInWrite++;
     }
   }
 
   if (switchState) {
     if (isInRead) {
-      writeCount = 0;
+      writeCountInWrite = 0;
     }
 
     isInRead = !isInRead;
