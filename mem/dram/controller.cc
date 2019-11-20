@@ -103,14 +103,10 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
       [this](uint64_t, uint64_t) { submitRequest(); },
       "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventDoNext");
   eventReadDone = createEvent(
-      [this](uint64_t, uint64_t) {
-
-      },
+      [this](uint64_t, uint64_t d) { completeRequest(d, true); },
       "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventReadDone");
   eventWriteDone = createEvent(
-      [this](uint64_t, uint64_t) {
-
-      },
+      [this](uint64_t, uint64_t d) { completeRequest(d, false); },
       "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventWriteDone");
 }
 
@@ -183,6 +179,18 @@ void Channel::submitRequest() {
   }
 }
 
+void Channel::completeRequest(uint64_t id, bool read) {
+  auto iter = responseQueue.find(id);
+
+  panic_if(iter == responseQueue.end(), "Invalid DRAM response.");
+
+  if (read) {
+    scheduleNow(iter->second.event, iter->second.data);
+  }
+
+  responseQueue.erase(iter);
+}
+
 uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
   bool foundInWrQ = false;
 
@@ -194,6 +202,9 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
 
   if (!foundInWrQ) {
     readRequestQueue.emplace_back(addr, eid, data);
+  }
+  else {
+    scheduleNow(eid, data);
   }
 
   if (!isScheduled(eventDoNext)) {

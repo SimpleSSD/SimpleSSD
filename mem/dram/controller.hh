@@ -66,6 +66,8 @@ class Channel : public Object {
   Event eventReadDone;
   Event eventWriteDone;
 
+  void completeRequest(uint64_t, bool);
+
   // Statistics
   uint64_t readCount;
   uint64_t readFromWriteQueue;
