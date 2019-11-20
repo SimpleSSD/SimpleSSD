@@ -276,9 +276,10 @@ void Channel::getStatList(std::vector<Stat> &list,
 void Channel::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)readCount);
   values.push_back((double)readFromWriteQueue);
-  values.push_back((double)(readCount * entrySize));
   values.push_back((double)writeCount);
   values.push_back((double)writeMerged);
+  values.push_back((double)(readCount * entrySize));
+  values.push_back((double)(readFromWriteQueue * entrySize));
   values.push_back((double)(writeCount * entrySize));
 }
 
