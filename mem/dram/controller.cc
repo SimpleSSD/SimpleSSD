@@ -319,7 +319,7 @@ DRAMController::DRAMController(ObjectData &o)
   addressLimit.bank = dram->bank;
   addressLimit.row = dram->chipSize / dram->bank / dram->rowSize;
 
-  capacity = dram->chipSize * dram->chip * dram->rank * dram->channel;
+  totalCapacity = dram->chipSize * dram->chip * dram->rank * dram->channel;
 
   panic_if(popcount64(entrySize) != 1,
            "Memory request size should be power of 2.");
@@ -473,6 +473,8 @@ void DRAMController::writeRetry() {
 
 void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
                                    Event eid, uint64_t data) {
+  panic_if(addr + size >= totalCapacity, "Address out of range.");
+
   // Split request
   uint64_t alignedBegin = addr / entrySize;
   uint64_t alignedEnd = alignedBegin + DIVCEIL(size, entrySize) * entrySize;

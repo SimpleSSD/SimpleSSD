@@ -112,7 +112,6 @@ class DRAMController : public AbstractRAM {
   std::vector<Channel *> channels;
 
   // Address decoder
-  uint64_t capacity;
   Address addressLimit;
 
   std::function<Address(uint64_t)> decodeAddress;
