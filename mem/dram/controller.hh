@@ -10,31 +10,61 @@
 #ifndef __SIMPLESSD_MEM_DRAM_DRAM_CONTROLLER_HH__
 #define __SIMPLESSD_MEM_DRAM_DRAM_CONTROLLER_HH__
 
+#include <unordered_set>
+
 #include "mem/abstract_ram.hh"
 #include "mem/dram/abstract_dram.hh"
 
 namespace SimpleSSD::Memory::DRAM {
 
+class DRAMController;
+
 class Channel : public Object {
  private:
   const uint8_t id;
 
+  DRAMController *parent;
+  Config::DRAMController *ctrl;
   AbstractDRAM *pDRAM;
+
+  uint32_t entrySize;
+
+  // Address matcher
+  std::unordered_set<uint64_t> writeQueue;
+
+  // Request queue
+  struct ReadRequest {
+    uint64_t address;
+    Event event;
+    uint64_t data;
+  };
+
+  std::list<ReadRequest> readRequestQueue;
+  std::list<uint64_t> writeRequestQueue;
+
+  uint8_t addToReadQueue(uint64_t, Event, uint64_t);
+  uint8_t addToWriteQueue(uint64_t);
+
+  void submitRequest();
+
+  Event eventDoNext;
+
+  // Completion handler
+  Event eventReadDone;
+  Event eventWriteDone;
 
   // Statistics
   uint64_t readCount;
   uint64_t readFromWriteQueue;
-  uint64_t readBytes;
   uint64_t writeCount;
   uint64_t writeMerged;
-  uint64_t writeBytes;
 
  public:
-  Channel(ObjectData &, uint8_t);
+  Channel(ObjectData &, DRAMController*, uint8_t, uint32_t);
   ~Channel();
 
   // 0 = submit, 1 = wqhit, 2 = retry
-  uint8_t submit(Address &, uint32_t, bool, Event, uint64_t);
+  uint8_t submit(uint64_t, bool, Event, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -108,11 +138,10 @@ class DRAMController : public AbstractRAM {
 
     Entry *parent;
 
-    Address address;
-
+    uint64_t address;
     uint64_t submitted;
 
-    SubEntry(uint64_t i, Entry *p, Address a) : id(i), parent(p), address(a) {}
+    SubEntry(uint64_t i, Entry *p, uint64_t a) : id(i), parent(p), address(a) {}
   };
 
   std::unordered_map<uint64_t, SubEntry> subentries;
@@ -139,6 +168,8 @@ class DRAMController : public AbstractRAM {
  public:
   DRAMController(ObjectData &);
   ~DRAMController();
+
+  std::function<Address(uint64_t)> &getDecodeFunction();
 
   void read(uint64_t address, uint32_t length, Event eid,
             uint64_t data = 0) override;

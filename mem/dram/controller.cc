@@ -13,7 +13,10 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
-Channel::Channel(ObjectData &o, uint8_t i) : Object(o), id(i) {
+Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
+    : Object(o), id(i), parent(p), entrySize(e) {
+  ctrl = object.config->getDRAMController();
+
   switch ((Memory::Config::Model)readConfigUint(
       Section::Memory, Memory::Config::Key::DRAMModel)) {
     case Memory::Config::Model::Ideal:
@@ -27,10 +30,94 @@ Channel::Channel(ObjectData &o, uint8_t i) : Object(o), id(i) {
 
       abort();
   }
+
+  // Make event
+  eventDoNext = createEvent(
+      [this](uint64_t, uint64_t) { submitRequest(); },
+      "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventDoNext");
+  eventReadDone = createEvent(
+      [this](uint64_t, uint64_t) {
+
+      },
+      "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventReadDone");
+  eventWriteDone = createEvent(
+      [this](uint64_t, uint64_t) {
+
+      },
+      "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventWriteDone");
 }
 
 Channel::~Channel() {
   delete pDRAM;
+}
+
+void Channel::submitRequest() {
+
+}
+
+uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
+  bool foundInWrQ = false;
+
+  if (writeQueue.find(addr) != writeQueue.end()) {
+    foundInWrQ = true;
+
+    readFromWriteQueue++;
+  }
+
+  if (!foundInWrQ) {
+    ReadRequest req;
+
+    req.address = addr;
+    req.event = eid;
+    req.data = data;
+
+    readRequestQueue.emplace_back(req);
+  }
+
+  if (!isScheduled(eventDoNext)) {
+    scheduleNow(eventDoNext);
+  }
+
+  return true;
+}
+
+uint8_t Channel::addToWriteQueue(uint64_t addr) {
+  bool merged = writeQueue.find(addr) != writeQueue.end();
+
+  if (!merged) {
+    writeQueue.emplace(addr);
+    writeRequestQueue.emplace_back(addr);
+  }
+  else {
+    writeMerged++;
+  }
+
+  if (!isScheduled(eventDoNext)) {
+    scheduleNow(eventDoNext);
+  }
+
+  return 0;
+}
+
+uint8_t Channel::submit(uint64_t addr, bool read, Event eid, uint64_t data) {
+  uint64_t now = getTick();
+
+  if (!read) {
+    if (writeQueue.size() < ctrl->writeQueueSize) {
+      writeCount++;
+
+      return addToWriteQueue(addr);
+    }
+  }
+  else {
+    if (readQueue.size() < ctrl->readQueueSize) {
+      readCount++;
+
+      return addToReadQueue(addr, eid, data);
+    }
+  }
+
+  return 2;
 }
 
 void Channel::getStatList(std::vector<Stat> &list,
@@ -54,19 +141,17 @@ void Channel::getStatList(std::vector<Stat> &list,
 void Channel::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)readCount);
   values.push_back((double)readFromWriteQueue);
-  values.push_back((double)readBytes);
+  values.push_back((double)(readCount * entrySize));
   values.push_back((double)writeCount);
   values.push_back((double)writeMerged);
-  values.push_back((double)writeBytes);
+  values.push_back((double)(writeCount * entrySize));
 }
 
 void Channel::resetStatValues() noexcept {
   readCount = 0;
   readFromWriteQueue = 0;
-  readBytes = 0;
   writeCount = 0;
   writeMerged = 0;
-  writeBytes = 0;
 }
 
 void Channel::createCheckpoint(std::ostream &out) const noexcept {
@@ -86,9 +171,11 @@ DRAMController::DRAMController(ObjectData &o)
 
   channels.resize(nc);
 
+  entrySize = (uint64_t)dram->width * dram->burstChop / 8;
+
   // Create DRAM Objects
   for (uint8_t i = 0; i < nc; i++) {
-    channels[i] = new Channel(object, i);
+    channels[i] = new Channel(object, this, i, entrySize);
   }
 
   // Calculate maximums
@@ -98,8 +185,6 @@ DRAMController::DRAMController(ObjectData &o)
   addressLimit.row = dram->chipSize / dram->bank / dram->rowSize;
 
   capacity = dram->chipSize * dram->chip * dram->rank * dram->channel;
-
-  entrySize = (uint64_t)dram->width * dram->burstChop / 8;
 
   panic_if(popcount64(entrySize) != 1,
            "Memory request size should be power of 2.");
@@ -190,11 +275,15 @@ DRAMController::~DRAMController() {
   }
 }
 
+std::function<Address(uint64_t)> &DRAMController::getDecodeFunction() {
+  return decodeAddress;
+}
+
 void DRAMController::readRetry() {
   auto req = readRetryQueue.front();
 
-  uint8_t ret = channels[req->address.channel]->submit(
-      req->address, (uint32_t)entrySize, true, eventReadComplete, req->id);
+  uint8_t ret = channels[decodeAddress(req->address).channel]->submit(
+      req->address, true, eventReadComplete, req->id);
 
   if (ret == 2) {
     // Queue full
@@ -223,8 +312,8 @@ void DRAMController::readRetry() {
 void DRAMController::writeRetry() {
   auto req = writeRetryQueue.front();
 
-  uint8_t ret = channels[req->address.channel]->submit(
-      req->address, (uint32_t)entrySize, false, eventWriteComplete, req->id);
+  uint8_t ret = channels[decodeAddress(req->address).channel]->submit(
+      req->address, false, eventWriteComplete, req->id);
 
   if (ret == 0) {
     // Request submitted - write is async
@@ -283,7 +372,7 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
   for (uint64_t addr = alignedBegin; addr < alignedEnd; addr += entrySize) {
     auto sret = subentries.emplace(
         internalSubentryID,
-        SubEntry(internalSubentryID, &ret.first->second, decodeAddress(addr)));
+        SubEntry(internalSubentryID, &ret.first->second, addr));
 
     target->emplace_back(&sret.first->second);
   }
