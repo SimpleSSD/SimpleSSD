@@ -71,10 +71,9 @@ class AbstractDRAM : public Object {
   AbstractDRAM(ObjectData &);
   ~AbstractDRAM();
 
-  virtual void read(Address address, uint16_t size, Event eid,
-                    uint64_t data = 0) = 0;
-  virtual void write(Address address, uint16_t size, Event eid,
-                     uint64_t data = 0) = 0;
+  virtual bool isNotRefresh(uint32_t, uint8_t) = 0;
+  virtual uint32_t getRowInfo(uint32_t, uint8_t) = 0;
+  virtual void submit(Address, uint32_t, bool, Event, uint64_t) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

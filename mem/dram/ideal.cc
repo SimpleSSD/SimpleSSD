@@ -44,34 +44,38 @@ void Ideal::postDone(Request *req) {
   delete req;
 }
 
-void Ideal::read(Address addr, uint16_t length, Event eid, uint64_t data) {
-  uint64_t address = 0;
-
-  address = addr.bank * bankSize + addr.row * pStructure->rowSize + addr.column;
-
-  auto req = new Request(address, length, eid, data);
-
-  // Stat Update
-  readStat.count++;
-  readStat.size += length;
-
-  // Schedule callback
-  scheduler.read(req);
+bool Ideal::isNotRefresh(uint32_t, uint8_t) {
+  return true;
 }
 
-void Ideal::write(Address addr, uint16_t length, Event eid, uint64_t data) {
+uint32_t Ideal::getRowInfo(uint32_t, uint8_t) {
+  return std::numeric_limits<uint32_t>::max();
+}
+
+void Ideal::submit(Address addr, uint32_t size, bool read, Event eid,
+                   uint64_t data) {
   uint64_t address = 0;
 
-  address = addr.bank * bankSize + addr.row * pStructure->rowSize + addr.column;
+  address = addr.bank * bankSize + addr.row * pStructure->rowSize;
 
-  auto req = new Request(address, length, eid, data);
+  auto req = new Request(address, size, eid, data);
 
-  // Stat Update
-  writeStat.count++;
-  writeStat.size += length;
+  if (read) {
+    // Stat Update
+    readStat.count++;
+    readStat.size += size;
 
-  // Schedule callback
-  scheduler.write(req);
+    // Schedule callback
+    scheduler.read(req);
+  }
+  else {
+    // Stat Update
+    writeStat.count++;
+    writeStat.size += size;
+
+    // Schedule callback
+    scheduler.write(req);
+  }
 }
 
 void Ideal::createCheckpoint(std::ostream &out) const noexcept {

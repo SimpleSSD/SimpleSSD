@@ -30,8 +30,9 @@ class Ideal : public AbstractDRAM {
   Ideal(ObjectData &);
   ~Ideal();
 
-  void read(Address, uint16_t, Event, uint64_t) override;
-  void write(Address, uint16_t, Event, uint64_t) override;
+  bool isNotRefresh(uint32_t, uint8_t) override;
+  uint32_t getRowInfo(uint32_t, uint8_t) override;
+  void submit(Address, uint32_t, bool, Event, uint64_t) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
