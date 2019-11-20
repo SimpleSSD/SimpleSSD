@@ -51,6 +51,14 @@ class DRAMController : public AbstractRAM {
   // DRAM Channels
   std::vector<Channel *> channels;
 
+  // Address decoder
+  uint64_t capacity;
+  Address addressLimit;
+
+  std::function<Address(uint64_t)> decodeAddress;
+
+  // Completion handler
+
   // Stat bin
   struct StatisticBin {
     // Address range

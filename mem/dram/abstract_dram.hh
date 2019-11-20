@@ -19,11 +19,13 @@ namespace SimpleSSD::Memory::DRAM {
 
 struct Address {
   uint32_t row;
-  uint32_t bank : 8;
-  uint32_t column : 24;
+  uint8_t bank;
+  uint8_t channel;
+  uint16_t rank;
 
-  Address() : row(0), bank(0), column(0) {}
-  Address(uint32_t r, uint8_t b, uint32_t c) : row(r), bank(b), column(c) {}
+  Address() : row(0), bank(0), channel(0), rank(0) {}
+  Address(uint8_t c, uint16_t r, uint8_t b, uint32_t ro)
+      : row(ro), bank(b), channel(c), rank(r) {}
 };
 
 class AbstractDRAM : public Object {

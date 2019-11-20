@@ -76,7 +76,8 @@ void Channel::restoreCheckpoint(std::istream &in) noexcept {
 }
 
 DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
-  uint8_t nc = object.config->getDRAM()->channel;
+  auto dram = object.config->getDRAM();
+  uint8_t nc = dram->channel;
 
   ctrl = object.config->getDRAMController();
 
@@ -85,6 +86,80 @@ DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
   // Create DRAM Objects
   for (uint8_t i = 0; i < nc; i++) {
     channels[i] = new Channel(object, i);
+  }
+
+  // Calculate maximums
+  addressLimit.channel = nc;
+  addressLimit.rank = dram->rank;
+  addressLimit.bank = dram->bank;
+  addressLimit.row = dram->chipSize / dram->bank / dram->rowSize;
+
+  capacity = dram->chipSize * dram->chip * dram->rank * dram->channel;
+
+  // Panic
+  panic_if(popcount32(dram->bank) != 1, "# Bank should be power of 2.");
+  panic_if(popcount32(dram->rowSize) != 1,
+           "Row buffer size should be power of 2.");
+
+  // Make address decoder
+  switch (ctrl->addressPolicy) {
+    case Config::AddressMapping::RoRaBaChCo:
+      decodeAddress = [channel = addressLimit.channel, rank = addressLimit.rank,
+                       bank = addressLimit.bank, row = addressLimit.row,
+                       col = dram->rowSize](uint64_t addr) -> Address {
+        Address ret;
+
+        addr = addr / col;
+        ret.channel = addr % channel;
+        addr = addr / channel;
+        ret.bank = addr % bank;
+        addr = addr / bank;
+        ret.rank = addr % rank;
+        addr = addr / rank;
+        ret.row = addr % row;
+
+        return ret;
+      };
+
+      break;
+    case Config::AddressMapping::RoRaBaCoCh:
+      decodeAddress = [channel = addressLimit.channel, rank = addressLimit.rank,
+                       bank = addressLimit.bank, row = addressLimit.row,
+                       col = dram->rowSize](uint64_t addr) -> Address {
+        Address ret;
+
+        ret.channel = addr % channel;
+        addr = addr / channel;
+        addr = addr / col;
+        ret.bank = addr % bank;
+        addr = addr / bank;
+        ret.rank = addr % rank;
+        addr = addr / rank;
+        ret.row = addr % row;
+
+        return ret;
+      };
+
+      break;
+    case Config::AddressMapping::RoCoRaBaCh:
+      decodeAddress = [channel = addressLimit.channel, rank = addressLimit.rank,
+                       bank = addressLimit.bank, row = addressLimit.row,
+                       col = dram->rowSize](uint64_t addr) -> Address {
+        Address ret;
+
+        ret.channel = addr % channel;
+        addr = addr / channel;
+        ret.bank = addr % bank;
+        addr = addr / bank;
+        ret.rank = addr % rank;
+        addr = addr / rank;
+        addr = addr / col;
+        ret.row = addr % row;
+
+        return ret;
+      };
+
+      break;
   }
 }
 
