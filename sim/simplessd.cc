@@ -10,8 +10,7 @@
 #include <iostream>
 
 #include "hil/nvme/subsystem.hh"
-#include "mem/dram/gem5.hh"
-#include "mem/dram/simple.hh"
+#include "mem/dram/controller.hh"
 #include "mem/sram/sram.hh"
 #include "sim/version.hh"
 #include "util/path.hh"
@@ -118,20 +117,7 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   log.init(object.cpu, outfile, errfile, debugfile);
 
   object.sram = new Memory::SRAM::SRAM(object);
-
-  switch ((Memory::Config::Model)c->readUint(Section::Memory,
-                                             Memory::Config::Key::DRAMModel)) {
-    case Memory::Config::Model::Simple:
-      object.dram = new Memory::DRAM::SimpleDRAM(object);
-      break;
-    case Memory::Config::Model::Gem5:
-      object.dram = new Memory::DRAM::TimingDRAM(object);
-      break;
-    default:
-      std::cerr << "Invalid DRAM model selected." << std::endl;
-
-      abort();
-  }
+  object.dram = new Memory::DRAM::DRAMController(object);
 
   // Initialize objects
   switch (mode) {

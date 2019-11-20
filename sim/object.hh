@@ -68,7 +68,7 @@ namespace SimpleSSD {
 // Forware definitions
 namespace Memory::DRAM {
 
-class AbstractDRAM;
+class DRAMController;
 
 }
 
@@ -87,7 +87,7 @@ class AbstractSRAM;
 struct ObjectData {
   /* SSD hardware */
   CPU::CPU *cpu;
-  Memory::DRAM::AbstractDRAM *dram;
+  Memory::DRAM::DRAMController *dram;
   Memory::SRAM::AbstractSRAM *sram;
 
   /* Simulation utilities */
@@ -100,7 +100,7 @@ struct ObjectData {
         sram(nullptr),
         config(nullptr),
         log(nullptr) {}
-  ObjectData(CPU::CPU *e, Memory::DRAM::AbstractDRAM *d,
+  ObjectData(CPU::CPU *e, Memory::DRAM::DRAMController *d,
              Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
       : cpu(e), dram(d), sram(s), config(c), log(l) {}
 };
@@ -236,7 +236,7 @@ class Object {
 }  // namespace SimpleSSD
 
 #include "mem/abstract_ram.hh"
-#include "mem/dram/abstract_dram.hh"
+#include "mem/dram/controller.hh"
 #include "mem/sram/abstract_sram.hh"
 
 #endif
