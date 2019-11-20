@@ -17,7 +17,11 @@ namespace SimpleSSD::Memory::DRAM {
 
 class DRAMController : public AbstractRAM {
  private:
-  AbstractDRAM *pDRAM;
+  Config::DRAMController *ctrl;
+
+  uint8_t totalChannel;
+
+  std::vector<AbstractDRAM *> pDRAM;
 
  public:
   DRAMController(ObjectData &);

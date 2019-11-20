@@ -12,48 +12,77 @@
 namespace SimpleSSD::Memory::DRAM {
 
 DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
-  switch ((Memory::Config::Model)readConfigUint(
-      Section::Memory, Memory::Config::Key::DRAMModel)) {
-    case Memory::Config::Model::Ideal:
-      pDRAM = new Memory::DRAM::Ideal(object);
-      break;
-    case Memory::Config::Model::LPDDR4:
-      // object.dram = new Memory::DRAM::TimingDRAM(object);
-      break;
-    default:
-      std::cerr << "Invalid DRAM model selected." << std::endl;
+  ctrl = object.config->getDRAMController();
 
-      abort();
+  totalChannel = object.config->getDRAM()->channel;
+
+  pDRAM.resize(totalChannel);
+
+  // Create DRAM Objects
+  for (auto &dram : pDRAM) {
+    switch ((Memory::Config::Model)readConfigUint(
+        Section::Memory, Memory::Config::Key::DRAMModel)) {
+      case Memory::Config::Model::Ideal:
+        dram = new Memory::DRAM::Ideal(object);
+        break;
+      case Memory::Config::Model::LPDDR4:
+        // dram = new Memory::DRAM::TimingDRAM(object);
+        break;
+      default:
+        std::cerr << "Invalid DRAM model selected." << std::endl;
+
+        abort();
+    }
   }
 }
 
 DRAMController::~DRAMController() {
-  delete pDRAM;
+  for (auto &dram : pDRAM) {
+    delete dram;
+  }
 }
 
 void DRAMController::getStatList(std::vector<Stat> &list,
                                  std::string prefix) noexcept {
-  pDRAM->getStatList(list, prefix + "dram.");
+  for (uint8_t i = 0; i < totalChannel; i++) {
+    pDRAM[i]->getStatList(list, prefix + "channel" + std::to_string(i) + ".");
+  }
 }
 
 void DRAMController::getStatValues(std::vector<double> &values) noexcept {
-  pDRAM->getStatValues(values);
+  for (auto &dram : pDRAM) {
+    dram->getStatValues(values);
+  }
 }
 
 void DRAMController::resetStatValues() noexcept {
-  pDRAM->resetStatValues();
+  for (auto &dram : pDRAM) {
+    dram->resetStatValues();
+  }
 }
 
 void DRAMController::createCheckpoint(std::ostream &out) const noexcept {
   AbstractRAM::createCheckpoint(out);
 
-  pDRAM->createCheckpoint(out);
+  BACKUP_SCALAR(out, totalChannel);
+
+  for (auto &dram : pDRAM) {
+    dram->createCheckpoint(out);
+  }
 }
 
 void DRAMController::restoreCheckpoint(std::istream &in) noexcept {
   AbstractRAM::restoreCheckpoint(in);
 
-  pDRAM->restoreCheckpoint(in);
+  uint8_t t8;
+
+  RESTORE_SCALAR(in, t8);
+
+  panic_if(t8 != totalChannel, "DRAM channel mismatch while restore.");
+
+  for (auto &dram : pDRAM) {
+    dram->restoreCheckpoint(in);
+  }
 }
 
 }  // namespace SimpleSSD::Memory::DRAM
