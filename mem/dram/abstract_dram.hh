@@ -47,8 +47,19 @@ class AbstractDRAM : public Object {
   Config::DRAMTiming *pTiming;
   Config::DRAMPower *pPower;
 
+  // Statistics
   Stats readStat;
   Stats writeStat;
+
+  double act_energy;
+  double pre_energy;
+  double read_energy;
+  double write_energy;
+  double ref_energy;
+  double sref_energy;
+  double window_energy;
+
+  uint64_t lastResetAt;
 
  public:
   AbstractDRAM(ObjectData &);

@@ -18,6 +18,16 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
   pTiming = o.config->getDRAMTiming();
   pPower = o.config->getDRAMPower();
 
+  // Reset stats
+  lastResetAt = 0;
+  act_energy = 0;
+  pre_energy = 0;
+  read_energy = 0;
+  write_energy = 0;
+  ref_energy = 0;
+  sref_energy = 0;
+  window_energy = 0;
+
   // gem5 src/mem/drampower.cc
   spec.memArchSpec.burstLength = pStructure->burstLength;
   spec.memArchSpec.nbrOfBanks = pStructure->bank;
@@ -90,8 +100,21 @@ void AbstractDRAM::getStatList(std::vector<Stat> &list,
   list.emplace_back(prefix + "write.bytes", "Write data size in byte");
   list.emplace_back(prefix + "request_count", "Total request count");
   list.emplace_back(prefix + "bytes", "Total data size in byte");
-  list.emplace_back(prefix + "energy", "Total energy consumed by DRAM (pJ)");
-  list.emplace_back(prefix + "power", "Average power consumed by DRAM (mW)");
+
+  list.emplace_back(prefix + "energy.activate",
+                    "Energy for activate commands per rank (pJ)");
+  list.emplace_back(prefix + "energy.precharge",
+                    "Energy for precharge commands per rank (pJ)");
+  list.emplace_back(prefix + "energy.read",
+                    "Energy for read commands per rank (pJ)");
+  list.emplace_back(prefix + "energy.write",
+                    "Energy for write commands per rank (pJ)");
+  list.emplace_back(prefix + "energy.refresh",
+                    "Energy for refresh commands per rank (pJ)");
+  list.emplace_back(prefix + "energy.self_refresh",
+                    "Energy for self refresh per rank (pJ)");
+  list.emplace_back(prefix + "energy.total", "Total energy per rank (pJ)");
+  list.emplace_back(prefix + "power", "Core power per rank (mW)");
 }
 
 void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
@@ -102,14 +125,42 @@ void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)(readStat.count + writeStat.count));
   values.push_back((double)(readStat.size + writeStat.size));
 
+  // As calcWindowEnergy resets previous power/energy stat,
+  // we need to store previous values.
   dramPower->calcWindowEnergy(getTick() / pTiming->tCK);
 
-  values.push_back(dramPower->getEnergy().window_energy);
-  values.push_back(dramPower->getPower().average_power);
+  auto &energy = dramPower->getEnergy();
+
+  act_energy += energy.act_energy * pStructure->chip;
+  pre_energy += energy.pre_energy * pStructure->chip;
+  read_energy += energy.read_energy * pStructure->chip;
+  write_energy += energy.write_energy * pStructure->chip;
+  ref_energy += energy.ref_energy * pStructure->chip;
+  sref_energy += energy.sref_energy * pStructure->chip;
+  window_energy += energy.window_energy * pStructure->chip;
+
+  values.push_back(act_energy);
+  values.push_back(pre_energy);
+  values.push_back(read_energy);
+  values.push_back(write_energy);
+  values.push_back(ref_energy);
+  values.push_back(sref_energy);
+  values.push_back(window_energy);
+  values.push_back(1000.0 * window_energy / (getTick() - lastResetAt));
 }
 
 void AbstractDRAM::resetStatValues() noexcept {
   dramPower->calcWindowEnergy(getTick() / pTiming->tCK);
+
+  act_energy = 0.;
+  pre_energy = 0.;
+  read_energy = 0.;
+  write_energy = 0.;
+  ref_energy = 0.;
+  sref_energy = 0.;
+  window_energy = 0.;
+
+  lastResetAt = getTick();
 
   readStat.clear();
   writeStat.clear();
