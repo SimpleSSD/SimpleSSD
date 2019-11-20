@@ -38,8 +38,7 @@ class Channel : public Object {
  private:
   const uint8_t id;
 
-  std::function<Address(uint64_t)> &decodeAddress;
-
+  DRAMController *parent;
   Config::DRAMController *ctrl;
   AbstractDRAM *pDRAM;
 
@@ -60,6 +59,8 @@ class Channel : public Object {
   std::list<Entry> readRequestQueue;
   std::list<Entry> writeRequestQueue;
 
+  std::function<Address(uint64_t)> &decodeAddress;
+
   uint8_t addToReadQueue(uint64_t, Event, uint64_t);
   uint8_t addToWriteQueue(uint64_t);
 
@@ -75,9 +76,6 @@ class Channel : public Object {
   Event eventDoNext;
 
   // Completion handler
-  uint64_t internalEntryID;
-  std::unordered_map<uint64_t, Entry> responseQueue;
-
   Event eventReadDone;
   Event eventWriteDone;
 
@@ -198,7 +196,9 @@ class DRAMController : public AbstractRAM {
   DRAMController(ObjectData &);
   ~DRAMController();
 
+  // For channel
   std::function<Address(uint64_t)> &getDecodeFunction();
+  void triggerWriteRetry();
 
   void read(uint64_t address, uint32_t length, Event eid,
             uint64_t data = 0) override;

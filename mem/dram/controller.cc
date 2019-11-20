@@ -18,11 +18,11 @@ namespace SimpleSSD::Memory::DRAM {
 Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
     : Object(o),
       id(i),
-      decodeAddress(p->getDecodeFunction()),
+      parent(p),
       entrySize(e),
+      decodeAddress(p->getDecodeFunction()),
       isInRead(true),
-      writeCountInWrite(0),
-      internalEntryID(0) {
+      writeCountInWrite(0) {
   ctrl = object.config->getDRAMController();
 
   switch ((Memory::Config::Model)readConfigUint(
@@ -127,11 +127,7 @@ void Channel::submitRequest() {
       if (iter != readRequestQueue.end()) {
         // Submit to DRAM
         pDRAM->submit(decodeAddress(iter->address), entrySize, true,
-                      eventReadDone, internalEntryID);
-
-        // Remove request from queue
-        responseQueue.emplace(internalEntryID++, *iter);
-        readRequestQueue.erase(iter);
+                      eventReadDone, iter->address);
 
         // Switch to write?
         if (writeQueue.size() >=
@@ -151,14 +147,11 @@ void Channel::submitRequest() {
     if (iter != writeRequestQueue.end()) {
       // Submit to DRAM
       pDRAM->submit(decodeAddress(iter->address), entrySize, false,
-                    eventWriteDone, internalEntryID);
+                    eventWriteDone, iter->address);
 
       // Remove request from queue
       auto aiter = writeQueue.find(iter->address);
       writeQueue.erase(aiter);
-
-      responseQueue.emplace(internalEntryID++, *iter);
-      writeRequestQueue.erase(iter);
 
       // Switch to read?
       if (writeQueue.size() == 0 ||
@@ -183,18 +176,35 @@ void Channel::submitRequest() {
       (readRequestQueue.size() > 0 || writeRequestQueue.size() > 0)) {
     scheduleRel(eventDoNext, 0, SUBMIT_PERIOD);
   }
+
+  if (writeRequestQueue.size() < ctrl->writeQueueSize) {
+    parent->triggerWriteRetry();
+  }
 }
 
 void Channel::completeRequest(uint64_t id, bool read) {
-  auto iter = responseQueue.find(id);
-
-  panic_if(iter == responseQueue.end(), "Invalid DRAM response.");
-
   if (read) {
-    scheduleNow(iter->second.event, iter->second.data);
-  }
+    for (auto iter = readRequestQueue.begin(); iter != readRequestQueue.end();
+         ++iter) {
+      if (iter->address == id) {
+        scheduleNow(iter->event, iter->data);
 
-  responseQueue.erase(iter);
+        readRequestQueue.erase(iter);
+
+        break;
+      }
+    }
+  }
+  else {
+    for (auto iter = writeRequestQueue.begin(); iter != writeRequestQueue.end();
+         ++iter) {
+      if (iter->address == id) {
+        writeRequestQueue.erase(iter);
+
+        break;
+      }
+    }
+  }
 }
 
 uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
@@ -417,6 +427,12 @@ std::function<Address(uint64_t)> &DRAMController::getDecodeFunction() {
   return decodeAddress;
 }
 
+void DRAMController::triggerWriteRetry() {
+  if (!isScheduled(eventWriteRetry)) {
+    scheduleNow(eventWriteRetry);
+  }
+}
+
 void DRAMController::readRetry() {
   auto req = readRetryQueue.front();
 
@@ -522,12 +538,11 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
   }
 
   // Try submit
-  if (read && readRetryQueue.size() > 1 && !isScheduled(eventReadRetry)) {
-    readRetry();
+  if (read && !isScheduled(eventReadRetry)) {
+    scheduleNow(eventReadRetry);
   }
-  else if (!read && writeRetryQueue.size() > 1 &&
-           !isScheduled(eventWriteRetry)) {
-    writeRetry();
+  else if (!read && !isScheduled(eventWriteRetry)) {
+    scheduleNow(eventWriteRetry);
   }
 }
 
@@ -574,6 +589,10 @@ void DRAMController::completeRequest(uint64_t now, uint64_t id, bool read) {
     if (readCompletionQueue.size() > 0) {
       scheduleNow(eventReadComplete, readCompletionQueue.front());
     }
+
+    if (readRetryQueue.size() > 0 && !isScheduled(eventReadRetry)) {
+      scheduleNow(eventReadRetry);
+    }
   }
   else {
     writeCompletionQueue.pop_front();
@@ -581,6 +600,10 @@ void DRAMController::completeRequest(uint64_t now, uint64_t id, bool read) {
     // Complete next write request
     if (writeCompletionQueue.size() > 0) {
       scheduleNow(eventWriteComplete, writeCompletionQueue.front());
+    }
+
+    if (writeRetryQueue.size() > 0 && !isScheduled(eventWriteRetry)) {
+      scheduleNow(eventWriteRetry);
     }
   }
 }
