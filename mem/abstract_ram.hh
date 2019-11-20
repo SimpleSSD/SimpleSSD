@@ -42,7 +42,7 @@ class AbstractRAM : public Object {
    * \param[in] eid     Event ID of callback event
    * \param[in] data    Event data
    */
-  virtual void read(uint64_t address, uint64_t length, Event eid,
+  virtual void read(uint64_t address, uint32_t length, Event eid,
                     uint64_t data = 0) = 0;
 
   /**
@@ -55,7 +55,7 @@ class AbstractRAM : public Object {
    * \param[in] eid     Event ID of callback event
    * \param[in] data    Event data
    */
-  virtual void write(uint64_t address, uint64_t length, Event eid,
+  virtual void write(uint64_t address, uint32_t length, Event eid,
                      uint64_t data = 0) = 0;
 
   /**
