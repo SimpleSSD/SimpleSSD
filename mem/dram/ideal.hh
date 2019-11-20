@@ -21,6 +21,7 @@ class Ideal : public AbstractDRAM {
 
   double interfaceBandwidth;
   uint64_t pageSize;
+  uint64_t bankSize;
 
   uint64_t preSubmit(Request *);
   void postDone(Request *);
@@ -29,8 +30,8 @@ class Ideal : public AbstractDRAM {
   Ideal(ObjectData &);
   ~Ideal();
 
-  void read(uint64_t, uint32_t, Event, uint64_t) override;
-  void write(uint64_t, uint32_t, Event, uint64_t) override;
+  void read(Address, uint16_t, Event, uint64_t) override;
+  void write(Address, uint16_t, Event, uint64_t) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

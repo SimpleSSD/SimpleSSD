@@ -17,6 +17,15 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
+struct Address {
+  uint32_t row;
+  uint32_t bank : 8;
+  uint32_t column : 24;
+
+  Address() : row(0), bank(0), column(0) {}
+  Address(uint32_t r, uint8_t b, uint32_t c) : row(r), bank(b), column(c) {}
+};
+
 class AbstractDRAM : public Object {
  protected:
   struct Stats {
@@ -45,9 +54,9 @@ class AbstractDRAM : public Object {
   AbstractDRAM(ObjectData &);
   ~AbstractDRAM();
 
-  virtual void read(uint64_t address, uint32_t length, Event eid,
+  virtual void read(Address address, uint16_t size, Event eid,
                     uint64_t data = 0) = 0;
-  virtual void write(uint64_t address, uint32_t length, Event eid,
+  virtual void write(Address address, uint16_t size, Event eid,
                      uint64_t data = 0) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

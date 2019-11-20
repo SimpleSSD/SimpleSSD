@@ -20,9 +20,10 @@ Ideal::Ideal(ObjectData &o)
           [this](Request *r) { postDone(r); },
           [this](Request *r) { postDone(r); }, Request::backup,
           Request::restore) {
-  pageSize = pStructure->rowSize * pStructure->chip * pStructure->channel;
-  interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
-                       pStructure->channel / 8.0 / pTiming->tCK;
+  pageSize = pStructure->rowSize * pStructure->chip;
+  interfaceBandwidth =
+      2.0 * pStructure->width * pStructure->chip / 8.0 / pTiming->tCK;
+  bankSize = pStructure->chipSize / pStructure->bank;
 }
 
 Ideal::~Ideal() {
@@ -43,7 +44,11 @@ void Ideal::postDone(Request *req) {
   delete req;
 }
 
-void Ideal::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
+void Ideal::read(Address addr, uint16_t length, Event eid, uint64_t data) {
+  uint64_t address = 0;
+
+  address = addr.bank * bankSize + addr.row * pStructure->rowSize + addr.column;
+
   auto req = new Request(address, length, eid, data);
 
   // Stat Update
@@ -54,7 +59,11 @@ void Ideal::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
   scheduler.read(req);
 }
 
-void Ideal::write(uint64_t address, uint32_t length, Event eid, uint64_t data) {
+void Ideal::write(Address addr, uint16_t length, Event eid, uint64_t data) {
+  uint64_t address = 0;
+
+  address = addr.bank * bankSize + addr.row * pStructure->rowSize + addr.column;
+
   auto req = new Request(address, length, eid, data);
 
   // Stat Update
@@ -70,6 +79,7 @@ void Ideal::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, interfaceBandwidth);
   BACKUP_SCALAR(out, pageSize);
+  BACKUP_SCALAR(out, bankSize);
 
   scheduler.createCheckpoint(out);
 }
@@ -79,6 +89,7 @@ void Ideal::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, interfaceBandwidth);
   RESTORE_SCALAR(in, pageSize);
+  RESTORE_SCALAR(in, bankSize);
 
   scheduler.restoreCheckpoint(in);
 }
