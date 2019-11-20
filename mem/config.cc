@@ -74,6 +74,9 @@ const char NAME_READ_QUEUE_SIZE[] = "ReadQueueSize";
 const char NAME_SCHEDULING[] = "Scheduling";
 const char NAME_MAPPING[] = "Mapping";
 const char NAME_PAGE_POLICY[] = "PagePolicy";
+const char NAME_WRITE_MAX_THRESHOLD[] = "ForceWriteThreshold";
+const char NAME_WRITE_MIN_THRESHOLD[] = "WriteThreshold";
+const char NAME_MIN_WRITE_BURST[] = "MinWriteBurst";
 
 Config::Config() {
   /* 32MB SRAM */
@@ -137,6 +140,15 @@ Config::Config() {
   power.pIDD6[1] = 1.7f;
   power.pVDD[0] = 1.8f;
   power.pVDD[1] = 1.1f;
+
+  controller.readQueueSize = 64;
+  controller.writeQueueSize = 64;
+  controller.writeMinThreshold = 0.5;
+  controller.writeMaxThreshold = 0.85;
+  controller.minWriteBurst = 16;
+  controller.schedulePolicy = MemoryScheduling::FRFCFS;
+  controller.addressPolicy = AddressMapping::RoRaBaCoCh;
+  controller.pagePolicy = PagePolicy::OpenAdaptive;
 }
 
 void Config::loadSRAM(pugi::xml_node &section) {
@@ -219,6 +231,12 @@ void Config::loadTimingDRAM(pugi::xml_node &section) {
                         controller.writeQueueSize);
     LOAD_NAME_UINT_TYPE(node, NAME_READ_QUEUE_SIZE, uint32_t,
                         controller.readQueueSize);
+    LOAD_NAME_FLOAT(node, NAME_WRITE_MIN_THRESHOLD,
+                    controller.writeMinThreshold);
+    LOAD_NAME_FLOAT(node, NAME_WRITE_MAX_THRESHOLD,
+                    controller.writeMaxThreshold);
+    LOAD_NAME_UINT_TYPE(node, NAME_MIN_WRITE_BURST, uint32_t,
+                        controller.minWriteBurst);
     LOAD_NAME_UINT_TYPE(node, NAME_SCHEDULING, MemoryScheduling,
                         controller.schedulePolicy);
     LOAD_NAME_UINT_TYPE(node, NAME_MAPPING, AddressMapping,
@@ -297,6 +315,11 @@ void Config::storeDRAMPower(pugi::xml_node &section) {
 void Config::storeTimingDRAM(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_WRITE_QUEUE_SIZE, controller.writeQueueSize);
   STORE_NAME_UINT(section, NAME_READ_QUEUE_SIZE, controller.readQueueSize);
+  STORE_NAME_FLOAT(section, NAME_WRITE_MIN_THRESHOLD,
+                   controller.writeMinThreshold);
+  STORE_NAME_FLOAT(section, NAME_WRITE_MAX_THRESHOLD,
+                   controller.writeMaxThreshold);
+  STORE_NAME_UINT(section, NAME_MIN_WRITE_BURST, controller.minWriteBurst);
   STORE_NAME_UINT(section, NAME_SCHEDULING, controller.schedulePolicy);
   STORE_NAME_UINT(section, NAME_MAPPING, controller.addressPolicy);
   STORE_NAME_UINT(section, NAME_PAGE_POLICY, controller.pagePolicy);

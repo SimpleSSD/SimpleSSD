@@ -170,7 +170,12 @@
         <config name="WriteQueueSize">64</config>
         <!-- <int> Number of read queue entries -->
         <config name="ReadQueueSize">64</config>
-
+        <!-- <float> Threshold to force writes -->
+        <config name="ForceWriteThreshold">0.85</config>
+        <!-- <float> Threshold to start writes -->
+        <config name="WriteThreshold">0.5</config>
+        <!-- <int> Minimum write bursts before switching to reads -->
+        <config name="MinWriteBurst">16</config>
         <!--
           <int> Memory scheduling policy
 
