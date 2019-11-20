@@ -94,12 +94,12 @@ AbstractDRAM::~AbstractDRAM() {
 
 void AbstractDRAM::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
-  list.emplace_back(prefix + "read.request_count", "Read request count");
-  list.emplace_back(prefix + "read.bytes", "Read data size in byte");
-  list.emplace_back(prefix + "write.request_count", "Write request count");
-  list.emplace_back(prefix + "write.bytes", "Write data size in byte");
-  list.emplace_back(prefix + "request_count", "Total request count");
-  list.emplace_back(prefix + "bytes", "Total data size in byte");
+  list.emplace_back(prefix + "request_count.read", "Read request count");
+  list.emplace_back(prefix + "request_count.write", "Write request count");
+  list.emplace_back(prefix + "request_count.total", "Total request count");
+  list.emplace_back(prefix + "bytes.read", "Read data size in byte");
+  list.emplace_back(prefix + "bytes.write", "Write data size in byte");
+  list.emplace_back(prefix + "bytes.total", "Total data size in byte");
 
   list.emplace_back(prefix + "energy.activate",
                     "Energy for activate commands per rank (pJ)");
@@ -119,10 +119,10 @@ void AbstractDRAM::getStatList(std::vector<Stat> &list,
 
 void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)readStat.count);
-  values.push_back((double)readStat.size);
   values.push_back((double)writeStat.count);
-  values.push_back((double)writeStat.size);
   values.push_back((double)(readStat.count + writeStat.count));
+  values.push_back((double)readStat.size);
+  values.push_back((double)writeStat.size);
   values.push_back((double)(readStat.size + writeStat.size));
 
   // As calcWindowEnergy resets previous power/energy stat,
