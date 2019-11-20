@@ -106,9 +106,9 @@ set(SRC_CPU
   cpu/cpu.cc
 )
 set(SRC_MEM
+  mem/dram/controller.cc
   mem/dram/abstract_dram.cc
-  mem/dram/simple.cc
-  mem/dram/gem5.cc
+  mem/dram/ideal.cc
   mem/sram/abstract_sram.cc
   mem/sram/sram.cc
 )
