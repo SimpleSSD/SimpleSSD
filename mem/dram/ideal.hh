@@ -7,28 +7,27 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_HH__
-#define __SIMPLESSD_MEM_DRAM_SIMPLE_HH__
+#ifndef __SIMPLESSD_MEM_DRAM_IDEAL_HH__
+#define __SIMPLESSD_MEM_DRAM_IDEAL_HH__
 
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM {
 
-class SimpleDRAM : public AbstractDRAM {
+class Ideal : public AbstractDRAM {
  private:
   Scheduler<Request *> scheduler;
 
-  uint64_t pageFetchLatency;
   double interfaceBandwidth;
+  uint64_t pageSize;
 
-  uint64_t preSubmitRead(Request *);
-  uint64_t preSubmitWrite(Request *);
+  uint64_t preSubmit(Request *);
   void postDone(Request *);
 
  public:
-  SimpleDRAM(ObjectData &);
-  ~SimpleDRAM();
+  Ideal(ObjectData &);
+  ~Ideal();
 
   void read(uint64_t, uint64_t, Event, uint64_t) override;
   void write(uint64_t, uint64_t, Event, uint64_t) override;
