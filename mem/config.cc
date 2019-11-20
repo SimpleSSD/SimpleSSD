@@ -363,6 +363,14 @@ void Config::update() {
   if (sram.size > 0) {
     panic_if(sram.size % sram.lineSize != 0, "Size not aligned");
   }
+
+  if (dramModel == Model::LPDDR4) {
+    panic_if(dram.channel % 2 != 0, "LPDDR4 has 2n channels.");
+
+    // Fix for controller
+    dram.channel /= 2;
+    dram.width *= 2;
+  }
 }
 
 uint64_t Config::readUint(uint32_t idx) {
