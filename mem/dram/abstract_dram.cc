@@ -39,7 +39,6 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
   spec.memTimingSpec.RAS = spec.memTimingSpec.RRD - spec.memTimingSpec.RP;
   spec.memTimingSpec.WL = DIVCEIL(pTiming->tWL, pTiming->tCK);
   spec.memTimingSpec.DQSCK = DIVCEIL(pTiming->tDQSCK, pTiming->tCK);
-  ;
   spec.memTimingSpec.RTP = DIVCEIL(pTiming->tRTP, pTiming->tCK);
   spec.memTimingSpec.WR = DIVCEIL(pTiming->tWR, pTiming->tCK);
   spec.memTimingSpec.XS = DIVCEIL(pTiming->tSR, pTiming->tCK);

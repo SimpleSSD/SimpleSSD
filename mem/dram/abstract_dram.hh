@@ -43,7 +43,7 @@ class AbstractDRAM : public Object {
 
  public:
   AbstractDRAM(ObjectData &);
-  virtual ~AbstractDRAM();
+  ~AbstractDRAM();
 
   virtual void read(uint64_t address, uint32_t length, Event eid,
                     uint64_t data = 0) = 0;
