@@ -33,9 +33,9 @@ class AbstractRAM : public Object {
   virtual ~AbstractRAM() {}
 
   /**
-   * \brief Read SRAM
+   * \brief Read Memory
    *
-   * Read SRAM with callback event.
+   * Read Memory with callback event.
    *
    * \param[in] address Begin address of SRAM
    * \param[in] length  Amount of data to read
@@ -46,9 +46,9 @@ class AbstractRAM : public Object {
                     uint64_t data = 0) = 0;
 
   /**
-   * \brief Write SRAM
+   * \brief Write Memory
    *
-   * Write SRAM with callback event.
+   * Write Memory with callback event.
    *
    * \param[in] address Begin address of SRAM
    * \param[in] length  Amount of data to write
@@ -59,10 +59,10 @@ class AbstractRAM : public Object {
                      uint64_t data = 0) = 0;
 
   /**
-   * \brief Allocate range of RAM
+   * \brief Allocate range of Memory
    *
    * Allocate a portion of memory address range. If no space available, it
-   * panic. (You need to configure larger RAM for firmware.)
+   * panic. (You need to configure larger Memory for firmware.)
    * To check memory is available, set dry as true and check address is zero.
    *
    * \param[in] size  Requested memory size
