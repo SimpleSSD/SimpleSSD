@@ -15,13 +15,69 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
+class Channel : public Object {
+ private:
+  const uint8_t id;
+
+  AbstractDRAM *pDRAM;
+
+  // Statistics
+  uint64_t readCount;
+  uint64_t readFromWriteQueue;
+  uint64_t readBytes;
+  uint64_t writeCount;
+  uint64_t writeMerged;
+  uint64_t writeBytes;
+
+ public:
+  Channel(ObjectData &, uint8_t);
+  ~Channel();
+
+  void read(Address address, uint16_t size, Event eid, uint64_t data = 0);
+  void write(Address address, uint16_t size, Event eid, uint64_t data = 0);
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
+};
+
 class DRAMController : public AbstractRAM {
  private:
   Config::DRAMController *ctrl;
 
-  uint8_t totalChannel;
+  // DRAM Channels
+  std::vector<Channel *> channels;
 
-  std::vector<AbstractDRAM *> pDRAM;
+  // Stat bin
+  struct StatisticBin {
+    // Address range
+    const uint64_t begin;
+    const uint64_t end;
+
+    // Statistics
+    uint64_t lastResetAt;
+
+    uint64_t readCount;
+    uint64_t writeCount;
+    uint64_t readBytes;
+    uint64_t writeBytes;
+
+    double readLatencySum;
+    double writeLatencySum;
+
+    StatisticBin(uint64_t, uint64_t);
+
+    bool inRange(uint64_t, uint64_t);
+
+    void getStatList(std::vector<Stat> &, std::string) noexcept;
+    void getStatValues(std::vector<double> &, uint64_t) noexcept;
+    void resetStatValues(uint64_t) noexcept;
+  };
+
+  std::vector<StatisticBin> statbin;
 
  public:
   DRAMController(ObjectData &);
