@@ -11,6 +11,7 @@
 #include "mem/dram/ideal.hh"
 
 #define QUEUE_HIT_LATENCY ((uint64_t)10000)  // 10ns
+#define SUBMIT_PERIOD ((uint64_t)100)
 
 namespace SimpleSSD::Memory::DRAM {
 
@@ -178,8 +179,9 @@ void Channel::submitRequest() {
     isInRead = !isInRead;
   }
 
-  if (!isScheduled(eventDoNext)) {
-    scheduleRel(eventDoNext, 0, 0);
+  if (!isScheduled(eventDoNext) &&
+      (readRequestQueue.size() > 0 || writeRequestQueue.size() > 0)) {
+    scheduleRel(eventDoNext, 0, SUBMIT_PERIOD);
   }
 }
 
@@ -212,7 +214,7 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
   }
 
   if (!isScheduled(eventDoNext)) {
-    scheduleNow(eventDoNext);
+    scheduleRel(eventDoNext, 0, SUBMIT_PERIOD);
   }
 
   return true;
@@ -230,7 +232,7 @@ uint8_t Channel::addToWriteQueue(uint64_t addr) {
   }
 
   if (!isScheduled(eventDoNext)) {
-    scheduleNow(eventDoNext);
+    scheduleRel(eventDoNext, 0, SUBMIT_PERIOD);
   }
 
   return 0;
@@ -393,15 +395,16 @@ DRAMController::DRAMController(ObjectData &o)
 
   // Make events
   eventReadRetry = createEvent([this](uint64_t, uint64_t) { readRetry(); },
-                               "Memory::DRAM::TimingDRAM::eventReadRetry");
-  eventWriteRetry = createEvent([this](uint64_t, uint64_t) { writeRetry(); },
-                                "Memory::DRAM::TimingDRAM::eventWriteRetry");
+                               "Memory::DRAM::DRAMController::eventReadRetry");
+  eventWriteRetry =
+      createEvent([this](uint64_t, uint64_t) { writeRetry(); },
+                  "Memory::DRAM::DRAMController::eventWriteRetry");
   eventReadComplete = createEvent(
       [this](uint64_t t, uint64_t d) { completeRequest(t, d, true); },
-      "Memory::DRAM::TimingDRAM::eventReadComplete");
+      "Memory::DRAM::DRAMController::eventReadComplete");
   eventWriteComplete = createEvent(
       [this](uint64_t t, uint64_t d) { completeRequest(t, d, false); },
-      "Memory::DRAM::TimingDRAM::eventWriteComplete");
+      "Memory::DRAM::DRAMController::eventWriteComplete");
 }
 
 DRAMController::~DRAMController() {
