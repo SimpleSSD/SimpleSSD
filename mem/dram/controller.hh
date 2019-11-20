@@ -33,8 +33,8 @@ class Channel : public Object {
   Channel(ObjectData &, uint8_t);
   ~Channel();
 
-  void read(Address address, uint16_t size, Event eid, uint64_t data = 0);
-  void write(Address address, uint16_t size, Event eid, uint64_t data = 0);
+  // 0 = submit, 1 = wqhit, 2 = retry
+  uint8_t submit(Address &, uint32_t, bool, Event, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -56,8 +56,6 @@ class DRAMController : public AbstractRAM {
   Address addressLimit;
 
   std::function<Address(uint64_t)> decodeAddress;
-
-  // Completion handler
 
   // Stat bin
   struct StatisticBin {
@@ -86,6 +84,57 @@ class DRAMController : public AbstractRAM {
   };
 
   std::vector<StatisticBin> statbin;
+
+  // Request splitter
+  struct Entry {
+    const uint64_t id;
+
+    uint64_t counter;
+    const uint64_t chunks;
+
+    Event eid;
+    uint64_t data;
+
+    StatisticBin *stat;
+
+    Entry(uint64_t i, uint64_t c, Event e, uint64_t d, StatisticBin *s)
+        : id(i), counter(0), chunks(c), eid(e), data(d), stat(s) {}
+  };
+
+  std::unordered_map<uint64_t, Entry> entries;
+
+  struct SubEntry {
+    const uint64_t id;
+
+    Entry *parent;
+
+    Address address;
+
+    uint64_t submitted;
+
+    SubEntry(uint64_t i, Entry *p, Address a) : id(i), parent(p), address(a) {}
+  };
+
+  std::unordered_map<uint64_t, SubEntry> subentries;
+
+  std::list<SubEntry *> readRetryQueue;
+  std::list<SubEntry *> writeRetryQueue;
+  std::list<uint64_t> readCompletionQueue;
+  std::list<uint64_t> writeCompletionQueue;
+
+  uint64_t entrySize;
+  uint64_t internalEntryID;
+  uint64_t internalSubentryID;
+
+  Event eventReadRetry;
+  Event eventWriteRetry;
+  Event eventReadComplete;
+  Event eventWriteComplete;
+
+  void submitRequest(uint64_t, uint32_t, bool, Event, uint64_t);
+  void completeRequest(uint64_t, uint64_t, bool);
+  void readRetry();
+  void writeRetry();
 
  public:
   DRAMController(ObjectData &);

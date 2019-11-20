@@ -9,6 +9,8 @@
 
 #include "mem/dram/ideal.hh"
 
+#define QUEUE_HIT_LATENCY ((uint64_t)10000)  // 10ns
+
 namespace SimpleSSD::Memory::DRAM {
 
 Channel::Channel(ObjectData &o, uint8_t i) : Object(o), id(i) {
@@ -18,7 +20,7 @@ Channel::Channel(ObjectData &o, uint8_t i) : Object(o), id(i) {
       pDRAM = new Memory::DRAM::Ideal(object);
       break;
     case Memory::Config::Model::LPDDR4:
-      // pDRAM = new Memory::DRAM::TimingDRAM(object);
+      // pDRAM = new Memory::DRAM::DRAMController(object);
       break;
     default:
       std::cerr << "Invalid DRAM model selected." << std::endl;
@@ -75,7 +77,8 @@ void Channel::restoreCheckpoint(std::istream &in) noexcept {
   pDRAM->restoreCheckpoint(in);
 }
 
-DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
+DRAMController::DRAMController(ObjectData &o)
+    : AbstractRAM(o), internalEntryID(0), internalSubentryID(0) {
   auto dram = object.config->getDRAM();
   uint8_t nc = dram->channel;
 
@@ -95,6 +98,12 @@ DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
   addressLimit.row = dram->chipSize / dram->bank / dram->rowSize;
 
   capacity = dram->chipSize * dram->chip * dram->rank * dram->channel;
+
+  entrySize = (uint64_t)dram->width * dram->burstChop / 8;
+
+  panic_if(popcount64(entrySize) != 1,
+           "Memory request size should be power of 2.");
+  warn_if(entrySize != 64, "Memory request size is not 64 bytes.");
 
   // Panic
   panic_if(popcount32(dram->bank) != 1, "# Bank should be power of 2.");
@@ -161,12 +170,196 @@ DRAMController::DRAMController(ObjectData &o) : AbstractRAM(o) {
 
       break;
   }
+
+  // Make events
+  eventReadRetry = createEvent([this](uint64_t, uint64_t) { readRetry(); },
+                               "Memory::DRAM::TimingDRAM::eventReadRetry");
+  eventWriteRetry = createEvent([this](uint64_t, uint64_t) { writeRetry(); },
+                                "Memory::DRAM::TimingDRAM::eventWriteRetry");
+  eventReadComplete = createEvent(
+      [this](uint64_t t, uint64_t d) { completeRequest(t, d, true); },
+      "Memory::DRAM::TimingDRAM::eventReadComplete");
+  eventWriteComplete = createEvent(
+      [this](uint64_t t, uint64_t d) { completeRequest(t, d, false); },
+      "Memory::DRAM::TimingDRAM::eventWriteComplete");
 }
 
 DRAMController::~DRAMController() {
   for (auto &channel : channels) {
     delete channel;
   }
+}
+
+void DRAMController::readRetry() {
+  auto req = readRetryQueue.front();
+
+  uint8_t ret = channels[req->address.channel]->submit(
+      req->address, (uint32_t)entrySize, true, eventReadComplete, req->id);
+
+  if (ret == 2) {
+    // Queue full
+    return;
+  }
+
+  // Request submitted
+  readRetryQueue.pop_front();
+
+  // Check write queue hit (complete immediately)
+  if (ret == 1) {
+    // We may have multiple read completion at same time
+    readCompletionQueue.emplace_back(req->id);
+
+    if (!isScheduled(eventReadComplete)) {
+      scheduleRel(eventReadComplete, req->id, QUEUE_HIT_LATENCY);
+    }
+  }
+
+  // Schedule next retry
+  if (readRetryQueue.size() > 0) {
+    scheduleNow(eventReadRetry);
+  }
+}
+
+void DRAMController::writeRetry() {
+  auto req = writeRetryQueue.front();
+
+  uint8_t ret = channels[req->address.channel]->submit(
+      req->address, (uint32_t)entrySize, false, eventWriteComplete, req->id);
+
+  if (ret == 0) {
+    // Request submitted - write is async
+    writeRetryQueue.pop_front();
+
+    // We may have multiple write completion at same time
+    writeCompletionQueue.emplace_back(req->id);
+
+    if (!isScheduled(eventWriteComplete)) {
+      scheduleRel(eventWriteComplete, req->id, QUEUE_HIT_LATENCY);
+    }
+
+    // Schedule next retry
+    if (writeRetryQueue.size() > 0) {
+      scheduleNow(eventWriteRetry);
+    }
+  }
+  else {
+    // Queue full
+  }
+}
+
+void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
+                                   Event eid, uint64_t data) {
+  // Split request
+  uint64_t alignedBegin = addr / entrySize;
+  uint64_t alignedEnd = alignedBegin + DIVCEIL(size, entrySize) * entrySize;
+
+  // Find statistic bin
+  StatisticBin *stat = nullptr;
+
+  for (auto &iter : statbin) {
+    if (iter.inRange(addr, size)) {
+      stat = &iter;
+
+      break;
+    }
+  }
+
+  // Create request
+  Entry req(internalEntryID, (alignedEnd - alignedBegin) / entrySize, eid, data,
+            stat);
+
+  auto ret = entries.emplace(internalEntryID++, req);
+
+  // Generate splitted requests
+  std::list<SubEntry *> *target = nullptr;
+
+  if (read) {
+    target = &readRetryQueue;
+  }
+  else {
+    target = &writeRetryQueue;
+  }
+
+  for (uint64_t addr = alignedBegin; addr < alignedEnd; addr += entrySize) {
+    auto sret = subentries.emplace(
+        internalSubentryID,
+        SubEntry(internalSubentryID, &ret.first->second, decodeAddress(addr)));
+
+    target->emplace_back(&sret.first->second);
+  }
+
+  // Try submit
+  if (read && readRetryQueue.size() > 1 && !isScheduled(eventReadRetry)) {
+    readRetry();
+  }
+  else if (!read && writeRetryQueue.size() > 1 &&
+           !isScheduled(eventWriteRetry)) {
+    writeRetry();
+  }
+}
+
+void DRAMController::completeRequest(uint64_t now, uint64_t id, bool read) {
+  auto iter = subentries.find(id);
+
+  panic_if(iter == subentries.end(), "Unexpected subentry ID %" PRIu64 ".", id);
+
+  // Get latency
+  double latency = (now - iter->second.submitted) / 1000.0;
+
+  // Addup stat
+  auto parent = iter->second.parent;
+
+  if (read) {
+    parent->stat->readCount++;
+    parent->stat->readBytes += entrySize;
+    parent->stat->readLatencySum += latency;
+  }
+  else {
+    parent->stat->writeCount++;
+    parent->stat->writeBytes += entrySize;
+    parent->stat->writeLatencySum += latency;
+  }
+
+  // Check completion
+  parent->counter++;
+
+  if (parent->counter == parent->chunks) {
+    // All splitted requests are completed
+    scheduleNow(parent->eid, parent->data);
+
+    entries.erase(entries.find(parent->id));
+  }
+
+  // Remove me
+  subentries.erase(iter);
+
+  // Retry request
+  if (read) {
+    readCompletionQueue.pop_front();
+
+    // Complete next write request
+    if (readCompletionQueue.size() > 0) {
+      scheduleNow(eventReadComplete, readCompletionQueue.front());
+    }
+  }
+  else {
+    writeCompletionQueue.pop_front();
+
+    // Complete next write request
+    if (writeCompletionQueue.size() > 0) {
+      scheduleNow(eventWriteComplete, writeCompletionQueue.front());
+    }
+  }
+}
+
+void DRAMController::read(uint64_t addr, uint32_t size, Event eid,
+                          uint64_t data) {
+  submitRequest(addr, size, true, eid, data);
+}
+
+void DRAMController::write(uint64_t addr, uint32_t size, Event eid,
+                           uint64_t data) {
+  submitRequest(addr, size, false, eid, data);
 }
 
 uint64_t DRAMController::allocate(uint64_t size, std::string &&name, bool dry) {
