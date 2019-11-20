@@ -237,8 +237,6 @@ uint8_t Channel::addToWriteQueue(uint64_t addr) {
 }
 
 uint8_t Channel::submit(uint64_t addr, bool read, Event eid, uint64_t data) {
-  uint64_t now = getTick();
-
   if (!read) {
     if (writeRequestQueue.size() < ctrl->writeQueueSize) {
       writeCount++;
