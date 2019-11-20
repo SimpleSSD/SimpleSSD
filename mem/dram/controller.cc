@@ -515,6 +515,8 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
         internalSubentryID,
         SubEntry(internalSubentryID, &ret.first->second, addr));
 
+    internalSubentryID++;
+
     sret.first->second.submitted = now;
     target->emplace_back(&sret.first->second);
   }
