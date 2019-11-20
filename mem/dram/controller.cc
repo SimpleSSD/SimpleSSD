@@ -324,7 +324,6 @@ DRAMController::DRAMController(ObjectData &o)
 
   panic_if(popcount64(entrySize) != 1,
            "Memory request size should be power of 2.");
-  warn_if(entrySize != 64, "Memory request size is not 64 bytes.");
 
   // Panic
   panic_if(popcount32(dram->bank) != 1, "# Bank should be power of 2.");
