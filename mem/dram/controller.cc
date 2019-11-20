@@ -14,7 +14,13 @@
 namespace SimpleSSD::Memory::DRAM {
 
 Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
-    : Object(o), id(i), parent(p), entrySize(e) {
+    : Object(o),
+      id(i),
+      decodeAddress(p->getDecodeFunction()),
+      entrySize(e),
+      isInRead(true),
+      writeCount(0),
+      internalEntryID(0) {
   ctrl = object.config->getDRAMController();
 
   switch ((Memory::Config::Model)readConfigUint(
@@ -26,9 +32,70 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
       // pDRAM = new Memory::DRAM::DRAMController(object);
       break;
     default:
-      std::cerr << "Invalid DRAM model selected." << std::endl;
+      panic("Invalid DRAM model selected.");
+  }
 
-      abort();
+  // Scheduler
+  switch (ctrl->schedulePolicy) {
+    case Memory::Config::MemoryScheduling::FCFS:
+      chooseNext =
+          [this](std::list<Entry> &queue) -> std::list<Entry>::iterator {
+        auto iter = queue.begin();
+
+        for (; iter != queue.end(); ++iter) {
+          Address addr = decodeAddress(iter->address);
+
+          if (pDRAM->isNotRefresh(addr.rank, addr.bank)) {
+            break;
+          }
+        }
+
+        if (iter == queue.end() && queue.size() > 0) {
+          iter = queue.begin();
+        }
+
+        return iter;
+      };
+
+      break;
+    case Memory::Config::MemoryScheduling::FRFCFS:
+      chooseNext =
+          [this](std::list<Entry> &queue) -> std::list<Entry>::iterator {
+        auto iter = queue.begin();
+
+        for (; iter != queue.end(); ++iter) {
+          Address addr = decodeAddress(iter->address);
+
+          if (pDRAM->isNotRefresh(addr.rank, addr.bank) &&
+              pDRAM->getRowInfo(addr.rank, addr.bank) == addr.row) {
+            break;
+          }
+        }
+
+        if (iter == queue.end()) {
+          iter = queue.begin();
+
+          for (; iter != queue.end(); ++iter) {
+            Address addr = decodeAddress(iter->address);
+
+            if (pDRAM->isNotRefresh(addr.rank, addr.bank)) {
+              break;
+            }
+          }
+        }
+
+        if (iter == queue.end() && queue.size() > 0) {
+          iter = queue.begin();
+        }
+
+        return iter;
+      };
+
+      break;
+    default:
+      panic("Invalid scheduling policy.");
+
+      break;
   }
 
   // Make event
@@ -52,7 +119,68 @@ Channel::~Channel() {
 }
 
 void Channel::submitRequest() {
+  bool switchState = false;
 
+  if (isInRead) {
+    if (readRequestQueue.size() > 0) {
+      // Choose request
+      auto iter = chooseNext(readRequestQueue);
+
+      if (iter != readRequestQueue.end()) {
+        // Submit to DRAM
+        pDRAM->submit(decodeAddress(iter->address), entrySize, true,
+                      eventReadDone, internalEntryID);
+
+        // Remove request from queue
+        responseQueue.emplace(internalEntryID++, *iter);
+        readRequestQueue.erase(iter);
+
+        // Switch to write?
+        if (writeQueue.size() >=
+            ctrl->writeMaxThreshold * ctrl->writeQueueSize) {
+          switchState = true;
+        }
+      }
+    }
+    else if (writeQueue.size() > 0) {
+      switchState = true;
+    }
+  }
+  else {
+    // Choose request
+    auto iter = chooseNext(writeRequestQueue);
+
+    if (iter != writeRequestQueue.end()) {
+      // Submit to DRAM
+      pDRAM->submit(decodeAddress(iter->address), entrySize, false,
+                    eventWriteDone, internalEntryID);
+
+      // Remove request from queue
+      auto aiter = writeQueue.find(iter->address);
+      writeQueue.erase(aiter);
+
+      responseQueue.emplace(internalEntryID++, *iter);
+      writeRequestQueue.erase(iter);
+
+      // Switch to read?
+      if (writeQueue.size() == 0 ||
+          (readRequestQueue.size() > 0 && writeCount >= ctrl->minWriteBurst)) {
+        switchState = true;
+      }
+    }
+  }
+
+  if (switchState) {
+    if (isInRead) {
+      writeCount = 0;
+    }
+
+    isInRead = !isInRead;
+  }
+
+  if (!isScheduled(eventDoNext)) {
+    scheduleRel(eventDoNext, 0, 0);
+  }
 }
 
 uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
@@ -65,13 +193,7 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
   }
 
   if (!foundInWrQ) {
-    ReadRequest req;
-
-    req.address = addr;
-    req.event = eid;
-    req.data = data;
-
-    readRequestQueue.emplace_back(req);
+    readRequestQueue.emplace_back(addr, eid, data);
   }
 
   if (!isScheduled(eventDoNext)) {
@@ -86,7 +208,7 @@ uint8_t Channel::addToWriteQueue(uint64_t addr) {
 
   if (!merged) {
     writeQueue.emplace(addr);
-    writeRequestQueue.emplace_back(addr);
+    writeRequestQueue.emplace_back(addr, InvalidEventID, 0);
   }
   else {
     writeMerged++;
@@ -103,14 +225,14 @@ uint8_t Channel::submit(uint64_t addr, bool read, Event eid, uint64_t data) {
   uint64_t now = getTick();
 
   if (!read) {
-    if (writeQueue.size() < ctrl->writeQueueSize) {
+    if (writeRequestQueue.size() < ctrl->writeQueueSize) {
       writeCount++;
 
       return addToWriteQueue(addr);
     }
   }
   else {
-    if (readQueue.size() < ctrl->readQueueSize) {
+    if (readRequestQueue.size() < ctrl->readQueueSize) {
       readCount++;
 
       return addToReadQueue(addr, eid, data);

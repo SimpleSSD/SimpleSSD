@@ -23,7 +23,8 @@ class Channel : public Object {
  private:
   const uint8_t id;
 
-  DRAMController *parent;
+  std::function<Address(uint64_t)> &decodeAddress;
+
   Config::DRAMController *ctrl;
   AbstractDRAM *pDRAM;
 
@@ -33,23 +34,35 @@ class Channel : public Object {
   std::unordered_set<uint64_t> writeQueue;
 
   // Request queue
-  struct ReadRequest {
+  struct Entry {
     uint64_t address;
     Event event;
     uint64_t data;
+
+    Entry(uint64_t a, Event e, uint64_t d) : address(a), event(e), data(d) {}
   };
 
-  std::list<ReadRequest> readRequestQueue;
-  std::list<uint64_t> writeRequestQueue;
+  std::list<Entry> readRequestQueue;
+  std::list<Entry> writeRequestQueue;
 
   uint8_t addToReadQueue(uint64_t, Event, uint64_t);
   uint8_t addToWriteQueue(uint64_t);
+
+  // Scheduler
+  std::function<std::list<Entry>::iterator(std::list<Entry> &)> chooseNext;
+
+  // Submission
+  bool isInRead;
+  uint32_t writeCount;
 
   void submitRequest();
 
   Event eventDoNext;
 
   // Completion handler
+  uint64_t internalEntryID;
+  std::unordered_map<uint64_t, Entry> responseQueue;
+
   Event eventReadDone;
   Event eventWriteDone;
 
@@ -60,7 +73,7 @@ class Channel : public Object {
   uint64_t writeMerged;
 
  public:
-  Channel(ObjectData &, DRAMController*, uint8_t, uint32_t);
+  Channel(ObjectData &, DRAMController *, uint8_t, uint32_t);
   ~Channel();
 
   // 0 = submit, 1 = wqhit, 2 = retry
