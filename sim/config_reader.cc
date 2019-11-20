@@ -434,8 +434,8 @@ Memory::Config::DRAMPower *ConfigReader::getDRAMPower() {
   return memConfig.getDRAMPower();
 }
 
-Memory::Config::TimingDRAMConfig *ConfigReader::getTimingDRAM() {
-  return memConfig.getTimingDRAM();
+Memory::Config::DRAMController *ConfigReader::getDRAMController() {
+  return memConfig.getDRAMController();
 }
 
 std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
