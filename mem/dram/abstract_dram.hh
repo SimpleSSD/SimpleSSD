@@ -17,7 +17,7 @@
 
 namespace SimpleSSD::Memory::DRAM {
 
-class AbstractDRAM : public AbstractRAM {
+class AbstractDRAM : public Object {
  protected:
   struct Stats {
     uint64_t count;
@@ -31,6 +31,9 @@ class AbstractDRAM : public AbstractRAM {
     }
   };
 
+  Data::MemorySpecification spec;
+  libDRAMPower *dramPower;
+
   Config::DRAMStructure *pStructure;
   Config::DRAMTiming *pTiming;
   Config::DRAMPower *pPower;
@@ -41,6 +44,11 @@ class AbstractDRAM : public AbstractRAM {
  public:
   AbstractDRAM(ObjectData &);
   virtual ~AbstractDRAM();
+
+  virtual void read(uint64_t address, uint32_t length, Event eid,
+                    uint64_t data = 0) = 0;
+  virtual void write(uint64_t address, uint32_t length, Event eid,
+                     uint64_t data = 0) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
