@@ -23,8 +23,6 @@ Ideal::Ideal(ObjectData &o)
   pageSize = pStructure->rowSize * pStructure->chip * pStructure->channel;
   interfaceBandwidth = 2.0 * pStructure->width * pStructure->chip *
                        pStructure->channel / 8.0 / pTiming->tCK;
-  totalCapacity = pStructure->chipSize * pStructure->chip * pStructure->rank *
-                  pStructure->channel;
 }
 
 Ideal::~Ideal() {
@@ -45,7 +43,7 @@ void Ideal::postDone(Request *req) {
   delete req;
 }
 
-void Ideal::read(uint64_t address, uint64_t length, Event eid, uint64_t data) {
+void Ideal::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
   auto req = new Request(address, length, eid, data);
 
   // Stat Update
@@ -56,7 +54,7 @@ void Ideal::read(uint64_t address, uint64_t length, Event eid, uint64_t data) {
   scheduler.read(req);
 }
 
-void Ideal::write(uint64_t address, uint64_t length, Event eid, uint64_t data) {
+void Ideal::write(uint64_t address, uint32_t length, Event eid, uint64_t data) {
   auto req = new Request(address, length, eid, data);
 
   // Stat Update
