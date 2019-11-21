@@ -504,6 +504,8 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
     }
   }
 
+  panic_if(stat == nullptr, "Accessing not allocated address range.");
+
   // Create request
   Entry req(internalEntryID, (alignedEnd - alignedBegin) / entrySize, eid, data,
             stat);
@@ -617,7 +619,7 @@ uint64_t DRAMController::allocate(uint64_t size, std::string &&name, bool dry) {
   uint64_t address = AbstractRAM::allocate(size, std::move(name), dry);
 
   if (!dry) {
-    statbin.emplace_back(StatisticBin(address, size));
+    statbin.emplace_back(StatisticBin(address, address + size));
   }
 
   return address;
