@@ -730,9 +730,9 @@ void DRAMController::StatisticBin::getStatList(std::vector<Stat> &list,
   list.emplace_back(prefix + "bandwidth.total", "Total bandwidth in MiB/s");
 
   // Latency
-  list.emplace_back(prefix + "bandwidth.read", "Average read latency in ns");
-  list.emplace_back(prefix + "bandwidth.write", "Average write latency in ns");
-  list.emplace_back(prefix + "bandwidth.total", "Average latency in ns");
+  list.emplace_back(prefix + "latency.read", "Average read latency in ns");
+  list.emplace_back(prefix + "latency.write", "Average write latency in ns");
+  list.emplace_back(prefix + "latency.total", "Average latency in ns");
 }
 
 void DRAMController::StatisticBin::getStatValues(std::vector<double> &values,
