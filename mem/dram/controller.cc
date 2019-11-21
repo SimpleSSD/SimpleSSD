@@ -423,7 +423,7 @@ std::function<Address(uint64_t)> &DRAMController::getDecodeFunction() {
 }
 
 void DRAMController::triggerWriteRetry() {
-  if (!isScheduled(eventWriteRetry)) {
+  if (!isScheduled(eventWriteRetry) && writeRetryQueue.size() > 0) {
     scheduleNow(eventWriteRetry);
   }
 }

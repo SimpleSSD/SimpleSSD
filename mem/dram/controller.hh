@@ -76,6 +76,9 @@ class Channel : public Object {
   Event eventDoNext;
 
   // Completion handler
+  uint64_t internalEntryID;
+  std::unordered_map<uint64_t, Entry> responseQueue;
+
   Event eventReadDone;
   Event eventWriteDone;
 
