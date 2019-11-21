@@ -35,7 +35,7 @@ LPDDR4::LPDDR4(ObjectData &o) : AbstractDRAM(o) {
     rank.power = &dramPower.at(idx);
 
     // Create banks
-    rank.banks.reserve(pStructure->bank);
+    rank.banks.resize(pStructure->bank);
 
     // Precharge
     for (auto &bank : rank.banks) {
