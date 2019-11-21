@@ -32,7 +32,6 @@ class LPDDR4 : public AbstractDRAM {
     uint64_t lastPRE;
     uint64_t lastREAD;
     uint64_t lastWRITE;
-    uint64_t nextPRE;
 
     Bank();
   };
