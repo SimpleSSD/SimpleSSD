@@ -22,7 +22,8 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
       entrySize(e),
       decodeAddress(p->getDecodeFunction()),
       isInRead(true),
-      writeCountInWrite(0) {
+      writeCountInWrite(0),
+      internalEntryID(0) {
   ctrl = object.config->getDRAMController();
 
   switch ((Memory::Config::Model)readConfigUint(
@@ -127,7 +128,11 @@ void Channel::submitRequest() {
       if (iter != readRequestQueue.end()) {
         // Submit to DRAM
         pDRAM->submit(decodeAddress(iter->address), entrySize, true,
-                      eventReadDone, iter->address);
+                      eventReadDone, internalEntryID);
+
+        // Remove request from queue
+        responseQueue.emplace(internalEntryID++, *iter);
+        readRequestQueue.erase(iter);
 
         // Switch to write?
         if (writeQueue.size() >=
@@ -147,11 +152,14 @@ void Channel::submitRequest() {
     if (iter != writeRequestQueue.end()) {
       // Submit to DRAM
       pDRAM->submit(decodeAddress(iter->address), entrySize, false,
-                    eventWriteDone, iter->address);
+                    eventWriteDone, internalEntryID);
 
       // Remove request from queue
       auto aiter = writeQueue.find(iter->address);
       writeQueue.erase(aiter);
+
+      responseQueue.emplace(internalEntryID++, *iter);
+      writeRequestQueue.erase(iter);
 
       // Switch to read?
       if (writeQueue.size() == 0 ||
@@ -183,28 +191,15 @@ void Channel::submitRequest() {
 }
 
 void Channel::completeRequest(uint64_t id, bool read) {
+  auto iter = responseQueue.find(id);
+
+  panic_if(iter == responseQueue.end(), "Invalid DRAM response.");
+
   if (read) {
-    for (auto iter = readRequestQueue.begin(); iter != readRequestQueue.end();
-         ++iter) {
-      if (iter->address == id) {
-        scheduleNow(iter->event, iter->data);
-
-        readRequestQueue.erase(iter);
-
-        break;
-      }
-    }
+    scheduleNow(iter->second.event, iter->second.data);
   }
-  else {
-    for (auto iter = writeRequestQueue.begin(); iter != writeRequestQueue.end();
-         ++iter) {
-      if (iter->address == id) {
-        writeRequestQueue.erase(iter);
 
-        break;
-      }
-    }
-  }
+  responseQueue.erase(iter);
 }
 
 uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
