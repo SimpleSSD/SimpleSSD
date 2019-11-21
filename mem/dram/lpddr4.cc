@@ -175,7 +175,9 @@ void LPDDR4::completeRequest(uint64_t now) {
 
   requestQueue.erase(iter);
 
-  reschedule();
+  if (requestQueue.size() > 0) {
+    reschedule();
+  }
 }
 
 void LPDDR4::reschedule() {
