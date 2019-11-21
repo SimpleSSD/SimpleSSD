@@ -253,12 +253,16 @@ bool Channel::submit(uint64_t addr, bool read, uint64_t data) {
     if (writeRequestQueue.size() < ctrl->writeQueueSize) {
       writeCount++;
 
+      fprintf(stderr, "%" PRIu64 ", 1, %" PRIu64 "\n", getTick(), addr);
+
       return addToWriteQueue(addr);
     }
   }
   else {
     if (readRequestQueue.size() < ctrl->readQueueSize) {
       readCount++;
+
+      fprintf(stderr, "%" PRIu64 ", 0, %" PRIu64 "\n", getTick(), addr);
 
       return addToReadQueue(addr, data);
     }
@@ -499,7 +503,7 @@ void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
   panic_if(addr + size > totalCapacity, "Address out of range.");
 
   // Split request
-  uint64_t alignedBegin = addr / entrySize;
+  uint64_t alignedBegin = addr / entrySize * entrySize;
   uint64_t alignedEnd = alignedBegin + DIVCEIL(size, entrySize) * entrySize;
 
   // Find statistic bin
