@@ -496,7 +496,7 @@ void DRAMController::writeRetry() {
 
 void DRAMController::submitRequest(uint64_t addr, uint32_t size, bool read,
                                    Event eid, uint64_t data) {
-  panic_if(addr + size >= totalCapacity, "Address out of range.");
+  panic_if(addr + size > totalCapacity, "Address out of range.");
 
   // Split request
   uint64_t alignedBegin = addr / entrySize;
