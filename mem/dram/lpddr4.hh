@@ -48,8 +48,10 @@ class LPDDR4 : public AbstractDRAM {
     // Stat
     uint64_t readRowHit;
     uint64_t readCount;
+    uint64_t readBytes;
     uint64_t writeRowHit;
     uint64_t writeCount;
+    uint64_t writeBytes;
   };
 
   std::vector<Rank> ranks;

@@ -136,9 +136,8 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
     rank.power->doCommand(Data::MemCommand::RD, address.bank,
                           DIVCEIL(bank.lastREAD, pTiming->tCK));
 
-    readStat.count++;
-    readStat.size += size;
     rank.readCount++;
+    rank.readBytes += size;
 
     endAt = bank.lastREAD + pTiming->tRL + pTiming->tDQSCK +
             (pStructure->burstChop / 2) * pTiming->tCK;
@@ -151,9 +150,8 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
     rank.power->doCommand(Data::MemCommand::WR, address.bank,
                           DIVCEIL(bank.lastWRITE, pTiming->tCK));
 
-    writeStat.count++;
-    writeStat.size += size;
     rank.writeCount++;
+    rank.writeBytes += size;
 
     endAt = bank.lastWRITE + pTiming->tWL +
             (pStructure->burstChop / 2 + 1) * pTiming->tCK;
@@ -201,10 +199,16 @@ void LPDDR4::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
 
     list.emplace_back(rprefix + "request_count.read", "Read request count.");
     list.emplace_back(rprefix + "request_count.write", "Write request count.");
+    list.emplace_back(rprefix + "request_count.total", "Total request count.");
+    list.emplace_back(rprefix + "bytes.read", "Read bytes.");
+    list.emplace_back(rprefix + "bytes.write", "Write bytes.");
+    list.emplace_back(rprefix + "bytes.total", "Total bytes.");
     list.emplace_back(rprefix + "rowhit.count.read", "Read row hit count.");
     list.emplace_back(rprefix + "rowhit.count.write", "Write row hit count.");
+    list.emplace_back(rprefix + "rowhit.count.total", "Write row hit count.");
     list.emplace_back(rprefix + "rowhit.ratio.read", "Read row hit ratio.");
     list.emplace_back(rprefix + "rowhit.ratio.write", "Write row hit ratio.");
+    list.emplace_back(rprefix + "rowhit.ratio.total", "Write row hit ratio.");
   }
 }
 
@@ -214,10 +218,17 @@ void LPDDR4::getStatValues(std::vector<double> &values) noexcept {
   for (auto &rank : ranks) {
     values.push_back((double)rank.readCount);
     values.push_back((double)rank.writeCount);
+    values.push_back((double)(rank.readCount + rank.writeCount));
+    values.push_back((double)rank.readBytes);
+    values.push_back((double)rank.writeBytes);
+    values.push_back((double)(rank.readBytes + rank.writeBytes));
     values.push_back((double)rank.readRowHit);
     values.push_back((double)rank.writeRowHit);
+    values.push_back((double)(rank.readRowHit + rank.writeRowHit));
     values.push_back((double)rank.readRowHit / rank.readCount);
     values.push_back((double)rank.writeRowHit / rank.writeCount);
+    values.push_back((double)(rank.readRowHit + rank.writeRowHit) /
+                     (rank.readCount + rank.writeCount));
   }
 }
 
