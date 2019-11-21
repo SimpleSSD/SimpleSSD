@@ -283,6 +283,8 @@ void Channel::getStatList(std::vector<Stat> &list,
                     "Total number of bytes read from write queue");
   list.emplace_back(prefix + "byte.write.total",
                     "Total number of bytes written to DRAM");
+
+  pDRAM->getStatList(list, prefix);
 }
 
 void Channel::getStatValues(std::vector<double> &values) noexcept {
@@ -293,6 +295,8 @@ void Channel::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)(readCount * entrySize));
   values.push_back((double)(readFromWriteQueue * entrySize));
   values.push_back((double)(writeCount * entrySize));
+
+  pDRAM->getStatValues(values);
 }
 
 void Channel::resetStatValues() noexcept {
@@ -300,6 +304,8 @@ void Channel::resetStatValues() noexcept {
   readFromWriteQueue = 0;
   writeCount = 0;
   writeMerged = 0;
+
+  pDRAM->resetStatValues();
 }
 
 void Channel::createCheckpoint(std::ostream &out) const noexcept {
