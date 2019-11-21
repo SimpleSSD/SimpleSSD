@@ -109,6 +109,7 @@ set(SRC_MEM
   mem/dram/controller.cc
   mem/dram/abstract_dram.cc
   mem/dram/ideal.cc
+  mem/dram/lpddr4.cc
   mem/sram/abstract_sram.cc
   mem/sram/sram.cc
 )
