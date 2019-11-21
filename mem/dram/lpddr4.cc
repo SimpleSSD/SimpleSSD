@@ -225,9 +225,9 @@ void LPDDR4::getStatValues(std::vector<double> &values) noexcept {
     values.push_back((double)rank.readRowHit);
     values.push_back((double)rank.writeRowHit);
     values.push_back((double)(rank.readRowHit + rank.writeRowHit));
-    values.push_back((double)rank.readRowHit / rank.readCount);
-    values.push_back((double)rank.writeRowHit / rank.writeCount);
-    values.push_back((double)(rank.readRowHit + rank.writeRowHit) /
+    values.push_back(100. * rank.readRowHit / rank.readCount);
+    values.push_back(100. * rank.writeRowHit / rank.writeCount);
+    values.push_back(100. * (rank.readRowHit + rank.writeRowHit) /
                      (rank.readCount + rank.writeCount));
   }
 }
