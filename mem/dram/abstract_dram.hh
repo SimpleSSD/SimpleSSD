@@ -32,7 +32,7 @@ class AbstractDRAM : public Object {
   };
 
   Data::MemorySpecification spec;
-  libDRAMPower *dramPower;
+  std::vector<libDRAMPower> dramPower;
 
   Config::DRAMStructure *pStructure;
   Config::DRAMTiming *pTiming;
@@ -42,13 +42,29 @@ class AbstractDRAM : public Object {
   Stats readStat;
   Stats writeStat;
 
-  double act_energy;
-  double pre_energy;
-  double read_energy;
-  double write_energy;
-  double ref_energy;
-  double sref_energy;
-  double window_energy;
+  struct PowerStat {
+    double act_energy;
+    double pre_energy;
+    double read_energy;
+    double write_energy;
+    double ref_energy;
+    double sref_energy;
+    double window_energy;
+
+    PowerStat() { clear(); }
+
+    void clear() {
+      act_energy = 0.;
+      pre_energy = 0.;
+      read_energy = 0.;
+      write_energy = 0.;
+      ref_energy = 0.;
+      sref_energy = 0.;
+      window_energy = 0.;
+    }
+  };
+
+  std::vector<PowerStat> powerStat;
 
   uint64_t lastResetAt;
 
