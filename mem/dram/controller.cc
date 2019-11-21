@@ -204,6 +204,7 @@ void Channel::completeRequest(uint64_t id, bool read) {
 
 uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
   bool foundInWrQ = false;
+  uint8_t ret = 0;
 
   if (writeQueue.find(addr) != writeQueue.end()) {
     foundInWrQ = true;
@@ -215,6 +216,8 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
     readRequestQueue.emplace_back(addr, eid, data);
   }
   else {
+    ret = 1;
+
     scheduleNow(eid, data);
   }
 
@@ -222,7 +225,7 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
     scheduleRel(eventDoNext, 0, SUBMIT_PERIOD);
   }
 
-  return true;
+  return ret;
 }
 
 uint8_t Channel::addToWriteQueue(uint64_t addr) {
