@@ -9,6 +9,7 @@
 
 #include "mem/dram/abstract_dram.hh"
 #include "mem/dram/ideal.hh"
+#include "mem/dram/lpddr4.hh"
 
 #define QUEUE_HIT_LATENCY ((uint64_t)10000)  // 10ns
 #define SUBMIT_PERIOD ((uint64_t)100)
@@ -30,12 +31,16 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
       Section::Memory, Memory::Config::Key::DRAMModel)) {
     case Memory::Config::Model::Ideal:
       pDRAM = new Memory::DRAM::Ideal(object);
+
       break;
     case Memory::Config::Model::LPDDR4:
-      // pDRAM = new Memory::DRAM::DRAMController(object);
+      pDRAM = new Memory::DRAM::LPDDR4(object);
+
       break;
     default:
       panic("Invalid DRAM model selected.");
+
+      break;
   }
 
   // Scheduler
