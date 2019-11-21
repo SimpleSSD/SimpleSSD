@@ -155,7 +155,7 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
     writeStat.size += size;
     rank.writeCount++;
 
-    endAt = bank.lastREAD + pTiming->tWL +
+    endAt = bank.lastWRITE + pTiming->tWL +
             (pStructure->burstChop / 2 + 1) * pTiming->tCK;
   }
 
