@@ -101,7 +101,7 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
 
       // PRECHARGE ROW
       bank.lastPRE =
-          MAX(bank.lastACT + pTiming->tRP,
+          MAX(bank.lastACT + pTiming->tRRD,
               MAX(bank.lastREAD + 8 * pTiming->tCK + pTiming->tRTP,
                   MAX(bank.lastWRITE + pTiming->tWL +
                           pTiming->tCK * (pStructure->burstChop / 2 + 1) +
