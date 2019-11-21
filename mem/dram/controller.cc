@@ -48,7 +48,7 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
         for (; iter != queue.end(); ++iter) {
           Address addr = decodeAddress(iter->address);
 
-          if (pDRAM->isNotRefresh(addr.rank, addr.bank)) {
+          if (pDRAM->isIdle(addr.rank, addr.bank)) {
             break;
           }
         }
@@ -69,7 +69,7 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
         for (; iter != queue.end(); ++iter) {
           Address addr = decodeAddress(iter->address);
 
-          if (pDRAM->isNotRefresh(addr.rank, addr.bank) &&
+          if (pDRAM->isIdle(addr.rank, addr.bank) &&
               pDRAM->getRowInfo(addr.rank, addr.bank) == addr.row) {
             break;
           }
@@ -81,7 +81,7 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
           for (; iter != queue.end(); ++iter) {
             Address addr = decodeAddress(iter->address);
 
-            if (pDRAM->isNotRefresh(addr.rank, addr.bank)) {
+            if (pDRAM->isIdle(addr.rank, addr.bank)) {
               break;
             }
           }

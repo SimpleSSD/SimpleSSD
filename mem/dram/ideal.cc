@@ -44,7 +44,7 @@ void Ideal::postDone(Request *req) {
   delete req;
 }
 
-bool Ideal::isNotRefresh(uint32_t, uint8_t) {
+bool Ideal::isIdle(uint32_t, uint8_t) {
   return true;
 }
 

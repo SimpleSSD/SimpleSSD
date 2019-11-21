@@ -56,7 +56,7 @@ class AbstractDRAM : public Object {
   AbstractDRAM(ObjectData &);
   ~AbstractDRAM();
 
-  virtual bool isNotRefresh(uint32_t, uint8_t) = 0;
+  virtual bool isIdle(uint32_t, uint8_t) = 0;
   virtual uint32_t getRowInfo(uint32_t, uint8_t) = 0;
   virtual void submit(Address, uint32_t, bool, Event, uint64_t) = 0;
 

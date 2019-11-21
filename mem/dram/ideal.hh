@@ -30,7 +30,7 @@ class Ideal : public AbstractDRAM {
   Ideal(ObjectData &);
   ~Ideal();
 
-  bool isNotRefresh(uint32_t, uint8_t) override;
+  bool isIdle(uint32_t, uint8_t) override;
   uint32_t getRowInfo(uint32_t, uint8_t) override;
   void submit(Address, uint32_t, bool, Event, uint64_t) override;
 
