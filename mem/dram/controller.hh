@@ -60,8 +60,8 @@ class Channel : public Object {
 
   std::function<Address(uint64_t)> &decodeAddress;
 
-  uint8_t addToReadQueue(uint64_t, uint64_t);
-  uint8_t addToWriteQueue(uint64_t);
+  bool addToReadQueue(uint64_t, uint64_t);
+  bool addToWriteQueue(uint64_t);
 
   // Scheduler
   std::function<std::list<Entry>::iterator(std::list<Entry> &)> chooseNext;
@@ -93,8 +93,7 @@ class Channel : public Object {
   Channel(ObjectData &, DRAMController *, uint8_t, uint32_t);
   ~Channel();
 
-  // 0 = submit, 1 = wqhit, 2 = retry
-  uint8_t submit(uint64_t, bool, uint64_t);
+  bool submit(uint64_t, bool, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
