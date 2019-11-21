@@ -50,10 +50,9 @@ class Channel : public Object {
   // Request queue
   struct Entry {
     uint64_t address;
-    Event event;
     uint64_t data;
 
-    Entry(uint64_t a, Event e, uint64_t d) : address(a), event(e), data(d) {}
+    Entry(uint64_t a, uint64_t d) : address(a), data(d) {}
   };
 
   std::list<Entry> readRequestQueue;
@@ -61,7 +60,7 @@ class Channel : public Object {
 
   std::function<Address(uint64_t)> &decodeAddress;
 
-  uint8_t addToReadQueue(uint64_t, Event, uint64_t);
+  uint8_t addToReadQueue(uint64_t, uint64_t);
   uint8_t addToWriteQueue(uint64_t);
 
   // Scheduler
@@ -95,7 +94,7 @@ class Channel : public Object {
   ~Channel();
 
   // 0 = submit, 1 = wqhit, 2 = retry
-  uint8_t submit(uint64_t, bool, Event, uint64_t);
+  uint8_t submit(uint64_t, bool, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
@@ -202,6 +201,7 @@ class DRAMController : public AbstractRAM {
   // For channel
   std::function<Address(uint64_t)> &getDecodeFunction();
   void triggerWriteRetry();
+  void submitReadCompletion(uint64_t);
 
   void read(uint64_t address, uint32_t length, Event eid,
             uint64_t data = 0) override;

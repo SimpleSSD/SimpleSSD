@@ -196,13 +196,13 @@ void Channel::completeRequest(uint64_t id, bool read) {
   panic_if(iter == responseQueue.end(), "Invalid DRAM response.");
 
   if (read) {
-    scheduleNow(iter->second.event, iter->second.data);
+    parent->submitReadCompletion(iter->second.data);
   }
 
   responseQueue.erase(iter);
 }
 
-uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
+uint8_t Channel::addToReadQueue(uint64_t addr, uint64_t data) {
   bool foundInWrQ = false;
   uint8_t ret = 0;
 
@@ -213,12 +213,12 @@ uint8_t Channel::addToReadQueue(uint64_t addr, Event eid, uint64_t data) {
   }
 
   if (!foundInWrQ) {
-    readRequestQueue.emplace_back(addr, eid, data);
+    readRequestQueue.emplace_back(addr, data);
   }
   else {
     ret = 1;
 
-    scheduleNow(eid, data);
+    parent->submitReadCompletion(data);
   }
 
   if (!isScheduled(eventDoNext)) {
@@ -233,7 +233,7 @@ uint8_t Channel::addToWriteQueue(uint64_t addr) {
 
   if (!merged) {
     writeQueue.emplace(addr);
-    writeRequestQueue.emplace_back(addr, InvalidEventID, 0);
+    writeRequestQueue.emplace_back(addr, 0);
   }
   else {
     writeMerged++;
@@ -246,7 +246,7 @@ uint8_t Channel::addToWriteQueue(uint64_t addr) {
   return 0;
 }
 
-uint8_t Channel::submit(uint64_t addr, bool read, Event eid, uint64_t data) {
+uint8_t Channel::submit(uint64_t addr, bool read, uint64_t data) {
   if (!read) {
     if (writeRequestQueue.size() < ctrl->writeQueueSize) {
       writeCount++;
@@ -258,7 +258,7 @@ uint8_t Channel::submit(uint64_t addr, bool read, Event eid, uint64_t data) {
     if (readRequestQueue.size() < ctrl->readQueueSize) {
       readCount++;
 
-      return addToReadQueue(addr, eid, data);
+      return addToReadQueue(addr, data);
     }
   }
 
@@ -431,11 +431,19 @@ void DRAMController::triggerWriteRetry() {
   }
 }
 
+void DRAMController::submitReadCompletion(uint64_t id) {
+  readCompletionQueue.emplace_back(id);
+
+  if (!isScheduled(eventReadComplete)) {
+    scheduleNow(eventReadComplete, id);
+  }
+}
+
 void DRAMController::readRetry() {
   auto req = readRetryQueue.front();
 
   uint8_t ret = channels[decodeAddress(req->address).channel]->submit(
-      req->address, true, eventReadComplete, req->id);
+      req->address, true, req->id);
 
   if (ret == 2) {
     // Queue full
@@ -465,7 +473,7 @@ void DRAMController::writeRetry() {
   auto req = writeRetryQueue.front();
 
   uint8_t ret = channels[decodeAddress(req->address).channel]->submit(
-      req->address, false, eventWriteComplete, req->id);
+      req->address, false, req->id);
 
   if (ret == 0) {
     // Request submitted - write is async
