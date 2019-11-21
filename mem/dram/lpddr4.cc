@@ -156,7 +156,7 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
   }
 
   // Push to queue
-  requestQueue.emplace(endAt, eid, data);
+  requestQueue.emplace(endAt, Entry(eid, data));
 
   reschedule();
 }
@@ -214,6 +214,13 @@ void LPDDR4::getStatValues(std::vector<double> &values) noexcept {
 
 void LPDDR4::resetStatValues() noexcept {
   AbstractDRAM::resetStatValues();
+
+  for (auto &rank : ranks) {
+    rank.readCount = 0;
+    rank.writeCount = 0;
+    rank.readRowHit = 0;
+    rank.writeRowHit = 0;
+  }
 }
 
 void LPDDR4::createCheckpoint(std::ostream &) const noexcept {}
