@@ -39,9 +39,6 @@ class AbstractDRAM : public Object {
   Config::DRAMPower *pPower;
 
   // Statistics
-  Stats readStat;
-  Stats writeStat;
-
   struct PowerStat {
     double act_energy;
     double pre_energy;

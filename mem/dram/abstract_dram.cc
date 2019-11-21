@@ -86,13 +86,6 @@ AbstractDRAM::~AbstractDRAM() {}
 
 void AbstractDRAM::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
-  list.emplace_back(prefix + "request_count.read", "Read request count");
-  list.emplace_back(prefix + "request_count.write", "Write request count");
-  list.emplace_back(prefix + "request_count.total", "Total request count");
-  list.emplace_back(prefix + "bytes.read", "Read data size in byte");
-  list.emplace_back(prefix + "bytes.write", "Write data size in byte");
-  list.emplace_back(prefix + "bytes.total", "Total data size in byte");
-
   for (uint8_t rank = 0; rank < pStructure->rank; rank++) {
     std::string rprefix = prefix + "rank" + std::to_string(rank) + ".";
 
@@ -114,13 +107,6 @@ void AbstractDRAM::getStatList(std::vector<Stat> &list,
 }
 
 void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back((double)readStat.count);
-  values.push_back((double)writeStat.count);
-  values.push_back((double)(readStat.count + writeStat.count));
-  values.push_back((double)readStat.size);
-  values.push_back((double)writeStat.size);
-  values.push_back((double)(readStat.size + writeStat.size));
-
   // As calcWindowEnergy resets previous power/energy stat,
   // we need to store previous values.
   for (uint8_t rank = 0; rank < pStructure->rank; rank++) {
@@ -160,19 +146,14 @@ void AbstractDRAM::resetStatValues() noexcept {
   }
 
   lastResetAt = getTick();
-
-  readStat.clear();
-  writeStat.clear();
 }
 
 void AbstractDRAM::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, readStat);
-  BACKUP_SCALAR(out, writeStat);
+  BACKUP_SCALAR(out, lastResetAt);
 }
 
 void AbstractDRAM::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, readStat);
-  RESTORE_SCALAR(in, writeStat);
+  RESTORE_SCALAR(in, lastResetAt);
 }
 
 }  // namespace SimpleSSD::Memory::DRAM

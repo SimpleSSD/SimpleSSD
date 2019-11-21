@@ -61,18 +61,10 @@ void Ideal::submit(Address addr, uint32_t size, bool read, Event eid,
   auto req = new Request(address, size, eid, data);
 
   if (read) {
-    // Stat Update
-    readStat.count++;
-    readStat.size += size;
-
     // Schedule callback
     scheduler.read(req);
   }
   else {
-    // Stat Update
-    writeStat.count++;
-    writeStat.size += size;
-
     // Schedule callback
     scheduler.write(req);
   }
