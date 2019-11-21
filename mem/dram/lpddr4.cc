@@ -97,6 +97,8 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
   }
   else {
     if (bank.row != address.row) {
+      bank.row = address.row;
+
       // PRECHARGE ROW
       bank.lastPRE =
           MAX(bank.lastACT + pTiming->tRP,
