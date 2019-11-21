@@ -183,6 +183,9 @@ void LPDDR4::reschedule() {
     if (object.cpu->when(eventCompletion) != requestQueue.begin()->first) {
       deschedule(eventCompletion);
     }
+    else {
+      return;
+    }
   }
 
   scheduleAbs(eventCompletion, 0, requestQueue.begin()->first);
