@@ -129,8 +129,9 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
   }
 
   if (read) {
-    bank.lastREAD = MAX(bank.lastACT + pTiming->tRCD,
-                        MAX(bank.lastREAD + rtr, bank.lastWRITE + wtr));
+    bank.lastREAD =
+        MAX(bank.lastACT + pTiming->tRCD,
+            MAX(bank.lastREAD + rtr, MAX(bank.lastWRITE + wtr, now)));
 
     rank.power->doCommand(Data::MemCommand::RD, address.bank,
                           DIVCEIL(bank.lastREAD, pTiming->tCK));
@@ -143,8 +144,9 @@ void LPDDR4::submit(Address address, uint32_t size, bool read, Event eid,
             (pStructure->burstChop / 2) * pTiming->tCK;
   }
   else {
-    bank.lastWRITE = MAX(bank.lastACT + pTiming->tRCD,
-                         MAX(bank.lastREAD + rtw, bank.lastWRITE + wtr));
+    bank.lastWRITE =
+        MAX(bank.lastACT + pTiming->tRCD,
+            MAX(bank.lastREAD + rtw, MAX(bank.lastWRITE + wtr, now)));
 
     rank.power->doCommand(Data::MemCommand::WR, address.bank,
                           DIVCEIL(bank.lastWRITE, pTiming->tCK));
