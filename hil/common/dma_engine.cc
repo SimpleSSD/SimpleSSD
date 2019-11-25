@@ -229,8 +229,10 @@ void DMAEngine::getPRPListFromPRP_readDone(uint64_t tag) {
     // PRP list ends but size is not full
     // Last item of PRP list is pointer of another PRP list
     listPRP = session.parent->prList.back().address;
+    listPRPSize = getPRPSize(listPRP);
 
     session.parent->prList.pop_back();
+    session.handled -= listPRPSize;
 
     getPRPListFromPRP(session, listPRP);
   }
