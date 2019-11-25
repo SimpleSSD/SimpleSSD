@@ -85,8 +85,8 @@ void BasicFTL::read_find(Command &cmd) {
   if (!allowPageRead && mappingGranularity != 1) {
     // Check this request is aligned to mapping granularity
     LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
-    LPN alignedEnd = alignedBegin + DIVCEIL(cmd.length, mappingGranularity) *
-                                        mappingGranularity;
+    LPN alignedEnd = DIVCEIL(cmd.offset + cmd.length, mappingGranularity) *
+                     mappingGranularity;
 
     if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd) {
       // If not aligned, we need to read full-sized superpage
@@ -143,8 +143,8 @@ void BasicFTL::write_find(Command &cmd) {
 
   // Check this request is aligned to mapping granularity
   LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
-  LPN alignedEnd = alignedBegin +
-                   DIVCEIL(cmd.length, mappingGranularity) * mappingGranularity;
+  LPN alignedEnd =
+      DIVCEIL(cmd.offset + cmd.length, mappingGranularity) * mappingGranularity;
 
   if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd ||
       cmd.subCommandList.front().skipFront > 0 ||

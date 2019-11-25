@@ -712,7 +712,7 @@ CPU::Function VirtuallyLinked::writeMapping(Command &cmd) {
   // Check align
   LPN alignedBegin = cmd.offset / param.superpage * param.superpage;
   LPN alignedEnd =
-      alignedBegin + DIVCEIL(cmd.length, param.superpage) * param.superpage;
+      DIVCEIL(cmd.offset + cmd.length, param.superpage) * param.superpage;
   bool aligned =
       alignedBegin == cmd.offset && cmd.offset + cmd.length == alignedEnd;
 

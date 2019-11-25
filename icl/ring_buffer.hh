@@ -206,6 +206,9 @@ class RingBuffer : public AbstractCache {
   }
 
   inline uint64_t alignToMinPage(LPN lpn) { return lpn / minPages * minPages; }
+  inline uint64_t alignToMinPageEnd(LPN lpn, LPN length) {
+    return DIVCEIL(lpn + length, minPages) * minPages;
+  }
 
   inline bool isAligned(LPN lpn) { return alignToMinPage(lpn) == lpn; }
 
