@@ -131,7 +131,7 @@ CPU::Function VirtuallyLinked::readMappingInternal(LPN lpn, PPN &ppn) {
   uint32_t sidx = (uint32_t)getSPIndexFromPPN(lpn);
   uint64_t ptr = readPointer(slpn);
 
-  insertMemoryAddress(true, makePointerSize(slpn), pointerSize);
+  insertMemoryAddress(true, makeTableAddress(slpn), pointerSize);
 
   if (pointerValid.test(slpn) && partialTable[ptr].isValid(sidx)) {
     PPN sppn = partialTable[ptr].getEntry(sidx);
@@ -192,6 +192,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
         }
       }
       if (pointerValid.test(slpn)) {
+        panic_if(slpn != partialTable[ptr].slpn, "PTE corrupted.");
+
         // Unlink
         partialTable[ptr].slpn = InvalidLPN;
         pointerValid.reset(slpn);
@@ -265,6 +267,8 @@ CPU::Function VirtuallyLinked::writeMappingInternal(LPN lpn, bool full,
   }
   else {
     if (pointerValid.test(slpn)) {
+      panic_if(slpn != partialTable[ptr].slpn, "PTE corrupted.");
+
       if (partialTable[ptr].isValid(sidx)) {
         // Invalidate
         PPN sppn = partialTable[ptr].getEntry(sidx);

@@ -186,7 +186,7 @@ class VirtuallyLinked : public AbstractMapping {
       ret = 6;
 
       readPointer = [this, mask](LPN lpn) {
-        return ((uint64_t)(*(uint64_t *)(pointer + (lpn * 6)))) | mask;
+        return ((uint64_t)(*(uint64_t *)(pointer + (lpn * 6)))) & mask;
       };
       writePointer = [this](LPN lpn, uint64_t ppn) {
         memcpy(pointer + lpn * 6, &ppn, 6);
