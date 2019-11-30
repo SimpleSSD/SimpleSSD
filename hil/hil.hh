@@ -12,22 +12,96 @@
 
 #include <utility>
 
-#include "hil/command_manager.hh"
+#include "hil/common/dma_engine.hh"
 #include "icl/icl.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::HIL {
 
-enum class FormatOption {
+class HIL;
+
+enum class FormatOption : uint8_t {
   /* Format NVM */
   None,                //!< Invalidates FTL mapping (TRIM)
   UserDataErase,       //!< Erase block, by copying unaffected pages
-  CryptographicErase,  //<! Not supported (Same as UserDataErase)
+  CryptographicErase,  //!< Not supported (Same as UserDataErase)
 
   /* Sanitize */
   BlockErase = UserDataErase,
   CryptoErase = CryptographicErase,
   Overwrite  //!< Overwrite data with provided 32bit pattern
+};
+
+enum class Operation : uint16_t {
+  None,
+  Flush,
+  Read,
+  Write,
+  Format,
+  Compare,
+  CompareAndWrite,
+  WriteZeroes,
+};
+
+class Request {
+ private:
+  friend HIL;
+
+  DMAEngine *dmaEngine;
+  DMATag dmaTag;
+
+  Event eid;
+  uint64_t data;
+
+  uint64_t offset;  //!< Byte offset
+  uint32_t length;  //!< Byte length
+
+  uint16_t dmaCounter;
+  uint16_t nvmCounter;
+  uint16_t nlp;  //!< # logical pages
+
+  Operation opcode;
+
+  uint64_t dmaBeginAt;
+  uint64_t nvmBeginAt;
+
+ public:
+  Request(Event e, uint64_t c)
+      : dmaEngine(nullptr),
+        dmaTag(InvalidDMATag),
+        eid(e),
+        data(c),
+        offset(0),
+        length(0),
+        nlp(0),
+        dmaCounter(0),
+        nvmCounter(0),
+        opcode(Operation::None),
+        dmaBeginAt(0),
+        nvmBeginAt(0) {}
+  Request(DMAEngine *d, DMATag t, Event e, uint64_t c)
+      : dmaEngine(d),
+        dmaTag(t),
+        eid(e),
+        data(c),
+        offset(0),
+        length(0),
+        nlp(0),
+        dmaCounter(0),
+        nvmCounter(0),
+        opcode(Operation::None),
+        dmaBeginAt(0),
+        nvmBeginAt(0) {}
+
+  void setAddress(LPN slpn, uint16_t nlp, uint32_t lbaSize) {
+    offset = slpn * lbaSize;
+    length = nlp * lbaSize;
+  }
+
+  void setAddress(uint64_t byteoffset, uint32_t bytelength) {
+    offset = byteoffset;
+    length = bytelength;
+  }
 };
 
 /**
@@ -43,36 +117,61 @@ enum class FormatOption {
  */
 class HIL : public Object {
  private:
-  CommandManager commandManager;
   ICL::ICL icl;
 
   uint64_t requestCounter;
-  uint32_t logicalPageSize;
+
+  std::unordered_map<uint64_t, Request> requestQueue;
 
  public:
   HIL(ObjectData &);
   ~HIL();
 
   /**
-   * \brief Submit command
+   * \brief Read underlying NVM
    *
-   * Command should be inserted through CommandManager before call this
-   * function.
-   *
-   * \param[in] tag Unique command tag
+   * \param[in] req Request object
    */
-  void submitCommand(uint64_t tag);
+  void read(Request &&req);
 
   /**
-   * \brief Submit command
+   * \brief Write underlying NVM
    *
-   * Command should be inserted through CommandManager before call this
-   * function. Only begins specified subcommad.
+   * If zerofill is true, DMAEngine and DMATag can be null.
    *
-   * \param[in] tag Unique command tag
-   * \param[in] id  Unique subcommand id
+   * \param[in] req       Request object
+   * \param[in] fua       Force Unit Access
+   * \param[in] zerofill  Write zeroes
    */
-  void submitSubcommand(uint64_t tag, uint32_t id);
+  void write(Request &&req, bool fua = false, bool zerofill = false);
+
+  /**
+   * \brief Flush cache
+   *
+   * If cache is not enabled, this command has no effect.
+   * DMAEngine and DMATag can be null.
+   *
+   * \param[in] req Request object
+   */
+  void flush(Request &&req);
+
+  /**
+   * \brief TRIM/Format NVM
+   *
+   * DMAEngine and DMATag can be null.
+   *
+   * \param[in] req     Request object
+   * \param[in] option  Format option
+   */
+  void format(Request &&req, FormatOption option);
+
+  /**
+   * \brief Compare
+   *
+   * \param[in] req   Request object
+   * \param[in] fused True if this request is FUSED operation in NVMe
+   */
+  void compare(Request &&req, bool fused = false);
 
   /**
    * \brief Get logical pages contains data
@@ -87,15 +186,6 @@ class HIL : public Object {
 
   //! Get bytesize of one logical page.
   uint32_t getLPNSize();
-
-  //! Enable/disable ICL
-  void setCache(bool);
-
-  //! Get cache enabled
-  bool getCache();
-
-  //! Get command manager
-  CommandManager *getCommandManager();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
