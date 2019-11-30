@@ -19,16 +19,11 @@ Convert::Convert(ObjectData &o, uint32_t lpn) : Object(o) {
 ConvertFunction Convert::getConvertion() {
   return [shift = this->lpnOrder, mask = this->mask](
              uint64_t offset, uint32_t length, LPN &slpn, uint32_t &nlp,
-             uint32_t *skipFirst, uint32_t *skipLast) {
+             uint32_t &skipFirst, uint32_t &skipLast) {
     slpn = offset >> shift;
     nlp = (uint32_t)(((offset + length - 1) >> shift) + 1 - slpn);
-
-    if (skipFirst) {
-      *skipFirst = (uint32_t)(offset & mask);
-    }
-    if (skipLast) {
-      *skipLast = (uint32_t)(((slpn + nlp) << shift) - offset - length);
-    }
+    skipFirst = (uint32_t)(offset & mask);
+    skipLast = (uint32_t)(((slpn + nlp) << shift) - offset - length);
   };
 }
 

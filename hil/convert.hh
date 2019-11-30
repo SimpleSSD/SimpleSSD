@@ -32,7 +32,7 @@ namespace SimpleSSD::HIL {
  * \param[out] skipLast   The number of bytes to ignore at the end
  */
 using ConvertFunction = std::function<void(uint64_t, uint32_t, LPN &,
-                                           uint32_t &, uint32_t *, uint32_t *)>;
+                                           uint32_t &, uint32_t &, uint32_t &)>;
 
 /**
  * \brief Convert class
