@@ -20,39 +20,34 @@
 namespace SimpleSSD::HIL {
 
 /**
- * \brief Convert LBA -> LPN
+ * \brief Convert byteoffset -> LPN
  *
- * nlb must NOT zero.
+ * length must NOT zero.
  *
- * \param[in]  slba       Starting LBA
- * \param[in]  nlb        The number of logical blocks
+ * \param[in]  offset     Starting byte offset
+ * \param[in]  length     Length in bytes
  * \param[out] slpn       Starting LPN
  * \param[out] nlp        The number of logical pages
  * \param[out] skipFirst  The number of bytes to ignore at the beginning
  * \param[out] skipLast   The number of bytes to ignore at the end
  */
-using ConvertFunction = std::function<void(uint64_t, uint32_t, uint64_t &,
+using ConvertFunction = std::function<void(uint64_t, uint32_t, LPN &,
                                            uint32_t &, uint32_t *, uint32_t *)>;
 
 /**
  * \brief Convert class
  *
- * This class helps to convert LBA (logical block address) to LPN address.
+ * This class helps to convert byte offset to LPN address.
  *
- * LBA is always uint64_t - NVMe uses 8byte LBA.
- * LPN can have various size. (See SimpleSSD::HIL::HIL class)
- *
- * Both LBA and LPN must power of 2. (popcount == 1)
+ * LPN must power of 2. (popcount == 1)
  */
 class Convert : public Object {
  private:
   uint64_t lpnOrder;  //!< Order of LPN size. Fixed in one simulation session.
-  uint64_t lbaOrder;  //!< Order of LBA size. Can be modified.
-  int16_t shift;
   uint64_t mask;
 
  public:
-  Convert(ObjectData &, uint64_t, uint64_t);
+  Convert(ObjectData &, uint32_t);
 
   ConvertFunction getConvertion();
 
