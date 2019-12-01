@@ -12,13 +12,12 @@
 
 #include <utility>
 
-#include "hil/common/dma_engine.hh"
+#include "hil/convert.hh"
 #include "icl/icl.hh"
 #include "sim/object.hh"
+#include "hil/request.hh"
 
 namespace SimpleSSD::HIL {
-
-class HIL;
 
 enum class FormatOption : uint8_t {
   /* Format NVM */
@@ -30,78 +29,6 @@ enum class FormatOption : uint8_t {
   BlockErase = UserDataErase,
   CryptoErase = CryptographicErase,
   Overwrite  //!< Overwrite data with provided 32bit pattern
-};
-
-enum class Operation : uint16_t {
-  None,
-  Flush,
-  Read,
-  Write,
-  Format,
-  Compare,
-  CompareAndWrite,
-  WriteZeroes,
-};
-
-class Request {
- private:
-  friend HIL;
-
-  DMAEngine *dmaEngine;
-  DMATag dmaTag;
-
-  Event eid;
-  uint64_t data;
-
-  uint64_t offset;  //!< Byte offset
-  uint32_t length;  //!< Byte length
-
-  uint16_t dmaCounter;
-  uint16_t nvmCounter;
-  uint16_t nlp;  //!< # logical pages
-
-  Operation opcode;
-
-  uint64_t dmaBeginAt;
-  uint64_t nvmBeginAt;
-
- public:
-  Request(Event e, uint64_t c)
-      : dmaEngine(nullptr),
-        dmaTag(InvalidDMATag),
-        eid(e),
-        data(c),
-        offset(0),
-        length(0),
-        nlp(0),
-        dmaCounter(0),
-        nvmCounter(0),
-        opcode(Operation::None),
-        dmaBeginAt(0),
-        nvmBeginAt(0) {}
-  Request(DMAEngine *d, DMATag t, Event e, uint64_t c)
-      : dmaEngine(d),
-        dmaTag(t),
-        eid(e),
-        data(c),
-        offset(0),
-        length(0),
-        nlp(0),
-        dmaCounter(0),
-        nvmCounter(0),
-        opcode(Operation::None),
-        dmaBeginAt(0),
-        nvmBeginAt(0) {}
-
-  void setAddress(LPN slpn, uint16_t nlp, uint32_t lbaSize) {
-    offset = slpn * lbaSize;
-    length = nlp * lbaSize;
-  }
-
-  void setAddress(uint64_t byteoffset, uint32_t bytelength) {
-    offset = byteoffset;
-    length = bytelength;
-  }
 };
 
 /**
@@ -118,10 +45,23 @@ class Request {
 class HIL : public Object {
  private:
   ICL::ICL icl;
+  ConvertFunction convertFunction;
+
+  uint32_t lpnSize;
 
   uint64_t requestCounter;
+  uint64_t subrequestCounter;
 
   std::unordered_map<uint64_t, Request> requestQueue;
+  std::unordered_map<uint64_t, SubRequest> subrequestQueue;
+
+  void submit(Operation, Request &&);
+
+  Event eventNVMCompletion;
+  void nvmCompletion(uint64_t, uint64_t);
+
+  Event eventDMACompletion;
+  void dmaCompletion(uint64_t, uint64_t);
 
  public:
   HIL(ObjectData &);
@@ -140,10 +80,9 @@ class HIL : public Object {
    * If zerofill is true, DMAEngine and DMATag can be null.
    *
    * \param[in] req       Request object
-   * \param[in] fua       Force Unit Access
    * \param[in] zerofill  Write zeroes
    */
-  void write(Request &&req, bool fua = false, bool zerofill = false);
+  void write(Request &&req, bool zerofill = false);
 
   /**
    * \brief Flush cache
