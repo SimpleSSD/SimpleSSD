@@ -18,7 +18,7 @@ This software is based on pugixml library (http://pugixml.org).
 pugixml is Copyright (C) 2006-2018 Arseny Kapoulkine.
 ```
 
-### [McPAT](https://github.com/HewlettPackard/mcpat) located at `/lib/mcpat`
+### [McPAT](https://github.com/HewlettPackard/mcpat) located at `lib/mcpat`
 
 Multicore Power Area and Timing calculator.
 We modified source code to separate initialize phase and calculation phase.
