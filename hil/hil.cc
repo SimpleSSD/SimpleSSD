@@ -157,7 +157,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
   bool remove = false;
   auto iter = subrequestQueue.find(tag);
 
-  panic_if(iter == subrequestQueue.end(), "Unexpected subrequest %" PRIx64 "h",
+  panic_if(iter == subrequestQueue.end(), "Unexpected subrequest %" PRIx64 "h.",
            tag);
 
   // Shortcuts
