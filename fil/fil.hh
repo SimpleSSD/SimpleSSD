@@ -13,7 +13,6 @@
 #include "fil/def.hh"
 #include "fil/nvm/abstract_nvm.hh"
 #include "fil/scheduler/abstract_scheduler.hh"
-#include "hil/command_manager.hh"
 
 namespace SimpleSSD::FIL {
 
@@ -24,27 +23,39 @@ namespace SimpleSSD::FIL {
  */
 class FIL : public Object {
  private:
-  CommandManager *commandManager;
   NVM::AbstractNVM *pNVM;
   Scheduler::AbstractScheduler *pScheduler;
 
+  uint64_t requestCounter;
+  std::unordered_map<uint64_t, Request> requestQueue;
+
+  void submit(Operation, Request &&);
+
+  Event eventCompletion;
+  void completion(uint64_t, uint64_t);
+
  public:
-  FIL(ObjectData &, CommandManager *);
+  FIL(ObjectData &);
   ~FIL();
 
   /**
-   * \brief Submit Command to FIL
+   * \brief Read underlying NVM
    *
-   * This command must have SubCommands with valid ppn field.
-   *
-   * \param[in] tag Command tag
+   * \param[in] req Request object
    */
-  void submit(uint64_t tag);
-
+  void read(Request &&req);
   /**
-   * \brief Write spare data without timing calculation
+   * \brief Program/Write underlying NVM
+   *
+   * \param[in] req Request object
    */
-  void writeSpare(PPN, std::vector<uint8_t> &);
+  void program(Request &&req);
+  /**
+   * \brief Erase underlying NVM
+   *
+   * \param[in] req Request object
+   */
+  void erase(Request &&req);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
