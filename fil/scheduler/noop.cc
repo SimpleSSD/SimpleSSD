@@ -9,23 +9,12 @@
 
 namespace SimpleSSD::FIL::Scheduler {
 
-Noop::Noop(ObjectData &o, CommandManager *m, NVM::AbstractNVM *n)
-    : AbstractScheduler(o, m, n) {}
+Noop::Noop(ObjectData &o, NVM::AbstractNVM *n) : AbstractScheduler(o, n) {}
 
 Noop::~Noop() {}
 
-void Noop::enqueue(uint64_t tag) {
-  auto &list = commandManager->getSubCommand(tag);
-
-  panic_if(list.size() == 0, "Unexpected empty subcommands.");
-
-  for (auto &scmd : list) {
-    if (scmd.ppn == InvalidPPN) {
-      continue;
-    }
-
-    pNVM->enqueue(tag, scmd.id);
-  }
+void Noop::submit(Request *req) {
+  pNVM->submit(req);
 }
 
 void Noop::getStatList(std::vector<Stat> &, std::string) noexcept {}

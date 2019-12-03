@@ -16,10 +16,10 @@ namespace SimpleSSD::FIL::Scheduler {
 
 class Noop : public AbstractScheduler {
  public:
-  Noop(ObjectData &, CommandManager *, NVM::AbstractNVM *);
+  Noop(ObjectData &, NVM::AbstractNVM *);
   ~Noop();
 
-  void enqueue(uint64_t tag) override;
+  void submit(Request *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
