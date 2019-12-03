@@ -16,7 +16,6 @@
 
 #include "SimpleSSD_types.h"
 #include "fil/def.hh"
-#include "hil/command_manager.hh"
 #include "sim/object.hh"
 #include "util/algorithm.hh"
 
@@ -28,7 +27,7 @@ namespace SimpleSSD::FIL {
  * \param[in]  req  Request
  * \param[out] addr CPDPBP
  */
-using ConvertFunction = std::function<void(SubCommand &, ::CPDPBP &)>;
+using ConvertFunction = std::function<void(PPN, ::CPDPBP &)>;
 
 /**
  * \brief Convert class

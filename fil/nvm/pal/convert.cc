@@ -70,13 +70,13 @@ ConvertFunction Convert::getConvertion() {
     sum += popcount32(maskBlock);
     shiftPage = sum;
 
-    return [this](SubCommand &req, ::CPDPBP &addr) {
-      addr.Channel = (uint32_t)((req.ppn >> shiftChannel) & maskChannel);
-      addr.Package = (uint32_t)((req.ppn >> shiftWay) & maskWay);
-      addr.Die = (uint32_t)((req.ppn >> shiftDie) & maskDie);
-      addr.Plane = (uint32_t)((req.ppn >> shiftPlane) & maskPlane);
-      addr.Block = (uint32_t)((req.ppn >> shiftBlock) & maskBlock);
-      addr.Page = (uint32_t)((req.ppn >> shiftPage) & maskPage);
+    return [this](PPN ppn, ::CPDPBP &addr) {
+      addr.Channel = (uint32_t)((ppn >> shiftChannel) & maskChannel);
+      addr.Package = (uint32_t)((ppn >> shiftWay) & maskWay);
+      addr.Die = (uint32_t)((ppn >> shiftDie) & maskDie);
+      addr.Plane = (uint32_t)((ppn >> shiftPlane) & maskPlane);
+      addr.Block = (uint32_t)((ppn >> shiftBlock) & maskBlock);
+      addr.Page = (uint32_t)((ppn >> shiftPage) & maskPage);
     };
   }
   else {
@@ -110,21 +110,21 @@ ConvertFunction Convert::getConvertion() {
       }
     }
 
-    return [level, ppn, block = this->block, page = this->page](
-               SubCommand &req, ::CPDPBP &addr) {
+    return [level, ppnIndex = ppn, block = this->block, page = this->page](
+               PPN ppn, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
-      values[ppn[0]] = (uint32_t)(req.ppn % level[0]);
-      req.ppn /= level[0];
-      values[ppn[1]] = (uint32_t)(req.ppn % level[1]);
-      req.ppn /= level[1];
-      values[ppn[2]] = (uint32_t)(req.ppn % level[2]);
-      req.ppn /= level[2];
-      values[ppn[3]] = (uint32_t)(req.ppn % level[3]);
-      req.ppn /= level[3];
-      values[4] = (uint32_t)(req.ppn % block);
-      req.ppn /= block;
-      values[5] = (uint32_t)(req.ppn % page);
+      values[ppnIndex[0]] = (uint32_t)(ppn % level[0]);
+      ppn /= level[0];
+      values[ppnIndex[1]] = (uint32_t)(ppn % level[1]);
+      ppn /= level[1];
+      values[ppnIndex[2]] = (uint32_t)(ppn % level[2]);
+      ppn /= level[2];
+      values[ppnIndex[3]] = (uint32_t)(ppn % level[3]);
+      ppn /= level[3];
+      values[4] = (uint32_t)(ppn % block);
+      ppn /= block;
+      values[5] = (uint32_t)(ppn % page);
     };
   }
 }
