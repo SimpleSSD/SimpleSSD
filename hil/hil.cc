@@ -20,10 +20,10 @@ HIL::HIL(ObjectData &o)
   // Create events
   eventNVMCompletion =
       createEvent([this](uint64_t t, uint64_t d) { nvmCompletion(t, d); },
-                  "HIL::eventNVMCompletion");
+                  "HIL::HIL::eventNVMCompletion");
   eventDMACompletion =
       createEvent([this](uint64_t t, uint64_t d) { dmaCompletion(t, d); },
-                  "HIL::eventDMACompletion");
+                  "HIL::HIL::eventDMACompletion");
 
   // Register callback to ICL layer
 }
