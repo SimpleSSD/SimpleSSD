@@ -17,6 +17,8 @@
 
 namespace SimpleSSD::FIL {
 
+class FIL;
+
 enum PageAllocation : uint8_t {
   None = 0,
   Channel = 1,
@@ -46,6 +48,10 @@ enum class Operation : uint8_t {
 
 class Request {
  private:
+  friend FIL;
+
+  uint64_t requestTag;
+
   bool multiplane;
   Operation opcode;
 
@@ -61,14 +67,19 @@ class Request {
       : multiplane(false),
         opcode(Operation::None),
         address(a),
-        pageData(nullptr),
-        pageSpare(nullptr),
+        buffer(nullptr),
         eid(e),
         data(d) {}
 
-  void setData(uint8_t *ptr) { buffer = ptr; }
+  inline const uint64_t getTag() { return requestTag; }
+  inline bool getMultiPlane() { return multiplane; }
+  inline Operation getOperation() { return opcode; }
+  inline PPN getAddress() { return address; }
+  inline const uint8_t *getData() { return buffer; }
+  inline Event getEvent() { return eid; }
+  inline uint64_t getEventData() { return data; }
 
-  const uint8_t *getData() { return buffer; }
+  inline void setData(const uint8_t *ptr) { buffer = (uint8_t *)ptr; }
 };
 
 }  // namespace SimpleSSD::FIL
