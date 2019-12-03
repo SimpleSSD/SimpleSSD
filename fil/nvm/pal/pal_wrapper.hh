@@ -17,6 +17,7 @@
 #include "SimpleSSD_types.h"
 #include "fil/nvm/abstract_nvm.hh"
 #include "fil/nvm/pal/convert.hh"
+#include "fil/common/file.hh"
 
 class PAL2;
 class PALStatistics;
@@ -61,24 +62,22 @@ class PALOLD : public AbstractNVM {
   Convert convertObject;
   ConvertFunction convertCPDPBP;
 
+  NANDBackingFile backingFile;
+
+  uint64_t channelMultiplier;
+  uint64_t wayMultiplier;
+  uint64_t dieMultiplier;
+  uint64_t planeMultiplier;
+
   void printCPDPBP(::CPDPBP &, const char *);
   void reschedule(Complete &&);
   void completion(uint64_t);
 
-  /*
-   * As PALOLD does not support spare area, we need to store spare data here.
-   */
-  std::unordered_map<PPN, std::vector<uint8_t>> spareList;
-
-  void readSpare(PPN, std::vector<uint8_t> &);
-  void eraseSpare(PPN);
-
  public:
-  PALOLD(ObjectData &, CommandManager *);
+  PALOLD(ObjectData &);
   ~PALOLD();
 
-  void enqueue(uint64_t, uint32_t) override;
-  void writeSpare(PPN, std::vector<uint8_t> &) override;
+  void submit(Request *req) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

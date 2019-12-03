@@ -75,7 +75,16 @@ class NANDBackingFile : public BackingFile {
    * \param[in] pageIndex Page index
    * \param[in] buffer  Pointer to buffer
    */
-  void write(uint64_t blockID, uint32_t pageIndex, uint8_t *buffer);
+  void write(uint64_t blockID, uint32_t pageIndex, const uint8_t *buffer);
+
+  /**
+   * \brief Erase data
+   *
+   * Erase specified block
+   *
+   * \param[in] blockID Block ID
+   */
+  void erase(uint64_t blockID);
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

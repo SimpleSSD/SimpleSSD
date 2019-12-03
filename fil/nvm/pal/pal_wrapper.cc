@@ -22,8 +22,8 @@
 
 namespace SimpleSSD::FIL::NVM {
 
-PALOLD::PALOLD(ObjectData &o, CommandManager *m)
-    : AbstractNVM(o, m), lastResetTick(0), convertObject(o) {
+PALOLD::PALOLD(ObjectData &o)
+    : AbstractNVM(o), lastResetTick(0), convertObject(o), backingFile(o) {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));
@@ -45,12 +45,14 @@ PALOLD::PALOLD(ObjectData &o, CommandManager *m)
   stats = new PALStatistics(object.config, lat);
   pal = new PAL2(stats, object.config, lat);
 
-  // Reserve with total physical page count
-  spareList.reserve(stats->channel * stats->package * param->die *
-                    param->plane * param->block * param->die);
-
   completeEvent = createEvent([this](uint64_t t, uint64_t) { completion(t); },
                               "FIL::PALOLD::completeEvent");
+
+  // For backingFile
+  planeMultiplier = param->block;
+  dieMultiplier = param->plane * planeMultiplier;
+  wayMultiplier = param->die * dieMultiplier;
+  channelMultiplier = stats->package * wayMultiplier;
 
   // We will periodically flush timeslot for saving memory
   flushEvent = createEvent(
@@ -70,39 +72,45 @@ PALOLD::~PALOLD() {
   delete lat;
 }
 
-void PALOLD::enqueue(uint64_t tag, uint32_t id) {
-  auto &cmd = commandManager->getCommand(tag);
-  auto &scmd = cmd.subCommandList.at(id);
+void PALOLD::submit(Request *req) {
   Complete cplt;
 
-  cplt.id = tag;
-  cplt.eid = cmd.eid;
-  cplt.ppn = scmd.ppn;
+  cplt.id = req->getTag();
+  cplt.eid = req->getEvent();
+  cplt.ppn = req->getAddress();
   cplt.beginAt = getTick();
 
-  convertCPDPBP(scmd, cplt.addr);
+  convertCPDPBP(cplt.ppn, cplt.addr);
 
-  switch (cmd.opcode) {
+  uint64_t blockID = cplt.addr.Channel * channelMultiplier +
+                     cplt.addr.Package * wayMultiplier +
+                     cplt.addr.Die * dieMultiplier +
+                     cplt.addr.Plane * planeMultiplier + cplt.addr.Block;
+
+  switch (req->getOperation()) {
     case Operation::Read:
       cplt.oper = OPER_READ;
 
-      readSpare(scmd.ppn, scmd.spare);
+      req->setData(backingFile.read(blockID, cplt.addr.Page));
+
       stat.readCount++;
       break;
-    case Operation::Write:
+    case Operation::Program:
       cplt.oper = OPER_WRITE;
 
-      writeSpare(scmd.ppn, scmd.spare);
+      backingFile.write(blockID, cplt.addr.Page, req->getData());
+
       stat.writeCount++;
       break;
     case Operation::Erase:
       cplt.oper = OPER_ERASE;
 
-      eraseSpare(scmd.ppn);
+      backingFile.erase(blockID);
+
       stat.eraseCount++;
       break;
     default:
-      panic("Copyback not supported in PAL.");
+      panic("Operation not supported in PAL.");
       break;
   }
 
@@ -161,48 +169,6 @@ void PALOLD::completion(uint64_t) {
 
   if (completionQueue.size() > 0) {
     scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
-  }
-}
-
-void PALOLD::readSpare(PPN ppn, std::vector<uint8_t> &list) {
-  panic_if(list.size() > param->spareSize, "Unexpected size of spare data.");
-
-  // Find PPN
-  auto iter = spareList.find(ppn);
-
-  panic_if(iter == spareList.end(),
-           "PPN %" PRIx64 "h does not written and no spare data.", ppn);
-
-  // Copy
-  list = iter->second;
-}
-
-void PALOLD::writeSpare(PPN ppn, std::vector<uint8_t> &list) {
-  panic_if(list.size() > param->spareSize, "Unexpected size of spare data.");
-
-  // Find PPN
-  auto iter = spareList.find(ppn);
-
-  if (iter == spareList.end()) {
-    iter = spareList.emplace(ppn, list).first;
-  }
-  else {
-    // Move
-    iter->second = std::move(list);
-  }
-}
-
-void PALOLD::eraseSpare(PPN ppn) {
-  convertObject.getBlockAlignedPPN(ppn);
-
-  for (uint32_t i = 0; i < param->page; i++) {
-    auto iter = spareList.find(ppn);
-
-    if (iter != spareList.end()) {
-      spareList.erase(iter);
-    }
-
-    convertObject.increasePage(ppn);
   }
 }
 
