@@ -13,22 +13,24 @@
 #include <cinttypes>
 
 #include "fil/nvm/abstract_nvm.hh"
-#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FIL::Scheduler {
 
 class AbstractScheduler : public Object {
  protected:
-  CommandManager *commandManager;
   NVM::AbstractNVM *pNVM;
 
  public:
-  AbstractScheduler(ObjectData &o, CommandManager *m, NVM::AbstractNVM *n)
-      : Object(o), commandManager(m), pNVM(n) {}
+  AbstractScheduler(ObjectData &o, NVM::AbstractNVM *n) : Object(o), pNVM(n) {}
   virtual ~AbstractScheduler() {}
 
-  virtual void enqueue(uint64_t tag) = 0;
+  /**
+   * \brief Submit command
+   *
+   * \param[in] req Request object
+   */
+  virtual void submit(Request *req) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::Scheduler

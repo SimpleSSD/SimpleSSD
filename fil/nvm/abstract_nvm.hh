@@ -12,37 +12,22 @@
 
 #include <cinttypes>
 
-#include "hil/command_manager.hh"
+#include "ftl/def.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FIL::NVM {
 
 class AbstractNVM : public Object {
- protected:
-  CommandManager *commandManager;
-
  public:
-  AbstractNVM(ObjectData &o, CommandManager *m)
-      : Object(o), commandManager(m) {}
+  AbstractNVM(ObjectData &o) : Object(o) {}
   virtual ~AbstractNVM() {}
 
   /**
-   * \brief Handle SubCommand
+   * \brief Submit command
    *
-   * This SubCommand must have valid ppn field.
-   *
-   * \param[in] tag Command tag
-   * \param[in] id  SubCommand id
+   * \param[in] req Request object
    */
-  virtual void enqueue(uint64_t tag, uint32_t id) = 0;
-
-  /**
-   * \brief Write spare data without timing calculation
-   *
-   * This function should only be used in FTL initialization (warm-up)
-   * procedure.
-   */
-  virtual void writeSpare(PPN, std::vector<uint8_t> &) = 0;
+  virtual void submit(Request *req) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM
