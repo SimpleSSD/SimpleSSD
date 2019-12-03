@@ -22,8 +22,8 @@
 
 namespace SimpleSSD::FIL::NVM {
 
-PALOLD::PALOLD(ObjectData &o)
-    : AbstractNVM(o), lastResetTick(0), convertObject(o), backingFile(o) {
+PALOLD::PALOLD(ObjectData &o, Event e)
+    : AbstractNVM(o, e), lastResetTick(0), convertObject(o), backingFile(o) {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));
@@ -76,7 +76,6 @@ void PALOLD::submit(Request *req) {
   Complete cplt;
 
   cplt.id = req->getTag();
-  cplt.eid = req->getEvent();
   cplt.ppn = req->getAddress();
   cplt.beginAt = getTick();
 
@@ -165,7 +164,7 @@ void PALOLD::completion(uint64_t) {
              cplt.finishedAt - cplt.beginAt);
   printCPDPBP(cplt.addr, OPER_STRINFO2[cplt.oper]);
 
-  scheduleNow(cplt.eid, cplt.id);
+  scheduleNow(eventRequestCompletion, cplt.id);
 
   if (completionQueue.size() > 0) {
     scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
@@ -299,7 +298,6 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : completionQueue) {
     BACKUP_SCALAR(out, iter.second.id);
-    BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.beginAt);
     BACKUP_SCALAR(out, iter.second.finishedAt);
   }
@@ -322,7 +320,6 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     Complete tmp;
 
     RESTORE_SCALAR(in, tmp.id);
-    RESTORE_EVENT(in, tmp.eid);
     RESTORE_SCALAR(in, tmp.beginAt);
     RESTORE_SCALAR(in, tmp.finishedAt);
 

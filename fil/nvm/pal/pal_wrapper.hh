@@ -46,7 +46,6 @@ class PALOLD : public AbstractNVM {
   struct Complete {
     uint64_t id;
 
-    Event eid;
     PPN ppn;
 
     uint64_t beginAt;
@@ -74,7 +73,7 @@ class PALOLD : public AbstractNVM {
   void completion(uint64_t);
 
  public:
-  PALOLD(ObjectData &);
+  PALOLD(ObjectData &, Event);
   ~PALOLD();
 
   void submit(Request *req) override;

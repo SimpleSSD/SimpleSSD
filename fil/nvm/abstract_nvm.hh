@@ -18,8 +18,11 @@
 namespace SimpleSSD::FIL::NVM {
 
 class AbstractNVM : public Object {
+ protected:
+  Event eventRequestCompletion;
+
  public:
-  AbstractNVM(ObjectData &o) : Object(o) {}
+  AbstractNVM(ObjectData &o, Event e) : Object(o), eventRequestCompletion(e) {}
   virtual ~AbstractNVM() {}
 
   /**

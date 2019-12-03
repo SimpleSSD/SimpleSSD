@@ -76,8 +76,6 @@ class Request {
   inline Operation getOperation() { return opcode; }
   inline PPN getAddress() { return address; }
   inline const uint8_t *getData() { return buffer; }
-  inline Event getEvent() { return eid; }
-  inline uint64_t getEventData() { return data; }
 
   inline void setData(const uint8_t *ptr) { buffer = (uint8_t *)ptr; }
 };
