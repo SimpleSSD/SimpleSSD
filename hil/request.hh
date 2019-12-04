@@ -103,24 +103,24 @@ class Request {
         nvmBeginAt(0),
         requestTag(0) {}
 
-  void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
+  inline void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
     lbaSize = lbs;
     offset = slba * lbaSize;
     length = nlb * lbaSize;
   }
 
-  void setDMA(HIL::DMAEngine *engine, HIL::DMATag tag) {
+  inline void setDMA(HIL::DMAEngine *engine, HIL::DMATag tag) {
     dmaEngine = engine;
     dmaTag = tag;
   }
 
-  void getAddress(uint64_t &slba, uint32_t &nlb) {
+  inline void getAddress(uint64_t &slba, uint32_t &nlb) {
     slba = offset / lbaSize;
     nlb = length / lbaSize;
   }
 
-  HIL::DMATag getDMA() { return dmaTag; }
-  Response getResponse() { return result; }
+  inline HIL::DMATag getDMA() { return dmaTag; }
+  inline Response getResponse() { return result; }
 };
 
 class SubRequest {
@@ -142,6 +142,7 @@ class SubRequest {
       : requestTag(t), request(r), lpn(l), offset(o), length(s) {}
 
   inline const uint64_t getTag() { return requestTag; }
+  inline const LPN getLPN() { return lpn; }
 };
 
 }  // namespace SimpleSSD
