@@ -75,30 +75,32 @@ class Request {
   Request()
       : opcode(Operation::None),
         result(Response::Success),
+        lbaSize(0),
         dmaEngine(nullptr),
         dmaTag(HIL::InvalidDMATag),
         eid(InvalidEventID),
         data(0),
         offset(0),
         length(0),
-        nlp(0),
         dmaCounter(0),
         nvmCounter(0),
+        nlp(0),
         dmaBeginAt(0),
         nvmBeginAt(0),
         requestTag(0) {}
   Request(Event e, uint64_t c)
       : opcode(Operation::None),
         result(Response::Success),
+        lbaSize(0),
         dmaEngine(nullptr),
         dmaTag(HIL::InvalidDMATag),
         eid(e),
         data(c),
         offset(0),
         length(0),
-        nlp(0),
         dmaCounter(0),
         nvmCounter(0),
+        nlp(0),
         dmaBeginAt(0),
         nvmBeginAt(0),
         requestTag(0) {}
@@ -182,8 +184,8 @@ class SubRequest {
     buffer = (uint8_t *)calloc(size, 1);
   }
 
-  inline const uint64_t getTag() { return requestTag; }
-  inline const LPN getLPN() { return lpn; }
+  inline uint64_t getTag() { return requestTag; }
+  inline LPN getLPN() { return lpn; }
   inline const uint8_t *getBuffer() { return buffer; }
 };
 
