@@ -31,7 +31,7 @@ class VLFTL : public BasicFTL {
   void merge_writeDone();
 
  public:
-  VLFTL(ObjectData &, CommandManager *, FIL::FIL *, Mapping::AbstractMapping *,
+  VLFTL(ObjectData &, FIL::FIL *, Mapping::AbstractMapping *,
         BlockAllocator::AbstractAllocator *);
 
   void createCheckpoint(std::ostream &) const noexcept override;

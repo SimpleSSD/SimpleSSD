@@ -11,6 +11,7 @@
 #define __SIMPLESSD_FTL_MAPPING_ABSTRACT_MAPPING_HH__
 
 #include "ftl/def.hh"
+#include "hil/request.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {

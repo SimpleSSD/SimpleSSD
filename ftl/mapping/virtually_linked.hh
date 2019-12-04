@@ -216,12 +216,12 @@ class VirtuallyLinked : public AbstractMapping {
   CPU::Function writeMappingInternal(LPN, bool, PPN &, bool = false);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
-  CPU::Function readMapping(Command &) override;
-  CPU::Function writeMapping(Command &) override;
-  CPU::Function invalidateMapping(Command &) override;
+  CPU::Function readMapping(SubRequest *) override;
+  CPU::Function writeMapping(SubRequest *) override;
+  CPU::Function invalidateMapping(SubRequest *) override;
 
  public:
-  VirtuallyLinked(ObjectData &, CommandManager *);
+  VirtuallyLinked(ObjectData &);
   ~VirtuallyLinked();
 
   void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *) override;

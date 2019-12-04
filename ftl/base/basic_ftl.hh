@@ -51,7 +51,7 @@ class BasicFTL : public AbstractFTL {
   bool allowPageRead;
   LPN mappingGranularity;
 
-  std::list<Command *> writePendingQueue;
+  std::list<SubRequest *> writePendingQueue;
 
   bool gcInProgress;
   std::deque<PPN> gcBlockList;
@@ -136,11 +136,11 @@ class BasicFTL : public AbstractFTL {
   void gc_done(uint64_t);
 
  public:
-  BasicFTL(ObjectData &, CommandManager *, FIL::FIL *,
-           Mapping::AbstractMapping *, BlockAllocator::AbstractAllocator *);
+  BasicFTL(ObjectData &, FIL::FIL *, Mapping::AbstractMapping *,
+           BlockAllocator::AbstractAllocator *);
   virtual ~BasicFTL();
 
-  void submit(uint64_t) override;
+  void submit(SubRequest *) override;
   bool isGC() override;
   uint8_t isFormat() override;
 
