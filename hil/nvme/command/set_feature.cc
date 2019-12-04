@@ -71,11 +71,11 @@ void SetFeature::setRequest(ControllerData *cdata, SQContext *req) {
         tag->controller->getFeature()->er.data = entry->dword11;
 
         break;
-      case FeatureID::VolatileWriteCache: {
-        auto pHIL = subsystem->getHIL();
+      case FeatureID::VolatileWriteCache:
+        tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::FeatureNotChangeable);
 
-        pHIL->setCache(entry->dword11 == 1);
-      } break;
+        break;
       case FeatureID::NumberOfQueues: {
         auto feature = tag->controller->getFeature();
 

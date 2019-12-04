@@ -73,9 +73,10 @@ void GetFeature::setRequest(ControllerData *cdata, SQContext *req) {
 
         break;
       case FeatureID::VolatileWriteCache: {
-        auto pHIL = subsystem->getHIL();
+        bool enabled = readConfigBoolean(Section::InternalCache,
+                                         ICL::Config::Key::EnableCache);
 
-        tag->cqc->getData()->dword0 = pHIL->getCache() ? 1 : 0;
+        tag->cqc->getData()->dword0 = enabled ? 1 : 0;
       } break;
       case FeatureID::NumberOfQueues:
         tag->cqc->getData()->dword0 = tag->controller->getFeature()->noq.data;
