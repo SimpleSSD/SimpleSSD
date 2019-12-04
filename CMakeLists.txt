@@ -92,6 +92,8 @@ endif ()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Specify source files
 set(SRC_CONFIG
@@ -155,24 +157,18 @@ set(SRC_HIL_NVME_COMMAND
 )
 set(SRC_ICL
   icl/icl.cc
-  icl/ring_buffer.cc
 )
 set(SRC_FTL
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
   ftl/allocator/basic_allocator.cc
-  ftl/allocator/two_block_allocator.cc
-  ftl/allocator/vl_allocator.cc
 )
 set(SRC_FTL_BASE
   ftl/base/basic_ftl.cc
-  ftl/base/vlftl.cc
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
-  ftl/mapping/page_level.cc
-  ftl/mapping/virtually_linked.cc
 )
 set(SRC_FIL
   fil/fil.cc
