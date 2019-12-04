@@ -23,27 +23,6 @@ CommandTag Command::createTag(ControllerData *cdata, SQContext *sqc) {
   return ret;
 }
 
-DMACommandData *Command::createDMATag(ControllerData *cdata, SQContext *sqc) {
-  auto ret = new DMACommandData(object, this, cdata);
-
-  ret->sqc = sqc;
-
-  addTagToList(ret);
-
-  return ret;
-}
-
-BufferCommandData *Command::createBufferTag(ControllerData *cdata,
-                                            SQContext *sqc) {
-  auto ret = new BufferCommandData(object, this, cdata);
-
-  ret->sqc = sqc;
-
-  addTagToList(ret);
-
-  return ret;
-}
-
 CommandTag Command::findTag(uint64_t gcid) {
   auto iter = tagList.find(gcid);
 
@@ -51,14 +30,6 @@ CommandTag Command::findTag(uint64_t gcid) {
            "No such command is passed to this command handler.");
 
   return iter->second;
-}
-
-DMACommandData *Command::findDMATag(uint64_t gcid) {
-  return (DMACommandData *)findTag(gcid);
-}
-
-BufferCommandData *Command::findBufferTag(uint64_t gcid) {
-  return (BufferCommandData *)findTag(gcid);
 }
 
 void Command::destroyTag(CommandTag tag) {
@@ -81,12 +52,6 @@ void Command::addTagToList(CommandTag tag) {
 }
 
 void Command::completeRequest(CommandTag tag) {
-  if (auto iotag = dynamic_cast<DMACommandData *>(tag)) {
-    if (iotag->dmaTag != InvalidDMATag) {
-      iotag->dmaEngine->deinit(iotag->dmaTag);
-    }
-  }
-
   destroyTag(tag);
 }
 
@@ -98,23 +63,6 @@ void Command::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : tagList) {
     BACKUP_SCALAR(out, iter.first);
-
-    // Store type of CommandData
-    if (dynamic_cast<BufferCommandData *>(iter.second)) {
-      type = 3;
-    }
-    else if (dynamic_cast<DMACommandData *>(iter.second)) {
-      type = 2;
-    }
-    else if (dynamic_cast<CommandData *>(iter.second)) {
-      type = 1;
-    }
-    else {
-      // Actually, we cannot be here!
-      abort();
-    }
-
-    BACKUP_SCALAR(out, type);
 
     iter.second->createCheckpoint(out);
   }
@@ -140,23 +88,7 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
     auto cdata = ctrl->getControllerData();
 
     // Regenerate CommandTag
-    RESTORE_SCALAR(in, type);
-
-    CommandTag newTag = InvalidCommandTag;
-
-    switch (type) {
-      case 1:
-        newTag = new CommandData(object, this, cdata);
-        break;
-      case 2:
-        newTag = new DMACommandData(object, this, cdata);
-        break;
-      case 3:
-        newTag = new BufferCommandData(object, this, cdata);
-        break;
-      default:
-        panic("Unexpected CommandTag type.");
-    }
+    CommandTag newTag = new CommandData(object, this, cdata);
 
     // Restore CommandTag (SQContext recovered here!)
     newTag->restoreCheckpoint(in);

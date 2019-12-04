@@ -10,6 +10,8 @@
 #ifndef __SIMPLESSD_HIL_NVME_COMMAND_COMMAND_HH__
 #define __SIMPLESSD_HIL_NVME_COMMAND_COMMAND_HH__
 
+#include "hil/request.hh"
+
 // Admin commands
 #include "hil/nvme/command/abort.hh"
 #include "hil/nvme/command/async_event_request.hh"
@@ -77,6 +79,9 @@ class CommandData : public Object {
   SQContext *sqc;
   CQContext *cqc;
 
+  Request request;
+  uint64_t beginAt;
+
   CommandData(ObjectData &, Command *, ControllerData *);
 
   void createResponse();
@@ -89,49 +94,15 @@ class CommandData : public Object {
 
   Arbitrator *getArbitrator();
 
+  void initRequest(Event);
+  void makeResponse();
+  void createDMAEngine(uint32_t, Event);
+  void destroyDMAEngine();
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override {}
   void getStatValues(std::vector<double> &) noexcept override {}
   void resetStatValues() noexcept override {}
 
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
-};
-
-class DMACommandData : public CommandData {
- protected:
-  friend Command;
-
-  FRIEND_LIST
-
-  DMATag dmaTag;
-
-  uint64_t _slba;
-  uint16_t _nlb;
-
-  uint64_t beginAt;  // For log
-
-  DMACommandData(ObjectData &, Command *, ControllerData *);
-
-  void createDMAEngine(uint32_t, Event);
-  void destroyDMAEngine();
-
- public:
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
-};
-
-class BufferCommandData : public DMACommandData {
- protected:
-  friend Command;
-
-  FRIEND_LIST
-
-  uint8_t complete;
-  std::vector<uint8_t> buffer;
-
-  BufferCommandData(ObjectData &, Command *, ControllerData *);
-
- public:
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };

@@ -53,6 +53,57 @@ Arbitrator *CommandData::getArbitrator() {
   return arbitrator;
 }
 
+void CommandData::initRequest(Event eid) {
+  request = Request(eid, getGCID());
+}
+
+void CommandData::makeResponse() {
+  panic_if(!cqc, "Response not created.");
+
+  auto response = request.getResponse();
+
+  switch (response) {
+    case Response::Unwritten:
+      break;
+    case Response::OutOfRange:
+      break;
+    case Response::FormatInProgress:
+      break;
+    case Response::ReadECCFail:
+      break;
+    case Response::WriteFail:
+      break;
+    case Response::CompareFail:
+      cqc->makeStatus(false, false, StatusType::MediaAndDataIntegrityErrors,
+                      MediaAndDataIntegrityErrorCode::CompareFailure);
+
+      break;
+    default:
+      // Do nothing
+      break;
+  }
+}
+
+void CommandData::createDMAEngine(uint32_t size, Event eid) {
+  auto entry = sqc->getData();
+  DMATag dmaTag;
+
+  if (sqc->isSGL()) {
+    dmaTag = dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid,
+                                    getGCID());
+  }
+  else {
+    dmaTag = dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid,
+                                    getGCID());
+  }
+
+  request.setDMA(dmaEngine, dmaTag);
+}
+
+void CommandData::destroyDMAEngine() {
+  dmaEngine->deinit(request.getDMA());
+}
+
 void CommandData::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
 
@@ -100,87 +151,6 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
 
     cqc->update(sqc);
     RESTORE_BLOB(in, cqc->getData(), 16);
-  }
-}
-
-DMACommandData::DMACommandData(ObjectData &o, Command *p, ControllerData *c)
-    : CommandData(o, p, c),
-      dmaTag(InvalidDMATag),
-      _slba(0),
-      _nlb(0),
-      beginAt(0) {}
-
-/**
- * Create DMAEngine for command handling
- *
- * \param[in] size  Expected data size (for PRPEngine)
- * \param[in] eid   DMA init callback
- */
-void DMACommandData::createDMAEngine(uint32_t size, Event eid) {
-  auto entry = sqc->getData();
-
-  if (sqc->isSGL()) {
-    dmaTag = dmaEngine->initFromSGL(entry->dptr1, entry->dptr2, size, eid,
-                                    getGCID());
-  }
-  else {
-    dmaTag = dmaEngine->initFromPRP(entry->dptr1, entry->dptr2, size, eid,
-                                    getGCID());
-  }
-}
-
-void DMACommandData::destroyDMAEngine() {
-  dmaEngine->deinit(dmaTag);
-  dmaTag = InvalidDMATag;
-}
-
-void DMACommandData::createCheckpoint(std::ostream &out) const noexcept {
-  CommandData::createCheckpoint(out);
-
-  BACKUP_DMATAG(out, dmaTag);
-  BACKUP_SCALAR(out, _slba);
-  BACKUP_SCALAR(out, _nlb);
-  BACKUP_SCALAR(out, beginAt);
-}
-
-void DMACommandData::restoreCheckpoint(std::istream &in) noexcept {
-  CommandData::restoreCheckpoint(in);
-
-  RESTORE_DMATAG(dmaEngine, in, dmaTag);
-  RESTORE_SCALAR(in, _slba);
-  RESTORE_SCALAR(in, _nlb);
-  RESTORE_SCALAR(in, beginAt);
-}
-
-BufferCommandData::BufferCommandData(ObjectData &o, Command *p,
-                                     ControllerData *c)
-    : DMACommandData(o, p, c), complete(0) {}
-
-void BufferCommandData::createCheckpoint(std::ostream &out) const noexcept {
-  DMACommandData::createCheckpoint(out);
-
-  BACKUP_SCALAR(out, complete);
-
-  uint64_t size = buffer.size();
-  BACKUP_SCALAR(out, size);
-
-  if (size > 0) {
-    BACKUP_BLOB(out, buffer.data(), size);
-  }
-}
-
-void BufferCommandData::restoreCheckpoint(std::istream &in) noexcept {
-  uint64_t size;
-
-  DMACommandData::restoreCheckpoint(in);
-
-  RESTORE_SCALAR(in, complete);
-  RESTORE_SCALAR(in, size);
-
-  if (size > 0) {
-    buffer.resize(size);
-
-    RESTORE_BLOB(in, buffer.data(), size);
   }
 }
 

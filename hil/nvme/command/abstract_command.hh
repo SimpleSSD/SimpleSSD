@@ -63,12 +63,7 @@ class Command : public Object {
   std::unordered_map<uint64_t, CommandTag> tagList;
 
   CommandTag createTag(ControllerData *, SQContext *);
-  DMACommandData *createDMATag(ControllerData *, SQContext *);
-  BufferCommandData *createBufferTag(ControllerData *, SQContext *);
-
   CommandTag findTag(uint64_t);
-  DMACommandData *findDMATag(uint64_t);
-  BufferCommandData *findBufferTag(uint64_t);
 
   void destroyTag(CommandTag);
   void addTagToList(CommandTag);
