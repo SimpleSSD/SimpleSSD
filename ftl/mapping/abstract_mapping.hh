@@ -11,7 +11,6 @@
 #define __SIMPLESSD_FTL_MAPPING_ABSTRACT_MAPPING_HH__
 
 #include "ftl/def.hh"
-#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {
@@ -61,8 +60,6 @@ class AbstractMapping : public Object {
         : eid(e), tag(t), counter(c) {}
   };
 
-  CommandManager *commandManager;
-
   Parameter param;
   FIL::Config::NANDStructure *filparam;
 
@@ -92,12 +89,12 @@ class AbstractMapping : public Object {
   Event eventDRAMDone_write;
   void dramDone(uint64_t);
 
-  virtual CPU::Function readMapping(Command &) = 0;
-  virtual CPU::Function writeMapping(Command &) = 0;
-  virtual CPU::Function invalidateMapping(Command &) = 0;
+  virtual CPU::Function readMapping(SubRequest *) = 0;
+  virtual CPU::Function writeMapping(SubRequest *) = 0;
+  virtual CPU::Function invalidateMapping(SubRequest *) = 0;
 
  public:
-  AbstractMapping(ObjectData &, CommandManager *);
+  AbstractMapping(ObjectData &);
   virtual ~AbstractMapping() {}
 
   virtual void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *);
@@ -152,30 +149,36 @@ class AbstractMapping : public Object {
   virtual uint16_t getAge(PPN) = 0;
 
   // I/O interfaces
-  inline void readMapping(Command &cmd, Event eid) {
-    createMemoryCommand(eid, cmd.tag);
+  inline void readMapping(SubRequest *req, Event eid) {
+    const uint64_t tag = req->getTag();
 
-    CPU::Function fstat = readMapping(cmd);
+    createMemoryCommand(eid, tag);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+    CPU::Function fstat = readMapping(req);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
                      fstat);
   }
 
-  inline void writeMapping(Command &cmd, Event eid) {
-    createMemoryCommand(eid, cmd.tag);
+  inline void writeMapping(SubRequest *req, Event eid) {
+    const uint64_t tag = req->getTag();
 
-    CPU::Function fstat = writeMapping(cmd);
+    createMemoryCommand(eid, tag);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+    CPU::Function fstat = writeMapping(req);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
                      fstat);
   }
 
-  inline void invalidateMapping(Command &cmd, Event eid) {
-    createMemoryCommand(eid, cmd.tag);
+  inline void invalidateMapping(SubRequest *req, Event eid) {
+    const uint64_t tag = req->getTag();
 
-    CPU::Function fstat = invalidateMapping(cmd);
+    createMemoryCommand(eid, tag);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, cmd.tag,
+    CPU::Function fstat = invalidateMapping(req);
+
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
                      fstat);
   }
 

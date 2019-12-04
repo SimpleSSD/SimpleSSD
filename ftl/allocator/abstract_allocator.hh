@@ -11,7 +11,6 @@
 #define __SIMPLESSD_FTL_ALLOCATOR_ABSTRACT_ALLOCATOR_HH__
 
 #include "ftl/def.hh"
-#include "hil/command_manager.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {

@@ -15,7 +15,7 @@
 #include "ftl/base/abstract_ftl.hh"
 #include "ftl/base/basic_ftl.hh"
 #include "ftl/def.hh"
-#include "hil/command_manager.hh"
+#include "hil/request.hh"
 
 namespace SimpleSSD::FTL {
 
@@ -31,7 +31,6 @@ class FTL : public Object {
     uint64_t data;
   };
 
-  CommandManager *commandManager;
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
@@ -39,10 +38,10 @@ class FTL : public Object {
   AbstractFTL *pFTL;
 
  public:
-  FTL(ObjectData &, CommandManager *);
+  FTL(ObjectData &);
   ~FTL();
 
-  void submit(uint64_t);
+  void submit(SubRequest *);
 
   Parameter *getInfo();
   uint32_t getMappingGranularity();

@@ -19,8 +19,8 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
-  pFIL = new FIL::FIL(object, commandManager);
+FTL::FTL(ObjectData &o) : Object(o) {
+  pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
                                                      Config::Key::MappingMode);
@@ -28,7 +28,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   // Mapping algorithm
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
-      pMapper = new Mapping::PageLevel(object, commandManager);
+      pMapper = new Mapping::PageLevel(object);
 
       break;
     // case Config::MappingType::BlockLevelFTL:
@@ -36,7 +36,7 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
 
     //   break;
     case Config::MappingType::VLFTL:
-      pMapper = new Mapping::VirtuallyLinked(object, commandManager);
+      pMapper = new Mapping::VirtuallyLinked(object);
 
       break;
     default:
@@ -60,11 +60,11 @@ FTL::FTL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
   // Base FTL routine
   switch (mapping) {
     case Config::MappingType::VLFTL:
-      pFTL = new VLFTL(object, commandManager, pFIL, pMapper, pAllocator);
+      pFTL = new VLFTL(object, pFIL, pMapper, pAllocator);
 
       break;
     default:
-      pFTL = new BasicFTL(object, commandManager, pFIL, pMapper, pAllocator);
+      pFTL = new BasicFTL(object, pFIL, pMapper, pAllocator);
 
       break;
   }
@@ -83,8 +83,8 @@ FTL::~FTL() {
   delete pFTL;
 }
 
-void FTL::submit(uint64_t tag) {
-  pFTL->submit(tag);
+void FTL::submit(SubRequest *req) {
+  pFTL->submit(req);
 }
 
 Parameter *FTL::getInfo() {
