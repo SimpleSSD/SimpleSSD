@@ -133,16 +133,58 @@ class SubRequest {
 
   LPN lpn;
 
-  uint64_t offset;
-  uint32_t length;
+  uint64_t offset;  //!< Offset in DMA Tag
+  uint32_t length;  //!< Length in DMA Tag
+
+  bool clear;
+  uint8_t *buffer;  //!< Buffer for DMA
 
  public:
-  SubRequest(uint64_t t, Request *r) : requestTag(t), request(r) {}
+  SubRequest(uint64_t t, Request *r)
+      : requestTag(t), request(r), clear(false), buffer(nullptr) {}
   SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
-      : requestTag(t), request(r), lpn(l), offset(o), length(s) {}
+      : requestTag(t),
+        request(r),
+        lpn(l),
+        offset(o),
+        length(s),
+        clear(false),
+        buffer(nullptr) {}
+  SubRequest(const SubRequest &) = delete;
+  SubRequest(SubRequest &&rhs) noexcept
+      : requestTag(rhs.requestTag), clear(false), buffer(nullptr) {
+    *this = std::move(rhs);
+  }
+  ~SubRequest() {
+    if (clear) {
+      free(buffer);
+    }
+  }
+
+  SubRequest &operator=(const SubRequest &) = delete;
+  SubRequest &operator=(SubRequest &&rhs) {
+    if (this != &rhs) {
+      this->request = std::exchange(rhs.request, nullptr);
+      this->lpn = std::exchange(rhs.lpn, 0);
+      this->offset = std::exchange(rhs.offset, 0);
+      this->length = std::exchange(rhs.length, 0);
+      this->clear = std::exchange(rhs.clear, false);
+      this->buffer = std::exchange(rhs.buffer, nullptr);
+    }
+
+    return *this;
+  }
+
+  void setBuffer(uint8_t *data) { buffer = data; }
+  void createBuffer(uint32_t size) {
+    clear = true;
+
+    buffer = (uint8_t *)calloc(size, 1);
+  }
 
   inline const uint64_t getTag() { return requestTag; }
   inline const LPN getLPN() { return lpn; }
+  inline const uint8_t *getBuffer() { return buffer; }
 };
 
 }  // namespace SimpleSSD
