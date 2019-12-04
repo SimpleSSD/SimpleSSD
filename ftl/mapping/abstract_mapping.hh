@@ -49,46 +49,14 @@ class AbstractMapping : public Object {
         : address(a), size(s), read(r) {}
   };
 
-  struct MemoryCommand {
-    Event eid;
-    uint64_t tag;
-    uint32_t counter;
-
-    std::vector<MemoryEntry> commandList;
-
-    MemoryCommand(Event e, uint64_t t) : eid(e), tag(t), counter(0) {}
-    MemoryCommand(Event e, uint64_t t, uint32_t c)
-        : eid(e), tag(t), counter(c) {}
-  };
-
   Parameter param;
   FIL::Config::NANDStructure *filparam;
 
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
-  std::list<MemoryCommand> memoryQueue;
-
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
-
-  void insertMemoryAddress(bool isRead, uint64_t address, uint32_t size,
-                           bool en = true) {
-    if (en) {
-      memoryQueue.back().commandList.emplace_back(isRead, address, size);
-    }
-  }
-
-  void createMemoryCommand(Event eid, uint64_t tag) {
-    memoryQueue.emplace_back(eid, tag);
-  }
-
-  Event eventDoDRAM;
-  void submitDRAMRequest(uint64_t);
-
-  Event eventDRAMDone_read;
-  Event eventDRAMDone_write;
-  void dramDone(uint64_t);
 
   virtual CPU::Function readMapping(SubRequest *) = 0;
   virtual CPU::Function writeMapping(SubRequest *) = 0;
@@ -151,44 +119,29 @@ class AbstractMapping : public Object {
 
   // I/O interfaces
   inline void readMapping(SubRequest *req, Event eid) {
-    const uint64_t tag = req->getTag();
-
-    createMemoryCommand(eid, tag);
-
     CPU::Function fstat = readMapping(req);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
                      fstat);
   }
 
   inline void writeMapping(SubRequest *req, Event eid) {
-    const uint64_t tag = req->getTag();
-
-    createMemoryCommand(eid, tag);
-
     CPU::Function fstat = writeMapping(req);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
                      fstat);
   }
 
   inline void invalidateMapping(SubRequest *req, Event eid) {
-    const uint64_t tag = req->getTag();
-
-    createMemoryCommand(eid, tag);
-
     CPU::Function fstat = invalidateMapping(req);
 
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventDoDRAM, tag,
+    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
                      fstat);
   }
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace Mapping
