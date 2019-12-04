@@ -116,7 +116,6 @@ set(SRC_MEM
   mem/sram/sram.cc
 )
 set(SRC_HIL
-  hil/command_manager.cc
   hil/convert.cc
   hil/hil.cc
 )
@@ -196,7 +195,6 @@ set(SRC_SIM
 )
 set(SRC_UTIL
   util/bitset.cc
-  util/disk.cc
   util/fifo.cc
   util/interface.cc
   util/path.cc
