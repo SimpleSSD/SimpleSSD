@@ -115,6 +115,7 @@ void HIL::submit(Operation opcode, Request *req) {
       sreq.createBuffer(sreq.length);
 
       // Submit DMA (first chunk)
+      req->dmaBeginAt = getTick();
       req->dmaEngine->read(req->dmaTag, sreq.offset, sreq.length, sreq.buffer,
                            eventDMACompletion, sreq.requestTag);
 
@@ -138,6 +139,7 @@ void HIL::submit(Operation opcode, Request *req) {
     case Operation::Format:
 
       // Submit NVM (all chunks)
+      req->nvmBeginAt = getTick();
       for (auto &sreq : subrequestList) {
         icl.submit(sreq);
       }
@@ -169,6 +171,10 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
   switch (req.opcode) {
     case Operation::Read:
       // Submit DMA (current chunk)
+      if (req.dmaCounter == 0) {
+        req.dmaBeginAt = now;
+      }
+
       req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
                           eventDMACompletion, sreq.requestTag);
 
@@ -241,6 +247,10 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
       break;
     case Operation::Write:
       // Start NVM for this subrequest
+      if (req.nvmCounter == 0) {
+        req.nvmBeginAt = now;
+      }
+
       icl.submit(&sreq);
 
       break;
