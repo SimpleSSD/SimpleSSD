@@ -22,7 +22,7 @@ NamespaceManagement::NamespaceManagement(ObjectData &o, Subsystem *s)
 }
 
 void NamespaceManagement::dmaComplete(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
   uint8_t *buffer = tag->buffer.data();
 
   // Make namespace information
@@ -68,14 +68,14 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
 }
 
 void NamespaceManagement::dmaInitDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0, 4096, tag->buffer.data(),
+  tag->dmaEngine->read(tag->request.getDMA(), 0, 4096, tag->buffer.data(),
                        dmaCompleteEvent, gcid);
 }
 
 void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createBufferTag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   bool sendAEN = false;
