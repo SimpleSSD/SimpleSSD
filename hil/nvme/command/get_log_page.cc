@@ -21,21 +21,21 @@ GetLogPage::GetLogPage(ObjectData &o, Subsystem *s) : Command(o, s) {
 }
 
 void GetLogPage::dmaInitDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
   // Write buffer to host
-  tag->dmaEngine->write(tag->dmaTag, 0, (uint32_t)tag->buffer.size(),
+  tag->dmaEngine->write(tag->request.getDMA(), 0, (uint32_t)tag->buffer.size(),
                         tag->buffer.data(), dmaCompleteEvent, gcid);
 }
 
 void GetLogPage::dmaComplete(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
   subsystem->complete(tag);
 }
 
 void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createBufferTag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   bool immediate = false;

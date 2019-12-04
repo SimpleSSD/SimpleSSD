@@ -82,6 +82,8 @@ class CommandData : public Object {
   Request request;
   uint64_t beginAt;
 
+  std::vector<uint8_t> buffer;
+
   CommandData(ObjectData &, Command *, ControllerData *);
 
   void createResponse();
