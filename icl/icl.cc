@@ -12,8 +12,7 @@
 
 namespace SimpleSSD::ICL {
 
-ICL::ICL(ObjectData &o) : Object(o) {
-  pFTL = new FTL::FTL(object);
+ICL::ICL(ObjectData &o) : Object(o), eventHILCompletion(InvalidEventID) {
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
@@ -37,6 +36,10 @@ ICL::ICL(ObjectData &o) : Object(o) {
 ICL::~ICL() {
   delete pCache;
   delete pFTL;
+}
+
+void ICL::setCallbackFunction(Event e) {
+  eventHILCompletion = e;
 }
 
 void ICL::submit(SubRequest *req) {

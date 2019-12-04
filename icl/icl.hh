@@ -29,6 +29,8 @@ class ICL : public Object {
   FTL::FTL *pFTL;
   AbstractCache *pCache;
 
+  Event eventHILCompletion;
+
   bool enabled;
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;
@@ -36,6 +38,9 @@ class ICL : public Object {
  public:
   ICL(ObjectData &);
   ~ICL();
+
+  //! Set callback
+  void setCallbackFunction(Event);
 
   //! Submit request
   void submit(SubRequest *);

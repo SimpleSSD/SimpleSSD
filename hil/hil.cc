@@ -26,6 +26,7 @@ HIL::HIL(ObjectData &o)
                   "HIL::HIL::eventDMACompletion");
 
   // Register callback to ICL layer
+  icl.setCallbackFunction(eventNVMCompletion);
 }
 
 HIL::~HIL() {
