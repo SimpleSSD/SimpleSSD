@@ -12,15 +12,14 @@
 namespace SimpleSSD::HIL::NVMe {
 
 FormatNVM::FormatNVM(ObjectData &o, Subsystem *s) : Command(o, s) {
-  eventFormatDone =
-      createEvent([this](uint64_t, uint64_t gcid) { formatDone(gcid); },
-                  "HIL::NVMe::FormatNVM::eventFormatDone");
+  eventCompletion =
+      createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
+                  "HIL::NVMe::FormatNVM::eventCompletion");
 }
 
-void FormatNVM::formatDone(uint64_t gcid) {
+void FormatNVM::completion(uint64_t now, uint64_t gcid) {
   auto tag = findTag(gcid);
 
-  subsystem->getHIL()->getCommandManager()->destroyCommand(gcid);
   subsystem->complete(tag);
 }
 
@@ -52,19 +51,34 @@ void FormatNVM::setRequest(ControllerData *cdata, SQContext *req) {
                          CommandSpecificStatusCode::Invalid_Format);
   }
   else {
-    auto ret = subsystem->format(nsid, (FormatOption)ses, lbaf, eventFormatDone,
-                                 tag->getGCID());
+    // Update namespace structure
+    auto &namespaceList = subsystem->getNamespaceList();
+    auto ns = namespaceList.find(nsid);
 
-    switch (ret) {
-      case 0:
-        immediate = false;
+    if (UNLIKELY(ns == namespaceList.end())) {
+      tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
+                           GenericCommandStatusCode::Invalid_Field);
+    }
+    else {
+      immediate = false;
 
-        break;
-      case 1:
-        tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                             GenericCommandStatusCode::Invalid_Field);
+      auto info = ns->second->getInfo();
+      auto pHIL = subsystem->getHIL();
 
-        break;
+      info->lbaFormatIndex = lbaf;
+      info->lbaSize = lbaSize[lbaf];
+      info->size =
+          info->namespaceRange.second * pHIL->getLPNSize() / info->lbaSize;
+      info->capacity = info->size;
+      info->utilization = 0;  // Formatted
+
+      // Do format
+      tag->initRequest(eventCompletion);
+      tag->request.setAddress(info->namespaceRange.first,
+                              info->namespaceRange.second, pHIL->getLPNSize());
+      tag->beginAt = getTick();
+
+      pHIL->format(&tag->request, (FormatOption)ses);
     }
   }
 
@@ -82,13 +96,13 @@ void FormatNVM::resetStatValues() noexcept {}
 void FormatNVM::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 
-  BACKUP_EVENT(out, eventFormatDone);
+  BACKUP_EVENT(out, eventCompletion);
 }
 
 void FormatNVM::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
 
-  RESTORE_EVENT(in, eventFormatDone);
+  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

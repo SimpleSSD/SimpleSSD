@@ -8,120 +8,49 @@
 #include "hil/nvme/command/write.hh"
 
 #include "hil/nvme/command/internal.hh"
-#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 Write::Write(ObjectData &o, Subsystem *s) : Command(o, s) {
-  dmaInitEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
-                  "HIL::NVMe::Write::dmaInitEvent");
-  dmaCompleteEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
-                  "HIL::NVMe::Write::dmaCompleteEvent");
-  writeDoneEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { writeDone(gcid); },
-                  "HIL::NVMe::Write::readDoneEvent");
+  eventDMAInitDone =
+      createEvent([this](uint64_t, uint64_t d) { dmaInitDone(d); },
+                  "HIL::NVMe::Write::eventDMAInitDone");
+  eventCompletion =
+      createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
+                  "HIL::NVMe::Write::eventCompletion");
 }
 
 void Write::dmaInitDone(uint64_t gcid) {
-  auto tag = findDMATag(gcid);
+  auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
-  auto &scmd = cmd.subCommandList.front();
 
-  uint64_t offset = 0;
-  uint32_t size = 0;
-  uint32_t skipFront = cmd.subCommandList.front().skipFront;
-  uint32_t skipEnd = cmd.subCommandList.back().skipEnd;
-
-  scmd.status = Status::DMA;
-
-  size = (uint32_t)scmd.buffer.size();
-  offset = (scmd.lpn - cmd.offset) * size - skipFront;
-
-  if (scmd.lpn == cmd.offset) {
-    offset = 0;
-    size -= skipFront;
-  }
-  if (scmd.lpn + 1 == cmd.offset + cmd.length) {
-    size -= skipEnd;
-  }
-
-  // Perform first page DMA
-  tag->dmaEngine->read(tag->dmaTag, offset, size,
-                       scmd.buffer.data() + scmd.skipFront, dmaCompleteEvent,
-                       gcid);
+  // Perform write
+  pHIL->write(&tag->request);
 }
 
-void Write::dmaComplete(uint64_t gcid) {
-  auto tag = findDMATag(gcid);
-  auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
-  auto nslist = subsystem->getNamespaceList();
-  auto ns = nslist.find(tag->sqc->getData()->namespaceID);
-  auto disk = ns->second->getDisk();
+void Write::completion(uint64_t now, uint64_t gcid) {
+  auto tag = findTag(gcid);
 
-  // Find dma subcommand
-  uint32_t i = 0;
-  uint32_t scmds = (uint32_t)cmd.subCommandList.size();
+  // Make CQ status
+  tag->makeResponse();
 
-  for (i = 0; i < scmds; i++) {
-    auto &iter = cmd.subCommandList.at(i);
+  // Get address
+  uint64_t slba;
+  uint32_t nlb;
 
-    if (iter.status == Status::DMA) {
-      pHIL->submitSubcommand(gcid, i);
+  tag->request.getAddress(slba, nlb);
 
-      // Handle disk
-      if (disk) {
-        disk->write(
-            i * iter.buffer.size() + iter.skipFront,
-            (uint32_t)iter.buffer.size() - iter.skipFront - iter.skipEnd,
-            iter.buffer.data() + iter.skipFront);
-      }
+  debugprint_command(tag,
+                     "NVM     | Write | NSID %u | %" PRIx64 "h + %xh | %" PRIu64
+                     " - %" PRIu64 " (%" PRIu64 ")",
+                     tag->sqc->getData()->namespaceID, slba, nlb, tag->beginAt,
+                     now, now - tag->beginAt);
 
-      break;
-    }
-  }
-
-  // Start next DMA (as we break-ed, i != scmds)
-  if (LIKELY(++i < scmds)) {
-    auto &scmd = cmd.subCommandList.at(i);
-
-    scmd.status = Status::DMA;
-
-    tag->dmaEngine->read(
-        tag->dmaTag,
-        i * (uint32_t)scmd.buffer.size() - cmd.subCommandList.front().skipFront,
-        (uint32_t)scmd.buffer.size() - scmd.skipEnd, scmd.buffer.data(),
-        dmaCompleteEvent, gcid);
-  }
-}
-
-void Write::writeDone(uint64_t gcid) {
-  auto tag = findDMATag(gcid);
-  auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto &cmd = mgr->getCommand(gcid);
-
-  cmd.counter++;
-
-  if (cmd.counter == cmd.subCommandList.size()) {
-    auto now = getTick();
-
-    debugprint_command(tag,
-                       "NVM     | Write | NSID %u | %" PRIx64
-                       "h + %xh | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                       tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
-                       tag->beginAt, now, now - tag->beginAt);
-
-    mgr->destroyCommand(gcid);
-    subsystem->complete(tag);
-  }
+  subsystem->complete(tag);
 }
 
 void Write::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createDMATag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -153,45 +82,13 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  // Convert unit
-  LPN slpn;
-  uint32_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
+  // Prepare request
+  uint32_t lbaSize = ns->second->getInfo()->lbaSize;
 
-  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
-
-  // Check range
-  auto info = ns->second->getInfo();
-  auto range = info->namespaceRange;
-
-  if (UNLIKELY(slpn + nlp > range.second)) {
-    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                         GenericCommandStatusCode::Invalid_Field);
-
-    subsystem->complete(tag);
-
-    return;
-  }
-
-  slpn += info->namespaceRange.first;
-
-  ns->second->write(nlb * info->lbaSize);
-
-  // Make command
-  auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto gcid = tag->getGCID();
-
-  mgr->createHILWrite(gcid, writeDoneEvent, slpn, nlp, skipFront, skipEnd,
-                      (uint32_t)info->lpnSize);
-
-  tag->_slba = slba;
-  tag->_nlb = nlb;
+  tag->initRequest(eventCompletion);
+  tag->request.setAddress(slba, nlb, lbaSize);
   tag->beginAt = getTick();
-
-  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
-                       dmaInitEvent);
+  tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
 }
 
 void Write::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -203,17 +100,15 @@ void Write::resetStatValues() noexcept {}
 void Write::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 
-  BACKUP_EVENT(out, dmaInitEvent);
-  BACKUP_EVENT(out, writeDoneEvent);
-  BACKUP_EVENT(out, dmaCompleteEvent);
+  BACKUP_EVENT(out, eventDMAInitDone);
+  BACKUP_EVENT(out, eventCompletion);
 }
 
 void Write::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
 
-  RESTORE_EVENT(in, dmaInitEvent);
-  RESTORE_EVENT(in, writeDoneEvent);
-  RESTORE_EVENT(in, dmaCompleteEvent);
+  RESTORE_EVENT(in, eventDMAInitDone);
+  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -670,41 +670,6 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
   return 0;
 }
 
-uint8_t Subsystem::format(uint32_t nsid, FormatOption ses, uint8_t lbaf,
-                          Event eid, uint64_t gcid) {
-  // Update namespace structure
-  auto ns = namespaceList.find(nsid);
-
-  if (UNLIKELY(ns == namespaceList.end())) {
-    return 1u;  // No such namespace
-  }
-
-  auto info = ns->second->getInfo();
-  info->lbaFormatIndex = lbaf;
-  info->lbaSize = lbaSize[lbaf];
-  info->size = info->namespaceRange.second * logicalPageSize / info->lbaSize;
-  info->capacity = info->size;
-  info->utilization = 0;  // Formatted
-
-  ns->second->format();
-
-  // Do format
-  auto mgr = pHIL->getCommandManager();
-
-  if (ses == FormatOption::None) {
-    mgr->createHILTrim(gcid, eid, info->namespaceRange.first,
-                       info->namespaceRange.second);
-  }
-  else {
-    mgr->createHILFormat(gcid, eid, info->namespaceRange.first,
-                         info->namespaceRange.second);
-  }
-
-  pHIL->submitCommand(gcid);
-
-  return 0;
-}
-
 void Subsystem::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
   prefix += "nvme.";

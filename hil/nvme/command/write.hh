@@ -34,13 +34,11 @@ namespace SimpleSSD::HIL::NVMe {
  */
 class Write : public Command {
  private:
-  Event dmaInitEvent;
-  Event writeDoneEvent;
-  Event dmaCompleteEvent;
-
+  Event eventDMAInitDone;
   void dmaInitDone(uint64_t);
-  void dmaComplete(uint64_t);
-  void writeDone(uint64_t);
+
+  Event eventCompletion;
+  void completion(uint64_t, uint64_t);
 
  public:
   Write(ObjectData &, Subsystem *);

@@ -16,9 +16,8 @@ namespace SimpleSSD::HIL::NVMe {
 
 class Flush : public Command {
  private:
-  Event flushDoneEvent;
-
-  void flushDone(uint64_t);
+  Event eventCompletion;
+  void completion(uint64_t, uint64_t);
 
  public:
   Flush(ObjectData &, Subsystem *);

@@ -8,90 +8,50 @@
 #include "hil/nvme/command/read.hh"
 
 #include "hil/nvme/command/internal.hh"
-#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
-  dmaInitEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
-                  "HIL::NVMe::Read::dmaInitEvent");
-  dmaCompleteEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
-                  "HIL::NVMe::Read::dmaCompleteEvent");
-  readDoneEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { readDone(gcid); },
-                  "HIL::NVMe::Read::readDoneEvent");
+  eventDMAInitDone =
+      createEvent([this](uint64_t, uint64_t d) { dmaInitDone(d); },
+                  "HIL::NVMe::Read::eventDMAInitDone");
+  eventCompletion =
+      createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
+                  "HIL::NVMe::Read::eventCompletion");
 }
 
 void Read::dmaInitDone(uint64_t gcid) {
+  auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
 
   // Perform read
-  pHIL->submitCommand(gcid);
+  pHIL->read(&tag->request);
 }
 
-void Read::readDone(uint64_t gcid) {
-  auto tag = findDMATag(gcid);
-  auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
+void Read::completion(uint64_t now, uint64_t gcid) {
+  auto tag = findTag(gcid);
 
-  uint64_t offset = 0;
-  uint32_t size = 0;
-  uint32_t skipFront = cmd.subCommandList.front().skipFront;
-  uint32_t skipEnd = cmd.subCommandList.back().skipEnd;
+  // Make CQ status
+  tag->makeResponse();
 
-  // Find completed subcommand
-  for (auto &iter : cmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      size = (uint32_t)iter.buffer.size();
-      offset = (iter.lpn - cmd.offset) * size - skipFront;
+  // Get address
+  uint64_t slba;
+  uint32_t nlb;
 
-      if (iter.lpn == cmd.offset) {
-        offset = 0;
-        size -= skipFront;
-      }
-      if (iter.lpn + 1 == cmd.offset + cmd.length) {
-        size -= skipEnd;
-      }
+  tag->request.getAddress(slba, nlb);
 
-      // Start DMA for current subcommand
-      tag->dmaEngine->write(tag->dmaTag, offset, size,
-                            iter.buffer.data() + iter.skipFront,
-                            dmaCompleteEvent, gcid);
+  // Done
+  debugprint_command(tag,
+                     "NVM     | Read | NSID %u | %" PRIx64 "h + %xh | %" PRIu64
+                     " - %" PRIu64 " (%" PRIu64 ")",
+                     tag->sqc->getData()->namespaceID, slba, nlb, tag->beginAt,
+                     now, now - tag->beginAt);
 
-      iter.status = Status::DMA;
-
-      break;
-    }
-  }
-}
-
-void Read::dmaComplete(uint64_t gcid) {
-  auto tag = findDMATag(gcid);
-  auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto &cmd = mgr->getCommand(gcid);
-
-  cmd.counter++;
-
-  if (cmd.counter == cmd.subCommandList.size()) {
-    // Done
-    auto now = getTick();
-
-    debugprint_command(tag,
-                       "NVM     | Read | NSID %u | %" PRIx64
-                       "h + %xh | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                       tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
-                       tag->beginAt, now, now - tag->beginAt);
-
-    mgr->destroyCommand(gcid);
-    subsystem->complete(tag);
-  }
+  subsystem->complete(tag);
 }
 
 void Read::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createDMATag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -121,55 +81,13 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  // Convert unit
-  LPN slpn;
-  uint32_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
+  // Prepare request
+  uint32_t lbaSize = ns->second->getInfo()->lbaSize;
 
-  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
-
-  // Check range
-  auto info = ns->second->getInfo();
-  auto range = info->namespaceRange;
-
-  if (UNLIKELY(slpn + nlp > range.second)) {
-    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                         GenericCommandStatusCode::Invalid_Field);
-
-    subsystem->complete(tag);
-
-    return;
-  }
-
-  slpn += info->namespaceRange.first;
-
-  ns->second->read(nlb * info->lbaSize);
-
-  // Make command
-  auto disk = ns->second->getDisk();
-  auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto gcid = tag->getGCID();
-
-  mgr->createHILRead(gcid, readDoneEvent, slpn, nlp, skipFront, skipEnd,
-                     (uint32_t)info->lpnSize);
-
-  if (disk) {
-    auto &cmd = mgr->getCommand(gcid);
-
-    for (auto &iter : cmd.subCommandList) {
-      disk->read(iter.lpn * info->lpnSize, (uint32_t)info->lpnSize,
-                 iter.buffer.data());
-    }
-  }
-
-  tag->_slba = slba;
-  tag->_nlb = nlb;
+  tag->initRequest(eventCompletion);
+  tag->request.setAddress(slba, nlb, lbaSize);
   tag->beginAt = getTick();
-
-  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
-                       dmaInitEvent);
+  tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -181,17 +99,15 @@ void Read::resetStatValues() noexcept {}
 void Read::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 
-  BACKUP_EVENT(out, dmaInitEvent);
-  BACKUP_EVENT(out, readDoneEvent);
-  BACKUP_EVENT(out, dmaCompleteEvent);
+  BACKUP_EVENT(out, eventDMAInitDone);
+  BACKUP_EVENT(out, eventCompletion);
 }
 
 void Read::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
 
-  RESTORE_EVENT(in, dmaInitEvent);
-  RESTORE_EVENT(in, readDoneEvent);
-  RESTORE_EVENT(in, dmaCompleteEvent);
+  RESTORE_EVENT(in, eventDMAInitDone);
+  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

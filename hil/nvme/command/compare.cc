@@ -8,110 +8,54 @@
 #include "hil/nvme/command/compare.hh"
 
 #include "hil/nvme/command/internal.hh"
-#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
 Compare::Compare(ObjectData &o, Subsystem *s) : Command(o, s) {
-  dmaInitEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaInitDone(gcid); },
-                  "HIL::NVMe::Compare::dmaInitEvent");
-  dmaCompleteEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
-                  "HIL::NVMe::Compare::dmaCompleteEvent");
-  readNVMDoneEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { readNVMDone(gcid); },
-                  "HIL::NVMe::Compare::readDoneEvent");
+  eventDMAInitDone =
+      createEvent([this](uint64_t, uint64_t d) { dmaInitDone(d); },
+                  "HIL::NVMe::Compare::eventDMAInitDone");
+  eventCompletion =
+      createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
+                  "HIL::NVMe::Compare::eventCompletion");
 }
 
 void Compare::dmaInitDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
-  auto &first = cmd.subCommandList.front();
-  auto &last = cmd.subCommandList.back();
 
-  // DMA
-  tag->dmaEngine->read(
-      tag->dmaTag, 0,
-      (uint32_t)tag->buffer.size() - first.skipFront - last.skipEnd,
-      tag->buffer.data() + first.skipFront, dmaCompleteEvent, gcid);
+  // Submit compare request
+  // TODO: Support FUSED operation
+  pHIL->compare(&tag->request, false);
 }
 
-void Compare::dmaComplete(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+void Compare::completion(uint64_t now, uint64_t gcid) {
+  auto tag = findTag(gcid);
 
-  tag->complete |= 0x01;
+  // Make CQ status
+  tag->makeResponse();
 
-  if (tag->complete == 0x03) {
-    compare(tag);
-  }
-}
+  // Get address
+  uint64_t slba;
+  uint32_t nlb;
 
-void Compare::readNVMDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
-  auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(gcid);
+  tag->request.getAddress(slba, nlb);
 
-  uint32_t completed = 0;
-
-  for (auto &iter : cmd.subCommandList) {
-    if (iter.status == Status::Done) {
-      completed++;
-
-      iter.status = Status::Complete;
-
-      break;
-    }
-    else if (iter.status == Status::Complete) {
-      completed++;
-    }
-  }
-
-  if (completed == cmd.subCommandList.size()) {
-    // We completed all page access
-    tag->complete |= 0x02;
-
-    if (tag->complete == 0x03) {
-      compare(tag);
-    }
-  }
-}
-
-void Compare::compare(BufferCommandData *tag) {
-  auto pHIL = subsystem->getHIL();
-  auto &cmd = pHIL->getCommandManager()->getCommand(tag->getGCID());
-
-  auto now = getTick();
-
-  // Compare contents
-  bool same = true;
-  uint64_t offset = 0;
-
-  for (auto &iter : cmd.subCommandList) {
-    same &= memcmp(tag->buffer.data() + offset, iter.buffer.data(),
-                   iter.buffer.size()) == 0;
-
-    offset += iter.buffer.size();
-  }
-
-  if (!same) {
-    tag->cqc->makeStatus(false, false, StatusType::MediaAndDataIntegrityErrors,
-                         MediaAndDataIntegrityErrorCode::CompareFailure);
-  }
+  // For log only (already filled in makeResponse)
+  bool diff = tag->request.getResponse() == Response::CompareFail;
 
   debugprint_command(tag,
                      "NVM     | Compare | NSID %u | %" PRIx64
                      "h + %xh | %s | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                     tag->sqc->getData()->namespaceID, tag->_slba, tag->_nlb,
-                     same ? "Success" : "Fail", tag->beginAt, now,
+                     tag->sqc->getData()->namespaceID, slba, nlb,
+                     diff ? "Fail" : "Success", tag->beginAt, now,
                      now - tag->beginAt);
 
   subsystem->complete(tag);
 }
 
 void Compare::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createBufferTag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters
@@ -141,54 +85,13 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
     return;
   }
 
-  // Convert unit
-  LPN slpn;
-  uint32_t nlp;
-  uint32_t skipFront;
-  uint32_t skipEnd;
+  // Prepare request
+  uint32_t lbaSize = ns->second->getInfo()->lbaSize;
 
-  ns->second->getConvertFunction()(slba, nlb, slpn, nlp, &skipFront, &skipEnd);
-
-  // Check range
-  auto info = ns->second->getInfo();
-  auto range = info->namespaceRange;
-
-  if (UNLIKELY(slpn + nlp > range.second)) {
-    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                         GenericCommandStatusCode::Invalid_Field);
-
-    subsystem->complete(tag);
-
-    return;
-  }
-
-  slpn += info->namespaceRange.first;
-
-  // Make buffer
-  auto disk = ns->second->getDisk();
-  auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
-  auto gcid = tag->getGCID();
-
-  mgr->createHILRead(gcid, readNVMDoneEvent, slpn, nlp, skipFront, skipEnd,
-                     (uint32_t)info->lpnSize);
-
-  if (disk) {
-    auto &cmd = mgr->getCommand(gcid);
-
-    for (auto &iter : cmd.subCommandList) {
-      disk->read(iter.lpn * info->lpnSize, (uint32_t)info->lpnSize,
-                 iter.buffer.data());
-    }
-  }
-
-  tag->buffer.resize(info->lpnSize * nlp);
-  tag->_slba = slba;
-  tag->_nlb = nlb;
+  tag->initRequest(eventCompletion);
+  tag->request.setAddress(slba, nlb, lbaSize);
   tag->beginAt = getTick();
-
-  tag->createDMAEngine((uint32_t)(nlp * info->lpnSize - skipFront - skipEnd),
-                       dmaInitEvent);
+  tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
 }
 
 void Compare::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -200,17 +103,15 @@ void Compare::resetStatValues() noexcept {}
 void Compare::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);
 
-  BACKUP_EVENT(out, dmaInitEvent);
-  BACKUP_EVENT(out, dmaCompleteEvent);
-  BACKUP_EVENT(out, readNVMDoneEvent);
+  BACKUP_EVENT(out, eventDMAInitDone);
+  BACKUP_EVENT(out, eventCompletion);
 }
 
 void Compare::restoreCheckpoint(std::istream &in) noexcept {
   Command::restoreCheckpoint(in);
 
-  RESTORE_EVENT(in, dmaInitEvent);
-  RESTORE_EVENT(in, dmaCompleteEvent);
-  RESTORE_EVENT(in, readNVMDoneEvent);
+  RESTORE_EVENT(in, eventDMAInitDone);
+  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -16,9 +16,8 @@ namespace SimpleSSD::HIL::NVMe {
 
 class FormatNVM : public Command {
  private:
-  Event eventFormatDone;
-
-  void formatDone(uint64_t);
+  Event eventCompletion;
+  void completion(uint64_t, uint64_t);
 
  public:
   FormatNVM(ObjectData &, Subsystem *);

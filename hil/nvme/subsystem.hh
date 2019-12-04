@@ -106,8 +106,6 @@ class Subsystem : public AbstractSubsystem {
   uint8_t createNamespace(NamespaceInformation *, uint32_t &);
   uint8_t destroyNamespace(uint32_t);
 
-  uint8_t format(uint32_t, FormatOption, uint8_t, Event, uint64_t);
-
   void scheduleAEN(AsyncEventType, uint8_t, LogPageID);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

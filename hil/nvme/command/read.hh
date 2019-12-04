@@ -34,13 +34,11 @@ namespace SimpleSSD::HIL::NVMe {
  */
 class Read : public Command {
  private:
-  Event dmaInitEvent;
-  Event readDoneEvent;
-  Event dmaCompleteEvent;
-
+  Event eventDMAInitDone;
   void dmaInitDone(uint64_t);
-  void dmaComplete(uint64_t);
-  void readDone(uint64_t);
+
+  Event eventCompletion;
+  void completion(uint64_t, uint64_t);
 
  public:
   Read(ObjectData &, Subsystem *);
