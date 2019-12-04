@@ -49,25 +49,27 @@ class Request {
   friend HIL::HIL;
 
   Operation opcode;
-  Response result;
+  Response result;  //!< Request result
+
+  uint32_t lbaSize;  //!< Not used by HIL
 
   HIL::DMAEngine *dmaEngine;
   HIL::DMATag dmaTag;
 
-  Event eid;
-  uint64_t data;
+  Event eid;      //!< Completion event
+  uint64_t data;  //!< Completion data
 
   uint64_t offset;  //!< Byte offset
   uint32_t length;  //!< Byte length
 
-  uint32_t dmaCounter;
-  uint32_t nvmCounter;
-  uint32_t nlp;  //!< # logical pages
+  uint32_t dmaCounter;  //!< # completed DMA request
+  uint32_t nvmCounter;  //!< # completed NVM (ICL) request
+  uint32_t nlp;         //!< # logical pages
 
   uint64_t dmaBeginAt;
   uint64_t nvmBeginAt;
 
-  uint64_t requestTag;
+  uint64_t requestTag;  //!< Unique ID for HIL
 
  public:
   Request()
@@ -101,19 +103,20 @@ class Request {
         nvmBeginAt(0),
         requestTag(0) {}
 
-  void setAddress(LPN slpn, uint32_t nlp, uint32_t lbaSize) {
-    offset = slpn * lbaSize;
-    length = nlp * lbaSize;
-  }
-
-  void setAddress(uint64_t byteoffset, uint32_t bytelength) {
-    offset = byteoffset;
-    length = bytelength;
+  void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
+    lbaSize = lbs;
+    offset = slba * lbaSize;
+    length = nlb * lbaSize;
   }
 
   void setDMA(HIL::DMAEngine *engine, HIL::DMATag tag) {
     dmaEngine = engine;
     dmaTag = tag;
+  }
+
+  void getAddress(uint64_t &slba, uint32_t &nlb) {
+    slba = offset / lbaSize;
+    nlb = length / lbaSize;
   }
 
   HIL::DMATag getDMA() { return dmaTag; }
