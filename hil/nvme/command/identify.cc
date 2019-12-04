@@ -20,7 +20,7 @@ Identify::Identify(ObjectData &o, Subsystem *s) : Command(o, s) {
                   "HIL::NVMe::Identify::dmaCompleteEvent");
 }
 
-void Identify::makeNamespaceStructure(BufferCommandData *tag, uint32_t nsid,
+void Identify::makeNamespaceStructure(CommandData *tag, uint32_t nsid,
                                       bool force) {
   auto ctrlID = tag->controller->getControllerID();
   uint8_t *buffer = tag->buffer.data();
@@ -99,8 +99,7 @@ void Identify::makeNamespaceStructure(BufferCommandData *tag, uint32_t nsid,
   }
 }
 
-void Identify::makeNamespaceList(BufferCommandData *tag, uint32_t nsid,
-                                 bool force) {
+void Identify::makeNamespaceList(CommandData *tag, uint32_t nsid, bool force) {
   uint16_t idx = 0;
   uint8_t *buffer = tag->buffer.data();
 
@@ -133,7 +132,7 @@ void Identify::makeNamespaceList(BufferCommandData *tag, uint32_t nsid,
   }
 }
 
-void Identify::makeControllerStructure(BufferCommandData *tag) {
+void Identify::makeControllerStructure(CommandData *tag) {
   uint16_t vid, ssvid;
   uint16_t id;
   uint64_t totalSize;
@@ -605,7 +604,7 @@ void Identify::makeControllerStructure(BufferCommandData *tag) {
   memset(buffer + 0x0C00, 0, 1024);
 }
 
-void Identify::makeControllerList(BufferCommandData *tag, ControllerID cntid,
+void Identify::makeControllerList(CommandData *tag, ControllerID cntid,
                                   uint32_t nsid) {
   uint16_t size = 0;
   uint8_t *buffer = tag->buffer.data();
@@ -643,21 +642,21 @@ void Identify::makeControllerList(BufferCommandData *tag, ControllerID cntid,
 }
 
 void Identify::dmaInitDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
   // Write buffer to host
-  tag->dmaEngine->write(tag->dmaTag, 0, 4096, tag->buffer.data(),
+  tag->dmaEngine->write(tag->request.getDMA(), 0, 4096, tag->buffer.data(),
                         dmaCompleteEvent, gcid);
 }
 
 void Identify::dmaComplete(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
   subsystem->complete(tag);
 }
 
 void Identify::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createBufferTag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters

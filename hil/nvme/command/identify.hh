@@ -21,11 +21,10 @@ class Identify : public Command {
   Event dmaInitEvent;
   Event dmaCompleteEvent;
 
-  void makeNamespaceStructure(BufferCommandData *, uint32_t, bool = false);
-  void makeNamespaceList(BufferCommandData *, uint32_t, bool = false);
-  void makeControllerStructure(BufferCommandData *);
-  void makeControllerList(BufferCommandData *, ControllerID,
-                          uint32_t = NSID_ALL);
+  void makeNamespaceStructure(CommandData *, uint32_t, bool = false);
+  void makeNamespaceList(CommandData *, uint32_t, bool = false);
+  void makeControllerStructure(CommandData *);
+  void makeControllerList(CommandData *, ControllerID, uint32_t = NSID_ALL);
 
   void dmaInitDone(uint64_t);
   void dmaComplete(uint64_t);
