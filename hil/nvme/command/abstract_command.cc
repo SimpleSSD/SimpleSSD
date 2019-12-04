@@ -57,7 +57,6 @@ void Command::completeRequest(CommandTag tag) {
 
 void Command::createCheckpoint(std::ostream &out) const noexcept {
   uint64_t size = tagList.size();
-  uint8_t type;
 
   BACKUP_SCALAR(out, size);
 
@@ -70,7 +69,6 @@ void Command::createCheckpoint(std::ostream &out) const noexcept {
 
 void Command::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
-  uint8_t type;
 
   RESTORE_SCALAR(in, size);
 
