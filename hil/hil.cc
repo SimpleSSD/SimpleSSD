@@ -28,7 +28,10 @@ HIL::HIL(ObjectData &o)
   // Register callback to ICL layer
 }
 
-HIL::~HIL() {}
+HIL::~HIL() {
+  warn_if(requestQueue.size() != 0, "Not all requests are handled.");
+  warn_if(subrequestQueue.size() != 0, "Not all subrequests are handled.");
+}
 
 void HIL::submit(Operation opcode, Request *req) {
   uint64_t tag = ++requestCounter;
@@ -36,10 +39,11 @@ void HIL::submit(Operation opcode, Request *req) {
   req->opcode = opcode;
   req->requestTag = tag;
 
-  auto first = subrequestQueue.end();
   auto ret = requestQueue.emplace(tag, req);
 
   panic_if(!ret.second, "Request ID conflict.");
+
+  std::vector<SubRequest *> subrequestList;
 
   if (opcode < Operation::Flush) {
     // Make LPN address
@@ -72,12 +76,8 @@ void HIL::submit(Operation opcode, Request *req) {
 
       panic_if(!sreq.second, "SubRequest ID conflict.");
 
-      if (i == 0) {
-        first = sreq.first;
-      }
+      subrequestList.emplace_back(&sreq.first->second);
     }
-
-    req->nlp = nlp;
   }
   else {
     ++subrequestCounter;
@@ -87,41 +87,22 @@ void HIL::submit(Operation opcode, Request *req) {
 
     panic_if(!sreq.second, "SubRequest ID conflict.");
 
-    first = sreq.first;
-    req->nlp = 1;  // Only one completion expected
+    subrequestList.emplace_back(&sreq.first->second);
   }
 
-  panic_if(first == subrequestQueue.end(), "Unexpected length of request.");
+  req->nlp = subrequestList.size();
+
+  panic_if(req->nlp == 0, "Unexpected length of request.");
+
+  auto &sreq = *subrequestList.front();
 
   switch (opcode) {
-    case Operation::Read:
-      /*
-       * For read, we push all NVM requests at same time, and do the DMA when
-       * each subrequest is completed.
-       */
-
-      // TODO: ADD HERE
-
-      break;
     case Operation::Write:
       /*
        * For write, we need to read data to be written by DMA operation. DMA is
        * performed in subrequest (LPN) granularity. For each completion of DMA,
        * NVM operation will be triggered.
        */
-
-      // TODO: ADD HERE
-
-      break;
-    case Operation::WriteZeroes:
-      /*
-       * For write zeroes, we don't need to perform DMA. Just push all NVM
-       * requests at same time, like read operation.
-       */
-
-      // TODO: ADD HERE
-
-      break;
     case Operation::Compare:
     case Operation::CompareAndWrite:
       /*
@@ -129,19 +110,36 @@ void HIL::submit(Operation opcode, Request *req) {
        * all NVM and DMA operation.
        */
 
-      // TODO: ADD HERE
+      // Allocate buffer
+      sreq.createBuffer(sreq.length);
 
-      break;
+      // Submit DMA (first chunk)
+      req->dmaEngine->read(req->dmaTag, sreq.offset, sreq.length, sreq.buffer,
+                           eventDMACompletion, sreq.requestTag);
+
+      if (opcode == Operation::Write) {
+        break;
+      }
+
+      /* fallthrough */
+    case Operation::Read:
+      /*
+       * For read, we push all NVM requests at same time, and do the DMA when
+       * each subrequest is completed.
+       */
+    case Operation::WriteZeroes:
+      /*
+       * For write zeroes, we don't need to perform DMA. Just push all NVM
+       * requests at same time, like read operation.
+       */
     case Operation::Flush:
-      // TODO: ADD HERE
-
-      break;
     case Operation::Trim:
-      // TODO: ADD HERE
-
-      break;
     case Operation::Format:
-      // TODO: ADD HERE
+
+      // Submit NVM (all chunks)
+      for (auto &sreq : subrequestList) {
+        icl.submit(sreq);
+      }
 
       break;
     default:
@@ -169,11 +167,9 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
 
   switch (req.opcode) {
     case Operation::Read:
-      /*
-       * Start DMA for this subrequest.
-       */
-
-      // TODO: ADD HERE
+      // Submit DMA (current chunk)
+      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+                          eventDMACompletion, sreq.requestTag);
 
       break;
     case Operation::Write:
@@ -181,9 +177,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
     case Operation::Flush:
     case Operation::Trim:
     case Operation::Format:
-      /*
-       * Complete when all pending NVM operations are completed.
-       */
+      // Complete when all pending NVM operations are completed.
       remove = true;
 
       if (req.nvmCounter == req.nlp) {
@@ -198,9 +192,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
       break;
     case Operation::Compare:
     case Operation::CompareAndWrite:
-      /*
-       * Check DMA operations are completed, and start compare operation
-       */
+      // Check DMA operations are completed, and start compare operation
       panic("Compare not implemented yet.");
 
       break;
@@ -233,9 +225,7 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
 
   switch (req.opcode) {
     case Operation::Read:
-      /*
-       * Complete when all pending DMA operations are completed.
-       */
+      // Complete when all pending DMA operations are completed.
       remove = true;
 
       if (req.dmaCounter == req.nlp) {
@@ -249,18 +239,13 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
 
       break;
     case Operation::Write:
-      /*
-       * Start NVM for this subrequest
-       */
-
-      // TODO: ADD HERE
+      // Start NVM for this subrequest
+      icl.submit(&sreq);
 
       break;
     case Operation::Compare:
     case Operation::CompareAndWrite:
-      /*
-       * Check NVM operations are completed, and start compare operation
-       */
+      // Check NVM operations are completed, and start compare operation
       panic("Compare not implemented yet.");
 
       break;
