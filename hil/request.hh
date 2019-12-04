@@ -34,11 +34,22 @@ enum class Operation : uint16_t {
   Format,           // 1        0
 };
 
+enum class Response : uint16_t {
+  Success,
+  Unwritten,         //!< Specified LBA range is not written (All commands)
+  OutOfRange,        //!< Specified LBA range is out-of-range (All commands)
+  FormatInProgress,  //!< Format in progress (All commands)
+  ReadECCFail,       //!< Read ECC failed (Read commands only)
+  WriteFail,         //!< Write failed (Write commands only)
+  CompareFail,       //!< Compare failed (Compare / Fused write only)
+};
+
 class Request {
  private:
   friend HIL::HIL;
 
   Operation opcode;
+  Response result;
 
   HIL::DMAEngine *dmaEngine;
   HIL::DMATag dmaTag;
@@ -61,6 +72,7 @@ class Request {
  public:
   Request(Event e, uint64_t c)
       : opcode(Operation::None),
+        result(Response::Success),
         dmaEngine(nullptr),
         dmaTag(HIL::InvalidDMATag),
         eid(e),
@@ -75,6 +87,7 @@ class Request {
         requestTag(0) {}
   Request(HIL::DMAEngine *d, HIL::DMATag t, Event e, uint64_t c)
       : opcode(Operation::None),
+        result(Response::Success),
         dmaEngine(d),
         dmaTag(t),
         eid(e),
@@ -96,6 +109,10 @@ class Request {
   void setAddress(uint64_t byteoffset, uint32_t bytelength) {
     offset = byteoffset;
     length = bytelength;
+  }
+
+  Response getResponse() {
+    return result;
   }
 };
 

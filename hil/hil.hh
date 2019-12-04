@@ -13,9 +13,9 @@
 #include <utility>
 
 #include "hil/convert.hh"
+#include "hil/request.hh"
 #include "icl/icl.hh"
 #include "sim/object.hh"
-#include "hil/request.hh"
 
 namespace SimpleSSD::HIL {
 
@@ -52,10 +52,10 @@ class HIL : public Object {
   uint64_t requestCounter;
   uint64_t subrequestCounter;
 
-  std::unordered_map<uint64_t, Request> requestQueue;
+  std::unordered_map<uint64_t, Request *> requestQueue;
   std::unordered_map<uint64_t, SubRequest> subrequestQueue;
 
-  void submit(Operation, Request &&);
+  void submit(Operation, Request *);
 
   Event eventNVMCompletion;
   void nvmCompletion(uint64_t, uint64_t);
@@ -72,7 +72,7 @@ class HIL : public Object {
    *
    * \param[in] req Request object
    */
-  void read(Request &&req);
+  void read(Request *req);
 
   /**
    * \brief Write underlying NVM
@@ -82,7 +82,7 @@ class HIL : public Object {
    * \param[in] req       Request object
    * \param[in] zerofill  Write zeroes
    */
-  void write(Request &&req, bool zerofill = false);
+  void write(Request *req, bool zerofill = false);
 
   /**
    * \brief Flush cache
@@ -92,7 +92,7 @@ class HIL : public Object {
    *
    * \param[in] req Request object
    */
-  void flush(Request &&req);
+  void flush(Request *req);
 
   /**
    * \brief TRIM/Format NVM
@@ -102,7 +102,7 @@ class HIL : public Object {
    * \param[in] req     Request object
    * \param[in] option  Format option
    */
-  void format(Request &&req, FormatOption option);
+  void format(Request *req, FormatOption option);
 
   /**
    * \brief Compare
@@ -110,7 +110,7 @@ class HIL : public Object {
    * \param[in] req   Request object
    * \param[in] fused True if this request is FUSED operation in NVMe
    */
-  void compare(Request &&req, bool fused = false);
+  void compare(Request *req, bool fused = false);
 
   /**
    * \brief Get logical pages contains data

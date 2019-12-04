@@ -30,18 +30,16 @@ HIL::HIL(ObjectData &o)
 
 HIL::~HIL() {}
 
-void HIL::submit(Operation opcode, Request &&_req) {
+void HIL::submit(Operation opcode, Request *req) {
   uint64_t tag = ++requestCounter;
 
-  _req.opcode = opcode;
-  _req.requestTag = tag;
+  req->opcode = opcode;
+  req->requestTag = tag;
 
   auto first = subrequestQueue.end();
-  auto ret = requestQueue.emplace(tag, _req);
+  auto ret = requestQueue.emplace(tag, req);
 
   panic_if(!ret.second, "Request ID conflict.");
-
-  auto &req = ret.first->second;
 
   if (opcode < Operation::Flush) {
     // Make LPN address
@@ -50,7 +48,7 @@ void HIL::submit(Operation opcode, Request &&_req) {
     uint32_t skipFront;
     uint32_t skipEnd;
 
-    convertFunction(req.offset, req.length, slpn, nlp, skipFront, skipEnd);
+    convertFunction(req->offset, req->length, slpn, nlp, skipFront, skipEnd);
 
     // Make subrequests
     for (uint32_t i = 0; i < nlp; i++) {
@@ -70,7 +68,7 @@ void HIL::submit(Operation opcode, Request &&_req) {
 
       auto sreq = subrequestQueue.emplace(
           subrequestCounter,
-          SubRequest(subrequestCounter, &req, slpn + i, offset, length));
+          SubRequest(subrequestCounter, req, slpn + i, offset, length));
 
       panic_if(!sreq.second, "SubRequest ID conflict.");
 
@@ -79,18 +77,18 @@ void HIL::submit(Operation opcode, Request &&_req) {
       }
     }
 
-    req.nlp = nlp;
+    req->nlp = nlp;
   }
   else {
     ++subrequestCounter;
 
     auto sreq = subrequestQueue.emplace(subrequestCounter,
-                                        SubRequest(subrequestCounter, &req));
+                                        SubRequest(subrequestCounter, req));
 
     panic_if(!sreq.second, "SubRequest ID conflict.");
 
     first = sreq.first;
-    req.nlp = 1;  // Only one completion expected
+    req->nlp = 1;  // Only one completion expected
   }
 
   panic_if(first == subrequestQueue.end(), "Unexpected length of request.");
@@ -277,20 +275,19 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
   }
 }
 
-void HIL::read(Request &&req) {
-  submit(Operation::Read, std::move(req));
+void HIL::read(Request *req) {
+  submit(Operation::Read, req);
 }
 
-void HIL::write(Request &&req, bool zerofill) {
-  submit(zerofill ? Operation::WriteZeroes : Operation::WriteZeroes,
-         std::move(req));
+void HIL::write(Request *req, bool zerofill) {
+  submit(zerofill ? Operation::WriteZeroes : Operation::WriteZeroes, req);
 }
 
-void HIL::flush(Request &&req) {
-  submit(Operation::Flush, std::move(req));
+void HIL::flush(Request *req) {
+  submit(Operation::Flush, req);
 }
 
-void HIL::format(Request &&req, FormatOption option) {
+void HIL::format(Request *req, FormatOption option) {
   if (option == FormatOption::CryptographicErase) {
     warn("Cryptographic erase not implemented.");
 
@@ -298,12 +295,11 @@ void HIL::format(Request &&req, FormatOption option) {
   }
 
   submit(option == FormatOption::None ? Operation::Trim : Operation::Format,
-         std::move(req));
+         req);
 }
 
-void HIL::compare(Request &&req, bool fused) {
-  submit(fused ? Operation::CompareAndWrite : Operation::Compare,
-         std::move(req));
+void HIL::compare(Request *req, bool fused) {
+  submit(fused ? Operation::CompareAndWrite : Operation::Compare, req);
 }
 
 LPN HIL::getPageUsage(LPN offset, LPN length) {
