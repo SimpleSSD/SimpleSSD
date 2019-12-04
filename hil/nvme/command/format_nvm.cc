@@ -20,6 +20,10 @@ FormatNVM::FormatNVM(ObjectData &o, Subsystem *s) : Command(o, s) {
 void FormatNVM::completion(uint64_t now, uint64_t gcid) {
   auto tag = findTag(gcid);
 
+  debugprint_command(
+      tag, "ADMIN   | Format NVM | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+      tag->beginAt, now, now - tag->beginAt);
+
   subsystem->complete(tag);
 }
 
