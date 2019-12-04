@@ -70,13 +70,13 @@ class Request {
   uint64_t requestTag;
 
  public:
-  Request(Event e, uint64_t c)
+  Request()
       : opcode(Operation::None),
         result(Response::Success),
         dmaEngine(nullptr),
         dmaTag(HIL::InvalidDMATag),
-        eid(e),
-        data(c),
+        eid(InvalidEventID),
+        data(0),
         offset(0),
         length(0),
         nlp(0),
@@ -85,11 +85,11 @@ class Request {
         dmaBeginAt(0),
         nvmBeginAt(0),
         requestTag(0) {}
-  Request(HIL::DMAEngine *d, HIL::DMATag t, Event e, uint64_t c)
+  Request(Event e, uint64_t c)
       : opcode(Operation::None),
         result(Response::Success),
-        dmaEngine(d),
-        dmaTag(t),
+        dmaEngine(nullptr),
+        dmaTag(HIL::InvalidDMATag),
         eid(e),
         data(c),
         offset(0),
@@ -111,9 +111,13 @@ class Request {
     length = bytelength;
   }
 
-  Response getResponse() {
-    return result;
+  void setDMA(HIL::DMAEngine *engine, HIL::DMATag tag) {
+    dmaEngine = engine;
+    dmaTag = tag;
   }
+
+  HIL::DMATag getDMA() { return dmaTag; }
+  Response getResponse() { return result; }
 };
 
 class SubRequest {
