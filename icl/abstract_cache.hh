@@ -19,21 +19,13 @@ class AbstractCache : public Object {
  protected:
   const uint32_t minIO = 512;
 
-  CommandManager *commandManager;
   FTL::FTL *pFTL;
 
-  uint64_t cacheCommandTag;
-
-  inline uint64_t makeCacheCommandTag() {
-    return cacheCommandTag++ | ICL_TAG_PREFIX;
-  }
-
  public:
-  AbstractCache(ObjectData &o, CommandManager *m, FTL::FTL *p)
-      : Object(o), commandManager(m), pFTL(p), cacheCommandTag(0) {}
+  AbstractCache(ObjectData &o, FTL::FTL *p) : Object(o), pFTL(p) {}
   virtual ~AbstractCache() {}
 
-  virtual void enqueue(uint64_t, uint32_t) = 0;
+  virtual void submit(SubRequest *) = 0;
 
   virtual void setCache(bool) = 0;
   virtual bool getCache() = 0;

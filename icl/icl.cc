@@ -7,22 +7,24 @@
 
 #include "icl/icl.hh"
 
-#include "icl/ring_buffer.hh"
+#include "icl/abstract_cache.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
 
-ICL::ICL(ObjectData &o, CommandManager *m) : Object(o), commandManager(m) {
-  pFTL = new FTL::FTL(object, commandManager);
+ICL::ICL(ObjectData &o) : Object(o) {
+  pFTL = new FTL::FTL(object);
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
   logicalPageSize = param->pageSize;
 
+  enabled = readConfigBoolean(Section::InternalCache, Config::Key::EnableCache);
+
   switch ((Config::Mode)readConfigUint(Section::InternalCache,
                                        Config::Key::CacheMode)) {
     case Config::Mode::RingBuffer:
-      pCache = new RingBuffer(object, commandManager, pFTL);
+      // pCache = new RingBuffer(object, commandManager, pFTL);
 
       break;
     default:
@@ -37,8 +39,13 @@ ICL::~ICL() {
   delete pFTL;
 }
 
-void ICL::submit(uint64_t tag, uint32_t id) {
-  pCache->enqueue(tag, id);
+void ICL::submit(SubRequest *req) {
+  if (LIKELY(enabled)) {
+    pCache->submit(req);
+  }
+  else {
+    pFTL->submit(req);
+  }
 }
 
 LPN ICL::getPageUsage(LPN offset, LPN length) {
@@ -51,14 +58,6 @@ LPN ICL::getTotalPages() {
 
 uint32_t ICL::getLPNSize() {
   return logicalPageSize;
-}
-
-void ICL::setCache(bool set) {
-  pCache->setCache(set);
-}
-
-bool ICL::getCache() {
-  return pCache->getCache();
 }
 
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
