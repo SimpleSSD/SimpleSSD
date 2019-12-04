@@ -90,17 +90,6 @@ void Config::loadInterface(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDisk(pugi::xml_node &section, Disk *disk) {
-  disk->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
-
-  for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_BOOLEAN(node, NAME_ENABLE_DISK_IMAGE, disk->enable);
-    LOAD_NAME_BOOLEAN(node, NAME_STRICT_SIZE_CHECK, disk->strict);
-    LOAD_NAME_BOOLEAN(node, NAME_USE_COW_DISK, disk->useCoW);
-    LOAD_NAME_STRING(node, NAME_DISK_IMAGE_PATH, disk->path);
-  }
-}
-
 void Config::loadNVMe(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_MAX_SQ, uint16_t, maxSQ);
@@ -150,15 +139,6 @@ void Config::storeInterface(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_CLOCK, axiClock);
 }
 
-void Config::storeDisk(pugi::xml_node &section, Disk *disk) {
-  section.append_attribute("nsid").set_value(disk->nsid);
-
-  STORE_NAME_BOOLEAN(section, NAME_ENABLE_DISK_IMAGE, disk->enable);
-  STORE_NAME_BOOLEAN(section, NAME_STRICT_SIZE_CHECK, disk->strict);
-  STORE_NAME_BOOLEAN(section, NAME_USE_COW_DISK, disk->useCoW);
-  STORE_NAME_STRING(section, NAME_DISK_IMAGE_PATH, disk->path);
-}
-
 void Config::storeNVMe(pugi::xml_node &section) {
   pugi::xml_node node;
 
@@ -195,11 +175,6 @@ void Config::loadFrom(pugi::xml_node &section) {
     if (strcmp(name, "interface") == 0 && isSection(node)) {
       loadInterface(node);
     }
-    else if (strcmp(name, "disk") == 0 && isSection(node)) {
-      diskList.emplace_back(Disk());
-
-      loadDisk(node, &diskList.back());
-    }
     else if (strcmp(name, "nvme") == 0 && isSection(node)) {
       loadNVMe(node);
     }
@@ -214,12 +189,6 @@ void Config::storeTo(pugi::xml_node &section) {
 
   STORE_SECTION(section, "interface", node);
   storeInterface(node);
-
-  for (auto &disk : diskList) {
-    STORE_SECTION(section, "disk", node);
-
-    storeDisk(node, &disk);
-  }
 
   STORE_SECTION(section, "nvme", node);
   storeNVMe(node);
@@ -249,17 +218,6 @@ void Config::update() {
            "Invalid AXI bus width %u.", (uint16_t)axiWidth);
   axiWidth = (ARM::AXI::Width)((uint16_t)axiWidth / 8);
 
-  for (auto &disk : diskList) {
-    panic_if(
-        disk.nsid == 0 || disk.nsid == 0xFFFFFFFF || disk.nsid > maxNamespace,
-        "Invalid namespace ID %u in disk config.", disk.nsid);
-
-    if (disk.enable) {
-      panic_if(!std::filesystem::exists(disk.path),
-               "Specified disk image %s does not exists.", disk.path.c_str());
-    }
-  }
-
   panic_if(maxSQ < 2, "NVMe requires at least two submission queues.");
   panic_if(maxCQ < 2, "NVMe requires at least two completion queues.");
   panic_if(wrrHigh == 0 || wrrHigh > 256,
@@ -280,16 +238,6 @@ void Config::update() {
              "Invalid logical block size %u.", ns.lbaSize);
   }
 
-  // Make link between disk and namespace
-  std::sort(
-      diskList.begin(), diskList.end(),
-      [](const Disk &a, const Disk &b) -> bool {
-        panic_if(UNLIKELY(a.nsid == b.nsid),
-                 "Duplicated namespace ID %u while sorting disk configuration.",
-                 a.nsid);
-
-        return a.nsid < b.nsid;
-      });
   std::sort(
       namespaceList.begin(), namespaceList.end(),
       [](const Namespace &a, const Namespace &b) -> bool {
@@ -304,20 +252,10 @@ void Config::update() {
   // Simple O(n^2) algorithm
   // Do we need to change this to O(n) algorithm?
   for (auto &ns : namespaceList) {
-    ns.pDisk = nullptr;
-
     panic_if(ns.nsid > maxNamespace,
              "Namespace ID is greater than MaxNamespace.");
     panic_if((ns.capacity % ns.lbaSize) != 0,
              "Invalid capacity - not aligned to LBASize");
-
-    for (auto &disk : diskList) {
-      if (ns.nsid == disk.nsid) {
-        ns.pDisk = &disk;
-
-        break;
-      }
-    }
   }
 }
 
@@ -454,10 +392,6 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   }
 
   return ret;
-}
-
-std::vector<Config::Disk> &Config::getDiskList() {
-  return diskList;
 }
 
 std::vector<Config::Namespace> &Config::getNamespaceList() {

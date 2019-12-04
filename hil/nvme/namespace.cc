@@ -8,7 +8,6 @@
 #include "hil/nvme/namespace.hh"
 
 #include "hil/nvme/subsystem.hh"
-#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -78,8 +77,7 @@ NamespaceInformation *Namespace::getInfo() {
   return &info;
 }
 
-void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
-                        Config::Disk *_disk) {
+void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info) {
   nsid = _nsid;
   info = *_info;
 
@@ -123,8 +121,6 @@ void Namespace::getStatValues(std::vector<double> &) noexcept {}
 void Namespace::resetStatValues() noexcept {}
 
 void Namespace::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   BACKUP_SCALAR(out, inited);
   BACKUP_SCALAR(out, nsid);
 
@@ -149,8 +145,6 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void Namespace::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   RESTORE_SCALAR(in, inited);
   RESTORE_SCALAR(in, nsid);
 
