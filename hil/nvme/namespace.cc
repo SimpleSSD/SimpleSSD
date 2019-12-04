@@ -34,11 +34,9 @@ HealthInfo::HealthInfo() {
 }
 
 Namespace::Namespace(ObjectData &o, Subsystem * /* s */)
-    : Object(o) /* , subsystem(s) */, inited(false), disk(nullptr) {}
+    : Object(o) /* , subsystem(s) */, inited(false) {}
 
-Namespace::~Namespace() {
-  delete disk;
-}
+Namespace::~Namespace() {}
 
 uint32_t Namespace::getNSID() {
   return nsid;
@@ -85,26 +83,6 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
   nsid = _nsid;
   info = *_info;
 
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
-
-  if (_disk) {
-    if (_disk->path.length() == 0) {
-      disk = new MemDisk(object);
-    }
-    else if (_disk->useCoW) {
-      disk = new CoWDisk(object);
-    }
-    else {
-      disk = new Disk(object);
-    }
-
-    auto diskSize = disk->open(_disk->path, info.size * info.lbaSize);
-
-    panic_if(diskSize == 0, "Failed to open/create disk image");
-    panic_if(diskSize != info.size * info.lbaSize && _disk->strict,
-             "Disk size does not match with configuration");
-  }
-
   inited = true;
 }
 
@@ -114,18 +92,6 @@ HealthInfo *Namespace::getHealth() {
 
 const std::set<ControllerID> &Namespace::getAttachment() const {
   return attachList;
-}
-
-void Namespace::format() {
-  // When format, re-create disk
-  if (disk) {
-    delete disk;
-    disk = new MemDisk(object);
-
-    disk->open("", info.size * info.lbaSize);
-  }
-
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 }
 
 void Namespace::read(uint64_t bytesize) {
@@ -148,14 +114,6 @@ void Namespace::write(uint64_t bytesize) {
 
   info.writeBytes += bytesize;
   health.writeL = info.writeBytes / 1000 / 512;
-}
-
-ConvertFunction &Namespace::getConvertFunction() {
-  return convert;
-}
-
-Disk *Namespace::getDisk() {
-  return disk;
 }
 
 void Namespace::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -188,31 +146,6 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, info.namespaceRange.second);
 
   BACKUP_BLOB(out, health.data, 0x200);
-
-  exist = disk != nullptr;
-  BACKUP_SCALAR(out, exist);
-
-  if (exist) {
-    uint8_t type;
-
-    if (dynamic_cast<MemDisk *>(disk)) {
-      type = 3;
-    }
-    else if (dynamic_cast<CoWDisk *>(disk)) {
-      type = 2;
-    }
-    else if (dynamic_cast<Disk *>(disk)) {
-      type = 1;
-    }
-    else {
-      // Actually, we cannot be here!
-      abort();
-    }
-
-    BACKUP_SCALAR(out, type);
-
-    disk->createCheckpoint(out);
-  }
 }
 
 void Namespace::restoreCheckpoint(std::istream &in) noexcept {
@@ -243,32 +176,6 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
   info.namespaceRange = LPNRange(val1, val2);
 
   RESTORE_BLOB(in, health.data, 0x200);
-
-  RESTORE_SCALAR(in, exist);
-
-  if (exist) {
-    uint8_t type;
-
-    RESTORE_SCALAR(in, type);
-
-    switch (type) {
-      case 1:
-        disk = new Disk(object);
-        break;
-      case 2:
-        disk = new CoWDisk(object);
-        break;
-      case 3:
-        disk = new MemDisk(object);
-        break;
-      default:
-        panic("Unexpected disk type");
-    }
-
-    disk->restoreCheckpoint(in);
-  }
-
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
