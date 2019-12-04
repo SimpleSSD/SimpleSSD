@@ -35,16 +35,11 @@ class Config : public BaseConfig {
     SuperpageAllocation,
     MergeReadModifyWrite,
     AllowPageLevelRead,
-
-    // VLFTL
-    VLTableRatio,
-    MergeThreshold,
   };
 
   enum class MappingType : uint8_t {
     PageLevelFTL,
     BlockLevelFTL,
-    VLFTL,
   };
 
   enum class FillingType : uint8_t {
@@ -74,8 +69,6 @@ class Config : public BaseConfig {
   uint64_t dChoiceParam;
   float gcThreshold;
   uint8_t superpageAllocation;
-  float pmTableRatio;
-  float mergeThreshold;
 
   std::string superpage;
 

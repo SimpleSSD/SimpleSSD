@@ -432,7 +432,6 @@
       Possible values:
         0: Page-level Mapping (Supports superpage)
         1: Block-level Mapping
-        2: Virtually-Linked FTL
      -->
     <config name="MappingMode">0</config>
     <!-- Garbage Collection configuration -->
@@ -550,13 +549,6 @@
          -->
         <config name="InvalidFillRatio">0.0</config>
       </section>
-    </section>
-    <!-- VLFTL configuration -->
-    <section name="vlftl">
-      <!-- <float> Ratio of partial-mapping table -->
-      <config name="VLTableRatio">0.3</config>
-      <!-- <float> Merge threshold -->
-      <config name="MergeThreshold">0.1</config>
     </section>
   </section>
   <!--

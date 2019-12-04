@@ -8,12 +8,9 @@
 #include "ftl/ftl.hh"
 
 #include "ftl/allocator/basic_allocator.hh"
-#include "ftl/allocator/two_block_allocator.hh"
-#include "ftl/allocator/vl_allocator.hh"
 #include "ftl/base/basic_ftl.hh"
 #include "ftl/base/vlftl.hh"
 #include "ftl/mapping/page_level.hh"
-#include "ftl/mapping/virtually_linked.hh"
 
 namespace SimpleSSD {
 
@@ -35,10 +32,6 @@ FTL::FTL(ObjectData &o) : Object(o) {
     //   pMapper = new Mapping::BlockLevel(object);
 
     //   break;
-    case Config::MappingType::VLFTL:
-      pMapper = new Mapping::VirtuallyLinked(object);
-
-      break;
     default:
       panic("Unsupported mapping type.");
 
@@ -47,10 +40,6 @@ FTL::FTL(ObjectData &o) : Object(o) {
 
   // Block allocator
   switch (mapping) {
-    case Config::MappingType::VLFTL:
-      pAllocator = new BlockAllocator::VLAllocator(object, pMapper);
-
-      break;
     default:
       pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
 
@@ -59,10 +48,6 @@ FTL::FTL(ObjectData &o) : Object(o) {
 
   // Base FTL routine
   switch (mapping) {
-    case Config::MappingType::VLFTL:
-      pFTL = new VLFTL(object, pFIL, pMapper, pAllocator);
-
-      break;
     default:
       pFTL = new BasicFTL(object, pFIL, pMapper, pAllocator);
 

@@ -37,8 +37,6 @@ Config::Config() {
   dChoiceParam = 3;
   gcThreshold = 0.05f;
   superpageAllocation = FIL::PageAllocation::None;
-  pmTableRatio = 0.3f;
-  mergeThreshold = 0.8f;
 }
 
 void Config::loadFrom(pugi::xml_node &section) {
@@ -78,13 +76,6 @@ void Config::loadFrom(pugi::xml_node &section) {
         }
       }
     }
-    else if (strcmp(name, "vlftl") == 0 && isSection(node)) {
-      for (auto node2 = node.first_child(); node2;
-           node2 = node2.next_sibling()) {
-        LOAD_NAME_FLOAT(node2, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
-        LOAD_NAME_FLOAT(node2, NAME_MERGE_THRESHOLD, mergeThreshold);
-      }
-    }
   }
 }
 
@@ -122,10 +113,6 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(node2, NAME_FILLING_MODE, fillingMode);
   STORE_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
   STORE_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
-
-  STORE_SECTION(section, "vlftl", node);
-  STORE_NAME_FLOAT(node, NAME_PARTIAL_MAPPING_TABLE_RATIO, pmTableRatio);
-  STORE_NAME_FLOAT(node, NAME_MERGE_THRESHOLD, mergeThreshold);
 }
 
 void Config::update() {
@@ -136,8 +123,6 @@ void Config::update() {
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
            "Invalid InvalidPageRatio.");
-
-  panic_if(mergeThreshold >= 1.f, "Invalid VLFTL merge threshold");
 
   if (superpage.length() > 0) {
     superpageAllocation = 0;
@@ -199,12 +184,6 @@ float Config::readFloat(uint32_t idx) {
     case GCThreshold:
       ret = gcThreshold;
       break;
-    case VLTableRatio:
-      ret = pmTableRatio;
-      break;
-    case MergeThreshold:
-      ret = mergeThreshold;
-      break;
   }
 
   return ret;
@@ -265,12 +244,6 @@ bool Config::writeFloat(uint32_t idx, float value) {
       break;
     case GCThreshold:
       gcThreshold = value;
-      break;
-    case VLTableRatio:
-      pmTableRatio = value;
-      break;
-    case MergeThreshold:
-      mergeThreshold = value;
       break;
     default:
       ret = false;
