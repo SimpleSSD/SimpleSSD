@@ -37,8 +37,7 @@ class PageLevel : public AbstractMapping {
     uint64_t ret = 8;
 
     // Memory consumption optimization
-    // We are using InvalidLPN/PPN as max value (exclude equal to)
-    if (totalPhysicalSuperPages < std::numeric_limits<uint16_t>::max()) {
+    if (totalPhysicalSuperPages <= std::numeric_limits<uint16_t>::max()) {
       ret = 2;
 
       readEntry = [this](LPN lpn) {
@@ -48,7 +47,7 @@ class PageLevel : public AbstractMapping {
         *(uint16_t *)(table + (lpn << 1)) = (uint16_t)ppn;
       };
     }
-    else if (totalPhysicalSuperPages < std::numeric_limits<uint32_t>::max()) {
+    else if (totalPhysicalSuperPages <= std::numeric_limits<uint32_t>::max()) {
       ret = 4;
 
       readEntry = [this](LPN lpn) {
@@ -58,7 +57,7 @@ class PageLevel : public AbstractMapping {
         *(uint32_t *)(table + (lpn << 2)) = (uint32_t)ppn;
       };
     }
-    else if (totalPhysicalSuperPages < ((uint64_t)1ull << 48)) {
+    else if (totalPhysicalSuperPages <= ((uint64_t)1ull << 48)) {
       uint64_t mask = (uint64_t)0x0000FFFFFFFFFFFF;
       ret = 6;
 
