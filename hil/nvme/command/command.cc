@@ -101,7 +101,11 @@ void CommandData::createDMAEngine(uint32_t size, Event eid) {
 }
 
 void CommandData::destroyDMAEngine() {
-  dmaEngine->deinit(request.getDMA());
+  auto tag = request.getDMA();
+
+  if (tag != InvalidDMATag) {
+    dmaEngine->deinit(request.getDMA());
+  }
 }
 
 void CommandData::createCheckpoint(std::ostream &out) const noexcept {

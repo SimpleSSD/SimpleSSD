@@ -52,6 +52,8 @@ void Command::addTagToList(CommandTag tag) {
 }
 
 void Command::completeRequest(CommandTag tag) {
+  tag->destroyDMAEngine();
+
   destroyTag(tag);
 }
 
