@@ -174,7 +174,11 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
 }
 
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
-    : engine(e), config(c), log(l), lastResetStat(0), lastScheduledAt(0) {
+    : engine(e),
+      config(c),
+      log(l),
+      lastResetStat(0),
+      lastScheduledAt(std::numeric_limits<uint64_t>::max()) {
   clockSpeed = config->readUint(Section::CPU, Config::Key::Clock);
   clockPeriod = (uint64_t)(1000000000000. / clockSpeed);  // in pico-seconds
 
