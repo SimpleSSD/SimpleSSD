@@ -80,6 +80,10 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
   }
 
   powerStat.resize(pStructure->rank);
+
+  for (auto &stat : powerStat) {
+    stat.clear();
+  }
 }
 
 AbstractDRAM::~AbstractDRAM() {}

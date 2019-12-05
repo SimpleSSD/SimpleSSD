@@ -116,6 +116,12 @@ Channel::Channel(ObjectData &o, DRAMController *p, uint8_t i, uint32_t e)
   eventWriteDone = createEvent(
       [this](uint64_t, uint64_t d) { completeRequest(d, false); },
       "Memory::DRAM::Channel<" + std::to_string(i) + ">::eventWriteDone");
+
+  // Reset stats
+  readCount = 0;
+  readFromWriteQueue = 0;
+  writeCount = 0;
+  writeMerged = 0;
 }
 
 Channel::~Channel() {

@@ -236,10 +236,12 @@ void LPDDR4::resetStatValues() noexcept {
   AbstractDRAM::resetStatValues();
 
   for (auto &rank : ranks) {
-    rank.readCount = 0;
-    rank.writeCount = 0;
     rank.readRowHit = 0;
+    rank.readCount = 0;
+    rank.readBytes = 0;
     rank.writeRowHit = 0;
+    rank.writeCount = 0;
+    rank.writeBytes = 0;
   }
 }
 
