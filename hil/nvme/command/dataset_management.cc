@@ -8,7 +8,6 @@
 #include "hil/nvme/command/dataset_management.hh"
 
 #include "hil/nvme/command/internal.hh"
-#include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -21,84 +20,56 @@ DatasetManagement::DatasetManagement(ObjectData &o, Subsystem *s)
       createEvent([this](uint64_t, uint64_t gcid) { dmaComplete(gcid); },
                   "HIL::NVMe::Read::dmaCompleteEvent");
   trimDoneEvent =
-      createEvent([this](uint64_t, uint64_t gcid) { trimDone(gcid); },
+      createEvent([this](uint64_t t, uint64_t gcid) { trimDone(t, gcid); },
                   "HIL::NVMe::Read::readDoneEvent");
 }
 
 void DatasetManagement::dmaInitDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
-  tag->dmaEngine->read(tag->dmaTag, 0, (uint32_t)tag->buffer.size(),
+  tag->dmaEngine->read(tag->request.getDMA(), 0, (uint32_t)tag->buffer.size(),
                        tag->buffer.data(), dmaCompleteEvent, gcid);
 }
 
 void DatasetManagement::dmaComplete(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+  auto tag = findTag(gcid);
 
   auto nslist = subsystem->getNamespaceList();
   auto ns = nslist.find(tag->sqc->getData()->namespaceID);
-  auto range = ns->second->getInfo()->namespaceRange;
   auto lbaSize = ns->second->getInfo()->lbaSize;
 
-  auto disk = ns->second->getDisk();
-
-  uint64_t slpn;
-  uint32_t nlp;
   uint64_t nr = tag->buffer.size() >> 4;
   Range *trimRange;
 
   for (uint64_t i = 0; i < nr; i++) {
     trimRange = (Range *)(tag->buffer.data() + (i << 4));
 
-    ns->second->getConvertFunction()(trimRange->slba, trimRange->nlb, slpn, nlp,
-                                     nullptr, nullptr);
-
-    if (UNLIKELY(slpn + nlp > range.second)) {
-      tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                           GenericCommandStatusCode::Invalid_Field);
-
-      subsystem->complete(tag);
-
-      return;
-    }
-
-    slpn += range.first;
-
-    trimList.emplace_back(slpn, nlp);
-
-    if (disk) {
-      disk->erase(trimRange->slba * lbaSize, trimRange->nlb * lbaSize);
-    }
+    trimList.emplace_back(trimRange->slba * lbaSize, trimRange->nlb * lbaSize);
   }
 
   auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
   auto &first = trimList.front();
 
-  mgr->createHILTrim(gcid, trimDoneEvent, first.first, first.second);
+  tag->initRequest(trimDoneEvent);
+  tag->request.setAddress(first.first, first.second, 1);
 
-  pHIL->submitCommand(gcid);
+  pHIL->format(&tag->request, FormatOption::None);
 }
 
-void DatasetManagement::trimDone(uint64_t gcid) {
-  auto tag = findBufferTag(gcid);
+void DatasetManagement::trimDone(uint64_t now, uint64_t gcid) {
+  auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
-  auto mgr = pHIL->getCommandManager();
 
   trimList.pop_front();
 
   if (trimList.size() > 0) {
     auto &first = trimList.front();
-    auto &cmd = mgr->getCommand(gcid);
 
-    cmd.offset = first.first;
-    cmd.length = first.second;
+    tag->request.setAddress(first.first, first.second, 1);
 
-    pHIL->submitCommand(gcid);
+    pHIL->format(&tag->request, FormatOption::None);
   }
   else {
-    auto now = getTick();
-
     debugprint_command(
         tag,
         "NVM     | Dataset Management | NSID %u | Deallocate | %" PRIu64
@@ -106,13 +77,12 @@ void DatasetManagement::trimDone(uint64_t gcid) {
         tag->sqc->getData()->namespaceID, tag->beginAt, now,
         now - tag->beginAt);
 
-    mgr->destroyCommand(gcid);
     subsystem->complete(tag);
   }
 }
 
 void DatasetManagement::setRequest(ControllerData *cdata, SQContext *req) {
-  auto tag = createBufferTag(cdata, req);
+  auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
   // Get parameters

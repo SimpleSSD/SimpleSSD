@@ -31,11 +31,11 @@ class DatasetManagement : public Command {
   Event trimDoneEvent;
   Event dmaCompleteEvent;
 
-  std::list<std::pair<uint64_t, uint64_t>> trimList;
+  std::list<std::pair<uint64_t, uint32_t>> trimList;
 
   void dmaInitDone(uint64_t);
   void dmaComplete(uint64_t);
-  void trimDone(uint64_t);
+  void trimDone(uint64_t, uint64_t);
 
  public:
   DatasetManagement(ObjectData &, Subsystem *);
