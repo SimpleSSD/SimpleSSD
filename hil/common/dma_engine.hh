@@ -125,7 +125,10 @@ class DMAEngine : public Object {
   void writeNext(DMASession &) noexcept;
 
   inline DMASession &findSession(uint64_t);
-  inline uint64_t createSession(DMATag, Event, uint64_t, uint64_t, uint8_t *);
+  inline std::pair<const uint64_t, DMASession> &createSession(DMATag, Event,
+                                                              uint64_t,
+                                                              uint64_t,
+                                                              uint8_t *);
   inline void destroySession(uint64_t);
 
  public:
