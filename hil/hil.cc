@@ -295,7 +295,13 @@ void HIL::format(Request *req, FormatOption option) {
 }
 
 void HIL::compare(Request *req, bool fused) {
-  submit(fused ? Operation::CompareAndWrite : Operation::Compare, req);
+  if (fused) {
+    // Lazy submit until corresponding write is submitted
+    panic("Fused operation not supported yet.");
+  }
+  else {
+    submit(Operation::Compare, req);
+  }
 }
 
 LPN HIL::getPageUsage(LPN offset, LPN length) {
