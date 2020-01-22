@@ -86,7 +86,7 @@
       <!-- <int> Read latency in cycles -->
       <config name="ReadLatency">2</config>
       <!-- <int> Write latency in cycles -->
-      <config name="WriteLatency">1</config>
+      <config name="WriteLatency">2</config>
       <!-- <float> Operating current in mA -->
       <config name="IDD">750</config>
       <!-- <float> Powerdown current in mA -->
