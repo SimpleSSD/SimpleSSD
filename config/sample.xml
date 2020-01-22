@@ -63,7 +63,7 @@
     <!-- LLC -->
     <section name="cache">
       <!-- <int> Shared cache size in bytes -->
-      <config name="CacheSize">256K</config>
+      <config name="Size">256K</config>
       <!-- <int> # way of set-associative cache -->
       <config name="WaySize">8</config>
       <!-- <time> Tag lookup latency in cycles -->
