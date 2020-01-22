@@ -12,11 +12,20 @@
 namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
-const char NAME_LINE_SIZE[] = "LineSize";
-const char NAME_WAY_SIZE[] = "WaySize";
 const char NAME_BUS_CLOCK[] = "BusClock";
 const char NAME_SIZE[] = "Size";
-const char NAME_LATENCY[] = "Latency";
+const char NAME_WAY_SIZE[] = "WaySize";
+const char NAME_TAG_LATENCY[] = "TagLatency";
+const char NAME_DATA_LATENCY[] = "DataLatency";
+const char NAME_RESPONSE_LATENCY[] = "ResponseLatency";
+const char NAME_CLOCK[] = "Clock";
+const char NAME_DATA_RATE[] = "DataRate";
+const char NAME_DATA_WIDTH[] = "DataWidth";
+const char NAME_READ_LATENCY[] = "ReadLatency";
+const char NAME_WRITE_LATENCY[] = "WriteLatency";
+const char NAME_IDD[] = "IDD";
+const char NAME_ISB[] = "ISB1";
+const char NAME_VCC[] = "VCC";
 const char NAME_CHANNEL[] = "Channel";
 const char NAME_RANK[] = "Rank";
 const char NAME_BANK[] = "Bank";
@@ -81,15 +90,25 @@ const char NAME_MIN_WRITE_BURST[] = "MinWriteBurst";
 
 Config::Config() {
   /* Default memory subsystem */
-  system.size = 262144;
-  system.way = 8;
-  system.latency = 10000;
-  system.busClock = 200000000;
+  systemBusSpeed = 200000000;
 
-  /* 32MB SRAM */
-  sram.lineSize = 64;
-  sram.size = 33554432;
-  sram.latency = 50000;
+  /* gem5's L2 cache config */
+  llc.size = 262144;
+  llc.way = 8;
+  llc.tagCycles = 20;
+  llc.dataCycles = 20;
+  llc.responseCycles = 20;
+
+  /* CY7C1550KV18 DDR SRAM @ max. 450MHz 2M x36 */
+  sram.size = 75497472;
+  sram.clockSpeed = 400000000;
+  sram.dataRate = 2;
+  sram.dataWidth = 36;
+  sram.readCycles = 2;
+  sram.writeCycles = 2;
+  sram.pIDD = 750.f;
+  sram.pISB1 = 320.f;
+  sram.pVCC = 1.8f;
 
   /* MT53B512M32 LPDDR4-3200 512Mb x32 */
   dramModel = Model::LPDDR4;
@@ -157,20 +176,28 @@ Config::Config() {
   controller.pagePolicy = PagePolicy::OpenAdaptive;
 }
 
-void Config::loadSystem(pugi::xml_node &section) {
+void Config::loadCache(pugi::xml_node &section, CacheConfig &cache) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, system.size);
-    LOAD_NAME_UINT_TYPE(node, NAME_WAY_SIZE, uint32_t, system.way);
-    LOAD_NAME_TIME(node, NAME_LATENCY, system.latency);
-    LOAD_NAME_UINT(node, NAME_BUS_CLOCK, system.busClock);
+    LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, cache.size);
+    LOAD_NAME_UINT_TYPE(node, NAME_WAY_SIZE, uint16_t, cache.way);
+    LOAD_NAME_UINT_TYPE(node, NAME_TAG_LATENCY, uint16_t, cache.tagCycles);
+    LOAD_NAME_UINT_TYPE(node, NAME_DATA_LATENCY, uint16_t, cache.dataCycles);
+    LOAD_NAME_UINT_TYPE(node, NAME_RESPONSE_LATENCY, uint16_t,
+                        cache.responseCycles);
   }
 }
 
 void Config::loadSRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, sram.size);
-    LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint32_t, sram.lineSize);
-    LOAD_NAME_TIME(node, NAME_LATENCY, sram.latency);
+    LOAD_NAME_UINT_TYPE(node, NAME_DATA_RATE, uint16_t, sram.dataRate);
+    LOAD_NAME_UINT_TYPE(node, NAME_DATA_WIDTH, uint16_t, sram.dataWidth);
+    LOAD_NAME_UINT(node, NAME_CLOCK, sram.clockSpeed);
+    LOAD_NAME_UINT_TYPE(node, NAME_READ_LATENCY, uint16_t, sram.readCycles);
+    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_LATENCY, uint16_t, sram.writeCycles);
+    LOAD_NAME_FLOAT(node, NAME_IDD, sram.pIDD);
+    LOAD_NAME_FLOAT(node, NAME_ISB, sram.pISB1);
+    LOAD_NAME_FLOAT(node, NAME_VCC, sram.pVCC);
   }
 }
 
@@ -260,17 +287,24 @@ void Config::loadTimingDRAM(pugi::xml_node &section) {
   }
 }
 
-void Config::storeSystem(pugi::xml_node &section) {
-  STORE_NAME_UINT(section, NAME_SIZE, system.size);
-  STORE_NAME_UINT(section, NAME_WAY_SIZE, system.way);
-  STORE_NAME_TIME(section, NAME_LATENCY, system.latency);
-  STORE_NAME_UINT(section, NAME_BUS_CLOCK, system.busClock);
+void Config::storeCache(pugi::xml_node &section, CacheConfig &cache) {
+  STORE_NAME_UINT(section, NAME_SIZE, cache.size);
+  STORE_NAME_UINT(section, NAME_WAY_SIZE, cache.way);
+  STORE_NAME_UINT(section, NAME_TAG_LATENCY, cache.tagCycles);
+  STORE_NAME_UINT(section, NAME_DATA_LATENCY, cache.dataCycles);
+  STORE_NAME_UINT(section, NAME_RESPONSE_LATENCY, cache.responseCycles);
 }
 
 void Config::storeSRAM(pugi::xml_node &section) {
-  STORE_NAME_UINT(section, NAME_LINE_SIZE, sram.lineSize);
   STORE_NAME_UINT(section, NAME_SIZE, sram.size);
-  STORE_NAME_UINT(section, NAME_LATENCY, sram.latency);
+  STORE_NAME_UINT(section, NAME_DATA_RATE, sram.dataRate);
+  STORE_NAME_UINT(section, NAME_DATA_WIDTH, sram.dataWidth);
+  STORE_NAME_UINT(section, NAME_CLOCK, sram.clockSpeed);
+  STORE_NAME_UINT(section, NAME_READ_LATENCY, sram.readCycles);
+  STORE_NAME_UINT(section, NAME_WRITE_LATENCY, sram.writeCycles);
+  STORE_NAME_FLOAT(section, NAME_IDD, sram.pIDD);
+  STORE_NAME_FLOAT(section, NAME_ISB, sram.pISB1);
+  STORE_NAME_FLOAT(section, NAME_VCC, sram.pVCC);
 }
 
 void Config::storeDRAMStructure(pugi::xml_node &section) {
@@ -349,6 +383,8 @@ void Config::loadFrom(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
+    LOAD_NAME_UINT(node, NAME_BUS_CLOCK, systemBusSpeed);
+
     if (strcmp(name, "sram") == 0 && isSection(node)) {
       loadSRAM(node);
     }
@@ -379,6 +415,8 @@ void Config::loadFrom(pugi::xml_node &section) {
 void Config::storeTo(pugi::xml_node &section) {
   pugi::xml_node node, node2;
 
+  STORE_NAME_UINT(section, NAME_BUS_CLOCK, systemBusSpeed);
+
   STORE_SECTION(section, "sram", node);
   storeSRAM(node);
 
@@ -399,14 +437,6 @@ void Config::storeTo(pugi::xml_node &section) {
 }
 
 void Config::update() {
-  // Validate SRAM
-  panic_if(sram.lineSize == 0, "Invalid line size");
-  panic_if(sram.latency == 0, "Invalid latency");
-
-  if (sram.size > 0) {
-    panic_if(sram.size % sram.lineSize != 0, "Size not aligned");
-  }
-
   if (dramModel == Model::LPDDR4) {
     panic_if(dram.channel % 2 != 0, "LPDDR4 has 2n channels.");
 
@@ -420,6 +450,8 @@ uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {
     case DRAMModel:
       return dramModel;
+    case SystemBusSpeed:
+      return systemBusSpeed;
   }
 
   return 0;
@@ -432,12 +464,19 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
     case DRAMModel:
       dramModel = (Model)value;
       break;
+    case SystemBusSpeed:
+      systemBusSpeed = value;
+      break;
     default:
       ret = false;
       break;
   }
 
   return ret;
+}
+
+Config::CacheConfig *Config::getLLC() {
+  return &llc;
 }
 
 Config::SRAMStructure *Config::getSRAM() {

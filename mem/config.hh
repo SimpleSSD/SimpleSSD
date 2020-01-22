@@ -23,6 +23,7 @@ class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
     DRAMModel,
+    SystemBusSpeed,
   };
 
   enum Model : uint8_t {
@@ -48,19 +49,26 @@ class Config : public BaseConfig {
     CloseAdaptive,
   };
 
-  //! Memory subsystem parameters
-  struct SystemConfig {
-    uint32_t size;
-    uint32_t way;
-    uint64_t latency;
-    uint64_t busClock;
+  //! Cache parameters
+  struct CacheConfig {
+    uint32_t size;            //!< Cache size
+    uint16_t way;             //!< Number of ways
+    uint16_t tagCycles;       //!< Tag lookup latency
+    uint16_t dataCycles;      //!< Data access latency
+    uint16_t responseCycles;  //!< Miss return path latency
   };
 
   //! SRAM structure parameters
   struct SRAMStructure {
-    uint32_t size;      //!< SRAM size
-    uint32_t lineSize;  //!< Access granularity
-    uint64_t latency;   //!< Latency in ps / line
+    uint32_t size;         //!< SRAM size
+    uint16_t dataRate;     //!< Data / clock
+    uint16_t dataWidth;    //!< Data bus width in bits
+    uint64_t clockSpeed;   //!< Operating clock speed
+    uint16_t readCycles;   //!< Read latency
+    uint16_t writeCycles;  //!< Write latency
+    float pIDD;            //!< Operating current in mA
+    float pISB1;           //!< Idle/Powerdown current in mA
+    float pVCC;            //!< Operating voltage in V
   };
 
   //! DRAM structure parameters.
@@ -126,7 +134,9 @@ class Config : public BaseConfig {
   };
 
  private:
-  SystemConfig system;
+  uint64_t systemBusSpeed;
+
+  CacheConfig llc;
   SRAMStructure sram;
   DRAMStructure dram;
   DRAMTiming timing;
@@ -135,13 +145,13 @@ class Config : public BaseConfig {
 
   Model dramModel;
 
-  void loadSystem(pugi::xml_node &);
+  void loadCache(pugi::xml_node &, CacheConfig &);
   void loadSRAM(pugi::xml_node &);
   void loadDRAMStructure(pugi::xml_node &);
   void loadDRAMTiming(pugi::xml_node &);
   void loadDRAMPower(pugi::xml_node &);
   void loadTimingDRAM(pugi::xml_node &);
-  void storeSystem(pugi::xml_node &);
+  void storeCache(pugi::xml_node &, CacheConfig &);
   void storeSRAM(pugi::xml_node &);
   void storeDRAMStructure(pugi::xml_node &);
   void storeDRAMTiming(pugi::xml_node &);
@@ -160,6 +170,7 @@ class Config : public BaseConfig {
   uint64_t readUint(uint32_t) override;
   bool writeUint(uint32_t, uint64_t) override;
 
+  CacheConfig *getLLC();
   SRAMStructure *getSRAM();
   DRAMStructure *getDRAM();
   DRAMTiming *getDRAMTiming();
