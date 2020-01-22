@@ -12,20 +12,36 @@
 namespace SimpleSSD::Memory {
 
 System::System(CPU::CPU *e, ConfigReader *c, Log *l)
-    : cpu(e), config(c), log(l), totalCapacity(0) {}
+    : cpu(e), config(c), log(l) {
+  // TODO: Create SRAM object
+  SRAMbaseAddress = 0;
+  totalSRAMCapacity = 0;
+
+  // TODO: Create DRAM object
+  DRAMbaseAddress = 0;
+  totalDRAMCapacity = 0;
+}
 
 System::~System() {}
 
-uint64_t System::allocate(uint64_t size, std::string &&name, bool dry) {
-  uint64_t ret = 0;
-  uint64_t unallocated = totalCapacity;
-
-  if (UNLIKELY(unallocated == 0)) {
-    panic_log("Unexpected memory capacity.");
+uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
+                          bool dry) {
+  if (UNLIKELY(type >= MemoryType::Invalid)) {
+    panic_log("Invalid memory type %u.", (uint8_t)type);
   }
 
-  for (auto &iter : addressMap) {
-    unallocated -= iter.size;
+  uint64_t unallocated =
+      type == MemoryType::DRAM ? totalDRAMCapacity : totalSRAMCapacity;
+  uint64_t lastBase = 0;
+
+  for (auto &iter : allocatedAddressMap) {
+    if (validate(iter.base, iter.size) == type) {
+      unallocated -= iter.size;
+
+      if (lastBase < iter.base + iter.size) {
+        lastBase = iter.base + iter.size;
+      }
+    }
   }
 
   if (dry) {
@@ -36,7 +52,7 @@ uint64_t System::allocate(uint64_t size, std::string &&name, bool dry) {
     // Print current memory map
     uint64_t i = 0;
 
-    for (auto &iter : addressMap) {
+    for (auto &iter : allocatedAddressMap) {
       warn_log("%" PRIu64 ": %" PRIx64 "h + %" PRIx64 "h: %s", i, iter.base,
                iter.size, iter.name.c_str());
     }
@@ -46,13 +62,9 @@ uint64_t System::allocate(uint64_t size, std::string &&name, bool dry) {
               size, unallocated);
   }
 
-  if (addressMap.size() > 0) {
-    ret = addressMap.back().base + addressMap.back().size;
-  }
+  allocatedAddressMap.emplace_back(std::move(name), lastBase, size);
 
-  addressMap.emplace_back(std::move(name), ret, size);
-
-  return ret;
+  return lastBase;
 }
 
 void System::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -62,13 +74,16 @@ void System::getStatValues(std::vector<double> &) noexcept {}
 void System::resetStatValues() noexcept {}
 
 void System::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, totalCapacity);
+  BACKUP_SCALAR(out, SRAMbaseAddress);
+  BACKUP_SCALAR(out, totalSRAMCapacity);
+  BACKUP_SCALAR(out, DRAMbaseAddress);
+  BACKUP_SCALAR(out, totalDRAMCapacity);
 
-  uint64_t size = addressMap.size();
+  uint64_t size = allocatedAddressMap.size();
 
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : addressMap) {
+  for (auto &iter : allocatedAddressMap) {
     size = iter.name.length();
     BACKUP_SCALAR(out, size);
 
@@ -80,13 +95,16 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void System::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, totalCapacity);
+  RESTORE_SCALAR(in, SRAMbaseAddress);
+  RESTORE_SCALAR(in, totalSRAMCapacity);
+  RESTORE_SCALAR(in, DRAMbaseAddress);
+  RESTORE_SCALAR(in, totalDRAMCapacity);
 
   uint64_t size;
 
   RESTORE_SCALAR(in, size);
 
-  addressMap.reserve(size);
+  allocatedAddressMap.reserve(size);
 
   for (uint64_t i = 0; i < size; i++) {
     uint64_t l, a, s;
@@ -100,7 +118,7 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, a);
     RESTORE_SCALAR(in, s);
 
-    addressMap.emplace_back(std::move(name), a, s);
+    allocatedAddressMap.emplace_back(std::move(name), a, s);
   }
 }
 
