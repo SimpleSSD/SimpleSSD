@@ -68,8 +68,8 @@
     </section>
     <!-- SRAM -->
     <section name="sram">
-      <!-- <int> Total size of SRAM in bytes -->
-      <config name="Size">9M</config>
+      <!-- <int> Total size of SRAM in bits -->
+      <config name="Size">72M</config>
       <!-- <int> Operating clock speed in Hz -->
       <config name="Clock">400m</config>
       <!-- <int> Data / clock -->
