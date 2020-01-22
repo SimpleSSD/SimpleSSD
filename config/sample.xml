@@ -57,14 +57,21 @@
   <section name="memory">
     <!-- System -->
     <section name="system">
+      <!-- <int> Bus clock speed in Hz -->
+      <config name="BusClock">200m</config>
+    </section>
+    <!-- LLC -->
+    <section name="cache">
       <!-- <int> Shared cache size in bytes -->
       <config name="CacheSize">256K</config>
       <!-- <int> # way of set-associative cache -->
       <config name="WaySize">8</config>
-      <!-- <time> Access latency of SRAM -->
-      <config name="Latency">4ns</config>
-      <!-- <int> Bus clock speed in Hz -->
-      <config name="BusClock">200m</config>
+      <!-- <time> Tag lookup latency in cycles -->
+      <config name="TagLatency">20</config>
+      <!-- <time> Data access latency in cycles -->
+      <config name="DataLatency">20</config>
+      <!-- <time> Latency of miss return path in cycles -->
+      <config name="ResponseLatency">20</config>
     </section>
     <!-- SRAM -->
     <section name="sram">
@@ -76,9 +83,9 @@
       <config name="DataRate">2</config>
       <!-- <int> Data width in bits -->
       <config name="DataWidth">36</config>
-      <!-- <int> Read latency in cycle -->
+      <!-- <int> Read latency in cycles -->
       <config name="ReadLatency">2</config>
-      <!-- <int> Write latency in cycle -->
+      <!-- <int> Write latency in cycles -->
       <config name="WriteLatency">1</config>
       <!-- <float> Operating current in mA -->
       <config name="IDD">750</config>
