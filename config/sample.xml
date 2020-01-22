@@ -31,18 +31,6 @@
            Possible suffix (case sensitive):
             s, ms, us, ns, ps
    -->
-  <!-- Simulation configuration -->
-  <section name="sim">
-    <!--
-      <int> Controller to use (Only for SimpleSSD-Standalone)
-
-      Possible values:
-        1: NVMe controller
-        2: SATA controller
-        3: UFS controller
-     -->
-    <config name="Controller">1</config>
-  </section>
   <!--
     CPU configuration
    -->
