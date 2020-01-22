@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "cpu/cpu.hh"
-#include "mem/memory_system.hh"
+#include "mem/system.hh"
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/log.hh"

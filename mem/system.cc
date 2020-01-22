@@ -5,7 +5,7 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "mem/memory_system.hh"
+#include "mem/system.hh"
 
 #include "util/algorithm.hh"
 
