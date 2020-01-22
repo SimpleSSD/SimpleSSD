@@ -24,6 +24,41 @@ System::System(CPU::CPU *e, ConfigReader *c, Log *l)
 
 System::~System() {}
 
+void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
+  auto type = validate(address, length);
+
+  if (UNLIKELY(type == MemoryType::Invalid)) {
+    panic_log("Invalid memory read from %" PRIX64 "h + %Xh", address, length);
+  }
+
+  if (type == MemoryType::SRAM) {
+    address -= SRAMbaseAddress;
+    // TODO: Access SRAM here
+  }
+  else {
+    address -= DRAMbaseAddress;
+    // TODO: Access DRAM here
+  }
+}
+
+void System::write(uint64_t address, uint32_t length, Event eid,
+                   uint64_t data) {
+  auto type = validate(address, length);
+
+  if (UNLIKELY(type == MemoryType::Invalid)) {
+    panic_log("Invalid memory write to %" PRIX64 "h + %Xh", address, length);
+  }
+
+  if (type == MemoryType::SRAM) {
+    address -= SRAMbaseAddress;
+    // TODO: Access SRAM here
+  }
+  else {
+    address -= DRAMbaseAddress;
+    // TODO: Access DRAM here
+  }
+}
+
 uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
                           bool dry) {
   if (UNLIKELY(type >= MemoryType::Invalid)) {
