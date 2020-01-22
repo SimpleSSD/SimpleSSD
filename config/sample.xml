@@ -62,18 +62,30 @@
       <!-- <int> # way of set-associative cache -->
       <config name="WaySize">8</config>
       <!-- <time> Access latency of SRAM -->
-      <config name="Latency">10ns</config>
+      <config name="Latency">4ns</config>
       <!-- <int> Bus clock speed in Hz -->
       <config name="BusClock">200m</config>
     </section>
     <!-- SRAM -->
     <section name="sram">
-      <!-- <int> Total size of SRAM -->
-      <config name="Size">8M</config>
-      <!-- <time> Access latency of SRAM -->
-      <config name="Latency">50ns</config>
-      <!-- <int> Access granularity in bytes (for latency calculation) -->
-      <config name="LineSize">64</config>
+      <!-- <int> Total size of SRAM in bytes -->
+      <config name="Size">9M</config>
+      <!-- <int> Operating clock speed in Hz -->
+      <config name="Clock">400m</config>
+      <!-- <int> Data / clock -->
+      <config name="DataRate">2</config>
+      <!-- <int> Data width in bits -->
+      <config name="DataWidth">36</config>
+      <!-- <int> Read latency in cycle -->
+      <config name="ReadLatency">2</config>
+      <!-- <int> Write latency in cycle -->
+      <config name="WriteLatency">1</config>
+      <!-- <float> Operating current in mA -->
+      <config name="IDD">750</config>
+      <!-- <float> Powerdown current in mA -->
+      <config name="ISB1">320</config>
+      <!-- <float> Operating voltage in V -->
+      <config name="VCC">1.8</config>
     </section>
     <!-- DRAM -->
     <section name="dram">
