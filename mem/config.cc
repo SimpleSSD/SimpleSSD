@@ -13,6 +13,8 @@ namespace SimpleSSD::Memory {
 
 const char NAME_MODEL[] = "Model";
 const char NAME_LINE_SIZE[] = "LineSize";
+const char NAME_WAY_SIZE[] = "WaySize";
+const char NAME_BUS_CLOCK[] = "BusClock";
 const char NAME_SIZE[] = "Size";
 const char NAME_LATENCY[] = "Latency";
 const char NAME_CHANNEL[] = "Channel";
@@ -78,10 +80,16 @@ const char NAME_WRITE_MIN_THRESHOLD[] = "WriteThreshold";
 const char NAME_MIN_WRITE_BURST[] = "MinWriteBurst";
 
 Config::Config() {
+  /* Default memory subsystem */
+  system.size = 262144;
+  system.way = 8;
+  system.latency = 10000;
+  system.busClock = 200000000;
+
   /* 32MB SRAM */
   sram.lineSize = 64;
   sram.size = 33554432;
-  sram.latency = 20;
+  sram.latency = 50000;
 
   /* MT53B512M32 LPDDR4-3200 512Mb x32 */
   dramModel = Model::LPDDR4;
@@ -149,11 +157,20 @@ Config::Config() {
   controller.pagePolicy = PagePolicy::OpenAdaptive;
 }
 
+void Config::loadSystem(pugi::xml_node &section) {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, system.size);
+    LOAD_NAME_UINT_TYPE(node, NAME_WAY_SIZE, uint32_t, system.way);
+    LOAD_NAME_TIME(node, NAME_LATENCY, system.latency);
+    LOAD_NAME_UINT(node, NAME_BUS_CLOCK, system.busClock);
+  }
+}
+
 void Config::loadSRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint16_t, sram.lineSize);
-    LOAD_NAME_UINT(node, NAME_SIZE, sram.size);
-    LOAD_NAME_UINT(node, NAME_LATENCY, sram.latency);
+    LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, sram.size);
+    LOAD_NAME_UINT_TYPE(node, NAME_LINE_SIZE, uint32_t, sram.lineSize);
+    LOAD_NAME_TIME(node, NAME_LATENCY, sram.latency);
   }
 }
 
@@ -241,6 +258,13 @@ void Config::loadTimingDRAM(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_PAGE_POLICY, PagePolicy,
                         controller.pagePolicy);
   }
+}
+
+void Config::storeSystem(pugi::xml_node &section) {
+  STORE_NAME_UINT(section, NAME_SIZE, system.size);
+  STORE_NAME_UINT(section, NAME_WAY_SIZE, system.way);
+  STORE_NAME_TIME(section, NAME_LATENCY, system.latency);
+  STORE_NAME_UINT(section, NAME_BUS_CLOCK, system.busClock);
 }
 
 void Config::storeSRAM(pugi::xml_node &section) {

@@ -48,11 +48,19 @@ class Config : public BaseConfig {
     CloseAdaptive,
   };
 
+  //! Memory subsystem parameters
+  struct SystemConfig {
+    uint32_t size;
+    uint32_t way;
+    uint64_t latency;
+    uint64_t busClock;
+  };
+
   //! SRAM structure parameters
   struct SRAMStructure {
-    uint64_t size;
-    uint64_t lineSize;
-    uint64_t latency;
+    uint32_t size;      //!< SRAM size
+    uint32_t lineSize;  //!< Access granularity
+    uint64_t latency;   //!< Latency in ps / line
   };
 
   //! DRAM structure parameters.
@@ -118,6 +126,7 @@ class Config : public BaseConfig {
   };
 
  private:
+  SystemConfig system;
   SRAMStructure sram;
   DRAMStructure dram;
   DRAMTiming timing;
@@ -126,11 +135,13 @@ class Config : public BaseConfig {
 
   Model dramModel;
 
+  void loadSystem(pugi::xml_node &);
   void loadSRAM(pugi::xml_node &);
   void loadDRAMStructure(pugi::xml_node &);
   void loadDRAMTiming(pugi::xml_node &);
   void loadDRAMPower(pugi::xml_node &);
   void loadTimingDRAM(pugi::xml_node &);
+  void storeSystem(pugi::xml_node &);
   void storeSRAM(pugi::xml_node &);
   void storeDRAMStructure(pugi::xml_node &);
   void storeDRAMTiming(pugi::xml_node &);
