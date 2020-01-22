@@ -55,14 +55,25 @@
     Memory subsystem configuration.
    -->
   <section name="memory">
+    <!-- System -->
+    <section name="system">
+      <!-- <int> Shared cache size in bytes -->
+      <config name="CacheSize">256K</config>
+      <!-- <int> # way of set-associative cache -->
+      <config name="WaySize">8</config>
+      <!-- <time> Access latency of SRAM -->
+      <config name="Latency">10ns</config>
+      <!-- <int> Bus clock speed in Hz -->
+      <config name="BusClock">200m</config>
+    </section>
     <!-- SRAM -->
     <section name="sram">
       <!-- <int> Total size of SRAM -->
       <config name="Size">8M</config>
-      <!-- <int> Access latency of SRAM in cycle -->
-      <config name="Latency">20</config>
+      <!-- <time> Access latency of SRAM -->
+      <config name="Latency">50ns</config>
       <!-- <int> Access granularity in bytes (for latency calculation) -->
-      <config name="LineSize">8</config>
+      <config name="LineSize">64</config>
     </section>
     <!-- DRAM -->
     <section name="dram">
@@ -167,7 +178,7 @@
 
           Possible values:
             0: FCFS: First come first serve
-            1: FR-FCFS: First row-hit then first come first serve
+            1: FR-FCFS: First ready then first come first serve
          -->
         <config name="Scheduling">1</config>
         <!--
