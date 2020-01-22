@@ -24,7 +24,6 @@ const char NAME_BURST_CHOP[] = "BurstChop";
 const char NAME_BURST_LENGTH[] = "BurstLength";
 const char NAME_CHIP_SIZE[] = "ChipSize";
 const char NAME_ROWBUFFER_SIZE[] = "RowBufferSize";
-const char NAME_ACTIVATION_LIMIT[] = "ActivationLimit";
 
 const char NAME_TCK[] = "tCK";
 const char NAME_TRRD[] = "tRRD";
@@ -96,7 +95,6 @@ Config::Config() {
   dram.burstLength = 32;
   dram.chipSize = 1073741824;
   dram.rowSize = 2048;
-  dram.activationLimit = 4;
 
   timing.tCK = 625;
   timing.tRCD = MAX(18000, 4 * timing.tCK);
@@ -170,7 +168,6 @@ void Config::loadDRAMStructure(pugi::xml_node &section) {
     LOAD_NAME_UINT_TYPE(node, NAME_BURST_LENGTH, uint16_t, dram.burstLength);
     LOAD_NAME_UINT(node, NAME_CHIP_SIZE, dram.chipSize);
     LOAD_NAME_UINT(node, NAME_ROWBUFFER_SIZE, dram.rowSize);
-    LOAD_NAME_UINT(node, NAME_ACTIVATION_LIMIT, dram.activationLimit);
   }
 }
 
@@ -262,7 +259,6 @@ void Config::storeDRAMStructure(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_BURST_LENGTH, dram.burstLength);
   STORE_NAME_UINT(section, NAME_CHIP_SIZE, dram.chipSize);
   STORE_NAME_UINT(section, NAME_ROWBUFFER_SIZE, dram.rowSize);
-  STORE_NAME_UINT(section, NAME_ACTIVATION_LIMIT, dram.activationLimit);
 }
 
 void Config::storeDRAMTiming(pugi::xml_node &section) {

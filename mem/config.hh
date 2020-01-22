@@ -57,16 +57,15 @@ class Config : public BaseConfig {
 
   //! DRAM structure parameters.
   struct DRAMStructure {
-    uint8_t channel;           //!< # Channel
-    uint8_t rank;              //!< # Rank / Channel
-    uint8_t bank;              //!< # Bank / Rank
-    uint8_t chip;              //!< # Chip / Rank
-    uint16_t width;            //!< Bus width / Chip
-    uint8_t burstChop;         //!< Burst chop (or smaller BL)
-    uint8_t burstLength;       //!< BL (or larger BL)
-    uint64_t chipSize;         //!< bytes / Chip
-    uint32_t rowSize;         //!< Row buffer size
-    uint32_t activationLimit;  //!< Bank activation limit (tFAW)
+    uint8_t channel;      //!< # Channel
+    uint8_t rank;         //!< # Rank / Channel
+    uint8_t bank;         //!< # Bank / Rank
+    uint8_t chip;         //!< # Chip / Rank
+    uint16_t width;       //!< Bus width / Chip
+    uint8_t burstChop;    //!< Burst chop (or smaller BL)
+    uint8_t burstLength;  //!< BL (or larger BL)
+    uint64_t chipSize;    //!< bytes / Chip
+    uint32_t rowSize;     //!< Row buffer size
   };
 
   //! DRAM timing parameters. Unit is ps

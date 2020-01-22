@@ -94,8 +94,6 @@
         <config name="ChipSize">1073741824</config>
         <!-- <int> Row buffersize in bytes -->
         <config name="RowBufferSize">2048</config>
-        <!-- <int> Bank activation limit in tFAW -->
-        <config name="ActivationLimit">4</config>
       </section>
       <!--
         DRAM timing configuration
