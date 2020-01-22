@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "cpu/cpu.hh"
+#include "mem/memory_system.hh"
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/log.hh"
@@ -65,19 +66,6 @@ namespace SimpleSSD {
 #define info(format, ...)
 #endif
 
-// Forware definitions
-namespace Memory::DRAM {
-
-class DRAMController;
-
-}
-
-namespace Memory::SRAM {
-
-class AbstractSRAM;
-
-}
-
 /**
  * \brief Common data for Object
  *
@@ -87,22 +75,15 @@ class AbstractSRAM;
 struct ObjectData {
   /* SSD hardware */
   CPU::CPU *cpu;
-  Memory::DRAM::DRAMController *dram;
-  Memory::SRAM::AbstractSRAM *sram;
+  Memory::System *memory;
 
   /* Simulation utilities */
   ConfigReader *config;
   Log *log;
 
-  ObjectData()
-      : cpu(nullptr),
-        dram(nullptr),
-        sram(nullptr),
-        config(nullptr),
-        log(nullptr) {}
-  ObjectData(CPU::CPU *e, Memory::DRAM::DRAMController *d,
-             Memory::SRAM::AbstractSRAM *s, ConfigReader *c, Log *l)
-      : cpu(e), dram(d), sram(s), config(c), log(l) {}
+  ObjectData() : cpu(nullptr), memory(nullptr), config(nullptr), log(nullptr) {}
+  ObjectData(CPU::CPU *e, Memory::System *s, ConfigReader *c, Log *l)
+      : cpu(e), memory(s), config(c), log(l) {}
 };
 
 //! Logical Page Number definition
@@ -234,9 +215,5 @@ class Object {
 };
 
 }  // namespace SimpleSSD
-
-#include "mem/abstract_ram.hh"
-#include "mem/dram/controller.hh"
-#include "mem/sram/abstract_sram.hh"
 
 #endif
