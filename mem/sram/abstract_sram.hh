@@ -16,7 +16,7 @@
 
 namespace SimpleSSD::Memory::SRAM {
 
-class AbstractSRAM : public AbstractRAM {
+class AbstractSRAM : public Object {
  protected:
   struct Stats {
     uint64_t count;
@@ -44,6 +44,9 @@ class AbstractSRAM : public AbstractRAM {
  public:
   AbstractSRAM(ObjectData &);
   virtual ~AbstractSRAM();
+
+  virtual void read(uint64_t, uint32_t, Event, uint64_t = 0) = 0;
+  virtual void write(uint64_t, uint32_t, Event, uint64_t = 0) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
