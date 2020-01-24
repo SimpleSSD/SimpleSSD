@@ -62,8 +62,13 @@ void BusyStat::busyEnd(uint64_t now) noexcept {
   }
 }
 
-uint64_t BusyStat::getBusyTick() noexcept {
-  return totalBusy;
+uint64_t BusyStat::getBusyTick(uint64_t now) noexcept {
+  if (isBusy) {
+    return totalBusy + (now - lastBusyAt);
+  }
+  else {
+    return totalBusy;
+  }
 }
 
 void BusyStat::clear(uint64_t now) noexcept {

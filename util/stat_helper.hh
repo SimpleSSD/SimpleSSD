@@ -46,7 +46,7 @@ class BusyStat {
   void busyBegin(uint64_t) noexcept;
   void busyEnd(uint64_t) noexcept;
 
-  uint64_t getBusyTick() noexcept;
+  uint64_t getBusyTick(uint64_t) noexcept;
 
   void clear(uint64_t) noexcept;
 
