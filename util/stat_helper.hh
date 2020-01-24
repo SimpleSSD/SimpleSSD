@@ -10,7 +10,7 @@
 #ifndef __SIMPLESSD_UTIL_STAT_HELPER_HH__
 #define __SIMPLESSD_UTIL_STAT_HELPER_HH__
 
-#include <cinttypes>
+#include "sim/checkpoint.hh"
 
 namespace SimpleSSD {
 
@@ -28,6 +28,9 @@ class IOStat {
   uint64_t getSize() noexcept;
 
   void clear() noexcept;
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 class BusyStat {
@@ -46,6 +49,9 @@ class BusyStat {
   uint64_t getBusyTick() noexcept;
 
   void clear(uint64_t) noexcept;
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &) noexcept;
 };
 
 }  // namespace SimpleSSD

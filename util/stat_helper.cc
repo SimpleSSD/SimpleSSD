@@ -29,6 +29,16 @@ void IOStat::clear() noexcept {
   size = 0;
 }
 
+void IOStat::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, count);
+  BACKUP_SCALAR(out, size);
+}
+
+void IOStat::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, count);
+  RESTORE_SCALAR(in, size);
+}
+
 BusyStat::BusyStat() : isBusy(false), depth(0), lastBusyAt(0), totalBusy(0) {}
 
 void BusyStat::busyBegin(uint64_t now) noexcept {
@@ -62,6 +72,20 @@ void BusyStat::clear(uint64_t now) noexcept {
   }
 
   totalBusy = 0;
+}
+
+void BusyStat::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, isBusy);
+  BACKUP_SCALAR(out, depth);
+  BACKUP_SCALAR(out, lastBusyAt);
+  BACKUP_SCALAR(out, totalBusy);
+}
+
+void BusyStat::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, isBusy);
+  RESTORE_SCALAR(in, depth);
+  RESTORE_SCALAR(in, lastBusyAt);
+  RESTORE_SCALAR(in, totalBusy);
 }
 
 }  // namespace SimpleSSD
