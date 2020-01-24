@@ -17,6 +17,18 @@
 
 namespace SimpleSSD::Memory {
 
+namespace SRAM {
+
+class AbstractSRAM;
+
+}
+
+namespace DRAM {
+
+class AbstractDRAM;
+
+}
+
 enum class MemoryType : uint8_t {
   SRAM,
   DRAM,
@@ -40,6 +52,8 @@ class System {
   };
 
   // TODO: Add object of DRAM and SRAM
+  SRAM::AbstractSRAM *sram;
+  DRAM::AbstractDRAM *dram;
 
   uint64_t SRAMbaseAddress;
   uint64_t totalSRAMCapacity;

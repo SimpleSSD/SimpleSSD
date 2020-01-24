@@ -14,10 +14,12 @@ namespace SimpleSSD::Memory {
 System::System(CPU::CPU *e, ConfigReader *c, Log *l)
     : cpu(e), config(c), log(l) {
   // TODO: Create SRAM object
+  sram = nullptr;
   SRAMbaseAddress = 0;
   totalSRAMCapacity = 0;
 
   // TODO: Create DRAM object
+  dram = nullptr;
   DRAMbaseAddress = 0;
   totalDRAMCapacity = 0;
 }
