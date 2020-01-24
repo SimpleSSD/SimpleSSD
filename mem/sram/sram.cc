@@ -97,11 +97,23 @@ void SRAM::resetStatValues() noexcept {
 void SRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractSRAM::createCheckpoint(out);
 
+  BACKUP_SCALAR(out, lastResetAt);
+  BACKUP_SCALAR(out, busyPower);
+  BACKUP_SCALAR(out, idlePower);
+
+  busy.createCheckpoint(out);
+
   scheduler.createCheckpoint(out);
 }
 
 void SRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractSRAM::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, lastResetAt);
+  RESTORE_SCALAR(in, busyPower);
+  RESTORE_SCALAR(in, idlePower);
+
+  busy.restoreCheckpoint(in);
 
   scheduler.restoreCheckpoint(in);
 }
