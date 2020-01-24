@@ -11,6 +11,9 @@ namespace SimpleSSD::Memory::SRAM {
 
 AbstractSRAM::AbstractSRAM(ObjectData &o) : Object(o) {
   pStructure = o.config->getSRAM();
+
+  totalEnergy = 0;
+  averagePower = 0;
 }
 
 AbstractSRAM::~AbstractSRAM() {}
@@ -30,30 +33,43 @@ void AbstractSRAM::getStatList(std::vector<Stat> &list,
   list.emplace_back(prefix + "write.bytes", "Write data size in byte");
   list.emplace_back(prefix + "request_count", "Total request count");
   list.emplace_back(prefix + "bytes", "Total data size in byte");
+  list.emplace_back(prefix + "energy", "Total energy (pJ)");
+  list.emplace_back(prefix + "power", "Average power (mW)");
 }
 
 void AbstractSRAM::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back((double)readStat.count);
-  values.push_back((double)readStat.size);
-  values.push_back((double)writeStat.count);
-  values.push_back((double)writeStat.size);
-  values.push_back((double)(readStat.count + writeStat.count));
-  values.push_back((double)(readStat.size + writeStat.size));
+  values.push_back((double)readStat.getCount());
+  values.push_back((double)readStat.getSize());
+  values.push_back((double)writeStat.getCount());
+  values.push_back((double)writeStat.getSize());
+  values.push_back((double)(readStat.getCount() + writeStat.getCount()));
+  values.push_back((double)(readStat.getSize() + writeStat.getSize()));
+  values.push_back(totalEnergy);
+  values.push_back(averagePower);
 }
 
 void AbstractSRAM::resetStatValues() noexcept {
   readStat.clear();
   writeStat.clear();
+
+  totalEnergy = 0;
+  averagePower = 0;
 }
 
 void AbstractSRAM::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, readStat);
-  BACKUP_SCALAR(out, writeStat);
+  readStat.createCheckpoint(out);
+  writeStat.createCheckpoint(out);
+
+  BACKUP_SCALAR(out, totalEnergy);
+  BACKUP_SCALAR(out, averagePower);
 }
 
 void AbstractSRAM::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, readStat);
-  RESTORE_SCALAR(in, writeStat);
+  readStat.restoreCheckpoint(in);
+  writeStat.restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, totalEnergy);
+  RESTORE_SCALAR(in, averagePower);
 }
 
 }  // namespace SimpleSSD::Memory::SRAM

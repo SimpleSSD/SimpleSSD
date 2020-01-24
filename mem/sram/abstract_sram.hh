@@ -13,31 +13,18 @@
 #include <cinttypes>
 
 #include "sim/object.hh"
+#include "util/stat_helper.hh"
 
 namespace SimpleSSD::Memory::SRAM {
 
 class AbstractSRAM : public Object {
  protected:
-  struct Stats {
-    uint64_t count;
-    uint64_t size;
-
-    Stats() { clear(); }
-
-    void clear() {
-      count = 0;
-      size = 0;
-    }
-  };
-
   Config::SRAMStructure *pStructure;
 
-  // TODO: Add SRAM power model (from McPAT?)
-
-  // double totalEnergy;  // Unit: pJ
-  // double totalPower;   // Unit: mW
-  Stats readStat;
-  Stats writeStat;
+  double totalEnergy;   // Unit: pJ
+  double averagePower;  // Unit: mW
+  IOStat readStat;
+  IOStat writeStat;
 
   void rangeCheck(uint64_t, uint64_t) noexcept;
 
