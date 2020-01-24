@@ -14,6 +14,8 @@
 
 namespace SimpleSSD::Memory {
 
+static const uint64_t MemoryPacketSize = 64;  // 64bytes request size
+
 class Request {
  public:
   uint64_t offset;
