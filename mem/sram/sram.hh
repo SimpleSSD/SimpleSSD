@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_MEM_SRAM_SRAM_HH__
 #define __SIMPLESSD_MEM_SRAM_SRAM_HH__
 
+#include "mem/def.hh"
 #include "mem/sram/abstract_sram.hh"
 #include "util/scheduler.hh"
 
@@ -19,15 +20,27 @@ class SRAM : public AbstractSRAM {
  protected:
   Scheduler<Request *> scheduler;
 
-  uint64_t preSubmit(Request *);
+  /* For power calculation */
+  uint64_t lastResetAt;
+  double busyPower;
+  double idlePower;
+
+  // Stat
+  BusyStat busy;
+
+  uint64_t preSubmitRead(Request *);
+  uint64_t preSubmitWrite(Request *);
   void postDone(Request *);
 
  public:
   SRAM(ObjectData &);
   ~SRAM();
 
-  void read(uint64_t, uint32_t, Event, uint64_t) override;
-  void write(uint64_t, uint32_t, Event, uint64_t) override;
+  void read(uint64_t, Event, uint64_t) override;
+  void write(uint64_t, Event, uint64_t) override;
+
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

@@ -13,59 +13,85 @@ SRAM::SRAM(ObjectData &o)
     : AbstractSRAM(o),
       scheduler(
           o, "Memory::SRAM::scheduler",
-          [this](Request *r) -> uint64_t { return preSubmit(r); },
-          [this](Request *r) -> uint64_t { return preSubmit(r); },
+          [this](Request *r) -> uint64_t { return preSubmitRead(r); },
+          [this](Request *r) -> uint64_t { return preSubmitWrite(r); },
           [this](Request *r) { postDone(r); },
           [this](Request *r) { postDone(r); }, Request::backup,
-          Request::restore) {
+          Request::restore),
+      lastResetAt(0) {
   // Convert cycle to ps
-  pStructure->latency =
-      (uint64_t)(pStructure->latency * 1000000000000.f /
-                 readConfigUint(Section::CPU, CPU::Config::Clock));
+  pStructure->readCycles = (uint64_t)(pStructure->readCycles * 1000000000000.f /
+                                      pStructure->clockSpeed);
+  pStructure->writeCycles = (uint64_t)(
+      pStructure->writeCycles * 1000000000000.f / pStructure->clockSpeed);
 
-  totalCapacity = pStructure->size;
+  // Energy/Power calculation shortcut
+  busyPower = (double)pStructure->pIDD * pStructure->pVCC;  // mW
+  idlePower = (double)pStructure->pISB1 * pStructure->pVCC;
 }
 
 SRAM::~SRAM() {}
 
-uint64_t SRAM::preSubmit(Request *req) {
-  // Calculate latency
-  return DIVCEIL(req->length, pStructure->lineSize) * pStructure->latency;
+uint64_t SRAM::preSubmitRead(Request *req) {
+  return pStructure->readCycles;
+}
+
+uint64_t SRAM::preSubmitWrite(Request *req) {
+  return pStructure->writeCycles;
 }
 
 void SRAM::postDone(Request *req) {
+  busy.busyEnd(getTick());
+
   // Call handler
   scheduleNow(req->eid, req->data);
 
   delete req;
 }
 
-void SRAM::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
-  auto req = new Request(address, length, eid, data);
-
-  rangeCheck(address, length);
+void SRAM::read(uint64_t address, Event eid, uint64_t data) {
+  auto req = new Request(address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
 
-  readStat.count++;
-  readStat.size += length;
+  busy.busyBegin(req->beginAt);
+  readStat.add(MemoryPacketSize);
 
   scheduler.read(req);
 }
 
-void SRAM::write(uint64_t address, uint32_t length, Event eid, uint64_t data) {
-  auto req = new Request(address, length, eid, data);
-
-  rangeCheck(address, length);
+void SRAM::write(uint64_t address, Event eid, uint64_t data) {
+  auto req = new Request(address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
 
-  writeStat.count++;
-  writeStat.size += length;
+  busy.busyBegin(req->beginAt);
+  writeStat.add(MemoryPacketSize);
 
   scheduler.write(req);
+}
+
+void SRAM::getStatValues(std::vector<double> &values) noexcept {
+  // Calculate power
+  uint64_t window = getTick() - lastResetAt;
+  uint64_t busyTick = busy.getBusyTick(getTick());
+
+  panic_if(window < busyTick, "Invalid tick calculation.");
+
+  totalEnergy = busyTick * busyPower + (window - busyTick) * idlePower;
+  averagePower = totalEnergy / window;  // mW
+
+  totalEnergy /= 1000.0;  // to pJ
+
+  AbstractSRAM::getStatValues(values);
+}
+
+void SRAM::resetStatValues() noexcept {
+  lastResetAt = getTick();
+
+  AbstractSRAM::resetStatValues();
 }
 
 void SRAM::createCheckpoint(std::ostream &out) const noexcept {
