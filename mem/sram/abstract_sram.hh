@@ -26,8 +26,6 @@ class AbstractSRAM : public Object {
   IOStat readStat;
   IOStat writeStat;
 
-  void rangeCheck(uint64_t, uint64_t) noexcept;
-
  public:
   AbstractSRAM(ObjectData &);
   virtual ~AbstractSRAM();

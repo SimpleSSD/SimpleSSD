@@ -18,13 +18,6 @@ AbstractSRAM::AbstractSRAM(ObjectData &o) : Object(o) {
 
 AbstractSRAM::~AbstractSRAM() {}
 
-void AbstractSRAM::rangeCheck(uint64_t address, uint64_t length) noexcept {
-  panic_if(address >= pStructure->size, "Address (0x%" PRIx64 ") out of range!",
-           address);
-  panic_if(address + length >= pStructure->size,
-           "Address + Length (0x%" PRIx64 ") out of range!", address + length);
-}
-
 void AbstractSRAM::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
   list.emplace_back(prefix + "read.request_count", "Read request count");
