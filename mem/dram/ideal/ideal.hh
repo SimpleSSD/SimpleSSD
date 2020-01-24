@@ -7,21 +7,25 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_MEM_DRAM_IDEAL_HH__
-#define __SIMPLESSD_MEM_DRAM_IDEAL_HH__
+#ifndef __SIMPLESSD_MEM_DRAM_IDEAL_IDEAL_HH__
+#define __SIMPLESSD_MEM_DRAM_IDEAL_IDEAL_HH__
 
+#include "mem/def.hh"
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM {
 
+/**
+ * \brief Ideal DRAM model
+ *
+ * This model only calculates DRAM bus latency.
+ */
 class Ideal : public AbstractDRAM {
  private:
   Scheduler<Request *> scheduler;
 
-  double interfaceBandwidth;
-  uint64_t pageSize;
-  uint64_t bankSize;
+  double packetLatency;
 
   uint64_t preSubmit(Request *);
   void postDone(Request *);
@@ -30,9 +34,8 @@ class Ideal : public AbstractDRAM {
   Ideal(ObjectData &);
   ~Ideal();
 
-  bool isIdle(uint32_t, uint8_t) override;
-  uint32_t getRowInfo(uint32_t, uint8_t) override;
-  void submit(Address, uint32_t, bool, Event, uint64_t) override;
+  void read(uint64_t, Event, uint64_t = 0);
+  void write(uint64_t, Event, uint64_t = 0);
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
