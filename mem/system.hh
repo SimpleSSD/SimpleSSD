@@ -100,24 +100,28 @@ class System {
    *
    * Read Memory with callback event.
    *
-   * \param[in] address Begin address of SRAM
-   * \param[in] length  Amount of data to read
-   * \param[in] eid     Event ID of callback event
-   * \param[in] data    Event data
+   * \param[in] address   Begin address of SRAM
+   * \param[in] length    Amount of data to read
+   * \param[in] eid       Event ID of callback event
+   * \param[in] data      Event data
+   * \param[in] cacheable False for bypassing LLC (only for DRAM address)
    */
-  void read(uint64_t address, uint32_t length, Event eid, uint64_t data = 0);
+  void read(uint64_t address, uint32_t length, Event eid, uint64_t data = 0,
+            bool cacheable = true);
 
   /**
    * \brief Write Memory
    *
    * Write Memory with callback event.
    *
-   * \param[in] address Begin address of SRAM
-   * \param[in] length  Amount of data to write
-   * \param[in] eid     Event ID of callback event
-   * \param[in] data    Event data
+   * \param[in] address   Begin address of SRAM
+   * \param[in] length    Amount of data to write
+   * \param[in] eid       Event ID of callback event
+   * \param[in] data      Event data
+   * \param[in] cacheable False for bypassing LLC (only for DRAM address)
    */
-  void write(uint64_t address, uint32_t length, Event eid, uint64_t data = 0);
+  void write(uint64_t address, uint32_t length, Event eid, uint64_t data = 0,
+             bool cacheable = true);
 
   /**
    * \brief Allocate range of Memory

@@ -26,7 +26,8 @@ System::System(CPU::CPU *e, ConfigReader *c, Log *l)
 
 System::~System() {}
 
-void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
+void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
+                  bool cacheable) {
   auto type = validate(address, length);
 
   if (UNLIKELY(type == MemoryType::Invalid)) {
@@ -43,8 +44,8 @@ void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data) {
   }
 }
 
-void System::write(uint64_t address, uint32_t length, Event eid,
-                   uint64_t data) {
+void System::write(uint64_t address, uint32_t length, Event eid, uint64_t data,
+                   bool cacheable) {
   auto type = validate(address, length);
 
   if (UNLIKELY(type == MemoryType::Invalid)) {
