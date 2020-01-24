@@ -17,7 +17,11 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
   pStructure = o.config->getDRAM();
   pTiming = o.config->getDRAMTiming();
   pPower = o.config->getDRAMPower();
+}
 
+AbstractDRAM::~AbstractDRAM() {}
+
+void AbstractDRAM::convertMemspec(Data::MemorySpecification &spec) {
   // gem5 src/mem/drampower.cc
   spec.memArchSpec.burstLength = pStructure->burstLength;
   spec.memArchSpec.nbrOfBanks = pStructure->bank;
@@ -74,90 +78,6 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
   spec.memPowerSpec.idd62 = pPower->pIDD6[1];
   spec.memPowerSpec.vdd = pPower->pVDD[0];
   spec.memPowerSpec.vdd2 = pPower->pVDD[1];
-
-  for (uint8_t i = 0; i < pStructure->rank; i++) {
-    dramPower.emplace_back(libDRAMPower(spec, false));
-  }
-
-  powerStat.resize(pStructure->rank);
-
-  for (auto &stat : powerStat) {
-    stat.clear();
-  }
-}
-
-AbstractDRAM::~AbstractDRAM() {}
-
-void AbstractDRAM::getStatList(std::vector<Stat> &list,
-                               std::string prefix) noexcept {
-  for (uint8_t rank = 0; rank < pStructure->rank; rank++) {
-    std::string rprefix = prefix + "rank" + std::to_string(rank) + ".";
-
-    list.emplace_back(rprefix + "energy.activate",
-                      "Energy for activate commands per rank (pJ)");
-    list.emplace_back(rprefix + "energy.precharge",
-                      "Energy for precharge commands per rank (pJ)");
-    list.emplace_back(rprefix + "energy.read",
-                      "Energy for read commands per rank (pJ)");
-    list.emplace_back(rprefix + "energy.write",
-                      "Energy for write commands per rank (pJ)");
-    list.emplace_back(rprefix + "energy.refresh",
-                      "Energy for refresh commands per rank (pJ)");
-    list.emplace_back(rprefix + "energy.self_refresh",
-                      "Energy for self refresh per rank (pJ)");
-    list.emplace_back(rprefix + "energy.total", "Total energy per rank (pJ)");
-    list.emplace_back(rprefix + "power", "Core power per rank (mW)");
-  }
-}
-
-void AbstractDRAM::getStatValues(std::vector<double> &values) noexcept {
-  // As calcWindowEnergy resets previous power/energy stat,
-  // we need to store previous values.
-  for (uint8_t rank = 0; rank < pStructure->rank; rank++) {
-    auto &power = dramPower.at(rank);
-    auto &stat = powerStat.at(rank);
-
-    power.calcWindowEnergy(getTick() / pTiming->tCK);
-
-    auto &energy = power.getEnergy();
-
-    stat.act_energy += energy.act_energy * pStructure->chip;
-    stat.pre_energy += energy.pre_energy * pStructure->chip;
-    stat.read_energy += energy.read_energy * pStructure->chip;
-    stat.write_energy += energy.write_energy * pStructure->chip;
-    stat.ref_energy += energy.ref_energy * pStructure->chip;
-    stat.sref_energy += energy.sref_energy * pStructure->chip;
-    stat.window_energy += energy.window_energy * pStructure->chip;
-
-    values.push_back(stat.act_energy);
-    values.push_back(stat.pre_energy);
-    values.push_back(stat.read_energy);
-    values.push_back(stat.write_energy);
-    values.push_back(stat.ref_energy);
-    values.push_back(stat.sref_energy);
-    values.push_back(stat.window_energy);
-    values.push_back(1000.0 * stat.window_energy / (getTick() - lastResetAt));
-  }
-}
-
-void AbstractDRAM::resetStatValues() noexcept {
-  for (auto &power : dramPower) {
-    power.calcWindowEnergy(getTick() / pTiming->tCK);
-  }
-
-  for (auto &stat : powerStat) {
-    stat.clear();
-  }
-
-  lastResetAt = getTick();
-}
-
-void AbstractDRAM::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, lastResetAt);
-}
-
-void AbstractDRAM::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, lastResetAt);
 }
 
 }  // namespace SimpleSSD::Memory::DRAM
