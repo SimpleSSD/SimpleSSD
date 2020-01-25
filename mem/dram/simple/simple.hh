@@ -10,8 +10,6 @@
 #ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 #define __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 
-#include <map>
-
 #include "mem/dram/abstract_dram.hh"
 
 namespace SimpleSSD::Memory::DRAM {

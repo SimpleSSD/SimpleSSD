@@ -37,6 +37,7 @@ const char NAME_CHIP_SIZE[] = "ChipSize";
 const char NAME_ROWBUFFER_SIZE[] = "RowBufferSize";
 
 const char NAME_TCK[] = "tCK";
+const char NAME_TRAS[] = "tRAS";
 const char NAME_TRRD[] = "tRRD";
 const char NAME_TRCD[] = "tRCD";
 const char NAME_TCCD[] = "tCCD";
@@ -125,6 +126,7 @@ Config::Config() {
   dram.rowSize = 2048;
 
   timing.tCK = 625;
+  timing.tRAS = MAX(32000, 3 * timing.tCK);
   timing.tRCD = MAX(18000, 4 * timing.tCK);
   timing.tRP = MAX(18000, 3 * timing.tCK);
   timing.tRPab = MAX(21000, 3 * timing.tCK);
@@ -220,6 +222,7 @@ void Config::loadDRAMStructure(pugi::xml_node &section) {
 void Config::loadDRAMTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TIME_TYPE(node, NAME_TCK, uint32_t, timing.tCK);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRAS, uint32_t, timing.tRAS);
     LOAD_NAME_TIME_TYPE(node, NAME_TRRD, uint32_t, timing.tRRD);
     LOAD_NAME_TIME_TYPE(node, NAME_TRCD, uint32_t, timing.tRCD);
     LOAD_NAME_TIME_TYPE(node, NAME_TCCD, uint32_t, timing.tCCD);
@@ -324,6 +327,7 @@ void Config::storeDRAMStructure(pugi::xml_node &section) {
 
 void Config::storeDRAMTiming(pugi::xml_node &section) {
   STORE_NAME_TIME(section, NAME_TCK, timing.tCK);
+  STORE_NAME_TIME(section, NAME_TRAS, timing.tRAS);
   STORE_NAME_TIME(section, NAME_TRRD, timing.tRRD);
   STORE_NAME_TIME(section, NAME_TRCD, timing.tRCD);
   STORE_NAME_TIME(section, NAME_TCCD, timing.tCCD);

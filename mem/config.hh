@@ -87,6 +87,7 @@ class Config : public BaseConfig {
   //! DRAM timing parameters. Unit is ps
   struct DRAMTiming {
     uint32_t tCK;     //!< Clock period
+    uint32_t tRAS;    //!< Row address strobe
     uint32_t tRRD;    //!< ACT to ACT delay
     uint32_t tRCD;    //!< RAS to CAS delay
     uint32_t tCCD;    //!< CAS to CAS delay
