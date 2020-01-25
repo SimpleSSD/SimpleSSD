@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <list>
+#include <unordered_map>
 
 #include "mem/def.hh"
 #include "mem/dram/simple/rank.hh"
@@ -32,26 +33,24 @@ class Controller : public Object {
   // Request queue
   uint16_t requestDepth;
   uint16_t maxRequestDepth;
+  uint16_t commandDepth;
+  uint16_t maxCommandDepth;
 
   std::list<Packet *> requestQueue;
+  std::list<Packet *> commandQueue;
 
   // Ranks
   std::vector<Rank> ranks;
 
   // Read completion queue
-  std::list<Packet *> readCompletion;
-
-  Event eventCompletion;
-
-  void updateCompletion();
-  void completion(uint64_t);
+  std::unordered_map<uint64_t, Packet *> readCompletion;
 
   Event eventWork;
 
   void work(uint64_t);
 
  public:
-  Controller(ObjectData &, SimpleDRAM *);
+  Controller(ObjectData &, SimpleDRAM *, Timing *);
   ~Controller();
 
   bool submit(Packet *) noexcept;
