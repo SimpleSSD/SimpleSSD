@@ -10,7 +10,7 @@
 #ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_DEF_HH__
 #define __SIMPLESSD_MEM_DRAM_SIMPLE_DEF_HH__
 
-#include <cinttypes>
+#include "mem/config.hh"
 
 namespace SimpleSSD::Memory::DRAM::Simple {
 
@@ -29,7 +29,39 @@ enum class BankState : uint8_t {
   Activate,
   Precharge,
   Refresh,
-  PowerDown,
+};
+
+struct Timing {
+  uint32_t readToPre;
+  uint32_t readAP;
+  uint32_t readToRead;
+  uint32_t readToWrite;
+  uint32_t readToComplete;
+  uint32_t writeToPre;
+  uint32_t writeAP;
+  uint32_t writeToRead;
+  uint32_t writeToWrite;
+  uint32_t tRCD;
+  uint32_t tRFC;
+  uint32_t tRP;
+  uint32_t tBL;
+
+  Timing(Config::DRAMStructure *dram, Config::DRAMTiming *timing) {
+    tBL = dram->burstLength / 2 * timing->tCK;
+
+    readToPre = tBL / 2 + timing->tRTP;
+    readAP = tBL / 2 + timing->tRTP + timing->tRP;
+    readToRead = 2 * timing->tCCD;
+    readToWrite = timing->tRL + timing->tDQSCK + tBL / 2 - timing->tWL;
+    readToComplete = timing->tRL + timing->tDQSCK + tBL / 2;
+    writeToPre = timing->tWL + tBL / 2 + timing->tCK + timing->tWR;
+    writeAP = timing->tWL + tBL / 2 + timing->tCK + timing->tWR + timing->tRP;
+    writeToRead = timing->tWL + tBL / 2 + timing->tCK + timing->tWTR;
+    writeToWrite = 2 * timing->tCCD;
+    tRCD = timing->tRCD;
+    tRFC = timing->tRFC;
+    tRP = timing->tRP;
+  }
 };
 
 struct Packet {
