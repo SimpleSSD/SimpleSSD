@@ -26,6 +26,8 @@ class Bank : public Object {
   Rank *parent;
   Timing *timing;
 
+  const uint8_t bankID;
+
   Packet *currentPacket;
   uint64_t prevPacketAt;
   bool prevPacketWasRead;
@@ -50,7 +52,7 @@ class Bank : public Object {
   Event eventReadDone;
 
  public:
-  Bank(ObjectData &, Rank *, Timing *);
+  Bank(ObjectData &, uint8_t, Rank *, Timing *);
   ~Bank();
 
   bool submit(Packet *);

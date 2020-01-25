@@ -7,12 +7,15 @@
 
 #include "mem/dram/simple/bank.hh"
 
+#include "mem/dram/simple/rank.hh"
+
 namespace SimpleSSD::Memory::DRAM::Simple {
 
-Bank::Bank(ObjectData &o, Rank *r, Timing *t)
+Bank::Bank(ObjectData &o, uint8_t id, Rank *r, Timing *t)
     : Object(o),
       parent(r),
       timing(t),
+      bankID(id),
       currentPacket(nullptr),
       prevPacketAt(0),
       prevPacketWasRead(false),
@@ -52,14 +55,14 @@ void Bank::work(uint64_t now) {
 
           scheduleRel(eventWork, 0, timing->tRCD);
 
-          // TODO: RANK->PowerEvent
+          parent->powerEvent(currentPacket->opcode, bankID);
         }
         else {
           state = BankState::Refresh;
 
           scheduleRel(eventWork, 0, timing->tRFC);
 
-          // TODO: RANK->PowerEvent
+          parent->powerEvent(currentPacket->opcode, bankID);
         }
       }
 
@@ -102,7 +105,7 @@ void Bank::work(uint64_t now) {
 
               readStat.add();
 
-              // TODO: RANK->PowerEvent
+              parent->powerEvent(currentPacket->opcode, bankID);
 
               completionQueue.emplace_back(now + timing->readToComplete,
                                            currentPacket->id);
@@ -140,7 +143,7 @@ void Bank::work(uint64_t now) {
 
               writeStat.add();
 
-              // TODO: RANK->PowerEvent
+              parent->powerEvent(currentPacket->opcode, bankID);
 
               // State change to idle if auto-precharge
               if (currentPacket->opcode == Command::WriteAP) {
@@ -164,7 +167,7 @@ void Bank::work(uint64_t now) {
             else {
               state = BankState::Precharge;
 
-              // TODO: RANK->PowerEvent
+              parent->powerEvent(Command::Precharge, bankID);
 
               scheduleRel(eventWork, 0, timing->tRP);
             }
@@ -200,7 +203,7 @@ void Bank::completion(uint64_t now) {
 
   completionQueue.pop_front();
 
-  // TODO: Rank->completion(resp.second);
+  parent->completion(resp.second);
 
   updateCompletion();
 }
@@ -233,23 +236,58 @@ void Bank::resetStatValues() noexcept {
 }
 
 void Bank::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, currentPacket);
+  BACKUP_SCALAR(out, prevPacketAt);
+  BACKUP_SCALAR(out, prevPacketWasRead);
   BACKUP_SCALAR(out, state);
   BACKUP_SCALAR(out, activatedRowIndex);
 
-  readStat.createCheckpoint(out);
-  writeStat.createCheckpoint(out);
+  uint64_t size = completionQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : completionQueue) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
 
   BACKUP_EVENT(out, eventWork);
+  BACKUP_EVENT(out, eventReadDone);
+
+  readStat.createCheckpoint(out);
+  writeStat.createCheckpoint(out);
 }
 
 void Bank::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, currentPacket);
+
+  if (currentPacket) {
+    currentPacket = parent->restorePacket(currentPacket);
+  }
+
+  RESTORE_SCALAR(in, prevPacketAt);
+  RESTORE_SCALAR(in, prevPacketWasRead);
   RESTORE_SCALAR(in, state);
   RESTORE_SCALAR(in, activatedRowIndex);
 
-  readStat.restoreCheckpoint(in);
-  writeStat.restoreCheckpoint(in);
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t f, s;
+
+    RESTORE_SCALAR(in, f);
+    RESTORE_SCALAR(in, s);
+
+    completionQueue.emplace_back(f, s);
+  }
 
   RESTORE_EVENT(in, eventWork);
+  RESTORE_EVENT(in, eventReadDone);
+
+  readStat.restoreCheckpoint(in);
+  writeStat.restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::Memory::DRAM::Simple
