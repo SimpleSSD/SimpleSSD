@@ -14,23 +14,39 @@
 
 namespace SimpleSSD {
 
-class IOStat {
+class CountStat {
  private:
   uint64_t count;
+
+ public:
+  CountStat();
+
+  void add() noexcept;
+
+  uint64_t getCount() noexcept;
+
+  virtual void clear() noexcept;
+
+  virtual void createCheckpoint(std::ostream &) const noexcept;
+  virtual void restoreCheckpoint(std::istream &) noexcept;
+};
+
+class IOStat : public CountStat {
+ private:
   uint64_t size;
 
  public:
   IOStat();
 
+  void add() noexcept = delete;
   void add(uint64_t) noexcept;
 
-  uint64_t getCount() noexcept;
   uint64_t getSize() noexcept;
 
-  void clear() noexcept;
+  void clear() noexcept override;
 
-  void createCheckpoint(std::ostream &) const noexcept;
-  void restoreCheckpoint(std::istream &) noexcept;
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 class BusyStat {
