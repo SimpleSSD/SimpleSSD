@@ -13,17 +13,25 @@ namespace SimpleSSD::Memory::DRAM::Simple {
 
 Rank::Rank(ObjectData &o, Controller *c, Timing *t)
     : Object(o), parent(c), timing(t), pendingRefresh(false) {
+  // Create DRAMPower object
+  panic_if(!convertMemspec(object, spec),
+           "Failed to create DRAMPower parameter.");
+
+  drampower = new libDRAMPower(spec, false);
+
   // Create bank
   auto dram = object.config->getDRAM();
 
   banks.reserve(dram->bank);
 
   for (uint8_t i = 0; i < dram->bank; i++) {
-    banks.emplace_back(Bank(object, this, timing));
+    banks.emplace_back(Bank(object, i, this, timing));
   }
 }
 
-Rank::~Rank() {}
+Rank::~Rank() {
+  delete drampower;
+}
 
 bool Rank::submit(Packet *pkt) {
   auto &bank = banks[pkt->bank];
@@ -31,7 +39,36 @@ bool Rank::submit(Packet *pkt) {
   return bank.submit(pkt);
 }
 
-void Rank::powerEvent() {}
+void Rank::powerEvent(uint64_t now, Command cmd, uint8_t bankid) {
+  Data::MemCommand::cmds _cmd;
+  now /= timing->tCK;
+
+  switch (cmd) {
+    case Command::Read:
+      _cmd = Data::MemCommand::RD;
+      break;
+    case Command::ReadAP:
+      _cmd = Data::MemCommand::RDA;
+      break;
+    case Command::Write:
+      _cmd = Data::MemCommand::WR;
+      break;
+    case Command::WriteAP:
+      _cmd = Data::MemCommand::WRA;
+      break;
+    case Command::Activate:
+      _cmd = Data::MemCommand::ACT;
+      break;
+    case Command::Precharge:
+      _cmd = Data::MemCommand::PRE;
+      break;
+    case Command::Refresh:
+      _cmd = Data::MemCommand::REF;
+      break;
+  }
+
+  drampower->doCommand(_cmd, bankid, now);
+}
 
 void Rank::completion(uint64_t id) {
   // parent->completion(id);

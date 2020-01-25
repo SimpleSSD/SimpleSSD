@@ -55,14 +55,14 @@ void Bank::work(uint64_t now) {
 
           scheduleRel(eventWork, 0, timing->tRCD);
 
-          parent->powerEvent(currentPacket->opcode, bankID);
+          parent->powerEvent(now, currentPacket->opcode, bankID);
         }
         else {
           state = BankState::Refresh;
 
           scheduleRel(eventWork, 0, timing->tRFC);
 
-          parent->powerEvent(currentPacket->opcode, bankID);
+          parent->powerEvent(now, currentPacket->opcode, bankID);
         }
       }
 
@@ -105,7 +105,7 @@ void Bank::work(uint64_t now) {
 
               readStat.add();
 
-              parent->powerEvent(currentPacket->opcode, bankID);
+              parent->powerEvent(now, currentPacket->opcode, bankID);
 
               completionQueue.emplace_back(now + timing->readToComplete,
                                            currentPacket->id);
@@ -143,7 +143,7 @@ void Bank::work(uint64_t now) {
 
               writeStat.add();
 
-              parent->powerEvent(currentPacket->opcode, bankID);
+              parent->powerEvent(now, currentPacket->opcode, bankID);
 
               // State change to idle if auto-precharge
               if (currentPacket->opcode == Command::WriteAP) {
@@ -167,7 +167,7 @@ void Bank::work(uint64_t now) {
             else {
               state = BankState::Precharge;
 
-              parent->powerEvent(Command::Precharge, bankID);
+              parent->powerEvent(now, Command::Precharge, bankID);
 
               scheduleRel(eventWork, 0, timing->tRP);
             }

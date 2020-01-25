@@ -13,6 +13,7 @@
 #include <deque>
 
 #include "mem/dram/simple/bank.hh"
+#include "util/drampower.hh"
 
 namespace SimpleSSD::Memory::DRAM::Simple {
 
@@ -35,13 +36,16 @@ class Rank : public Object {
   CountStat readStat;
   CountStat writeStat;
 
+  Data::MemorySpecification spec;
+  libDRAMPower *drampower;
+
  public:
   Rank(ObjectData &, Controller *, Timing *);
   ~Rank();
 
   bool submit(Packet *);
 
-  void powerEvent();
+  void powerEvent(uint64_t, Command, uint8_t);
   void completion(uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
