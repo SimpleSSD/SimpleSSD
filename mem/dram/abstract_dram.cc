@@ -21,6 +21,11 @@ AbstractDRAM::AbstractDRAM(ObjectData &o) : Object(o) {
 
 AbstractDRAM::~AbstractDRAM() {}
 
+uint64_t AbstractDRAM::size() noexcept {
+  return pStructure->channel * pStructure->rank * pStructure->chip *
+         pStructure->chipSize;
+}
+
 void AbstractDRAM::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
   list.emplace_back(prefix + "read.request_count", "Read request count");

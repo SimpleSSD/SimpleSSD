@@ -33,6 +33,8 @@ class AbstractDRAM : public Object {
   virtual void read(uint64_t, Event, uint64_t = 0) = 0;
   virtual void write(uint64_t, Event, uint64_t = 0) = 0;
 
+  virtual uint64_t size() noexcept;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
