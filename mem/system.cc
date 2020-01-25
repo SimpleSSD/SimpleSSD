@@ -14,12 +14,12 @@
 
 namespace SimpleSSD::Memory {
 
-System::System(ObjectData *po)
-    : cpu(po->cpu), config(po->config), log(po->log) {
-  switch ((Config::Model)config->readUint(Section::Memory,
-                                          Config::Key::DRAMModel)) {
+System::System(ObjectData *po) : pobject(po) {
+  // Create memories
+  switch ((Config::Model)pobject->config->readUint(Section::Memory,
+                                                   Config::Key::DRAMModel)) {
     case Config::Model::Ideal:
-      dram = new DRAM::Ideal::IdealDRAM(*po);
+      dram = new DRAM::Ideal::IdealDRAM(*pobject);
 
       break;
     default:
@@ -31,14 +31,70 @@ System::System(ObjectData *po)
   DRAMbaseAddress = 0;
   totalDRAMCapacity = dram->size();
 
-  sram = new SRAM::SRAM(*po);
+  sram = new SRAM::SRAM(*pobject);
   SRAMbaseAddress = totalDRAMCapacity;
-  totalSRAMCapacity = config->getSRAM()->size;
+  totalSRAMCapacity = pobject->config->getSRAM()->size;
+
+  // Calculate dispatch period
+  auto clock =
+      pobject->config->readUint(Section::Memory, Config::Key::SystemBusSpeed);
+
+  dispatchPeriod = 1000000000000ull / clock;
+
+  panic_if(dispatchPeriod == 0, "System bus is too fast (period == 0).");
 }
 
 System::~System() {
   delete sram;
   delete dram;
+}
+
+void System::breakRequest(bool read, uint64_t address, uint32_t length,
+                          std::deque<MemoryRequest> &queue) {
+  uint64_t alignedBegin = (address / MemoryPacketSize) * MemoryPacketSize;
+  uint64_t alignedEnd =
+      DIVCEIL(address + length, MemoryPacketSize) * MemoryPacketSize;
+
+  for (; alignedBegin < alignedEnd; alignedBegin += MemoryPacketSize) {
+    queue.emplace_back(read, alignedBegin);
+  }
+}
+
+void System::updateDispatch() {
+  if (!pobject->cpu->isScheduled(eventDispatch)) {
+    pobject->cpu->schedule(eventDispatch, 0, dispatchPeriod);
+  }
+}
+
+void System::dispatch(uint64_t now) {
+  if (!requestSRAM.empty()) {
+    auto &req = requestSRAM.front();
+
+    if (req.read) {
+      sram->read(req.address, req.eid, req.data);
+    }
+    else {
+      sram->write(req.address, req.eid, req.data);
+    }
+
+    requestSRAM.pop_front();
+  }
+  if (!requestDRAM.empty()) {
+    auto &req = requestDRAM.front();
+
+    if (req.read) {
+      dram->read(req.address, req.eid, req.data);
+    }
+    else {
+      dram->write(req.address, req.eid, req.data);
+    }
+
+    requestDRAM.pop_front();
+  }
+
+  if (!requestSRAM.empty() || !requestDRAM.empty()) {
+    updateDispatch();
+  }
 }
 
 void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
@@ -51,12 +107,22 @@ void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
 
   if (type == MemoryType::SRAM) {
     address -= SRAMbaseAddress;
-    // TODO: Access SRAM here
+
+    breakRequest(true, address, length, requestSRAM);
+
+    requestSRAM.back().eid = eid;
+    requestSRAM.back().data = data;
   }
   else {
     address -= DRAMbaseAddress;
-    // TODO: Access DRAM here
+
+    breakRequest(true, address, length, requestDRAM);
+
+    requestDRAM.back().eid = eid;
+    requestDRAM.back().data = data;
   }
+
+  updateDispatch();
 }
 
 void System::write(uint64_t address, uint32_t length, Event eid, uint64_t data,
@@ -69,12 +135,22 @@ void System::write(uint64_t address, uint32_t length, Event eid, uint64_t data,
 
   if (type == MemoryType::SRAM) {
     address -= SRAMbaseAddress;
-    // TODO: Access SRAM here
+
+    breakRequest(false, address, length, requestSRAM);
+
+    requestSRAM.back().eid = eid;
+    requestSRAM.back().data = data;
   }
   else {
     address -= DRAMbaseAddress;
-    // TODO: Access DRAM here
+
+    breakRequest(false, address, length, requestDRAM);
+
+    requestDRAM.back().eid = eid;
+    requestDRAM.back().data = data;
   }
+
+  updateDispatch();
 }
 
 uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
@@ -155,11 +231,38 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.size);
   }
 
+  size = requestSRAM.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : requestSRAM) {
+    BACKUP_SCALAR(out, iter.read);
+    BACKUP_SCALAR(out, iter.address);
+    BACKUP_EVENT(out, iter.eid);
+    BACKUP_SCALAR(out, iter.data);
+  }
+
+  size = requestDRAM.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : requestDRAM) {
+    BACKUP_SCALAR(out, iter.read);
+    BACKUP_SCALAR(out, iter.address);
+    BACKUP_EVENT(out, iter.eid);
+    BACKUP_SCALAR(out, iter.data);
+  }
+
+  BACKUP_EVENT(out, eventDispatch);
+
   sram->createCheckpoint(out);
   dram->createCheckpoint(out);
 }
 
 void System::restoreCheckpoint(std::istream &in) noexcept {
+  // For macro
+  ObjectData &object = *pobject;
+
   RESTORE_SCALAR(in, SRAMbaseAddress);
   RESTORE_SCALAR(in, totalSRAMCapacity);
   RESTORE_SCALAR(in, DRAMbaseAddress);
@@ -185,6 +288,34 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
 
     allocatedAddressMap.emplace_back(std::move(name), a, s);
   }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    MemoryRequest req;
+
+    RESTORE_SCALAR(in, req.read);
+    RESTORE_SCALAR(in, req.address);
+    RESTORE_EVENT(in, req.eid);
+    RESTORE_SCALAR(in, req.data);
+
+    requestSRAM.emplace_back(req);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    MemoryRequest req;
+
+    RESTORE_SCALAR(in, req.read);
+    RESTORE_SCALAR(in, req.address);
+    RESTORE_EVENT(in, req.eid);
+    RESTORE_SCALAR(in, req.data);
+
+    requestDRAM.emplace_back(req);
+  }
+
+  RESTORE_EVENT(in, eventDispatch);
 
   sram->restoreCheckpoint(in);
   dram->restoreCheckpoint(in);

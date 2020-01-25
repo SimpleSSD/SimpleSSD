@@ -11,6 +11,7 @@
 #define __SIMPLESSD_MEM_MEMORY_SYSTEM_HH__
 
 #include <cinttypes>
+#include <deque>
 
 #include "cpu/cpu.hh"
 #include "sim/log.hh"
@@ -41,9 +42,7 @@ enum class MemoryType : uint8_t {
 
 class System {
  private:
-  CPU::CPU *cpu;
-  ConfigReader *config;
-  Log *log;
+  ObjectData *pobject;
 
   struct MemoryMap {
     uint64_t base;
@@ -55,7 +54,6 @@ class System {
         : base(b), size(s), name(std::move(n)) {}
   };
 
-  // TODO: Add object of DRAM and SRAM
   SRAM::AbstractSRAM *sram;
   DRAM::AbstractDRAM *dram;
 
@@ -66,11 +64,33 @@ class System {
 
   std::vector<MemoryMap> allocatedAddressMap;
 
+  struct MemoryRequest {
+    bool read;
+    uint64_t address;
+    Event eid;
+    uint64_t data;
+
+    MemoryRequest() : read(false), address(0), eid(InvalidEventID), data(0) {}
+    MemoryRequest(bool r, uint64_t a)
+        : read(r), address(a), eid(InvalidEventID), data(0) {}
+  };
+
+  std::deque<MemoryRequest> requestSRAM;
+  std::deque<MemoryRequest> requestDRAM;
+
+  void breakRequest(bool, uint64_t, uint32_t, std::deque<MemoryRequest> &);
+
+  Event eventDispatch;
+  uint64_t dispatchPeriod;
+
+  void updateDispatch();
+  void dispatch(uint64_t);
+
   inline void warn_log(const char *format, ...) noexcept {
     va_list args;
 
     va_start(args, format);
-    log->print(Log::LogID::Warn, format, args);
+    pobject->log->print(Log::LogID::Warn, format, args);
     va_end(args);
   }
 
@@ -78,7 +98,7 @@ class System {
     va_list args;
 
     va_start(args, format);
-    log->print(Log::LogID::Panic, format, args);
+    pobject->log->print(Log::LogID::Panic, format, args);
     va_end(args);
   }
 
