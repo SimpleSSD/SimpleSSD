@@ -41,7 +41,7 @@
        Second field means the bitwidth of integer variable.
     <float> is always IEEE 32bit floating points.
     <bool> is always boolean (1 byte unsigned integer).
-    <time> is stored as 64bit unsigned integer if not specified.
+    <time> is stored as <int:u64> if not specified.
    -->
   <!--
     CPU configuration
@@ -710,7 +710,7 @@
         <config name="tR" level="2"></config>
       </section>
       <!--
-        DRAM power configuration
+        NAND power configuration
         All values in <int:u64>, current in uA, voltage in mV.
        -->
       <section name="power">
