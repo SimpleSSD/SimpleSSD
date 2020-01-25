@@ -34,8 +34,8 @@ class IdealDRAM : public AbstractDRAM {
   IdealDRAM(ObjectData &);
   ~IdealDRAM();
 
-  void read(uint64_t, Event, uint64_t = 0);
-  void write(uint64_t, Event, uint64_t = 0);
+  void read(uint64_t, Event, uint64_t = 0) override;
+  void write(uint64_t, Event, uint64_t = 0) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
