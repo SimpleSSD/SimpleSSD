@@ -7,24 +7,39 @@
 
 #include "mem/system.hh"
 
+#include "mem/dram/ideal/ideal.hh"
+#include "mem/sram/sram.hh"
+#include "sim/object.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::Memory {
 
-System::System(CPU::CPU *e, ConfigReader *c, Log *l)
-    : cpu(e), config(c), log(l) {
-  // TODO: Create SRAM object
-  sram = nullptr;
-  SRAMbaseAddress = 0;
-  totalSRAMCapacity = 0;
+System::System(ObjectData *po)
+    : cpu(po->cpu), config(po->config), log(po->log) {
+  switch ((Config::Model)config->readUint(Section::Memory,
+                                          Config::Key::DRAMModel)) {
+    case Config::Model::Ideal:
+      dram = new DRAM::Ideal::IdealDRAM(*po);
 
-  // TODO: Create DRAM object
-  dram = nullptr;
+      break;
+    default:
+      panic("Unexpected DRAM model.");
+
+      break;
+  }
+
   DRAMbaseAddress = 0;
-  totalDRAMCapacity = 0;
+  totalDRAMCapacity = dram->size();
+
+  sram = new SRAM::SRAM(*po);
+  SRAMbaseAddress = totalDRAMCapacity;
+  totalSRAMCapacity = config->getSRAM()->size;
 }
 
-System::~System() {}
+System::~System() {
+  delete sram;
+  delete dram;
+}
 
 void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
                   bool cacheable) {
@@ -105,11 +120,20 @@ uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
   return lastBase;
 }
 
-void System::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void System::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  sram->getStatList(list, prefix + "sram.");
+  dram->getStatList(list, prefix + "dram.");
+}
 
-void System::getStatValues(std::vector<double> &) noexcept {}
+void System::getStatValues(std::vector<double> &values) noexcept {
+  sram->getStatValues(values);
+  dram->getStatValues(values);
+}
 
-void System::resetStatValues() noexcept {}
+void System::resetStatValues() noexcept {
+  sram->resetStatValues();
+  dram->resetStatValues();
+}
 
 void System::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, SRAMbaseAddress);
@@ -130,6 +154,9 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.base);
     BACKUP_SCALAR(out, iter.size);
   }
+
+  sram->createCheckpoint(out);
+  dram->createCheckpoint(out);
 }
 
 void System::restoreCheckpoint(std::istream &in) noexcept {
@@ -158,6 +185,9 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
 
     allocatedAddressMap.emplace_back(std::move(name), a, s);
   }
+
+  sram->restoreCheckpoint(in);
+  dram->restoreCheckpoint(in);
 }
 
 }  // namespace SimpleSSD::Memory

@@ -15,7 +15,11 @@
 #include "cpu/cpu.hh"
 #include "sim/log.hh"
 
-namespace SimpleSSD::Memory {
+namespace SimpleSSD {
+
+struct ObjectData;
+
+namespace Memory {
 
 namespace SRAM {
 
@@ -92,7 +96,7 @@ class System {
   }
 
  public:
-  System(CPU::CPU *, ConfigReader *, Log *);
+  System(ObjectData *);
   ~System();
 
   /**
@@ -149,6 +153,8 @@ class System {
   void restoreCheckpoint(std::istream &) noexcept;
 };
 
-}  // namespace SimpleSSD::Memory
+}  // namespace Memory
+
+}  // namespace SimpleSSD
 
 #endif
