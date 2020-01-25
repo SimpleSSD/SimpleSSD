@@ -12,7 +12,6 @@
 
 #include <cinttypes>
 
-#include "libdrampower/LibDRAMPower.h"
 #include "sim/object.hh"
 #include "util/stat_helper.hh"
 
@@ -26,8 +25,6 @@ class AbstractDRAM : public Object {
 
   IOStat readStat;
   IOStat writeStat;
-
-  void convertMemspec(Data::MemorySpecification &);
 
  public:
   AbstractDRAM(ObjectData &);
