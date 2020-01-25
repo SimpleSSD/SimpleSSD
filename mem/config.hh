@@ -125,8 +125,8 @@ class Config : public BaseConfig {
 
   //! DRAM Controller parameters.
   struct DRAMController {
-    uint32_t readQueueSize;
-    uint32_t writeQueueSize;
+    uint16_t readQueueSize;
+    uint16_t writeQueueSize;
     float writeMinThreshold;
     float writeMaxThreshold;
     uint32_t minWriteBurst;

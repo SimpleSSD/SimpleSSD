@@ -274,9 +274,9 @@ void Config::loadDRAMPower(pugi::xml_node &section) {
 
 void Config::loadTimingDRAM(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_QUEUE_SIZE, uint32_t,
+    LOAD_NAME_UINT_TYPE(node, NAME_WRITE_QUEUE_SIZE, uint16_t,
                         controller.writeQueueSize);
-    LOAD_NAME_UINT_TYPE(node, NAME_READ_QUEUE_SIZE, uint32_t,
+    LOAD_NAME_UINT_TYPE(node, NAME_READ_QUEUE_SIZE, uint16_t,
                         controller.readQueueSize);
     LOAD_NAME_FLOAT(node, NAME_WRITE_MIN_THRESHOLD,
                     controller.writeMinThreshold);
