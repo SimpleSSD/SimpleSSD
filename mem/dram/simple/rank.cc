@@ -74,6 +74,14 @@ void Rank::completion(uint64_t id) {
   // parent->completion(id);
 }
 
+uint32_t Rank::getActiveRow(uint8_t bankid) {
+  if (bankid < banks.size()) {
+    return banks[bankid].getActiveRow();
+  }
+
+  return std::numeric_limits<uint32_t>::max();
+}
+
 void Rank::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   list.emplace_back(prefix + "read", "Read command count");
   list.emplace_back(prefix + "write", "Write command count");

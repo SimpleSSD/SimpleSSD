@@ -48,6 +48,8 @@ class Rank : public Object {
   void powerEvent(uint64_t, Command, uint8_t);
   void completion(uint64_t);
 
+  uint32_t getActiveRow(uint8_t);
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

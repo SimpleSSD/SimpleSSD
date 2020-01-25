@@ -57,6 +57,8 @@ class Bank : public Object {
 
   bool submit(Packet *);
 
+  uint32_t getActiveRow();
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

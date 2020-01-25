@@ -220,6 +220,14 @@ bool Bank::submit(Packet *pkt) {
   return true;
 }
 
+uint32_t Bank::getActiveRow() {
+  if (state == BankState::Activate) {
+    return activatedRowIndex;
+  }
+
+  return std::numeric_limits<uint32_t>::max();
+}
+
 void Bank::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   list.emplace_back(prefix + "read", "Read command count");
   list.emplace_back(prefix + "write", "Write command count");
