@@ -133,6 +133,7 @@
         <config name="tCK">1250</config>
         <config name="tRRD">13750</config>
         <config name="tRCD">13750</config>
+        <config name="tCCD">10000</config>
         <config name="tRP">13750</config>
         <config name="tRPab">35000</config>
         <config name="tRL">15000</config>

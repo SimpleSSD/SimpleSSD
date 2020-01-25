@@ -89,6 +89,7 @@ class Config : public BaseConfig {
     uint32_t tCK;     //!< Clock period
     uint32_t tRRD;    //!< ACT to ACT delay
     uint32_t tRCD;    //!< RAS to CAS delay
+    uint32_t tCCD;    //!< CAS to CAS delay
     uint32_t tRP;     //!< Row precharge (Per bank)
     uint32_t tRPab;   //!< Row precharge (All banks)
     uint32_t tRL;     //!< Read latency

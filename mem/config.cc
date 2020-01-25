@@ -39,6 +39,7 @@ const char NAME_ROWBUFFER_SIZE[] = "RowBufferSize";
 const char NAME_TCK[] = "tCK";
 const char NAME_TRRD[] = "tRRD";
 const char NAME_TRCD[] = "tRCD";
+const char NAME_TCCD[] = "tCCD";
 const char NAME_TRP[] = "tRP";
 const char NAME_TRPab[] = "tRPab";
 const char NAME_TRL[] = "tRL";
@@ -128,6 +129,7 @@ Config::Config() {
   timing.tRP = MAX(18000, 3 * timing.tCK);
   timing.tRPab = MAX(21000, 3 * timing.tCK);
   timing.tRRD = MAX(10000, 4 * timing.tCK);
+  timing.tCCD = 8 * timing.tCK;
   timing.tRL = 28 * timing.tCK;
   timing.tWL = 14 * timing.tCK;
   timing.tDQSCK = 3500;
@@ -220,6 +222,7 @@ void Config::loadDRAMTiming(pugi::xml_node &section) {
     LOAD_NAME_TIME_TYPE(node, NAME_TCK, uint32_t, timing.tCK);
     LOAD_NAME_TIME_TYPE(node, NAME_TRRD, uint32_t, timing.tRRD);
     LOAD_NAME_TIME_TYPE(node, NAME_TRCD, uint32_t, timing.tRCD);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCCD, uint32_t, timing.tCCD);
     LOAD_NAME_TIME_TYPE(node, NAME_TRP, uint32_t, timing.tRP);
     LOAD_NAME_TIME_TYPE(node, NAME_TRPab, uint32_t, timing.tRPab);
     LOAD_NAME_TIME_TYPE(node, NAME_TRL, uint32_t, timing.tRL);
@@ -323,6 +326,7 @@ void Config::storeDRAMTiming(pugi::xml_node &section) {
   STORE_NAME_TIME(section, NAME_TCK, timing.tCK);
   STORE_NAME_TIME(section, NAME_TRRD, timing.tRRD);
   STORE_NAME_TIME(section, NAME_TRCD, timing.tRCD);
+  STORE_NAME_TIME(section, NAME_TCCD, timing.tCCD);
   STORE_NAME_TIME(section, NAME_TRP, timing.tRP);
   STORE_NAME_TIME(section, NAME_TRPab, timing.tRPab);
   STORE_NAME_TIME(section, NAME_TRL, timing.tRL);
