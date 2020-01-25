@@ -12,20 +12,19 @@
 
 #include "mem/dram/abstract_dram.hh"
 
-namespace SimpleSSD::Memory::DRAM {
+namespace SimpleSSD::Memory::DRAM::Simple {
 
 /**
  * \brief Simple DRAM model
  *
- * Very simple DRAM model with Rank/Bank/Row/Col calculation.
- * No scheduling - FCFS - and no refresh - self/auto refresh.
+ * Simple DRAM model with Rank/Bank/Row/Col calculation.
+ * Inspired by DRAMSim2.
  */
-class Simple : public AbstractDRAM {
+class SimpleDRAM : public AbstractDRAM {
  private:
-
  public:
-  Simple(ObjectData &);
-  ~Simple();
+  SimpleDRAM(ObjectData &);
+  ~SimpleDRAM();
 
   void read(uint64_t, Event, uint64_t = 0);
   void write(uint64_t, Event, uint64_t = 0);
@@ -38,6 +37,6 @@ class Simple : public AbstractDRAM {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::Memory::DRAM
+}  // namespace SimpleSSD::Memory::DRAM::Simple
 
 #endif

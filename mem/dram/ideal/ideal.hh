@@ -14,14 +14,14 @@
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
-namespace SimpleSSD::Memory::DRAM {
+namespace SimpleSSD::Memory::DRAM::Ideal {
 
 /**
  * \brief Ideal DRAM model
  *
  * This model only calculates DRAM bus latency.
  */
-class Ideal : public AbstractDRAM {
+class IdealDRAM : public AbstractDRAM {
  private:
   Scheduler<Request *> scheduler;
 
@@ -31,8 +31,8 @@ class Ideal : public AbstractDRAM {
   void postDone(Request *);
 
  public:
-  Ideal(ObjectData &);
-  ~Ideal();
+  IdealDRAM(ObjectData &);
+  ~IdealDRAM();
 
   void read(uint64_t, Event, uint64_t = 0);
   void write(uint64_t, Event, uint64_t = 0);
@@ -41,6 +41,6 @@ class Ideal : public AbstractDRAM {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::Memory::DRAM
+}  // namespace SimpleSSD::Memory::DRAM::Ideal
 
 #endif

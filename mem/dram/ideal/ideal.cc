@@ -9,12 +9,12 @@
 
 #include "util/algorithm.hh"
 
-namespace SimpleSSD::Memory::DRAM {
+namespace SimpleSSD::Memory::DRAM::Ideal {
 
-Ideal::Ideal(ObjectData &o)
+IdealDRAM::IdealDRAM(ObjectData &o)
     : AbstractDRAM(o),
       scheduler(
-          o, "Memory::Ideal::scheduler",
+          o, "Memory::IdealDRAM::scheduler",
           [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) { postDone(r); },
@@ -26,21 +26,21 @@ Ideal::Ideal(ObjectData &o)
   packetLatency = MemoryPacketSize / bytesPerClock;
 }
 
-Ideal::~Ideal() {
+IdealDRAM::~IdealDRAM() {
   // DO NOTHING
 }
 
-uint64_t Ideal::preSubmit(Request *req) {
+uint64_t IdealDRAM::preSubmit(Request *req) {
   return packetLatency;
 }
 
-void Ideal::postDone(Request *req) {
+void IdealDRAM::postDone(Request *req) {
   scheduleNow(req->eid, req->data);
 
   delete req;
 }
 
-void Ideal::read(uint64_t address, Event eid, uint64_t data) {
+void IdealDRAM::read(uint64_t address, Event eid, uint64_t data) {
   auto req = new Request(address, eid, data);
 
   // Enqueue request
@@ -51,7 +51,7 @@ void Ideal::read(uint64_t address, Event eid, uint64_t data) {
   scheduler.read(req);
 }
 
-void Ideal::write(uint64_t address, Event eid, uint64_t data) {
+void IdealDRAM::write(uint64_t address, Event eid, uint64_t data) {
   auto req = new Request(address, eid, data);
 
   // Enqueue request
@@ -62,7 +62,7 @@ void Ideal::write(uint64_t address, Event eid, uint64_t data) {
   scheduler.write(req);
 }
 
-void Ideal::createCheckpoint(std::ostream &out) const noexcept {
+void IdealDRAM::createCheckpoint(std::ostream &out) const noexcept {
   AbstractDRAM::createCheckpoint(out);
 
   BACKUP_SCALAR(out, packetLatency);
@@ -70,7 +70,7 @@ void Ideal::createCheckpoint(std::ostream &out) const noexcept {
   scheduler.createCheckpoint(out);
 }
 
-void Ideal::restoreCheckpoint(std::istream &in) noexcept {
+void IdealDRAM::restoreCheckpoint(std::istream &in) noexcept {
   AbstractDRAM::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, packetLatency);
@@ -78,4 +78,4 @@ void Ideal::restoreCheckpoint(std::istream &in) noexcept {
   scheduler.restoreCheckpoint(in);
 }
 
-}  // namespace SimpleSSD::Memory::DRAM
+}  // namespace SimpleSSD::Memory::DRAM::Ideal
