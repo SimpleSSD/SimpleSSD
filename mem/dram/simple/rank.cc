@@ -28,6 +28,9 @@ void BankStatus::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, nextActivate);
   BACKUP_SCALAR(out, nextPrecharge);
   BACKUP_SCALAR(out, nextPowerUp);
+
+  readStat.createCheckpoint(out);
+  writeStat.createCheckpoint(out);
 }
 
 void BankStatus::restoreCheckpoint(std::istream &in) noexcept {
@@ -38,10 +41,12 @@ void BankStatus::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, nextActivate);
   RESTORE_SCALAR(in, nextPrecharge);
   RESTORE_SCALAR(in, nextPowerUp);
+
+  readStat.restoreCheckpoint(in);
+  writeStat.restoreCheckpoint(in);
 }
 
-Rank::Rank(ObjectData &o)
-    : Object(o), pendingRefresh(false) {
+Rank::Rank(ObjectData &o) : Object(o), pendingRefresh(false) {
   // Create bank status
   auto dram = object.config->getDRAM();
 
@@ -99,6 +104,9 @@ void Rank::submit(Packet *pkt) {
                    pkt->row != bank.activatedRowIndex,
                "Invalid read access to bank %u.", pkt->bank);
 
+      bank.readStat.add();
+      readStat.add();
+
       // Update next possible ticks
       if (pkt->opcode == Command::Read) {
         bank.nextPrecharge = MAX(bank.nextPrecharge, now + readToPre);
@@ -115,7 +123,7 @@ void Rank::submit(Packet *pkt) {
 
       // Schedule completion of this packet
       pkt->finishedAt = now + readToComplete;
-      completionQueue.push_back(pkt);
+      completionQueue.emplace_back(pkt);
 
       updateCompletion();
 
@@ -125,6 +133,9 @@ void Rank::submit(Packet *pkt) {
       panic_if(bank.state != BankState::Activate || now < bank.nextWrite ||
                    pkt->row != bank.activatedRowIndex,
                "Invalid write access to bank %u.", pkt->bank);
+
+      bank.writeStat.add();
+      writeStat.add();
 
       // Update next possible ticks
       if (pkt->opcode == Command::Write) {
@@ -185,14 +196,87 @@ void Rank::submit(Packet *pkt) {
   }
 }
 
-void Rank::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void Rank::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  list.emplace_back(prefix + "read", "Read command count");
+  list.emplace_back(prefix + "write", "Write command count");
 
-void Rank::getStatValues(std::vector<double> &) noexcept {}
+  uint8_t bid = 0;
 
-void Rank::resetStatValues() noexcept {}
+  for (auto &iter : banks) {
+    std::string bprefix = prefix + "bank" + std::to_string(bid++) + '.';
 
-void Rank::createCheckpoint(std::ostream &) const noexcept {}
+    list.emplace_back(bprefix + "read", "Read command count");
+    list.emplace_back(bprefix + "write", "Write command count");
+  }
+}
 
-void Rank::restoreCheckpoint(std::istream &) noexcept {}
+void Rank::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)readStat.getCount());
+  values.push_back((double)writeStat.getCount());
+
+  for (auto &iter : banks) {
+    values.push_back((double)iter.readStat.getCount());
+    values.push_back((double)iter.writeStat.getCount());
+  }
+}
+
+void Rank::resetStatValues() noexcept {
+  for (auto &iter : banks) {
+    iter.readStat.clear();
+    iter.writeStat.clear();
+  }
+
+  readStat.clear();
+  writeStat.clear();
+}
+
+void Rank::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, pendingRefresh);
+
+  for (auto &iter : banks) {
+    iter.createCheckpoint(out);
+  }
+
+  uint64_t size = completionQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : completionQueue) {
+    BACKUP_SCALAR(out, iter->id);
+  }
+
+  BACKUP_EVENT(out, eventCompletion);
+
+  readStat.createCheckpoint(out);
+  writeStat.createCheckpoint(out);
+}
+
+void Rank::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, pendingRefresh);
+
+  for (auto &iter : banks) {
+    iter.restoreCheckpoint(in);
+  }
+
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t id;
+
+    RESTORE_SCALAR(in, id);
+
+    // TODO: Add restore method from parent
+    // auto pkt = ...;
+
+    // completionQueue.emplace_back(pkt);
+  }
+
+  RESTORE_EVENT(in, eventCompletion);
+
+  readStat.restoreCheckpoint(in);
+  writeStat.restoreCheckpoint(in);
+}
 
 }  // namespace SimpleSSD::Memory::DRAM::Simple

@@ -14,6 +14,7 @@
 
 #include "mem/dram/simple/def.hh"
 #include "sim/object.hh"
+#include "util/stat_helper.hh"
 
 namespace SimpleSSD::Memory::DRAM::Simple {
 
@@ -34,6 +35,9 @@ class BankStatus {
   uint64_t nextActivate;
   uint64_t nextPrecharge;
   uint64_t nextPowerUp;
+
+  CountStat readStat;
+  CountStat writeStat;
 
  public:
   BankStatus();
@@ -73,6 +77,9 @@ class Rank : public Object {
   uint64_t writeToRead;
   uint64_t writeToWrite;
   uint64_t actToActSame;
+
+  CountStat readStat;
+  CountStat writeStat;
 
   void completion(uint64_t);
   void updateCompletion();
