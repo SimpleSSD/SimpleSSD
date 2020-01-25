@@ -32,10 +32,22 @@
             s, ms, us, ns, ps
    -->
   <!--
+    Before updating configuration
+
+    Please check value type in comment.
+    <int:format> is depends on 'format' string.
+      format has following syntax: ([us])(\d+)
+       First field means the config is (s)igned or (u)nsigned.
+       Second field means the bitwidth of integer variable.
+    <float> is always IEEE 32bit floating points.
+    <bool> is always boolean (1 byte unsigned integer).
+    <time> is stored as 64bit unsigned integer if not specified.
+   -->
+  <!--
     CPU configuration
    -->
   <section name="cpu">
-    <!-- <int> CPU clock speed in Hz -->
+    <!-- <int:u64> CPU clock speed in Hz -->
     <config name="ClockSpeed">400m</config>
     <!--
       <bool> Use dedicated core
@@ -44,11 +56,11 @@
       If not, all firmware components shares all cores.
      -->
     <config name="UseDedicatedCore">true</config>
-    <!-- <int> # cores for Host Interface (HIL) -->
+    <!-- <int:u32> # cores for Host Interface (HIL) -->
     <config name="HILCoreCount">1</config>
-    <!-- <int> # cores for Data Cache (ICL) -->
+    <!-- <int:u32> # cores for Data Cache (ICL) -->
     <config name="ICLCoreCount">1</config>
-    <!-- <int> # cores for Flash Translation Layer (FTL) -->
+    <!-- <int:u32> # cores for Flash Translation Layer (FTL) -->
     <config name="FTLCoreCount">1</config>
   </section>
   <!--
@@ -57,35 +69,35 @@
   <section name="memory">
     <!-- System -->
     <section name="system">
-      <!-- <int> Bus clock speed in Hz -->
+      <!-- <int:u64> Bus clock speed in Hz -->
       <config name="BusClock">200m</config>
     </section>
     <!-- LLC -->
     <section name="cache">
-      <!-- <int> Shared cache size in bytes -->
+      <!-- <int:u32> Shared cache size in bytes -->
       <config name="Size">256K</config>
-      <!-- <int> # way of set-associative cache -->
+      <!-- <int:u16> # way of set-associative cache -->
       <config name="WaySize">8</config>
-      <!-- <time> Tag lookup latency in cycles -->
+      <!-- <int:u16> Tag lookup latency in cycles -->
       <config name="TagLatency">20</config>
-      <!-- <time> Data access latency in cycles -->
+      <!-- <int:u16> Data access latency in cycles -->
       <config name="DataLatency">20</config>
-      <!-- <time> Latency of miss return path in cycles -->
+      <!-- <int:u16> Latency of miss return path in cycles -->
       <config name="ResponseLatency">20</config>
     </section>
     <!-- SRAM -->
     <section name="sram">
-      <!-- <int> Total size of SRAM in bits -->
+      <!-- <int:u32> Total size of SRAM in bits -->
       <config name="Size">72M</config>
-      <!-- <int> Operating clock speed in Hz -->
+      <!-- <int:u64> Operating clock speed in Hz -->
       <config name="Clock">400m</config>
-      <!-- <int> Data / clock -->
+      <!-- <int:u16> Data / clock -->
       <config name="DataRate">2</config>
-      <!-- <int> Data width in bits -->
+      <!-- <int:u16> Data width in bits -->
       <config name="DataWidth">36</config>
-      <!-- <int> Read latency in cycles -->
+      <!-- <int:u16> Read latency in cycles -->
       <config name="ReadLatency">2</config>
-      <!-- <int> Write latency in cycles -->
+      <!-- <int:u16> Write latency in cycles -->
       <config name="WriteLatency">2</config>
       <!-- <float> Operating current in mA -->
       <config name="IDD">750</config>
@@ -97,7 +109,7 @@
     <!-- DRAM -->
     <section name="dram">
       <!--
-        <int> DRAM model.
+        <int:u8> DRAM model.
 
         Possible values:
          0: Ideal DRAM model with only DDR bus latency
@@ -106,28 +118,28 @@
       <config name="Model">1</config>
       <!-- DRAM structural configuration -->
       <section name="struct">
-        <!-- <int> # Channel -->
+        <!-- <int:u8> # Channel -->
         <config name="Channel">2</config>
-        <!-- <int> # Rank / Channel -->
+        <!-- <int:u8> # Rank / Channel -->
         <config name="Rank">1</config>
-        <!-- <int> # Bank / Rank -->
+        <!-- <int:u8> # Bank / Rank -->
         <config name="Bank">8</config>
-        <!-- <int> # Chip / Rank -->
+        <!-- <int:u8> # Chip / Rank -->
         <config name="Chip">1</config>
-        <!-- <int> # Bus width / Chip -->
+        <!-- <int:u16> # Bus width / Chip -->
         <config name="BusWidth">16</config>
-        <!-- <int> Burst Chop or Burst Length (small) -->
+        <!-- <int:u8> Burst Chop or Burst Length (small) -->
         <config name="BurstChop">16</config>
-        <!-- <int> Burst Length (large) -->
+        <!-- <int:u8> Burst Length (large) -->
         <config name="BurstLength">32</config>
-        <!-- <int> # Chip size in bytes -->
+        <!-- <int:u64> # Chip size in bytes -->
         <config name="ChipSize">1073741824</config>
-        <!-- <int> Row buffersize in bytes -->
+        <!-- <int:u32> Row buffersize in bytes -->
         <config name="RowBufferSize">2048</config>
       </section>
       <!--
         DRAM timing configuration
-        All values in <time>
+        All values in <time> (stored as <int:u32>)
        -->
       <section name="timing">
         <config name="tCK">1250</config>
@@ -183,18 +195,18 @@
         DRAM controller configuration
        -->
       <section name="controller">
-        <!-- <int> Number of write queue entries -->
+        <!-- <int:u16> Number of write queue entries -->
         <config name="WriteQueueSize">64</config>
-        <!-- <int> Number of read queue entries -->
+        <!-- <int:u16> Number of read queue entries -->
         <config name="ReadQueueSize">64</config>
         <!-- <float> Threshold to force writes -->
         <config name="ForceWriteThreshold">0.85</config>
         <!-- <float> Threshold to start writes -->
         <config name="WriteThreshold">0.5</config>
-        <!-- <int> Minimum write bursts before switching to reads -->
+        <!-- <int:u32> Minimum write bursts before switching to reads -->
         <config name="MinWriteBurst">16</config>
         <!--
-          <int> Memory scheduling policy
+          <int:u8> Memory scheduling policy
 
           Possible values:
             0: FCFS: First come first serve
@@ -202,7 +214,7 @@
          -->
         <config name="Scheduling">1</config>
         <!--
-          <int> Address mapping policy
+          <int:u8> Address mapping policy
 
           Possible values:
             0: RoRaBaChCo: Row > Rank > Bank > Channel > Column (LSB)
@@ -211,7 +223,7 @@
          -->
         <config name="Mapping">1</config>
         <!--
-          <int> Page management policy
+          <int:u8> Page management policy
 
           Possible values:
             0: Open
@@ -229,7 +241,7 @@
   <section name="hil">
     <!-- <time> Request collection interval -->
     <config name="WorkInterval">1us</config>
-    <!-- <int> Internal request queue size -->
+    <!-- <int:u64> Internal request queue size -->
     <config name="RequestQueueSize">8</config>
     <!--
       Interface and bus configuration
@@ -244,20 +256,20 @@
     <section name="interface">
       <!-- PCIe configuration -->
       <section name="pcie">
-        <!-- <int> PCIe Generation (1 ~ 3) -->
+        <!-- <int:u8> PCIe Generation (1 ~ 3) -->
         <config name="Generation">3</config>
-        <!-- <int> PCIe Lane (1 ~ 32, power of 2) -->
+        <!-- <int:u8> PCIe Lane (1 ~ 32, power of 2) -->
         <config name="Lane">4</config>
       </section>
       <!-- SATA configuration -->
       <section name="sata">
-        <!-- <int> SATA Generation (1 ~ 3) -->
+        <!-- <int:u8> SATA Generation (1 ~ 3) -->
         <config name="Generation">3</config>
       </section>
       <!-- MIPI M-PHY configuration -->
       <section name="mphy">
         <!--
-          <int> MIPI M-PHY Mode
+          <int:u8> MIPI M-PHY Mode
 
           Possible values:
            0: HS-G1 (High Speed Gear 1)
@@ -266,14 +278,14 @@
            3: HS-G4
          -->
         <config name="Mode">2</config>
-        <!-- <int> M-PHY Lane (1 ~ 2) -->
+        <!-- <int:u8> M-PHY Lane (1 ~ 2) -->
         <config name="Lane">2</config>
       </section>
       <!-- AXI4 configuration -->
       <section name="axi">
-        <!-- <int> AXI bus width (32 ~ 1024, power of 2) -->
+        <!-- <int:u16> AXI bus width (32 ~ 1024, power of 2) -->
         <config name="Width">256</config>
-        <!-- <int> AXI bus speed in Hz -->
+        <!-- <int:u64> AXI bus speed in Hz -->
         <config name="Clock">100m</config>
       </section>
     </section>
@@ -309,28 +321,28 @@
       NVMe specific configuration
      -->
     <section name="nvme">
-      <!-- <int> Maximum number of submission queues -->
+      <!-- <int:u16> Maximum number of submission queues -->
       <config name="MaxSQ">16</config>
-      <!-- <int> Maximum number of completion queues -->
+      <!-- <int:u16> Maximum number of completion queues -->
       <config name="MaxCQ">16</config>
       <!--
-        <int> Weighted Round Robin High Priority
+        <int:u16> Weighted Round Robin High Priority
 
         Specify maximum number of high priority requests should be inserted
         before handling medium priority requests.
        -->
       <config name="WRRHigh">2</config>
       <!--
-        <int> Weighted Round Robin Medium Priority
+        <int:u16> Weighted Round Robin Medium Priority
 
         Specify maximum number of medium priority requests should be inserted
         before handling low priority requests.
        -->
       <config name="WRRMedium">2</config>
-      <!-- <int> Maximum number of namespaces supported by controller -->
+      <!-- <int:u32> Maximum number of namespaces supported by controller -->
       <config name="MaxNamespace">16</config>
       <!--
-        <int> Initial number of namespaces
+        <int:u32> Initial number of namespaces
 
         Specify number of namespaces to create at beginning. You must specify
         per-namespace configuration sections.
@@ -351,14 +363,14 @@
        -->
       <section name="namespace" nsid="1">
         <!--
-          <int> Logical Block size
+          <int:u16> Logical Block size
 
           Must be power of 2, greater than and equal to 512. In Linux, logical
           block size greater than page size (usually 4K) is not supported.
          -->
         <config name="LBASize">512</config>
         <!--
-          <int> Capacity in bytes
+          <int:u64> Capacity in bytes
 
           Specify 0 to create evenly divided namespaces. This valus should be
           aligned with LBASize.
@@ -376,7 +388,7 @@
     <!-- <bool> Enable read prefetching / read-ahead -->
     <config name="EnableReadPrefetch">true</config>
     <!--
-      <int> Prefetch/Read-ahead granularity
+      <int:u8> Prefetch/Read-ahead granularity
 
       Set quantity of data to read when prefetch/read-ahead triggered.
       For the definition of parallelism group, see FIL section.
@@ -387,30 +399,30 @@
      -->
     <config name="PrefetchMode">0</config>
     <!--
-      <int> Prefetch/read-ahead trigger condition - request count
+      <int:u64> Prefetch/read-ahead trigger condition - request count
 
       Set the number of consecutive sequential read request to trigger
       prefetch/read-ahead. This value should be larger than 1.
      -->
     <config name="PrefetchCount">4</config>
     <!--
-      <int> Prefetch/read-ahead trigger condition - read capacity
+      <int:u64> Prefetch/read-ahead trigger condition - read capacity
 
       Set the amount of data should be read in sequential to trigger
       prefetch/read-ahead. This value is unit of one physical page.
      -->
     <config name="PrefetchRatio">32</config>
     <!--
-      <int> Cache algorithm
+      <int:u8> Cache algorithm
 
       Possible values:
         0: Ring buffer
      -->
     <config name="CacheMode">0</config>
-    <!-- <int> Cache size in bytes -->
+    <!-- <int:u64> Cache size in bytes -->
     <config name="CacheSize">512M</config>
     <!--
-      <int> Cache eviction policy
+      <int:u8> Cache eviction policy
 
       Possible values:
         0: RANDOM: Evict random entry
@@ -419,7 +431,7 @@
      -->
     <config name="EvictPolicy">2</config>
     <!--
-      <int> Eviction granularity
+      <int:u8> Eviction granularity
 
       Set quantity of data to evict when capacity/confilct miss occurs.
       Cache will try to collect as many pages as it can.
@@ -454,7 +466,7 @@
     <!-- Garbage Collection configuration -->
     <section name="gc">
       <!--
-        <int> Victim block selection algorithm
+        <int:u8> Victim block selection algorithm
 
         Possible values:
           0: Greedy: Choose lease utilized block (lease number of valid pages).
@@ -465,7 +477,7 @@
        -->
       <config name="VictimSelectionPolicy">0</config>
       <!--
-        <int> D-Choice parameter
+        <int:u64> D-Choice parameter
 
         Sampling factor. (blocks to erase) * (this config value) blocks will
         randomly sampled.
@@ -531,7 +543,7 @@
       <!-- Filling/Warm-up configuration -->
       <section name="warmup">
         <!--
-          <int> Filling Mode
+          <int:u8> Filling Mode
 
           Here, we have two-pass filling algorithm to invoke GC in very beginning
           of simulation. In first pass, FTL fills mapping - clean write. In second
@@ -572,12 +584,12 @@
     Flash Interface Layer configuration
    -->
   <section name="fil">
-    <!-- <int> # channel -->
+    <!-- <int:u32> # channel -->
     <config name="Channel">8</config>
-    <!-- <int> # packages / channel (way) -->
+    <!-- <int:u32> # packages / channel (way) -->
     <config name="Way">4</config>
     <!--
-      <int> Select NVM model
+      <int:u8> Select NVM model
 
       Possible values:
         0: PAL: Parallelism Abstraction Layer in SimpleSSD 1.0 ~ 2.0
@@ -585,7 +597,7 @@
      -->
     <config name="Model">0</config>
     <!--
-      <int> Select transaction scheduler
+      <int:u8> Select transaction scheduler
 
       Possible values:
         0: No-op scheduler (Submit requests in FIFO mannor)
@@ -593,22 +605,22 @@
     <config name="Scheduler">0</config>
     <!-- NAND configuration (valid for Model = 0/1) -->
     <section name="nand">
-      <!-- <int> Number of partial page programming allowed -->
+      <!-- <int:u8> Number of partial page programming allowed -->
       <config name="NOP">1</config>
-      <!-- <int> # die / package -->
+      <!-- <int:u32> # die / package -->
       <config name="Die">1</config>
-      <!-- <int> # plane / die -->
+      <!-- <int:u32> # plane / die -->
       <config name="Plane">2</config>
-      <!-- <int> # block / plane -->
+      <!-- <int:u32> # block / plane -->
       <config name="Block">512</config>
-      <!-- <int> # page / block -->
+      <!-- <int:u32> # page / block -->
       <config name="Page">512</config>
-      <!-- <int> page size in byte - data -->
+      <!-- <int:u32> page size in byte - data -->
       <config name="PageSize">16K</config>
-      <!-- <int> page size in byte - spare -->
+      <!-- <int:u32> page size in byte - spare -->
       <config name="SpareSize">1216</config>
       <!--
-        <int> Channel speed
+        <int:u32> Channel speed
 
         Only for PAL (Other model uses tWC/tRC parameter)
 
@@ -616,10 +628,10 @@
         One transfer has size of DataWidth.
        -->
       <config name="DMASpeed">333m</config>
-      <!-- <int> data width in bits -->
+      <!-- <int:u32> data width in bits -->
       <config name="DataWidth">8</config>
       <!--
-        <int> NAND type
+        <int:u8> NAND type
 
         Possible values:
           0: Single Level Cell (level 0 of timing section should be valid)
@@ -654,7 +666,9 @@
         Strateges on High-Speed SSDs," HotStorage 2012
        -->
       <config name="PageAllocation">CWDP</config>
-      <!-- <time> NAND timing table -->
+      <!--
+        <time> NAND timing table (stored as <int:u32> except I/O operations)
+       -->
       <section name="timing">
         <!-- Address cycle to Data Load time -->
         <config name="tADL">70ns</config>
@@ -674,7 +688,7 @@
         <config name="tWC">25ns</config>
         <!-- WE_n Pulse width -->
         <config name="tWP">11ns</config>
-        <!-- Block erase time -->
+        <!-- <int:u64> Block erase time -->
         <config name="tBERS">5ms</config>
         <!-- Cache busy time -->
         <config name="tCBSY">35us</config>
@@ -682,22 +696,22 @@
         <config name="tDBSY">500ns</config>
         <!-- Read Cache busy time -->
         <config name="tRCBSY">3us</config>
-        <!-- Page program time (SLC/MLC LSB/TLC LSB) -->
+        <!-- <int:u64> Page program time (SLC/MLC LSB/TLC LSB) -->
         <config name="tPROG" level="0">1250us</config>
-        <!-- Page program time (MLC MSB/TLC CSB) -->
+        <!-- <int:u64> Page program time (MLC MSB/TLC CSB) -->
         <config name="tPROG" level="1">3ms</config>
-        <!-- Page program time (TLC MSB) -->
+        <!-- <int:u64> Page program time (TLC MSB) -->
         <config name="tPROG" level="2"></config>
-        <!-- Page read time (SLC/MLC LSB/TLC LSB) -->
+        <!-- <int:u64> Page read time (SLC/MLC LSB/TLC LSB) -->
         <config name="tR" level="0">65us</config>
-        <!-- Page read time (MLC MSB/TLC CSB) -->
+        <!-- <int:u64> Page read time (MLC MSB/TLC CSB) -->
         <config name="tR" level="1">110us</config>
-        <!-- Page read time (TLC MSB) -->
+        <!-- <int:u64> Page read time (TLC MSB) -->
         <config name="tR" level="2"></config>
       </section>
       <!--
         DRAM power configuration
-        All values in <float>, current in uA, voltage in V.
+        All values in <int:u64>, current in uA, voltage in mV.
        -->
       <section name="power">
         <!-- Array Read Current -->
@@ -715,7 +729,7 @@
         <!-- Standby Current -->
         <config name="ISB">30</config>
         <!-- Voltage -->
-        <config name="VCC">3.3</config>
+        <config name="VCC">3300</config>
       </section>
     </section>
   </section>
