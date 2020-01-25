@@ -45,18 +45,20 @@ struct Timing {
   uint32_t tRFC;
   uint32_t tRP;
   uint32_t tBL;
+  uint32_t tCK;
 
   Timing(Config::DRAMStructure *dram, Config::DRAMTiming *timing) {
-    tBL = dram->burstLength / 2 * timing->tCK;
+    tCK = timing->tCK;
+    tBL = dram->burstLength / 2 * tCK;
 
     readToPre = tBL / 2 + timing->tRTP;
     readAP = tBL / 2 + timing->tRTP + timing->tRP;
     readToRead = 2 * timing->tCCD;
     readToWrite = timing->tRL + timing->tDQSCK + tBL / 2 - timing->tWL;
     readToComplete = timing->tRL + timing->tDQSCK + tBL / 2;
-    writeToPre = timing->tWL + tBL / 2 + timing->tCK + timing->tWR;
-    writeAP = timing->tWL + tBL / 2 + timing->tCK + timing->tWR + timing->tRP;
-    writeToRead = timing->tWL + tBL / 2 + timing->tCK + timing->tWTR;
+    writeToPre = timing->tWL + tBL / 2 + tCK + timing->tWR;
+    writeAP = timing->tWL + tBL / 2 + tCK + timing->tWR + timing->tRP;
+    writeToRead = timing->tWL + tBL / 2 + tCK + timing->tWTR;
     writeToWrite = 2 * timing->tCCD;
     tRCD = timing->tRCD;
     tRFC = timing->tRFC;
