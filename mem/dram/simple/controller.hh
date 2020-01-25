@@ -62,6 +62,8 @@ class Controller : public Object {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  Packet *restorePacket(Packet *) noexcept;
 };
 
 }  // namespace SimpleSSD::Memory::DRAM::Simple

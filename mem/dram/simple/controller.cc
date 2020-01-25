@@ -76,4 +76,8 @@ void Controller::createCheckpoint(std::ostream &) const noexcept {}
 
 void Controller::restoreCheckpoint(std::istream &) noexcept {}
 
+Packet *Controller::restorePacket(Packet *oldpkt) noexcept {
+  // TODO:
+}
+
 }  // namespace SimpleSSD::Memory::DRAM::Simple

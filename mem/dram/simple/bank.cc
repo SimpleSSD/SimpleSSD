@@ -261,9 +261,7 @@ void Bank::createCheckpoint(std::ostream &out) const noexcept {
 void Bank::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, currentPacket);
 
-  if (currentPacket) {
-    currentPacket = parent->restorePacket(currentPacket);
-  }
+  currentPacket = parent->restorePacket(currentPacket);
 
   RESTORE_SCALAR(in, prevPacketAt);
   RESTORE_SCALAR(in, prevPacketWasRead);

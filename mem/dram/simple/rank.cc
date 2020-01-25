@@ -127,4 +127,8 @@ void Rank::restoreCheckpoint(std::istream &in) noexcept {
   writeStat.restoreCheckpoint(in);
 }
 
+Packet *Rank::restorePacket(Packet *oldptr) noexcept {
+  return parent->restorePacket(oldptr);
+}
+
 }  // namespace SimpleSSD::Memory::DRAM::Simple
