@@ -56,17 +56,17 @@ class Config : public BaseConfig {
   };
 
  private:
-  MappingType mappingMode;
   float overProvision;
-  FillingType fillingMode;
   float fillRatio;
   float invalidFillRatio;
 
+  MappingType mappingMode;
+  FillingType fillingMode;
   bool mergeRMW;
   bool allowPageLevelRead;
 
-  VictimSelectionMode gcBlockSelection;
   uint64_t dChoiceParam;
+  VictimSelectionMode gcBlockSelection;
   float gcThreshold;
   uint8_t superpageAllocation;
 

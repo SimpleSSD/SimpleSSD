@@ -48,13 +48,13 @@ class Config : public BaseConfig {
   bool enable;
   bool readPrefetch;
   Granularity prefetchMode;
+  Mode mode;
+  float evictThreshold;
   uint64_t prefetchCount;
   uint64_t prefetchRatio;
-  Mode mode;
   uint64_t cacheSize;
   EvictModeType evictPolicy;
   Granularity evictMode;
-  float evictThreshold;
 
  public:
   Config();
