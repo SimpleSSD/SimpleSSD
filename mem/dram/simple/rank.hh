@@ -19,6 +19,7 @@
 namespace SimpleSSD::Memory::DRAM::Simple {
 
 class Rank;
+class Controller;
 
 /**
  * \brief Bank parameters
@@ -26,6 +27,7 @@ class Rank;
 class BankStatus {
  private:
   friend Rank;
+  friend Controller;
 
   BankState state;
 
@@ -54,15 +56,11 @@ class BankStatus {
  */
 class Rank : public Object {
  private:
-  // TODO: Add parent
+  friend Controller;
 
   bool pendingRefresh;
 
   std::vector<BankStatus> banks;
-
-  // Read completion queue
-  std::deque<Packet *> completionQueue;
-  Event eventCompletion;
 
   Config::DRAMTiming *timing;
 
@@ -81,14 +79,11 @@ class Rank : public Object {
   CountStat readStat;
   CountStat writeStat;
 
-  void completion(uint64_t);
-  void updateCompletion();
-
  public:
   Rank(ObjectData &);
   ~Rank();
 
-  void submit(Packet *);
+  uint64_t submit(Packet *);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

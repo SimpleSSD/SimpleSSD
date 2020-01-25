@@ -68,32 +68,11 @@ Rank::Rank(ObjectData &o) : Object(o), pendingRefresh(false) {
   writeToRead = timing->tWL + tBL / 2 + timing->tCK + timing->tWTR;
   writeToWrite = 2 * timing->tCCD;
   actToActSame = timing->tRAS + timing->tRP;
-
-  // Create event
-  eventCompletion = createEvent([this](uint64_t t, uint64_t) { completion(t); },
-                                "Memory::DRAM::Simple::Rank::completion");
 }
 
 Rank::~Rank() {}
 
-void Rank::completion(uint64_t now) {
-  auto pkt = completionQueue.front();
-
-  completionQueue.pop_front();  // pkt is pointer
-
-  // TODO: Call callback of memory controller with pkt->id
-
-  // Reschedule
-  updateCompletion();
-}
-
-void Rank::updateCompletion() {
-  if (!isScheduled(eventCompletion) && completionQueue.size() > 0) {
-    scheduleAbs(eventCompletion, 0, completionQueue.front()->finishedAt);
-  }
-}
-
-void Rank::submit(Packet *pkt) {
+uint64_t Rank::submit(Packet *pkt) {
   uint64_t now = getTick();
   auto &bank = banks[pkt->bank];
 
@@ -121,11 +100,8 @@ void Rank::submit(Packet *pkt) {
         iter.nextWrite = MAX(iter.nextWrite, now + readToWrite);
       }
 
-      // Schedule completion of this packet
-      pkt->finishedAt = now + readToComplete;
-      completionQueue.emplace_back(pkt);
-
-      updateCompletion();
+      // Return completion of this packet
+      now += readToComplete;
 
       break;
     case Command::Write:
@@ -194,6 +170,8 @@ void Rank::submit(Packet *pkt) {
 
       break;
   }
+
+  return now;
 }
 
 void Rank::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
@@ -237,16 +215,6 @@ void Rank::createCheckpoint(std::ostream &out) const noexcept {
     iter.createCheckpoint(out);
   }
 
-  uint64_t size = completionQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : completionQueue) {
-    BACKUP_SCALAR(out, iter->id);
-  }
-
-  BACKUP_EVENT(out, eventCompletion);
-
   readStat.createCheckpoint(out);
   writeStat.createCheckpoint(out);
 }
@@ -257,23 +225,6 @@ void Rank::restoreCheckpoint(std::istream &in) noexcept {
   for (auto &iter : banks) {
     iter.restoreCheckpoint(in);
   }
-
-  uint64_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t id;
-
-    RESTORE_SCALAR(in, id);
-
-    // TODO: Add restore method from parent
-    // auto pkt = ...;
-
-    // completionQueue.emplace_back(pkt);
-  }
-
-  RESTORE_EVENT(in, eventCompletion);
 
   readStat.restoreCheckpoint(in);
   writeStat.restoreCheckpoint(in);
