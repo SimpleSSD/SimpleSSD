@@ -108,10 +108,9 @@ set(SRC_CPU
   cpu/cpu.cc
 )
 set(SRC_MEM
-  mem/dram/controller.cc
+  mem/system.cc
   mem/dram/abstract_dram.cc
-  mem/dram/ideal.cc
-  mem/dram/lpddr4.cc
+  mem/dram/ideal/ideal.cc
   mem/sram/abstract_sram.cc
   mem/sram/sram.cc
 )
