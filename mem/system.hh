@@ -86,34 +86,10 @@ class System {
   void updateDispatch();
   void dispatch(uint64_t);
 
-  inline void warn_log(const char *format, ...) noexcept {
-    va_list args;
+  inline void warn_log(const char *format, ...) noexcept;
+  inline void panic_log(const char *format, ...) noexcept;
 
-    va_start(args, format);
-    pobject->log->print(Log::LogID::Warn, format, args);
-    va_end(args);
-  }
-
-  inline void panic_log(const char *format, ...) noexcept {
-    va_list args;
-
-    va_start(args, format);
-    pobject->log->print(Log::LogID::Panic, format, args);
-    va_end(args);
-  }
-
-  inline MemoryType validate(uint64_t offset, uint32_t size) {
-    if (offset >= SRAMbaseAddress &&
-        offset + size <= SRAMbaseAddress + totalSRAMCapacity) {
-      return MemoryType::SRAM;
-    }
-    else if (offset >= DRAMbaseAddress &&
-             offset + size <= DRAMbaseAddress + totalDRAMCapacity) {
-      return MemoryType::DRAM;
-    }
-
-    return MemoryType::Invalid;
-  }
+  inline MemoryType validate(uint64_t offset, uint32_t size);
 
  public:
   System(ObjectData *);

@@ -49,6 +49,35 @@ System::~System() {
   delete dram;
 }
 
+inline void System::warn_log(const char *format, ...) noexcept {
+  va_list args;
+
+  va_start(args, format);
+  pobject->log->print(Log::LogID::Warn, format, args);
+  va_end(args);
+}
+
+inline void System::panic_log(const char *format, ...) noexcept {
+  va_list args;
+
+  va_start(args, format);
+  pobject->log->print(Log::LogID::Panic, format, args);
+  va_end(args);
+}
+
+inline MemoryType System::validate(uint64_t offset, uint32_t size) {
+  if (offset >= SRAMbaseAddress &&
+      offset + size <= SRAMbaseAddress + totalSRAMCapacity) {
+    return MemoryType::SRAM;
+  }
+  else if (offset >= DRAMbaseAddress &&
+           offset + size <= DRAMbaseAddress + totalDRAMCapacity) {
+    return MemoryType::DRAM;
+  }
+
+  return MemoryType::Invalid;
+}
+
 void System::breakRequest(bool read, uint64_t address, uint32_t length,
                           std::deque<MemoryRequest> &queue) {
   uint64_t alignedBegin = (address / MemoryPacketSize) * MemoryPacketSize;
