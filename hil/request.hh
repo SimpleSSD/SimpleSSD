@@ -139,6 +139,7 @@ class SubRequest {
   uint64_t offset;  //!< Offset in DMA Tag
   uint32_t length;  //!< Length in DMA Tag
 
+  bool hit;  //!< Used in ICL, true when this request is served by cache
   bool clear;
 
   // Device-side DMA address
@@ -154,6 +155,7 @@ class SubRequest {
         lpn(l),
         offset(o),
         length(s),
+        hit(false),
         clear(false),
         buffer(nullptr),
         address(0) {}
@@ -175,6 +177,7 @@ class SubRequest {
       this->lpn = std::exchange(rhs.lpn, 0);
       this->offset = std::exchange(rhs.offset, 0);
       this->length = std::exchange(rhs.length, 0);
+      this->hit = std::exchange(rhs.hit, false);
       this->clear = std::exchange(rhs.clear, false);
       this->buffer = std::exchange(rhs.buffer, nullptr);
       this->address = std::exchange(rhs.address, 0);
@@ -183,7 +186,8 @@ class SubRequest {
     return *this;
   }
 
-  inline void setAddress(uint64_t addr) { address = addr; }
+  inline void setDRAMAddress(uint64_t addr) { address = addr; }
+  inline void setHit() { hit = true; }
   void setBuffer(uint8_t *data) { buffer = data; }
   void createBuffer(uint32_t size) {
     clear = true;
@@ -193,6 +197,7 @@ class SubRequest {
 
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
+  inline bool getHit() { return hit; }
   inline const uint8_t *getBuffer() { return buffer; }
 
   /* Only for Flush, Trim and Format */
