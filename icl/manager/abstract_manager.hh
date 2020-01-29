@@ -25,15 +25,18 @@ struct FlushContext {
 
 class AbstractManager : public Object {
  protected:
+  ICL::ICL *pICL;
+
   FTL::FTL *pFTL;
   AbstractCache *cache;
 
   Event eventICLCompletion;
 
  public:
-  AbstractManager(ObjectData &o, FTL::FTL *p)
+  AbstractManager(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
       : Object(o),
-        pFTL(p),
+        pICL(p),
+        pFTL(f),
         cache(nullptr),
         eventICLCompletion(InvalidEventID) {}
   virtual ~AbstractManager() {}

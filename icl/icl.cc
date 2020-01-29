@@ -7,13 +7,14 @@
 
 #include "icl/icl.hh"
 
+#include "hil/hil.hh"
 #include "icl/cache/abstract_cache.hh"
 #include "icl/manager/none.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
 
-ICL::ICL(ObjectData &o) : Object(o) {
+ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
@@ -123,6 +124,10 @@ void ICL::restoreCheckpoint(std::istream &in) noexcept {
 
   pCache->restoreCheckpoint(in);
   pFTL->restoreCheckpoint(in);
+}
+
+SubRequest *ICL::restoreSubRequest(uint64_t tag) noexcept {
+  return pHIL->restoreSubRequest(tag);
 }
 
 }  // namespace SimpleSSD::ICL

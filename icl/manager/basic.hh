@@ -26,7 +26,7 @@ class BasicCache : public AbstractManager {
   Event eventEraseDone;
 
  public:
-  BasicCache(ObjectData &, FTL::FTL *);
+  BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
   ~BasicCache();
 
   void read(SubRequest *) override;

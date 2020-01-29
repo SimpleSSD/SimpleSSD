@@ -15,7 +15,15 @@
 #include "ftl/ftl.hh"
 #include "sim/object.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD {
+
+namespace HIL {
+
+class HIL;
+
+}
+
+namespace ICL {
 
 class AbstractManager;
 class AbstractCache;
@@ -27,6 +35,8 @@ class AbstractCache;
  */
 class ICL : public Object {
  private:
+  HIL::HIL *pHIL;
+
   FTL::FTL *pFTL;
   AbstractManager *pManager;
   AbstractCache *pCache;
@@ -35,7 +45,7 @@ class ICL : public Object {
   uint32_t logicalPageSize;
 
  public:
-  ICL(ObjectData &);
+  ICL(ObjectData &, HIL::HIL *);
   ~ICL();
 
   //! Set callback
@@ -76,8 +86,12 @@ class ICL : public Object {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  SubRequest *restoreSubRequest(uint64_t) noexcept;
 };
 
-}  // namespace SimpleSSD::ICL
+}  // namespace ICL
+
+}  // namespace SimpleSSD
 
 #endif

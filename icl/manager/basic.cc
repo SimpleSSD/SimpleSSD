@@ -11,7 +11,8 @@
 
 namespace SimpleSSD::ICL {
 
-BasicCache::BasicCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {
+BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
+    : AbstractManager(o, p, f) {
   // Create events
   eventLookupDone =
       createEvent([this](uint64_t t, uint64_t d) { lookupDone(t, d); },
@@ -131,8 +132,35 @@ void BasicCache::getStatValues(std::vector<double> &) noexcept {}
 
 void BasicCache::resetStatValues() noexcept {}
 
-void BasicCache::createCheckpoint(std::ostream &) const noexcept {}
+void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_EVENT(out, eventLookupDone);
+  BACKUP_EVENT(out, eventEraseDone);
 
-void BasicCache::restoreCheckpoint(std::istream &) noexcept {}
+  uint64_t size = requestQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : requestQueue) {
+    BACKUP_SCALAR(out, iter.first);
+  }
+}
+
+void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_EVENT(in, eventLookupDone);
+  RESTORE_EVENT(in, eventEraseDone);
+
+  uint64_t size, tag;
+  SubRequest *sreq;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, tag);
+
+    sreq = pICL->restoreSubRequest(tag);
+
+    requestQueue.emplace(tag, sreq);
+  }
+}
 
 }  // namespace SimpleSSD::ICL

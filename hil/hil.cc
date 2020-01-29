@@ -12,7 +12,7 @@ namespace SimpleSSD::HIL {
 HIL::HIL(ObjectData &o, AbstractSubsystem *p)
     : Object(o),
       parent(p),
-      icl(object),
+      icl(object, this),
       requestCounter(0),
       subrequestCounter(0) {
   lpnSize = icl.getLPNSize();
