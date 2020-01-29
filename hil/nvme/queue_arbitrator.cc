@@ -1042,7 +1042,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-SQContext *Arbitrator::getRecoveredRequest(uint32_t id) {
+SQContext *Arbitrator::restoreRequest(uint32_t id) {
   // Query from dispatchedQueue
   auto iter = dispatchedQueue.find(id);
 
