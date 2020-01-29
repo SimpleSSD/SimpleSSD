@@ -383,71 +383,87 @@
     Internal Cache Layer configuration
    -->
   <section name="icl">
-    <!-- <bool> Enable caching -->
-    <config name="EnableCache">true</config>
-    <!-- <bool> Enable read prefetching / read-ahead -->
-    <config name="EnableReadPrefetch">true</config>
-    <!--
-      <int:u8> Prefetch/Read-ahead granularity
-
-      Set quantity of data to read when prefetch/read-ahead triggered.
-      For the definition of parallelism group, see FIL section.
-
-      Possible values:
-        0: Superpage granularity
-        1: Each page in all parallelism group
-     -->
-    <config name="PrefetchMode">0</config>
-    <!--
-      <int:u64> Prefetch/read-ahead trigger condition - request count
-
-      Set the number of consecutive sequential read request to trigger
-      prefetch/read-ahead. This value should be larger than 1.
-     -->
-    <config name="PrefetchCount">4</config>
-    <!--
-      <int:u64> Prefetch/read-ahead trigger condition - read capacity
-
-      Set the amount of data should be read in sequential to trigger
-      prefetch/read-ahead. This value is unit of one physical page.
-     -->
-    <config name="PrefetchRatio">32</config>
     <!--
       <int:u8> Cache algorithm
 
       Possible values:
-        0: Ring buffer
+        0: Disable cache (very small buffer)
+        1: Ring buffer
+        2: Set associative
      -->
     <config name="CacheMode">0</config>
     <!-- <int:u64> Cache size in bytes -->
     <config name="CacheSize">512M</config>
-    <!--
-      <int:u8> Cache eviction policy
+    <!-- Prefetch/Read-ahead configration -->
+    <section name="prefetch">
+      <!-- <bool> Enable read prefetching / read-ahead -->
+      <config name="EnableReadPrefetch">true</config>
+      <!--
+        <int:u8> Prefetch/Read-ahead granularity
 
-      Possible values:
-        0: RANDOM: Evict random entry
-        1: FIFO: Evict least recently added entry
-        2: LRU: Evict least recently used entry
-     -->
-    <config name="EvictPolicy">2</config>
-    <!--
-      <int:u8> Eviction granularity
+        Set quantity of data to read when prefetch/read-ahead triggered.
+        For the definition of parallelism group, see FIL section.
 
-      Set quantity of data to evict when capacity/confilct miss occurs.
-      Cache will try to collect as many pages as it can.
+        Possible values:
+          0: Superpage granularity
+          1: Each page in all parallelism group
+       -->
+      <config name="PrefetchMode">0</config>
+      <!--
+        <int:u64> Prefetch/read-ahead trigger condition - request count
 
-      Possible values:
-        0: Superpage granularity
-        1: Each page in all parallelism group
-     -->
-    <config name="EvictMode">1</config>
-    <!--
-      <float> On-demand evicition trigger
+        Set the number of consecutive sequential read request to trigger
+        prefetch/read-ahead. This value should be larger than 1.
+       -->
+      <config name="PrefetchCount">4</config>
+      <!--
+        <int:u64> Prefetch/read-ahead trigger condition - read capacity
 
-      In ring buffer, if current dirty pages / cache size >= this value,
-      background write worker will triggered to evict pages to FTL.
-     -->
-    <config name="EvictThreshold">0.8</config>
+        Set the amount of data should be read in sequential to trigger
+        prefetch/read-ahead. This value is unit of one physical page.
+       -->
+      <config name="PrefetchRatio">32</config>
+    </section>
+    <!-- Cache eviction/flush configuration -->
+    <section name="eviction">
+      <!--
+        <int:u8> Cache eviction policy
+
+        Possible values:
+          0: RANDOM: Evict random entry
+          1: FIFO: Evict least recently added entry
+          2: LRU: Evict least recently used entry
+       -->
+      <config name="EvictPolicy">2</config>
+      <!--
+        <int:u8> Eviction granularity
+
+        Set quantity of data to evict when capacity/confilct miss occurs.
+        Cache will try to collect as many pages as it can.
+
+        Possible values:
+          0: Superpage granularity
+          1: Each page in all parallelism group
+       -->
+      <config name="EvictMode">1</config>
+      <!--
+        <float> On-demand evicition trigger
+
+        In ring buffer, if current dirty pages / cache size >= this value,
+        background write worker will triggered to evict pages to FTL.
+       -->
+      <config name="EvictThreshold">0.8</config>
+    </section>
+    <!-- Set-associative cache configuration -->
+    <section name="setassoc">
+      <!--
+        <int:u32> Way size
+
+        To create fully-associative cache, set this value as zero.
+        To create directed-map cache, set this value as one.
+       -->
+      <config name="WaySize">8</config>
+    </section>
   </section>
   <!--
     Flash Translation Layer configuration
