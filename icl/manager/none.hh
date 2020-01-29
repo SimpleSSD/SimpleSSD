@@ -16,7 +16,7 @@ namespace SimpleSSD::ICL {
 
 class NoCache : public AbstractManager {
  public:
-  NoCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {}
+  NoCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f) : AbstractManager(o, p, f) {}
   ~NoCache() {}
 
   void read(SubRequest *) override {

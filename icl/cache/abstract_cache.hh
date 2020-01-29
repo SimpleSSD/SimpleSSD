@@ -19,6 +19,8 @@ class AbstractManager;
 
 class AbstractCache : public Object {
  protected:
+  static const uint64_t minIO = 512;
+
   AbstractManager *manager;
 
  public:
