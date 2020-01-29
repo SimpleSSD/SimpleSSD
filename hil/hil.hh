@@ -15,6 +15,7 @@
 #include "hil/convert.hh"
 #include "hil/request.hh"
 #include "icl/icl.hh"
+#include "sim/abstract_subsystem.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::HIL {
@@ -44,6 +45,8 @@ enum class FormatOption : uint8_t {
  */
 class HIL : public Object {
  private:
+  AbstractSubsystem *parent;
+
   ICL::ICL icl;
   ConvertFunction convertFunction;
 
@@ -64,7 +67,7 @@ class HIL : public Object {
   void dmaCompletion(uint64_t, uint64_t);
 
  public:
-  HIL(ObjectData &);
+  HIL(ObjectData &, AbstractSubsystem *);
   ~HIL();
 
   /**
@@ -132,6 +135,9 @@ class HIL : public Object {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  Request *restoreRequest(uint64_t) noexcept;
+  SubRequest *restoreSubRequest(uint64_t) noexcept;
 };
 
 }  // namespace SimpleSSD::HIL

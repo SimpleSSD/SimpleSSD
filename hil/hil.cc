@@ -9,8 +9,12 @@
 
 namespace SimpleSSD::HIL {
 
-HIL::HIL(ObjectData &o)
-    : Object(o), icl(object), requestCounter(0), subrequestCounter(0) {
+HIL::HIL(ObjectData &o, AbstractSubsystem *p)
+    : Object(o),
+      parent(p),
+      icl(object),
+      requestCounter(0),
+      subrequestCounter(0) {
   lpnSize = icl.getLPNSize();
 
   Convert convert(object, lpnSize);
@@ -355,14 +359,80 @@ void HIL::resetStatValues() noexcept {
 
 void HIL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, requestCounter);
+  BACKUP_SCALAR(out, subrequestCounter);
+  BACKUP_EVENT(out, eventNVMCompletion);
+  BACKUP_EVENT(out, eventDMACompletion);
+
+  uint64_t size = requestQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : requestQueue) {
+    BACKUP_SCALAR(out, iter.first);
+  }
+
+  size = subrequestQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : subrequestQueue) {
+    BACKUP_SCALAR(out, iter.first);
+
+    iter.second.createCheckpoint(out);
+  }
 
   icl.createCheckpoint(out);
 }
 
 void HIL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, requestCounter);
+  RESTORE_SCALAR(in, subrequestCounter);
+  RESTORE_EVENT(in, eventNVMCompletion);
+  RESTORE_EVENT(in, eventDMACompletion);
+
+  uint64_t size, tag;
+  Request *req;
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, tag);
+
+    req = parent->restoreRequest(tag);
+
+    panic_if(req == nullptr, "Invalid request while restore.");
+
+    requestQueue.emplace(tag, req);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, tag);
+
+    SubRequest sreq;
+
+    sreq.restoreCheckpoint(in, this);
+  }
 
   icl.restoreCheckpoint(in);
+}
+
+Request *HIL::restoreRequest(uint64_t tag) noexcept {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Invalid request tag while restore.");
+
+  return iter->second;
+}
+
+SubRequest *HIL::restoreSubRequest(uint64_t tag) noexcept {
+  auto iter = subrequestQueue.find(tag);
+
+  panic_if(iter == subrequestQueue.end(),
+           "Invalid subrequest tag while restore.");
+
+  return &iter->second;
 }
 
 }  // namespace SimpleSSD::HIL

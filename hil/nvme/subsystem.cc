@@ -928,8 +928,6 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   pHIL->restoreCheckpoint(in);
 
   // Clear restore buffer
-  pHIL->clearOldList();
-
   for (auto &iter : controllerList) {
     iter.second->dmaEngine->clearOldDMATagList();
   }

@@ -123,6 +123,7 @@ class SubRequest {
   uint64_t address;  //!< Physical address of internal DRAM
 
  public:
+  SubRequest();
   SubRequest(uint64_t, Request *);
   SubRequest(uint64_t, Request *, LPN, uint64_t, uint32_t);
   SubRequest(const SubRequest &) = delete;

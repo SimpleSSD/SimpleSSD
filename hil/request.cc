@@ -77,6 +77,9 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, requestTag);
 }
 
+SubRequest::SubRequest()
+    : requestTag(0), request(nullptr), clear(false), buffer(nullptr) {}
+
 SubRequest::SubRequest(uint64_t t, Request *r)
     : requestTag(t), request(r), clear(false), buffer(nullptr) {}
 
