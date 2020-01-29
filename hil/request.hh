@@ -194,6 +194,10 @@ class SubRequest {
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
   inline const uint8_t *getBuffer() { return buffer; }
+
+  /* Only for Flush, Trim and Format */
+  inline LPN getOffset() { return (LPN)offset; }
+  inline uint32_t getLength() { return length; }
 };
 
 }  // namespace SimpleSSD
