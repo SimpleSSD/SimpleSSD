@@ -25,10 +25,10 @@ class AbstractCache : public Object {
   AbstractCache(ObjectData &o, AbstractManager *m) : Object(o), manager(m) {}
   virtual ~AbstractCache() {}
 
-  virtual CPU::Function lookup(LPN, bool, bool &) = 0;
-  virtual CPU::Function allocate(LPN, uint64_t) = 0;
-  virtual CPU::Function flush(LPN, uint32_t) = 0;
-  virtual CPU::Function erase(LPN, uint32_t) = 0;
+  virtual CPU::Function lookup(SubRequest *, bool) = 0;
+  virtual CPU::Function allocate(SubRequest *) = 0;
+  virtual CPU::Function flush(SubRequest *) = 0;
+  virtual CPU::Function erase(SubRequest *) = 0;
   virtual void dmaDone(LPN) = 0;
   virtual void drainDone() = 0;
 };

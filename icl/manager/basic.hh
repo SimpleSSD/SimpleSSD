@@ -24,7 +24,6 @@ class BasicCache : public AbstractManager {
   void lookupDone(uint64_t, uint64_t);
 
   Event eventEraseDone;
-  void eraseDone(uint64_t, uint64_t);
 
  public:
   BasicCache(ObjectData &, FTL::FTL *);
