@@ -98,12 +98,6 @@ void HIL::submit(Operation opcode, Request *req) {
   auto &sreq = *subrequestList.front();
 
   switch (opcode) {
-    case Operation::Write:
-      /*
-       * For write, we need to read data to be written by DMA operation. DMA is
-       * performed in subrequest (LPN) granularity. For each completion of DMA,
-       * NVM operation will be triggered.
-       */
     case Operation::Compare:
     case Operation::CompareAndWrite:
       /*
@@ -111,23 +105,20 @@ void HIL::submit(Operation opcode, Request *req) {
        * all NVM and DMA operation.
        */
 
-      // Allocate buffer
-      sreq.createBuffer(sreq.length);
-
-      // Submit DMA (first chunk)
-      req->dmaBeginAt = getTick();
-      req->dmaEngine->read(req->dmaTag, sreq.offset, sreq.length, sreq.buffer,
-                           eventDMACompletion, sreq.requestTag);
-
-      if (opcode == Operation::Write) {
-        break;
-      }
+      panic("Compare not implemented yet.");
 
       /* fallthrough */
     case Operation::Read:
       /*
        * For read, we push all NVM requests at same time, and do the DMA when
        * each subrequest is completed.
+       */
+    case Operation::Write:
+      /*
+       * For write, we need to read data to be written by DMA operation. But
+       * before starting DMA, we need to know where to copy data. So, we first
+       * handle cache lookup to get target DRAM address to copy data. Second,
+       * we perform DMA.
        */
     case Operation::WriteZeroes:
       /*
@@ -175,11 +166,20 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         req.dmaBeginAt = now;
       }
 
-      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+      req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
                           eventDMACompletion, sreq.requestTag);
 
       break;
     case Operation::Write:
+      // Submit DMA (current chunk)
+      if (req.dmaCounter == 0) {
+        req.dmaBeginAt = now;
+      }
+
+      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+                          eventDMACompletion, sreq.requestTag);
+
+      break;
     case Operation::WriteZeroes:
     case Operation::Flush:
     case Operation::Trim:
@@ -235,6 +235,8 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
       // Complete when all pending DMA operations are completed.
       remove = true;
 
+      icl.done(&sreq);  // Mark as complete
+
       if (req.dmaCounter == req.nlp) {
         scheduleNow(req.eid, req.data);
 
@@ -246,12 +248,19 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
 
       break;
     case Operation::Write:
-      // Start NVM for this subrequest
-      if (req.nvmCounter == 0) {
-        req.nvmBeginAt = now;
-      }
+      // Complete when all pending DMA operations are completed.
+      remove = true;
 
-      icl.submit(&sreq);
+      icl.done(&sreq);  // Mark as complete
+
+      if (req.dmaCounter == req.nlp) {
+        scheduleNow(req.eid, req.data);
+
+        // Remove request
+        auto iter = requestQueue.find(req.requestTag);
+
+        requestQueue.erase(iter);
+      }
 
       break;
     case Operation::Compare:

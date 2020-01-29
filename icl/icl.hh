@@ -45,6 +45,9 @@ class ICL : public Object {
   //! Submit request
   void submit(SubRequest *);
 
+  //! Mark completion of DMA operation
+  void done(SubRequest *);
+
   /**
    * \brief Get logical pages contains data
    *

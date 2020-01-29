@@ -135,11 +135,15 @@ class SubRequest {
 
   LPN lpn;
 
+  // Host-side DMA address
   uint64_t offset;  //!< Offset in DMA Tag
   uint32_t length;  //!< Length in DMA Tag
 
   bool clear;
-  uint8_t *buffer;  //!< Buffer for DMA
+
+  // Device-side DMA address
+  uint8_t *buffer;   //!< Buffer for DMA (real data)
+  uint64_t address;  //!< Physical address of internal DRAM
 
  public:
   SubRequest(uint64_t t, Request *r)
@@ -151,7 +155,8 @@ class SubRequest {
         offset(o),
         length(s),
         clear(false),
-        buffer(nullptr) {}
+        buffer(nullptr),
+        address(0) {}
   SubRequest(const SubRequest &) = delete;
   SubRequest(SubRequest &&rhs) noexcept
       : requestTag(rhs.requestTag), clear(false), buffer(nullptr) {
@@ -172,11 +177,13 @@ class SubRequest {
       this->length = std::exchange(rhs.length, 0);
       this->clear = std::exchange(rhs.clear, false);
       this->buffer = std::exchange(rhs.buffer, nullptr);
+      this->address = std::exchange(rhs.address, 0);
     }
 
     return *this;
   }
 
+  inline void setAddress(uint64_t addr) { address = addr; }
   void setBuffer(uint8_t *data) { buffer = data; }
   void createBuffer(uint32_t size) {
     clear = true;
