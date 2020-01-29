@@ -17,20 +17,22 @@ namespace SimpleSSD::ICL {
 class Config : public BaseConfig {
  public:
   enum Key : uint32_t {
-    EnableCache,
+    CacheMode,
+    CacheSize,
     EnablePrefetch,
     PrefetchMode,
     PrefetchCount,
     PrefetchRatio,
-    CacheMode,
-    CacheSize,
     EvictPolicy,
     EvictMode,
     EvictThreshold,
+    CacheWaySize,
   };
 
   enum class Mode : uint8_t {
+    None,
     RingBuffer,
+    SetAssociative,
   };
 
   enum class EvictModeType : uint8_t {
@@ -45,16 +47,16 @@ class Config : public BaseConfig {
   };
 
  private:
-  bool enable;
+  Mode mode;
   bool readPrefetch;
   Granularity prefetchMode;
-  Mode mode;
+  EvictModeType evictPolicy;
   float evictThreshold;
   uint64_t prefetchCount;
   uint64_t prefetchRatio;
   uint64_t cacheSize;
-  EvictModeType evictPolicy;
   Granularity evictMode;
+  uint32_t waySize;
 
  public:
   Config();
