@@ -31,10 +31,14 @@ class AbstractManager : public Object {
   Event eventICLCompletion;
 
  public:
-  AbstractManager(ObjectData &o, FTL::FTL *p, Event e)
-      : Object(o), pFTL(p), cache(nullptr), eventICLCompletion(e) {}
+  AbstractManager(ObjectData &o, FTL::FTL *p)
+      : Object(o),
+        pFTL(p),
+        cache(nullptr),
+        eventICLCompletion(InvalidEventID) {}
   virtual ~AbstractManager() {}
 
+  void setCallbackFunction(Event e) { eventICLCompletion = e; }
   virtual void initialize(AbstractCache *ac) { cache = ac; }
 
   /* Interface for ICL::ICL */

@@ -9,8 +9,7 @@
 
 namespace SimpleSSD::ICL {
 
-NoCache::NoCache(ObjectData &o, FTL::FTL *f, Event e)
-    : AbstractManager(o, f, e) {}
+NoCache::NoCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {}
 
 NoCache::~NoCache() {}
 

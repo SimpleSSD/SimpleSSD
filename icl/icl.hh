@@ -31,8 +31,6 @@ class ICL : public Object {
   AbstractManager *pManager;
   AbstractCache *pCache;
 
-  Event eventHILCompletion;
-
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;
 

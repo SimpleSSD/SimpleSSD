@@ -8,12 +8,12 @@
 #include "icl/icl.hh"
 
 #include "icl/cache/abstract_cache.hh"
-#include "icl/manager/abstract_manager.hh"
+#include "icl/manager/none.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
 
-ICL::ICL(ObjectData &o) : Object(o), eventHILCompletion(InvalidEventID) {
+ICL::ICL(ObjectData &o) : Object(o) {
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
@@ -25,6 +25,7 @@ ICL::ICL(ObjectData &o) : Object(o), eventHILCompletion(InvalidEventID) {
 
   switch (mode) {
     case Config::Mode::None:
+      pManager = new NoCache(object, pFTL);
       break;
     case Config::Mode::RingBuffer:
     case Config::Mode::SetAssociative:
@@ -58,7 +59,7 @@ ICL::~ICL() {
 }
 
 void ICL::setCallbackFunction(Event e) {
-  eventHILCompletion = e;
+  pManager->setCallbackFunction(e);
 }
 
 void ICL::read(SubRequest *req) {
