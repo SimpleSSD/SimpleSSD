@@ -71,7 +71,10 @@ void CPU::Core::handleJob(uint64_t now) {
   auto job = std::move(jobQueue.front());
 
   // Function is completed!
-  job.eid->func(now, job.data);
+  if (job.eid != InvalidEventID) {
+    job.eid->func(now, job.data);
+  }
+
   busyUntil = now;
 
   jobQueue.pop_front();
@@ -114,10 +117,6 @@ void CPU::Core::submitJob(Event eid, uint64_t data, uint64_t curTick,
   instructionStat += func;
   eventStat.busy += busy;
   eventStat.handledFunction++;
-
-  if (UNLIKELY(eid == InvalidEventID)) {
-    return;
-  }
 
   if (jobQueue.size() == 0) {
     parent->scheduleAbs(jobEvent, 0ull, beginAt + busy);
