@@ -23,6 +23,9 @@ class BasicCache : public AbstractManager {
   Event eventLookupDone;
   void lookupDone(uint64_t, uint64_t);
 
+  Event eventEraseDone;
+  void eraseDone(uint64_t, uint64_t);
+
  public:
   BasicCache(ObjectData &, FTL::FTL *);
   ~BasicCache();
@@ -34,6 +37,7 @@ class BasicCache : public AbstractManager {
   void dmaDone(SubRequest *) override;
 
   void allocateDone(uint64_t) override;
+  void flushDone(uint64_t) override;
   void drain(std::vector<FlushContext> &) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

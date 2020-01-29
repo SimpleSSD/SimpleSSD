@@ -16,6 +16,9 @@ BasicCache::BasicCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {
   eventLookupDone =
       createEvent([this](uint64_t t, uint64_t d) { lookupDone(t, d); },
                   "ICL::BasicCache::eventLookupDone");
+  eventEraseDone =
+      createEvent([this](uint64_t t, uint64_t d) { eraseDone(t, d); },
+                  "ICL::BasicCache::eventEraseDone");
 }
 
 BasicCache::~BasicCache() {
@@ -33,12 +36,25 @@ void BasicCache::lookupDone(uint64_t now, uint64_t tag) {
   auto &req = *iter->second;
 
   if (req.getHit()) {
-    scheduleNow(eventICLCompletion, tag);
+    scheduleAbs(eventICLCompletion, tag, now);
 
     requestQueue.erase(iter);
   }
 
   // If not hit, just wait for allocateDone()
+}
+
+void BasicCache::eraseDone(uint64_t now, uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected SubRequest ID %" PRIu64 ".",
+           tag);
+
+  auto &req = *iter->second;
+
+  scheduleAbs(eventICLCompletion, tag, now);
+
+  requestQueue.erase(iter);
 }
 
 void BasicCache::read(SubRequest *req) {
@@ -67,8 +83,9 @@ void BasicCache::read(SubRequest *req) {
 void BasicCache::write(SubRequest *req) {
   bool hit = false;
   LPN lpn = req->getLPN();
+  auto tag = req->getTag();
 
-  requestQueue.emplace(req->getTag(), req);
+  requestQueue.emplace(tag, req);
 
   // Lookup
   auto fstat = cache->lookup(lpn, true, hit);
@@ -78,37 +95,58 @@ void BasicCache::write(SubRequest *req) {
     req->setHit();
   }
   else {
-    fstat += cache->allocate(lpn, req->getTag());
+    fstat += cache->allocate(lpn, tag);
 
     // Continue at allocateDone
   }
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupDone, req->getTag(),
-                   fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupDone, tag, fstat);
 }
 
 void BasicCache::flush(SubRequest *req) {
+  auto tag = req->getTag();
   auto fstat = cache->flush(req->getOffset(), req->getLength());
 
-  requestQueue.emplace(req->getTag(), req);
+  requestQueue.emplace(tag, req);
 
   // Continue at flushDone
 
-  // TODO: Handle CPU
+  scheduleFunction(CPU::CPUGroup::InternalCache, InvalidEventID, tag, fstat);
 }
 
 void BasicCache::erase(SubRequest *req) {
+  auto tag = req->getTag();
   auto fstat = cache->erase(req->getOffset(), req->getLength());
 
-  requestQueue.emplace(req->getTag(), req);
+  requestQueue.emplace(tag, req);
 
-  // Continue at eraseDone
-
-  // TODO: Handle CPU
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventEraseDone, tag, fstat);
 }
 
 void BasicCache::dmaDone(SubRequest *req) {
   cache->dmaDone(req->getLPN());
+}
+
+void BasicCache::allocateDone(uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected SubRequest ID %" PRIu64 ".",
+           tag);
+
+  auto &req = *iter->second;
+
+  requestQueue.erase(iter);
+}
+
+void BasicCache::flushDone(uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected SubRequest ID %" PRIu64 ".",
+           tag);
+
+  auto &req = *iter->second;
+
+  requestQueue.erase(iter);
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
