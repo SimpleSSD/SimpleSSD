@@ -11,12 +11,34 @@
 
 namespace SimpleSSD::ICL {
 
-BasicCache::BasicCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {}
+BasicCache::BasicCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {
+  // Create events
+  eventLookupDone =
+      createEvent([this](uint64_t t, uint64_t d) { lookupDone(t, d); },
+                  "ICL::BasicCache::eventLookupDone");
+}
 
 BasicCache::~BasicCache() {
   if (!requestQueue.empty()) {
     warn("Request queue is not empty.");
   }
+}
+
+void BasicCache::lookupDone(uint64_t now, uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected SubRequest ID %" PRIu64 ".",
+           tag);
+
+  auto &req = *iter->second;
+
+  if (req.getHit()) {
+    scheduleNow(eventICLCompletion, tag);
+
+    requestQueue.erase(iter);
+  }
+
+  // If not hit, just wait for allocateDone()
 }
 
 void BasicCache::read(SubRequest *req) {
@@ -29,15 +51,17 @@ void BasicCache::read(SubRequest *req) {
   auto fstat = cache->lookup(lpn, false, hit);
 
   if (hit) {
-    // TODO: Read completion
+    // Cache hit, immediate completion
+    req->setHit();
   }
   else {
     fstat += cache->allocate(lpn, req->getTag());
 
-    // TODO: FTL
+    // Continue at allocateDone
   }
 
-  // TODO: Handle CPU
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupDone, req->getTag(),
+                   fstat);
 }
 
 void BasicCache::write(SubRequest *req) {
@@ -51,7 +75,7 @@ void BasicCache::write(SubRequest *req) {
 
   if (hit) {
     // Hit or cold-miss
-    // TODO: Write completion
+    req->setHit();
   }
   else {
     fstat += cache->allocate(lpn, req->getTag());
@@ -59,7 +83,8 @@ void BasicCache::write(SubRequest *req) {
     // Continue at allocateDone
   }
 
-  // TODO: Handle CPU
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupDone, req->getTag(),
+                   fstat);
 }
 
 void BasicCache::flush(SubRequest *req) {

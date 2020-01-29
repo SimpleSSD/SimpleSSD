@@ -20,7 +20,9 @@ class BasicCache : public AbstractManager {
  protected:
   std::unordered_map<uint64_t, SubRequest *> requestQueue;
 
-  void readDone(uint64_t, uint64_t);
+  Event eventLookupDone;
+  void lookupDone(uint64_t, uint64_t);
+
  public:
   BasicCache(ObjectData &, FTL::FTL *);
   ~BasicCache();
