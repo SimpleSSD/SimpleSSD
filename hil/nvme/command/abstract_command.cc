@@ -98,4 +98,14 @@ void Command::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
+Request *Command::restoreRequest(uint64_t tag) noexcept {
+  for (auto &iter : tagList) {
+    if (iter.second->request.getTag() == tag) {
+      return &iter.second->request;
+    }
+  }
+
+  return nullptr;
+}
+
 }  // namespace SimpleSSD::HIL::NVMe

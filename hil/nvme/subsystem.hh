@@ -114,6 +114,8 @@ class Subsystem : public AbstractSubsystem {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  Request *restoreRequest(uint64_t) noexcept override;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe

@@ -926,6 +926,110 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventDispatch);
 
   pHIL->restoreCheckpoint(in);
+
+  // Clear restore buffer
+  pHIL->clearOldList();
+
+  for (auto &iter : controllerList) {
+    iter.second->dmaEngine->clearOldDMATagList();
+  }
+}
+
+Request *Subsystem::restoreRequest(uint64_t tag) noexcept {
+  Request *ret = nullptr;
+
+  ret = commandDeleteSQ->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandCreateSQ->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandGetLogPage->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandDeleteCQ->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandCreateCQ->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandIdentify->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandAbort->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandSetFeature->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandGetFeature->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandAsyncEventRequest->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandNamespaceManagement->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandNamespaceAttachment->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandFormatNVM->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandFlush->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandWrite->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandRead->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandCompare->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+  ret = commandDatasetManagement->restoreRequest(tag);
+  if (ret) {
+    goto RESTORE_END;
+  }
+
+RESTORE_END:
+  return ret;
 }
 
 }  // namespace SimpleSSD::HIL::NVMe

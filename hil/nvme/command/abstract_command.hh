@@ -78,6 +78,8 @@ class Command : public Object {
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
+
+  virtual Request *restoreRequest(uint64_t) noexcept;
 };
 
 }  // namespace SimpleSSD::HIL::NVMe
