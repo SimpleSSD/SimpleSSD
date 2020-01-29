@@ -131,6 +131,14 @@ void CommandData::createCheckpoint(std::ostream &out) const noexcept {
     // If we have cqc, we always have sqc. Just store data only.
     BACKUP_BLOB(out, cqc->getData(), 16);
   }
+
+  request.createCheckpoint(out);
+
+  // Backup DMATag
+  DMATag tag = request.getDMA();
+
+  BACKUP_DMATAG(out, tag);
+  BACKUP_SCALAR(out, beginAt);
 }
 
 void CommandData::restoreCheckpoint(std::istream &in) noexcept {
@@ -143,7 +151,7 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, id);
 
-    sqc = arbitrator->getRecoveredRequest(id);
+    sqc = arbitrator->restoreRequest(id);
 
     panic_if(!sqc, "Invalid SQContext found while recover command status.");
   }
@@ -156,6 +164,16 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
     cqc->update(sqc);
     RESTORE_BLOB(in, cqc->getData(), 16);
   }
+
+  request.restoreCheckpoint(in, object);
+
+  // Restore DMATag
+  DMATag tag;
+
+  RESTORE_DMATAG(dmaEngine, in, tag);
+  RESTORE_SCALAR(in, beginAt);
+
+  request.setDMA(dmaEngine, tag);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
