@@ -45,15 +45,36 @@ class AbstractManager : public Object {
   virtual void initialize(AbstractCache *ac) { cache = ac; }
 
   /* Interface for ICL::ICL */
+  //! Submit read request
   virtual void read(SubRequest *) = 0;
+
+  //! Submit write request
   virtual void write(SubRequest *) = 0;
+
+  //! Submit flush request
   virtual void flush(SubRequest *) = 0;
+
+  //! Submit trim/format request (erase data in cache)
   virtual void erase(SubRequest *) = 0;
+
+  //! Called by ICL when DMA is completed (for releasing cacheline)
   virtual void dmaDone(SubRequest *) = 0;
 
   /* Interface for ICL::AbstractCache */
-  virtual void allocateDone(bool, uint64_t) = 0;
+  /**
+   * \brief Handler for cache allocation
+   *
+   * Called when allocating cacheline for new data has been completed
+   *
+   * \param[in] read  True when SubRequest(tag) was read
+   * \param[in] tag   Tag of SubRequest
+   */
+  virtual void allocateDone(bool read, uint64_t tag) = 0;
+
+  //! Handler for cache flush
   virtual void flushDone(uint64_t) = 0;
+
+  //! Cache write-back requester
   virtual void drain(std::vector<FlushContext> &) = 0;
 };
 
