@@ -52,7 +52,7 @@ class AbstractManager : public Object {
   virtual void dmaDone(SubRequest *) = 0;
 
   /* Interface for ICL::AbstractCache */
-  virtual void allocateDone(uint64_t) = 0;
+  virtual void allocateDone(bool, uint64_t) = 0;
   virtual void flushDone(uint64_t) = 0;
   virtual void drain(std::vector<FlushContext> &) = 0;
 };

@@ -20,10 +20,12 @@ class BasicCache : public AbstractManager {
  protected:
   std::unordered_map<uint64_t, SubRequest *> requestQueue;
 
+  Event eventDone;
+  Event eventDrainDone;
+
   Event eventLookupDone;
   void lookupDone(uint64_t, uint64_t);
 
-  Event eventEraseDone;
 
  public:
   BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
@@ -35,7 +37,7 @@ class BasicCache : public AbstractManager {
   void erase(SubRequest *) override;
   void dmaDone(SubRequest *) override;
 
-  void allocateDone(uint64_t) override;
+  void allocateDone(bool, uint64_t) override;
   void flushDone(uint64_t) override;
   void drain(std::vector<FlushContext> &) override;
 

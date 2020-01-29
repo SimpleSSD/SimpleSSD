@@ -35,7 +35,7 @@ class NoCache : public AbstractManager {
 
   void dmaDone(SubRequest *) override {}
 
-  void allocateDone(uint64_t) override {}
+  void allocateDone(bool, uint64_t) override {}
   void flushDone(uint64_t) override {}
   void drain(std::vector<FlushContext> &) override {}
 

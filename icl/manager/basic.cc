@@ -14,12 +14,15 @@ namespace SimpleSSD::ICL {
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f) {
   // Create events
+  eventDone =
+      createEvent([this](uint64_t, uint64_t d) { allocateDone(false, d); },
+                  "ICL::BasicCache::eventDone");
+  eventDrainDone =
+      createEvent([this](uint64_t, uint64_t) { cache->drainDone(); },
+                  "ICL::BasicCache::eventDrainDone");
   eventLookupDone =
       createEvent([this](uint64_t t, uint64_t d) { lookupDone(t, d); },
                   "ICL::BasicCache::eventLookupDone");
-  eventEraseDone =
-      createEvent([this](uint64_t, uint64_t d) { allocateDone(d); },
-                  "ICL::BasicCache::eventEraseDone");
 }
 
 BasicCache::~BasicCache() {
@@ -100,30 +103,35 @@ void BasicCache::erase(SubRequest *req) {
 
   requestQueue.emplace(tag, req);
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventEraseDone, tag, fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventDone, tag, fstat);
 }
 
 void BasicCache::dmaDone(SubRequest *req) {
   cache->dmaDone(req->getLPN());
 }
 
-void BasicCache::allocateDone(uint64_t tag) {
+void BasicCache::allocateDone(bool isRead, uint64_t tag) {
   auto iter = requestQueue.find(tag);
 
   panic_if(iter == requestQueue.end(), "Unexpected SubRequest ID %" PRIu64 ".",
            tag);
 
-  scheduleNow(eventICLCompletion, tag);
+  if (isRead) {
+    // TODO: FTL end with eventDone
+  }
+  else {
+    scheduleNow(eventICLCompletion, tag);
 
-  requestQueue.erase(iter);
+    requestQueue.erase(iter);
+  }
 }
 
 void BasicCache::flushDone(uint64_t tag) {
-  allocateDone(tag);
+  allocateDone(false, tag);
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
-  // TODO: FTL
+  // TODO: FTL end with drainDone
 }
 
 void BasicCache::getStatList(std::vector<Stat> &, std::string) noexcept {}
@@ -133,8 +141,9 @@ void BasicCache::getStatValues(std::vector<double> &) noexcept {}
 void BasicCache::resetStatValues() noexcept {}
 
 void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_EVENT(out, eventDone);
+  BACKUP_EVENT(out, eventDrainDone);
   BACKUP_EVENT(out, eventLookupDone);
-  BACKUP_EVENT(out, eventEraseDone);
 
   uint64_t size = requestQueue.size();
 
@@ -146,8 +155,9 @@ void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_EVENT(in, eventDone);
+  RESTORE_EVENT(in, eventDrainDone);
   RESTORE_EVENT(in, eventLookupDone);
-  RESTORE_EVENT(in, eventEraseDone);
 
   uint64_t size, tag;
   SubRequest *sreq;
