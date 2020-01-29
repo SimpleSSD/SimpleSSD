@@ -16,23 +16,34 @@ namespace SimpleSSD::ICL {
 
 class NoCache : public AbstractManager {
  public:
-  NoCache(ObjectData &, FTL::FTL *);
-  ~NoCache();
+  NoCache(ObjectData &o, FTL::FTL *f) : AbstractManager(o, f) {}
+  ~NoCache() {}
 
-  void read(SubRequest *) override;
-  void write(SubRequest *) override;
-  void flush(SubRequest *) override;
-  void erase(SubRequest *) override;
-  void dmaDone(SubRequest *) override;
+  void read(SubRequest *) override {
+    // TODO: FTL
+  }
 
-  void drain(std::vector<FlushContext> &) override;
+  void write(SubRequest *) override {
+    // TODO: FTL
+  }
 
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
+  void flush(SubRequest *) override {}
 
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  void erase(SubRequest *) override {
+    // TODO: FTL
+  }
+
+  void dmaDone(SubRequest *) override {}
+
+  void allocateDone(uint64_t) override {}
+  void drain(std::vector<FlushContext> &) override {}
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override {}
+  void getStatValues(std::vector<double> &) noexcept override {}
+  void resetStatValues() noexcept override {}
+
+  void createCheckpoint(std::ostream &) const noexcept override {}
+  void restoreCheckpoint(std::istream &) noexcept override {}
 };
 
 }  // namespace SimpleSSD::ICL
