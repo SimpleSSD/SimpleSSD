@@ -72,38 +72,8 @@ class Request {
   uint64_t requestTag;  //!< Unique ID for HIL
 
  public:
-  Request()
-      : opcode(Operation::None),
-        result(Response::Success),
-        lbaSize(0),
-        dmaEngine(nullptr),
-        dmaTag(HIL::InvalidDMATag),
-        eid(InvalidEventID),
-        data(0),
-        offset(0),
-        length(0),
-        dmaCounter(0),
-        nvmCounter(0),
-        nlp(0),
-        dmaBeginAt(0),
-        nvmBeginAt(0),
-        requestTag(0) {}
-  Request(Event e, uint64_t c)
-      : opcode(Operation::None),
-        result(Response::Success),
-        lbaSize(0),
-        dmaEngine(nullptr),
-        dmaTag(HIL::InvalidDMATag),
-        eid(e),
-        data(c),
-        offset(0),
-        length(0),
-        dmaCounter(0),
-        nvmCounter(0),
-        nlp(0),
-        dmaBeginAt(0),
-        nvmBeginAt(0),
-        requestTag(0) {}
+  Request();
+  Request(Event, uint64_t);
 
   inline void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
     lbaSize = lbs;
@@ -123,13 +93,19 @@ class Request {
 
   inline HIL::DMATag getDMA() { return dmaTag; }
   inline Response getResponse() { return result; }
+
+  inline HIL::DMATag getDMA() const { return dmaTag; }
+  inline uint64_t getTag() const { return requestTag; }
+
+  void createCheckpoint(std::ostream &out) const noexcept;
+  void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
 };
 
 class SubRequest {
  private:
   friend HIL::HIL;
 
-  const uint64_t requestTag;
+  uint64_t requestTag;
 
   Request *request;
 
@@ -147,18 +123,8 @@ class SubRequest {
   uint64_t address;  //!< Physical address of internal DRAM
 
  public:
-  SubRequest(uint64_t t, Request *r)
-      : requestTag(t), request(r), clear(false), buffer(nullptr) {}
-  SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
-      : requestTag(t),
-        request(r),
-        lpn(l),
-        offset(o),
-        length(s),
-        hit(false),
-        clear(false),
-        buffer(nullptr),
-        address(0) {}
+  SubRequest(uint64_t, Request *);
+  SubRequest(uint64_t, Request *, LPN, uint64_t, uint32_t);
   SubRequest(const SubRequest &) = delete;
   SubRequest(SubRequest &&rhs) noexcept
       : requestTag(rhs.requestTag), clear(false), buffer(nullptr) {
@@ -189,10 +155,10 @@ class SubRequest {
   inline void setDRAMAddress(uint64_t addr) { address = addr; }
   inline void setHit() { hit = true; }
   void setBuffer(uint8_t *data) { buffer = data; }
-  void createBuffer(uint32_t size) {
+  void createBuffer() {
     clear = true;
 
-    buffer = (uint8_t *)calloc(size, 1);
+    buffer = (uint8_t *)calloc(length, 1);
   }
 
   inline uint64_t getTag() { return requestTag; }
@@ -203,6 +169,9 @@ class SubRequest {
   /* Only for Flush, Trim and Format */
   inline LPN getOffset() { return (LPN)offset; }
   inline uint32_t getLength() { return length; }
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &, HIL::HIL *) noexcept;
 };
 
 }  // namespace SimpleSSD

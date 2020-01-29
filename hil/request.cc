@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/*
+ * Copyright (C) 2019 CAMELab
+ *
+ * Author: Donghyun Gouk <kukdh1@camelab.org>
+ */
+
+#include "hil/request.hh"
+
+#include "hil/hil.hh"
+
+namespace SimpleSSD {
+
+Request::Request()
+    : opcode(Operation::None),
+      result(Response::Success),
+      lbaSize(0),
+      dmaEngine(nullptr),
+      dmaTag(HIL::InvalidDMATag),
+      eid(InvalidEventID),
+      data(0),
+      offset(0),
+      length(0),
+      dmaCounter(0),
+      nvmCounter(0),
+      nlp(0),
+      dmaBeginAt(0),
+      nvmBeginAt(0),
+      requestTag(0) {}
+
+Request::Request(Event e, uint64_t c)
+    : opcode(Operation::None),
+      result(Response::Success),
+      lbaSize(0),
+      dmaEngine(nullptr),
+      dmaTag(HIL::InvalidDMATag),
+      eid(e),
+      data(c),
+      offset(0),
+      length(0),
+      dmaCounter(0),
+      nvmCounter(0),
+      nlp(0),
+      dmaBeginAt(0),
+      nvmBeginAt(0),
+      requestTag(0) {}
+
+void Request::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, opcode);
+  BACKUP_SCALAR(out, result);
+  BACKUP_SCALAR(out, lbaSize);
+  BACKUP_EVENT(out, eid);
+  BACKUP_SCALAR(out, data);
+  BACKUP_SCALAR(out, offset);
+  BACKUP_SCALAR(out, length);
+  BACKUP_SCALAR(out, dmaCounter);
+  BACKUP_SCALAR(out, nvmCounter);
+  BACKUP_SCALAR(out, nlp);
+  BACKUP_SCALAR(out, dmaBeginAt);
+  BACKUP_SCALAR(out, nvmBeginAt);
+  BACKUP_SCALAR(out, requestTag);
+}
+
+void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
+  RESTORE_SCALAR(in, opcode);
+  RESTORE_SCALAR(in, result);
+  RESTORE_SCALAR(in, lbaSize);
+  RESTORE_EVENT(in, eid);
+  RESTORE_SCALAR(in, data);
+  RESTORE_SCALAR(in, offset);
+  RESTORE_SCALAR(in, length);
+  RESTORE_SCALAR(in, dmaCounter);
+  RESTORE_SCALAR(in, nvmCounter);
+  RESTORE_SCALAR(in, nlp);
+  RESTORE_SCALAR(in, dmaBeginAt);
+  RESTORE_SCALAR(in, nvmBeginAt);
+  RESTORE_SCALAR(in, requestTag);
+}
+
+SubRequest::SubRequest(uint64_t t, Request *r)
+    : requestTag(t), request(r), clear(false), buffer(nullptr) {}
+
+SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
+    : requestTag(t),
+      request(r),
+      lpn(l),
+      offset(o),
+      length(s),
+      hit(false),
+      clear(false),
+      buffer(nullptr),
+      address(0) {}
+
+void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, requestTag);
+
+  uint64_t tag = request->getTag();
+  BACKUP_SCALAR(out, tag);
+
+  BACKUP_SCALAR(out, lpn);
+  BACKUP_SCALAR(out, offset);
+  BACKUP_SCALAR(out, length);
+  BACKUP_SCALAR(out, hit);
+  BACKUP_SCALAR(out, clear);
+
+  if (clear) {
+    BACKUP_BLOB(out, buffer, length);
+  }
+  else {
+    BACKUP_SCALAR(out, buffer);
+  }
+
+  BACKUP_SCALAR(out, address);
+}
+
+void SubRequest::restoreCheckpoint(std::istream &in, HIL::HIL *pHIL) noexcept {
+  RESTORE_SCALAR(in, requestTag);
+
+  uint64_t tag;
+  RESTORE_SCALAR(in, tag);
+
+  request = pHIL->restoreRequest(tag);
+
+  RESTORE_SCALAR(in, lpn);
+  RESTORE_SCALAR(in, offset);
+  RESTORE_SCALAR(in, length);
+  RESTORE_SCALAR(in, hit);
+  RESTORE_SCALAR(in, clear);
+
+  if (clear) {
+    buffer = (uint8_t *)calloc(length, 1);
+
+    RESTORE_BLOB(in, buffer, length);
+  }
+  else {
+    RESTORE_SCALAR(in, buffer);
+  }
+
+  RESTORE_SCALAR(in, address);
+}
+
+}  // namespace SimpleSSD
