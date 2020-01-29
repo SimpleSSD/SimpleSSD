@@ -55,6 +55,8 @@ void HIL::submit(Operation opcode, Request *req) {
 
     convertFunction(req->offset, req->length, slpn, nlp, skipFront, skipEnd);
 
+    panic_if(req->nlp == 0, "Unexpected length of request.");
+
     // Make subrequests
     for (uint32_t i = 0; i < nlp; i++) {
       uint64_t offset = lpnSize * i - skipFront;
@@ -88,12 +90,14 @@ void HIL::submit(Operation opcode, Request *req) {
 
     panic_if(!sreq.second, "SubRequest ID conflict.");
 
+    sreq.first->second.offset = req->offset;
+    sreq.first->second.length = req->length;
+
     subrequestList.emplace_back(&sreq.first->second);
   }
 
   req->nlp = subrequestList.size();
-
-  panic_if(req->nlp == 0, "Unexpected length of request.");
+  req->nvmBeginAt = getTick();
 
   auto &sreq = *subrequestList.front();
 
@@ -113,6 +117,11 @@ void HIL::submit(Operation opcode, Request *req) {
        * For read, we push all NVM requests at same time, and do the DMA when
        * each subrequest is completed.
        */
+      for (auto &sreq : subrequestList) {
+        icl.read(sreq);
+      }
+
+      break;
     case Operation::Write:
       /*
        * For write, we need to read data to be written by DMA operation. But
@@ -125,14 +134,21 @@ void HIL::submit(Operation opcode, Request *req) {
        * For write zeroes, we don't need to perform DMA. Just push all NVM
        * requests at same time, like read operation.
        */
+      for (auto &sreq : subrequestList) {
+        icl.write(sreq);
+      }
+
+      break;
     case Operation::Flush:
+      for (auto &sreq : subrequestList) {
+        icl.flush(sreq);
+      }
+
+      break;
     case Operation::Trim:
     case Operation::Format:
-
-      // Submit NVM (all chunks)
-      req->nvmBeginAt = getTick();
       for (auto &sreq : subrequestList) {
-        icl.submit(sreq);
+        icl.format(sreq);
       }
 
       break;
@@ -167,7 +183,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
       }
 
       req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
-                          eventDMACompletion, sreq.requestTag);
+                           eventDMACompletion, sreq.requestTag);
 
       break;
     case Operation::Write:

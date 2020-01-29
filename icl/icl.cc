@@ -7,7 +7,8 @@
 
 #include "icl/icl.hh"
 
-#include "icl/abstract_cache.hh"
+#include "icl/cache/abstract_cache.hh"
+#include "icl/manager/abstract_manager.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
@@ -18,10 +19,24 @@ ICL::ICL(ObjectData &o) : Object(o), eventHILCompletion(InvalidEventID) {
   totalLogicalPages = param->totalLogicalPages;
   logicalPageSize = param->pageSize;
 
-  enabled = readConfigBoolean(Section::InternalCache, Config::Key::EnableCache);
+  // Create cache manager
+  auto mode = (Config::Mode)readConfigUint(Section::InternalCache,
+                                           Config::Key::CacheMode);
 
-  switch ((Config::Mode)readConfigUint(Section::InternalCache,
-                                       Config::Key::CacheMode)) {
+  switch (mode) {
+    case Config::Mode::None:
+      break;
+    case Config::Mode::RingBuffer:
+    case Config::Mode::SetAssociative:
+      break;
+    default:
+      panic("Unexpected internal cache model.");
+
+      break;
+  }
+
+  // Create cache structure
+  switch (mode) {
     case Config::Mode::RingBuffer:
       // pCache = new RingBuffer(object, commandManager, pFTL);
 
@@ -31,9 +46,13 @@ ICL::ICL(ObjectData &o) : Object(o), eventHILCompletion(InvalidEventID) {
 
       break;
   }
+
+  // Initialize
+  pManager->initialize(pCache);
 }
 
 ICL::~ICL() {
+  delete pManager;
   delete pCache;
   delete pFTL;
 }
@@ -42,13 +61,24 @@ void ICL::setCallbackFunction(Event e) {
   eventHILCompletion = e;
 }
 
-void ICL::submit(SubRequest *req) {
-  if (LIKELY(enabled)) {
-    pCache->submit(req);
-  }
-  else {
-    pFTL->submit(req);
-  }
+void ICL::read(SubRequest *req) {
+  pManager->read(req);
+}
+
+void ICL::write(SubRequest *req) {
+  pManager->write(req);
+}
+
+void ICL::flush(SubRequest *req) {
+  pManager->flush(req);
+}
+
+void ICL::format(SubRequest *req) {
+  pManager->erase(req);
+}
+
+void ICL::done(SubRequest *req) {
+  pManager->dmaDone(req);
 }
 
 LPN ICL::getPageUsage(LPN offset, LPN length) {

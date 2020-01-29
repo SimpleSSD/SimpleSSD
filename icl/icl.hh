@@ -17,6 +17,7 @@
 
 namespace SimpleSSD::ICL {
 
+class AbstractManager;
 class AbstractCache;
 
 /**
@@ -27,11 +28,11 @@ class AbstractCache;
 class ICL : public Object {
  private:
   FTL::FTL *pFTL;
+  AbstractManager *pManager;
   AbstractCache *pCache;
 
   Event eventHILCompletion;
 
-  bool enabled;
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;
 
@@ -42,8 +43,17 @@ class ICL : public Object {
   //! Set callback
   void setCallbackFunction(Event);
 
-  //! Submit request
-  void submit(SubRequest *);
+  //! Read/Compare request
+  void read(SubRequest *);
+
+  //! Write request
+  void write(SubRequest *);
+
+  //! Flush request
+  void flush(SubRequest *);
+
+  //! Format request
+  void format(SubRequest *);
 
   //! Mark completion of DMA operation
   void done(SubRequest *);
