@@ -24,7 +24,7 @@ class Config : public BaseConfig {
     PrefetchCount,
     PrefetchRatio,
     EvictPolicy,
-    EvictMode,
+    EvictGranularity,
     EvictThreshold,
     CacheWaySize,
   };
@@ -35,7 +35,7 @@ class Config : public BaseConfig {
     SetAssociative,
   };
 
-  enum class EvictModeType : uint8_t {
+  enum class EvictPolicyType : uint8_t {
     Random,
     FIFO,
     LRU,
@@ -50,7 +50,7 @@ class Config : public BaseConfig {
   Mode mode;
   bool readPrefetch;
   Granularity prefetchMode;
-  EvictModeType evictPolicy;
+  EvictPolicyType evictPolicy;
   float evictThreshold;
   uint64_t prefetchCount;
   uint64_t prefetchRatio;

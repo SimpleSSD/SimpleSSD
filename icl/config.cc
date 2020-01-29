@@ -27,7 +27,7 @@ Config::Config() {
   prefetchMode = Granularity::AllLevel;
   mode = Mode::RingBuffer;
   cacheSize = 33554432;
-  evictPolicy = EvictModeType::LRU;
+  evictPolicy = EvictPolicyType::LRU;
   evictMode = Granularity::AllLevel;
   evictThreshold = 0.7f;
   waySize = 8;
@@ -53,7 +53,7 @@ void Config::loadFrom(pugi::xml_node &section) {
     else if (strcmp(name, "eviction") == 0 && isSection(node)) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_POLICY, EvictModeType,
+        LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_POLICY, EvictPolicyType,
                             evictPolicy);
         LOAD_NAME_UINT_TYPE(node2, NAME_EVICT_MODE, Granularity, evictMode);
         LOAD_NAME_FLOAT(node2, NAME_EVICT_THRESHOLD, evictThreshold);
@@ -119,7 +119,7 @@ uint64_t Config::readUint(uint32_t idx) {
     case EvictPolicy:
       ret = (uint64_t)evictPolicy;
       break;
-    case EvictMode:
+    case EvictGranularity:
       ret = (uint64_t)evictMode;
       break;
     case CacheWaySize:
@@ -172,9 +172,9 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       cacheSize = value;
       break;
     case EvictPolicy:
-      evictPolicy = (EvictModeType)value;
+      evictPolicy = (EvictPolicyType)value;
       break;
-    case EvictMode:
+    case EvictGranularity:
       evictMode = (Granularity)value;
       break;
     case CacheWaySize:
