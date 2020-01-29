@@ -103,8 +103,6 @@ void HIL::submit(Operation opcode, Request *req) {
   req->nlp = subrequestList.size();
   req->nvmBeginAt = getTick();
 
-  auto &sreq = *subrequestList.front();
-
   switch (opcode) {
     case Operation::Compare:
     case Operation::CompareAndWrite:
@@ -258,7 +256,7 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
       icl.done(&sreq);  // Mark as complete
 
       if (req.dmaCounter == req.nlp) {
-        scheduleNow(req.eid, req.data);
+        scheduleAbs(req.eid, req.data, now);
 
         // Remove request
         auto iter = requestQueue.find(req.requestTag);
@@ -274,7 +272,7 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
       icl.done(&sreq);  // Mark as complete
 
       if (req.dmaCounter == req.nlp) {
-        scheduleNow(req.eid, req.data);
+        scheduleAbs(req.eid, req.data, now);
 
         // Remove request
         auto iter = requestQueue.find(req.requestTag);
