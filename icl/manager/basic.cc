@@ -55,7 +55,7 @@ void BasicCache::read(SubRequest *req) {
   requestQueue.emplace(tag, req);
 
   // Lookup
-  auto fstat = cache->lookup(req, false);
+  auto fstat = cache->lookup(req, true);
 
   if (!req->getHit()) {
     // Cache miss
@@ -74,7 +74,7 @@ void BasicCache::write(SubRequest *req) {
   requestQueue.emplace(tag, req);
 
   // Lookup
-  auto fstat = cache->lookup(req, true);
+  auto fstat = cache->lookup(req, false);
 
   if (!req->getHit()) {
     // Capcity-miss or conflict-miss

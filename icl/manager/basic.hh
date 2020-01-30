@@ -26,7 +26,6 @@ class BasicCache : public AbstractManager {
   Event eventLookupDone;
   void lookupDone(uint64_t, uint64_t);
 
-
  public:
   BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
   ~BasicCache();
