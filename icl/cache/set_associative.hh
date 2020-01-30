@@ -31,12 +31,13 @@ class SetAssociative : public AbstractCache {
       };
     };
 
+    LPN tag;
     uint64_t insertedAt;
     uint64_t accessedAt;
     Bitset validbits;
 
     CacheLine(uint64_t size)
-        : insertedAt(0), accessedAt(0), data(0), validbits(size) {}
+        : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
   };
 
   uint32_t sectorsInCacheLine;
@@ -44,14 +45,16 @@ class SetAssociative : public AbstractCache {
   uint32_t waySize;
 
   Config::Granularity evictMode;
+  uint32_t pagesToEvict;
 
+  uint32_t cacheTagSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
-  uint64_t cacheTagSize;
-  uint64_t cacheSize;
 
   std::vector<CacheLine> cacheline;
   std::function<CPU::Function(uint32_t, uint32_t &)> evictFunction;
+
+  // Pending queues
 
   // Victim selection
   std::random_device rd;
@@ -61,6 +64,10 @@ class SetAssociative : public AbstractCache {
   CPU::Function randomEviction(uint32_t, uint32_t &);
   CPU::Function fifoEviction(uint32_t, uint32_t &);
   CPU::Function lruEviction(uint32_t, uint32_t &);
+
+  inline uint32_t getSetIdx(LPN addr) { return addr % setSize; }
+  CPU::Function getEmptyWay(uint32_t, uint32_t &);
+  CPU::Function getValidWay(LPN, uint32_t &);
 
  public:
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);

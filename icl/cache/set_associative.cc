@@ -30,7 +30,8 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   waySize = (uint32_t)readConfigUint(Section::InternalCache,
                                      Config::Key::CacheWaySize);
 
-  cacheSize = readConfigUint(Section::InternalCache, Config::Key::CacheSize);
+  uint64_t cacheSize =
+      readConfigUint(Section::InternalCache, Config::Key::CacheSize);
 
   if (waySize == 0) {
     // Fully-associative
@@ -54,22 +55,40 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
       "CREATE  | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
       setSize, waySize, lineSize, cacheSize);
 
+  // # pages to evict once
+  switch (evictMode) {
+    case Config::Granularity::SuperpageLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+
+      break;
+    case Config::Granularity::AllLevel:
+      pagesToEvict = parameter->parallelism;
+
+      break;
+    default:
+      panic("Unexpected eviction granularity.");
+
+      break;
+  }
+
   // Allocate memory
   cacheDataBaseAddress = object.memory->allocate(
       cacheSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Data");
 
-  // Replace insertedAt and accessedAt as 2 byte clock-LRU
-  cacheTagSize = 3 + DIVCEIL(sectorsInCacheLine, 8);
+  // Omit insertedAt and accessedAt
+  cacheTagSize = 8 + DIVCEIL(sectorsInCacheLine, 8);
+
+  uint64_t totalTagSize = cacheTagSize * setSize * waySize;
 
   // Try SRAM
   if (object.memory->allocate(cacheTagSize, Memory::MemoryType::SRAM, "",
                               true) == 0) {
     cacheTagBaseAddress = object.memory->allocate(
-        cacheTagSize, Memory::MemoryType::SRAM, "ICL::SetAssociative::Tag");
+        totalTagSize, Memory::MemoryType::SRAM, "ICL::SetAssociative::Tag");
   }
   else {
     cacheTagBaseAddress = object.memory->allocate(
-        cacheTagSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Tag");
+        totalTagSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Tag");
   }
 
   // Create victim cacheline selecttion
@@ -110,7 +129,7 @@ CPU::Function SetAssociative::randomEviction(uint32_t set, uint32_t &way) {
   do {
     way = dist(gen);
 
-    auto &line = cacheline.at(set * waySize + way);
+    auto &line = cacheline[set * waySize + way];
 
     if (line.valid) {
       break;
@@ -152,21 +171,63 @@ CPU::Function SetAssociative::lruEviction(uint32_t set, uint32_t &way) {
   return fstat;
 }
 
+CPU::Function SetAssociative::getEmptyWay(uint32_t set, uint32_t &way) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  for (way = 0; way < waySize; way++) {
+    auto &line = cacheline[set * setSize + way];
+
+    if (!line.valid) {
+      break;
+    }
+  }
+
+  return fstat;
+}
+
+CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  uint32_t set = getSetIdx(lpn);
+
+  for (way = 0; way < waySize; way++) {
+    auto &line = cacheline[set * setSize + way];
+
+    if (line.valid && line.tag == lpn) {
+      break;
+    }
+  }
+
+  return fstat;
+}
+
 CPU::Function SetAssociative::lookup(SubRequest *sreq, bool read) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   LPN lpn = sreq->getLPN();
+  uint32_t set = getSetIdx(lpn);
+  uint32_t way;
 
-  auto iter = cacheline.find(lpn);
+  fstat += getValidWay(lpn, way);
 
-  if (iter != cacheline.end()) {
+  if (way != waySize) {
     // Hit
     sreq->setHit();
   }
   else if (!read) {
-    // Write, check conflict-miss
+    getEmptyWay(set, way);  // Don't add fstat here
+
+    if (way != waySize) {
+      // Cold miss
+      sreq->setHit();
+    }
   }
+
+  object.memory->read(cacheTagBaseAddress, cacheTagSize * waySize,
+                      InvalidEventID);
 
   return fstat;
 }
