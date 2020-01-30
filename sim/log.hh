@@ -38,7 +38,7 @@ class Log {
     HIL_NVMe,
     HIL_NVMe_Command,
     ICL,
-    ICL_RingBuffer,
+    ICL_SetAssociative,
     FTL,
     FTL_PageLevel,
     FTL_VLFTL,

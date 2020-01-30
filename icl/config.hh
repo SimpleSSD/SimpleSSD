@@ -31,7 +31,6 @@ class Config : public BaseConfig {
 
   enum class Mode : uint8_t {
     None,
-    RingBuffer,
     SetAssociative,
   };
 

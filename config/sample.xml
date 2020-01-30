@@ -388,8 +388,7 @@
 
       Possible values:
         0: Disable cache (very small buffer)
-        1: Ring buffer
-        2: Set associative
+        1: Set associative
      -->
     <config name="CacheMode">0</config>
     <!-- <int:u64> Cache size in bytes -->

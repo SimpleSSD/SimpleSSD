@@ -9,6 +9,7 @@
 
 #include "hil/hil.hh"
 #include "icl/cache/abstract_cache.hh"
+#include "icl/manager/basic.hh"
 #include "icl/manager/none.hh"
 #include "util/algorithm.hh"
 
@@ -26,10 +27,12 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   switch (mode) {
     case Config::Mode::None:
-      pManager = new NoCache(object, pFTL);
+      pManager = new NoCache(object, this, pFTL);
+
       break;
-    case Config::Mode::RingBuffer:
     case Config::Mode::SetAssociative:
+      pManager = new BasicCache(object, this, pFTL);
+
       break;
     default:
       panic("Unexpected internal cache model.");
@@ -39,7 +42,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   // Create cache structure
   switch (mode) {
-    case Config::Mode::RingBuffer:
+    case Config::Mode::SetAssociative:
       // pCache = new RingBuffer(object, commandManager, pFTL);
 
       break;

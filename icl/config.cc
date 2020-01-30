@@ -25,7 +25,7 @@ Config::Config() {
   prefetchCount = 1;
   prefetchRatio = 4;
   prefetchMode = Granularity::AllLevel;
-  mode = Mode::RingBuffer;
+  mode = Mode::SetAssociative;
   cacheSize = 33554432;
   evictPolicy = EvictPolicyType::LRU;
   evictMode = Granularity::AllLevel;
