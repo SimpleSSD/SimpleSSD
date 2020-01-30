@@ -21,6 +21,8 @@ struct FlushContext {
   LPN lpn;           // Logical address of request
   uint64_t address;  // Physical address of internal DRAM
   uint8_t *buffer;   // Data (for simulation)
+
+  FlushContext(LPN l, uint64_t a) : lpn(l), address(a) {}
 };
 
 class AbstractManager : public Object {
