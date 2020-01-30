@@ -74,9 +74,9 @@ class SetAssociative : public AbstractCache {
   ~SetAssociative();
 
   CPU::Function lookup(SubRequest *, bool) override;
-  CPU::Function allocate(SubRequest *) override;
   CPU::Function flush(SubRequest *) override;
   CPU::Function erase(SubRequest *) override;
+  void allocate(SubRequest *) override;
   void dmaDone(LPN) override;
   void drainDone() override;
 

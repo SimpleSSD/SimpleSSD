@@ -38,18 +38,9 @@ class AbstractCache : public Object {
    *
    * \param[in] sreq    Current subrequest
    * \param[in] isRead  True when read
+   * \return  CPU execution latency
    */
   virtual CPU::Function lookup(SubRequest *sreq, bool isRead) = 0;
-
-  /**
-   * \brief Allocate cacheline in cache
-   *
-   * When miss, cache should make place to store new data. Call
-   * AbstractManager::drain for data write-back.
-   *
-   * \param[in] sreq  Current subrequest
-   */
-  virtual CPU::Function allocate(SubRequest *sreq) = 0;
 
   /**
    * \brief Flush cacheline
@@ -57,6 +48,7 @@ class AbstractCache : public Object {
    * Flush cacheline in [offset, offset + length) range.
    *
    * \param[in] sreq  Current subrequest
+   * \return  CPU execution latency
    */
   virtual CPU::Function flush(SubRequest *sreq) = 0;
 
@@ -66,8 +58,19 @@ class AbstractCache : public Object {
    * Erase (invalidate) cacheline in [offset, offset + length) range.
    *
    * \param[in] sreq  Current subrequest
+   * \return  CPU execution latency
    */
   virtual CPU::Function erase(SubRequest *sreq) = 0;
+
+  /**
+   * \brief Allocate cacheline in cache
+   *
+   * When miss, cache should make place to store new data. Call
+   * AbstractManager::drain for data write-back.
+   *
+   * \param[in] sreq  Current subrequest
+   */
+  virtual void allocate(SubRequest *sreq) = 0;
 
   /**
    * \brief DMA done callback
