@@ -59,7 +59,7 @@ void BasicCache::read(SubRequest *req) {
 
   if (!req->getHit()) {
     // Cache miss
-    cache->allocate(req);
+    cache->allocate(req, true);
 
     // Continue at allocateDone
   }
@@ -78,7 +78,7 @@ void BasicCache::write(SubRequest *req) {
 
   if (!req->getHit()) {
     // Capcity-miss or conflict-miss
-    cache->allocate(req);
+    cache->allocate(req, false);
 
     // Continue at allocateDone
   }

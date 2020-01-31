@@ -69,6 +69,11 @@ class SetAssociative : public AbstractCache {
   CPU::Function getEmptyWay(uint32_t, uint32_t &);
   CPU::Function getValidWay(LPN, uint32_t &);
 
+  Event eventReadAllocateDone;
+  Event eventWriteAllocateDone;
+
+  void allocateDone(bool, uint64_t);
+
  public:
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);
   ~SetAssociative();
@@ -76,7 +81,7 @@ class SetAssociative : public AbstractCache {
   CPU::Function lookup(SubRequest *, bool) override;
   CPU::Function flush(SubRequest *) override;
   CPU::Function erase(SubRequest *) override;
-  void allocate(SubRequest *) override;
+  void allocate(SubRequest *, bool) override;
   void dmaDone(LPN) override;
   void drainDone() override;
 

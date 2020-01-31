@@ -118,6 +118,14 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
       break;
   }
+
+  // Create events
+  eventReadAllocateDone =
+      createEvent([this](uint64_t, uint64_t d) { allocateDone(true, d); },
+                  "ICL::SetAssociative::eventReadAllocateDone");
+  eventWriteAllocateDone =
+      createEvent([this](uint64_t, uint64_t d) { allocateDone(false, d); },
+                  "ICL::SetAssociative::eventWriteAllocateDone");
 }
 
 SetAssociative::~SetAssociative() {}
@@ -203,6 +211,10 @@ CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
   return fstat;
 }
 
+void SetAssociative::allocateDone(bool read, uint64_t tag) {
+  manager->allocateDone(read, tag);
+}
+
 CPU::Function SetAssociative::lookup(SubRequest *sreq, bool read) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -232,40 +244,6 @@ CPU::Function SetAssociative::lookup(SubRequest *sreq, bool read) {
   return fstat;
 }
 
-CPU::Function SetAssociative::allocate(SubRequest *sreq) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  // Check capacity
-  if (cacheline.size() < maxEntryCount) {
-    // Just add new entry for current subrequest
-    auto ret = cacheline.emplace(sreq->getLPN(), CacheLine(sectorsInCacheLine));
-
-    panic_if(!ret.second, "Cache corrupted.");
-  }
-  else {
-    // Select cachelines to evict
-    uint32_t nl = parameter->parallelismLevel[0];
-    std::vector<FlushContext> list;
-
-    if (evictMode == Config::Granularity::AllLevel) {
-      nl = parameter->parallelism;
-    }
-
-    for (uint32_t i = 0; i < nl; i++) {
-      auto iter = evictFunction();
-
-      panic_if(iter == cacheline.end(), "Cache corrupted.");
-
-      list.emplace_back(FlushContext(iter->first, iter->second.address));
-    }
-
-    manager->drain(list);
-  }
-
-  return fstat;
-}
-
 CPU::Function SetAssociative::flush(SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -274,6 +252,27 @@ CPU::Function SetAssociative::flush(SubRequest *sreq) {
 }
 
 CPU::Function SetAssociative::erase(SubRequest *) {}
+
+void SetAssociative::allocate(SubRequest *sreq, bool read) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+  Event eid = read ? eventReadAllocateDone : eventWriteAllocateDone;
+
+  uint32_t set = getSetIdx(sreq->getLPN());
+  uint32_t way;
+
+  // Find victim in current set
+  fstat += getEmptyWay(set, way);
+
+  if (way != waySize) {
+    // Done
+  }
+  else {
+    // Collect victim lines
+  }
+
+  scheduleFunction(CPU::CPUGroup::InternalCache, eid, sreq->getTag(), fstat);
+}
 
 void SetAssociative::dmaDone(LPN) {}
 

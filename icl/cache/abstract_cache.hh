@@ -69,8 +69,9 @@ class AbstractCache : public Object {
    * AbstractManager::drain for data write-back.
    *
    * \param[in] sreq  Current subrequest
+   * \param[in] isRead  True when read
    */
-  virtual void allocate(SubRequest *sreq) = 0;
+  virtual void allocate(SubRequest *sreq, bool isRead) = 0;
 
   /**
    * \brief DMA done callback
