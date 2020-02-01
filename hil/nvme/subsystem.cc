@@ -278,6 +278,13 @@ void Subsystem::fillIdentifyNamespace(uint8_t *buffer,
   memcpy(buffer + 16, &info->utilization, 8);
 
   // Namespace Features
+  // [Bits ] Description
+  // [07:05] Reserved
+  // [04:04] NVM Set capabilities
+  // [03:03] Reuse of NGUID field
+  // [02:02] 1 for Support Deallocated or Unwritten Logical Block error
+  // [01:01] 1 for NAWUN, NAWUPF, NACWU are defined
+  // [00:00] 1 for Support Thin Provisioning
   buffer[24] = 0x04;  // Trim supported
 
   // Number of LBA Formats

@@ -686,21 +686,22 @@ void Controller::identify(uint8_t *data) {
     }
 
     // Firmware Revision
-    memcpy(data + 0x0040, "02.01.02", 0x08);
+    memcpy(data + 0x0040, "02.01.03", 0x08);
 
     // Recommended Arbitration Burst
     data[0x0048] = 0x00;
 
-    // IEEE OUI Identifier (Same as Inter 750)
+    // IEEE OUI Identifier
     {
-      data[0x0049] = 0xE4;
-      data[0x004A] = 0xD2;
-      data[0x004B] = 0x5C;
+      data[0x0049] = 0x00;
+      data[0x004A] = 0x00;
+      data[0x004B] = 0x00;
     }
 
     // Controller Multi-Path I/O and Namespace Sharing Capabilities
     // [Bits ] Description
-    // [07:03] Reserved
+    // [07:04] Reserved
+    // [03:03] 1 for Asymmetric Namespace Access Reporting
     // [02:02] 1 for SR-IOV Virtual Function, 0 for PCI (Physical) Function
     // [01:01] 1 for more than one host may connected to NVM subsystem
     // [00:00] 1 for NVM subsystem may has more than one NVM subsystem port
@@ -718,10 +719,10 @@ void Controller::identify(uint8_t *data) {
     // Version
     {
       data[0x0050] = 0x01;
-      data[0x0051] = 0x02;
-      data[0x0052] = 0x01;
+      data[0x0051] = 0x04;
+      data[0x0052] = 0x00;
       data[0x0053] = 0x00;
-    }  // NVM Express 1.2.1 Compliant Controller
+    }  // NVM Express 1.4 Compliant Controller
 
     // RTD3 Resume Latency
     {
@@ -742,7 +743,14 @@ void Controller::identify(uint8_t *data) {
     // Optional Asynchronous Events Supported
     {
       // [Bits ] Description
-      // [31:10] Reserved
+      // [31:15] Reserved
+      // [14:14] 1 for Support Endurance Group Event Aggregate Log Page Change
+      //         Notice
+      // [13:13] 1 for Support LBA Status Information Notice
+      // [12:12] 1 for Support Predictable Latency Event Aggregate Log Change
+      //         Notice
+      // [11:11] 1 for Support Asymmetric Namespace Access Change Notice
+      // [10:10] Reserved
       // [09:09] 1 for Support Firmware Activation Notice
       // [08:08] 1 for Support Namespace Attributes Notice
       // [07:00] Reserved
@@ -756,13 +764,68 @@ void Controller::identify(uint8_t *data) {
     {
       // [Bits ] Description
       // [31:01] Reserved
+      // [09:09] 1 for Support UUID List
+      // [08:08] 1 for Support SQ Associations
+      // [07:07] 1 for Support Namespace Granularity
+      // [06:06] 1 for Traffic Based Keep Alive Support
+      // [05:05] 1 for Support Predictable Latency Mode
+      // [04:04] 1 for Support Endurance Group
+      // [03:03] 1 for Support Read Recovery Levels
+      // [02:02] 1 for Support NVM Sets
+      // [01:01] 1 for Support Non-Operational Power State Permissive Mode
       // [00:00] 1 for Support 128-bit Host Identifier
       data[0x0060] = 0x00;
       data[0x0061] = 0x00;
       data[0x0062] = 0x00;
       data[0x0063] = 0x00;
     }
-    memset(data + 0x0064, 0, 156);  // Reserved
+
+    // Read Recovery Levels Supported
+    {
+      // [Bits ] Description
+      // [15:15] 1 for Read Recovery Level 15 - Fast Fail
+      // ...
+      // [04:04] 1 for Read Recovery Level 4 - Default
+      // ...
+      // [00:00] 1 for Read Recovery Level 0
+      data[0x0064] = 0x00;
+      data[0x0065] = 0x00;
+    }
+
+    memset(data + 0x0066, 0, 9);  // Reserved
+
+    // Controller Type
+    // [Value] Description
+    // [   0h] Reserved (Controller Type not reported)
+    // [   1h] I/O Controller
+    // [   2h] Discovery Controller
+    // [   3h] Administrative Controller
+    // [4h to FFh] Reserved
+    data[0x006F] = 0x01;
+
+    // FRU Globally Unique Identifier
+    memset(data + 0x0070, 0, 16);
+
+    // Command Retry Delay Time 1
+    {
+      data[0x0080] = 0x00;
+      data[0x0081] = 0x00;
+    }
+
+    // Command Retry Delay Time 2
+    {
+      data[0x0082] = 0x00;
+      data[0x0083] = 0x00;
+    }
+
+    // Command Retry Delay Time 3
+    {
+      data[0x0084] = 0x00;
+      data[0x0085] = 0x00;
+    }
+
+    memset(data + 0x0086, 0, 106);  // Reserved
+    memset(data + 0x00F0, 0, 16);   // See NVMe-MI Specification
   }
 
   /** Admin Command Set Attributes & Optional Controller Capabilities **/
@@ -770,7 +833,13 @@ void Controller::identify(uint8_t *data) {
     // Optional Admin Command Support
     {
       // [Bits ] Description
-      // [15:04] Reserved
+      // [15:10] Reserved
+      // [09:09] 1 for SupportGet LBA Status capability
+      // [08:08] 1 for Support Doorbell Buffer Config command
+      // [07:07] 1 for Support Virtualization Management command
+      // [06:06] 1 for Support NVMe-MI Send and NVMe-MI Receive commands
+      // [05:05] 1 for Support Directives
+      // [04:04] 1 for Support Device Self-Test command
       // [03:03] 1 for Support Namespace Management and Namespace Attachment
       //         commands
       // [02:02] 1 for Support Firmware Commit and Firmware Image Download
@@ -802,7 +871,10 @@ void Controller::identify(uint8_t *data) {
 
     // Log Page Attributes
     // [Bits ] Description
-    // [07:03] Reserved
+    // [07:05] Reserved
+    // [04:04] 1 for Support Persisten Event log
+    // [03:03] 1 for Support Telemetry Host-Initiated and Telemetry Controller-
+    //         Initiated log pages and Telemetry Log Notices
     // [02:02] 1 for Support extended data for Get Log Page command
     // [01:01] 1 for Support Command Effects log page
     // [00:00] 1 for Support S.M.A.R.T. / Health information log page per
@@ -888,8 +960,21 @@ void Controller::identify(uint8_t *data) {
       data[0x013B] = 0x00;
     }
 
-    // Reserved
-    memset(data + 0x013C, 0, 4);
+    // Extended Device Self-Test Time
+    {
+      data[0x013C] = 0x00;
+      data[0x013D] = 0x00;
+    }
+
+    // Device Self-Test Options
+    // [Bits ] Description
+    // [07:01] Reserved
+    // [00:00] 1 for Support only one device self-test operation in process at
+    //         a time
+    data[0x013E] = 0x00;
+
+    // Firmware Update Granularity
+    data[0x013F] = 0x00;
 
     // Keep Alive Support
     {
@@ -897,8 +982,109 @@ void Controller::identify(uint8_t *data) {
       data[0x0141] = 0x00;
     }
 
+    // Host Controlled Thermal Management Attributes
+    {
+      // [Bits ] Description
+      // [15:01] Reserved
+      // [00:00] 1 for Support host controlled thermal management
+      data[0x0142] = 0x00;
+      data[0x0143] = 0x00;
+    }
+
+    // Minimum Thernam Management Temperature
+    {
+      data[0x0144] = 0x00;
+      data[0x0145] = 0x00;
+    }
+
+    // Maximum Thernam Management Temperature
+    {
+      data[0x0146] = 0x00;
+      data[0x0147] = 0x00;
+    }
+
+    // Sanitize Capabilities
+    {
+      // [Bits ] Description
+      // [31:30] No-Deallocate Modifies Media After Sanitize
+      // [29:29] No-Deallocate Inhibited
+      // [28:03] Reserved
+      // [02:02] 1 for Support Overwrite
+      // [01:01] 1 for Support Block Erase
+      // [00:00] 1 for Support Crypto Erase
+      data[0x0148] = 0x00;
+      data[0x0149] = 0x00;
+      data[0x014A] = 0x00;
+      data[0x014B] = 0x00;
+    }
+
+    // Host Memory Buffer Minimum Descriptor Entry Size
+    {
+      data[0x014C] = 0x00;
+      data[0x014D] = 0x00;
+      data[0x014E] = 0x00;
+      data[0x014F] = 0x00;
+    }
+
+    // Host Memory Maximum Descriptors Entries
+    {
+      data[0x0150] = 0x00;
+      data[0x0151] = 0x00;
+    }
+
+    // NVM Set Identifier Maximum
+    {
+      data[0x0152] = 0x00;
+      data[0x0153] = 0x00;
+    }
+
+    // Endurance Group Identifier Maximum
+    {
+      data[0x0154] = 0x00;
+      data[0x0155] = 0x00;
+    }
+
+    // ANA Transition Time
+    data[0x0156] = 0x00;
+
+    // Asymmetric Namespace Access Capabilities
+    // [Bits ] Description
+    // [07:07] 1 for Support non-zero ANAGRPID
+    // [06:06] 1 for ANAGRPID does not change while namespace is attached
+    // [05:05] Reserved
+    // [04:04] 1 for Support ANA Change state
+    // [03:03] 1 for Support ANA Persistent Loss state
+    // [02:02] 1 for Support ANA Inaccessible state
+    // [01:01] 1 for Support ANA Non-Optimized state
+    // [00:00] 1 for Support ANA Optimized state
+    data[0x157] = 0x00;
+
+    // ANA Group Identifier Maximum
+    {
+      data[0x0158] = 0x00;
+      data[0x0159] = 0x00;
+      data[0x015A] = 0x00;
+      data[0x015B] = 0x00;
+    }
+
+    // Number of ANA AGroup Identifiers
+    {
+      data[0x015C] = 0x00;
+      data[0x015D] = 0x00;
+      data[0x015E] = 0x00;
+      data[0x015F] = 0x00;
+    }
+
+    // Persistent Event Log Size
+    {
+      data[0x0160] = 0x00;
+      data[0x0161] = 0x00;
+      data[0x0162] = 0x00;
+      data[0x0163] = 0x00;
+    }
+
     // Reserved
-    memset(data + 0x0142, 0, 190);
+    memset(data + 0x0164, 0, 156);
   }
 
   /** NVM Command Set Attributes **/
@@ -932,7 +1118,9 @@ void Controller::identify(uint8_t *data) {
     // Optional NVM Command Support
     {
       // [Bits ] Description
-      // [15:06] Reserved
+      // [15:08] Reserved
+      // [07:07] 1 for Support Verify command
+      // [06:06] 1 for Support Timestamp features
       // [05:05] 1 for Support reservations
       // [04:04] 1 for Support Save field in Set Features command and Select
       //         field in Get Features command
@@ -940,7 +1128,7 @@ void Controller::identify(uint8_t *data) {
       // [02:02] 1 for Support Dataset Management command
       // [01:01] 1 for Support Write Uncorrectable command
       // [00:00] 1 for Support Compare command
-      data[0x0208] = 0x04;
+      data[0x0208] = 0x05;
       data[0x0209] = 0x00;
     }
 
@@ -965,10 +1153,12 @@ void Controller::identify(uint8_t *data) {
 
     // Volatile Write Cache
     // [Bits ] Description
-    // [07:01] Reserved
+    // [07:03] Reserved
+    // [02:01] Indicated Flush comand behavior if the NSID is 0xFFFFFFFF
     // [00:00] 1 for volatile write cache is present
     data[0x020D] =
         conf.readBoolean(CONFIG_ICL, ICL::ICL_USE_WRITE_CACHE) ? 0x01 : 0x00;
+    data[0x020D] |= 0x06;
 
     // Atomic Write Unit Normal
     {
@@ -989,7 +1179,12 @@ void Controller::identify(uint8_t *data) {
     //         0 for format is vendor specific
     data[0x0212] = 0x00;
 
-    // Reserved
+    // Namespace Write Protection Capabilities
+    // [Bits ] Description
+    // [07:03] Reserved
+    // [02:02] 1 for Support Permenant Write Protect state
+    // [01:01] 1 for Support Write Protect Until Power Cycle state
+    // [00:00] 1 for Support No Write Protect and Write Protect state
     data[0x0213] = 0x00;
 
     // Atomic Compare & Write Unit
@@ -1004,7 +1199,8 @@ void Controller::identify(uint8_t *data) {
     // SGL Support
     {
       // [Bits ] Description
-      // [31:21] Reserved
+      // [31:22] Reserved
+      // [21:21] 1 for Support Ransport SGL Data Block
       // [20:20] 1 for Support Address field in SGL Data Block
       // [19:19] 1 for Support MPTR containing SGL descriptor
       // [18:18] 1 for Support MPTR/DPTR containing SGL with larger than amount
@@ -1022,8 +1218,11 @@ void Controller::identify(uint8_t *data) {
       data[0x021B] = 0x00;
     }
 
+    // Maximun Number of Allowed Namespaces
+    *(uint32_t *)(data + 0x021C) = 0;
+
     // Reserved
-    memset(data + 0x021C, 0, 228);
+    memset(data + 0x0220, 0, 224);
 
     // NVM Subsystem NVMe Qualified Name
     {
