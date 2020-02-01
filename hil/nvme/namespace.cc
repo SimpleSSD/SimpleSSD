@@ -83,6 +83,9 @@ void Namespace::submitCommand(SQEntryWrapper &req, RequestFunction &func) {
         case OPCODE_READ:
           read(req, func);
           break;
+        case OPCODE_COMPARE:
+          compare(req, func);
+          break;
         case OPCODE_DATASET_MANAGEMEMT:
           datasetManagement(req, func);
           break;
@@ -131,6 +134,11 @@ void Namespace::setData(uint32_t id, Information *data) {
       if (conf.readBoolean(CONFIG_NVME, NVME_STRICT_DISK_SIZE)) {
         panic("Disk size not match");
       }
+    }
+
+    if (filename.length() > 0) {
+      SimpleSSD::info("Using disk image at %s for NSID %u", filename.c_str(),
+                      nsid);
     }
   }
 
@@ -437,6 +445,111 @@ void Namespace::read(SQEntryWrapper &req, RequestFunction &func) {
     };
 
     IOContext *pContext = new IOContext(func, resp);
+
+    pContext->beginAt = getTick();
+    pContext->slba = slba;
+    pContext->nlb = nlb;
+
+    CPUContext *pCPU =
+        new CPUContext(doRead, pContext, CPU::NVME__NAMESPACE, CPU::READ);
+
+    if (req.useSGL) {
+      pContext->dma =
+          new SGL(cfgdata, cpuHandler, pCPU, req.entry.data1, req.entry.data2);
+    }
+    else {
+      pContext->dma =
+          new PRPList(cfgdata, cpuHandler, pCPU, req.entry.data1,
+                      req.entry.data2, pContext->nlb * info.lbaSize);
+    }
+  }
+  else {
+    func(resp);
+  }
+}
+
+void Namespace::compare(SQEntryWrapper &req, RequestFunction &func) {
+  bool err = false;
+
+  CQEntryWrapper resp(req);
+  uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+  uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
+  // bool fua = req.entry.dword12 & 0x40000000;
+
+  if (!attached) {
+    err = true;
+    resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                    STATUS_NAMESPACE_NOT_ATTACHED);
+  }
+  if (nlb == 0) {
+    err = true;
+    warn("nvme_namespace: host tried to read 0 blocks");
+  }
+
+  debugprint(LOG_HIL_NVME,
+             "NVM     | COMP  | SQ %u:%u | CID %u | NSID %-5d | %" PRIX64
+             " + %d",
+             req.sqID, req.sqUID, req.entry.dword0.commandID, nsid, slba, nlb);
+
+  if (!err) {
+    DMAFunction doRead = [this](uint64_t tick, void *context) {
+      DMAFunction dmaDone = [this](uint64_t tick, void *context) {
+        CompareContext *pContext = (CompareContext *)context;
+
+        pContext->beginAt++;
+
+        if (pContext->beginAt == 2) {
+          // Compare buffer!
+          // Always success if no disk
+          if (pDisk && memcmp(pContext->buffer, pContext->hostContent,
+                              pContext->nlb * info.lbaSize) != 0) {
+            pContext->resp.makeStatus(false, false,
+                                      TYPE_MEDIA_AND_DATA_INTEGRITY_ERROR,
+                                      STATUS_COMPARE_FAILURE);
+          }
+
+          debugprint(
+              LOG_HIL_NVME,
+              "NVM     | COMP  | CQ %u | SQ %u:%u | CID %u | NSID %-5d | "
+              "%" PRIX64 " + %d | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+              pContext->resp.cqID, pContext->resp.entry.dword2.sqID,
+              pContext->resp.sqUID, pContext->resp.entry.dword3.commandID, nsid,
+              pContext->slba, pContext->nlb, pContext->tick, tick,
+              tick - pContext->tick);
+
+          pContext->function(pContext->resp);
+
+          if (pContext->buffer) {
+            free(pContext->buffer);
+          }
+          if (pContext->hostContent) {
+            free(pContext->hostContent);
+          }
+
+          delete pContext->dma;
+          delete pContext;
+        }
+      };
+
+      CompareContext *pContext = (CompareContext *)context;
+
+      pContext->tick = tick;
+      pContext->beginAt = 0;
+
+      pParent->read(this, pContext->slba, pContext->nlb, dmaDone, pContext);
+
+      pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
+      pContext->hostContent = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
+
+      if (pDisk) {
+        pDisk->read(pContext->slba, pContext->nlb, pContext->buffer);
+      }
+
+      pContext->dma->read(0, pContext->nlb * info.lbaSize,
+                          pContext->hostContent, dmaDone, context);
+    };
+
+    CompareContext *pContext = new CompareContext(func, resp);
 
     pContext->beginAt = getTick();
     pContext->slba = slba;

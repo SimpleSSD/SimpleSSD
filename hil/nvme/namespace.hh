@@ -70,6 +70,14 @@ class IOContext : public RequestContext {
   IOContext(RequestFunction &f, CQEntryWrapper &r) : RequestContext(f, r) {}
 };
 
+class CompareContext : public IOContext {
+ public:
+  uint8_t *hostContent;
+
+  CompareContext(RequestFunction &f, CQEntryWrapper &r)
+      : IOContext(f, r), hostContent(nullptr) {}
+};
+
 class Namespace {
  public:
   typedef struct _Information {
@@ -109,6 +117,7 @@ class Namespace {
   void flush(SQEntryWrapper &, RequestFunction &);
   void write(SQEntryWrapper &, RequestFunction &);
   void read(SQEntryWrapper &, RequestFunction &);
+  void compare(SQEntryWrapper &, RequestFunction &);
   void datasetManagement(SQEntryWrapper &, RequestFunction &);
 
  public:
