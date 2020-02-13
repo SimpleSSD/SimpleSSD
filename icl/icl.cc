@@ -9,7 +9,7 @@
 
 #include "hil/hil.hh"
 #include "icl/cache/abstract_cache.hh"
-#include "icl/manager/basic.hh"
+// #include "icl/manager/basic.hh"
 #include "icl/manager/none.hh"
 #include "util/algorithm.hh"
 
@@ -31,7 +31,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
       break;
     case Config::Mode::SetAssociative:
-      pManager = new BasicCache(object, this, pFTL);
+      // pManager = new BasicCache(object, this, pFTL);
 
       break;
     default:
