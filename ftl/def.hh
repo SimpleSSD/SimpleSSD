@@ -53,9 +53,6 @@ class Request {
   Operation opcode;
   Response result;
 
-  bool lpnValid;
-  bool ppnValid;
-
   LPN lpn;
   PPN ppn;
 
@@ -70,26 +67,19 @@ class Request {
   inline Operation getOperation() { return opcode; }
   inline Response getResponse() { return result; }
 
-  inline LPN getLPN() {
-    if (!lpnValid) {
-      return InvalidLPN;
-    }
-
-    return lpn;
-  }
-
-  inline PPN getPPN() {
-    if (!ppnValid) {
-      return InvalidPPN;
-    }
-
-    return ppn;
-  }
+  inline LPN getLPN() { return lpn; }
+  inline PPN getPPN() { return ppn; }
 
   inline uint32_t getOffset() { return offset; }
   inline uint32_t getLength() { return length; }
 
   inline void setResponse(Response r) { result = r; }
+
+  inline void setLPN(LPN l) { lpn = l; }
+  inline void setPPN(PPN p) { ppn = p; }
+
+  inline void setOffset(uint32_t o) { offset = o; }
+  inline void setLength(uint32_t l) { length = l; }
 };
 
 /* struct CopyList {
