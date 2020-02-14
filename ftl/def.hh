@@ -31,7 +31,68 @@ typedef struct {
   uint64_t superpage;
 } Parameter;
 
-struct CopyList {
+enum class Operation : uint8_t {
+  None,
+  Read,
+  Write,
+  Erase,
+};
+
+enum class Response : uint8_t {
+  Success,
+  Unwritten,
+  FormatInProgress,
+  ReadECCFail,
+  WriteFail,
+};
+
+class Request {
+ private:
+  uint64_t tag;
+
+  Operation opcode;
+  Response result;
+
+  bool lpnValid;
+  bool ppnValid;
+
+  LPN lpn;
+  PPN ppn;
+
+  uint32_t offset;
+  uint32_t length;
+
+ public:
+  Request(uint64_t);
+  Request(uint64_t, Operation, LPN);
+  Request(uint64_t, Operation, LPN, PPN);
+
+  inline Operation getOperation() { return opcode; }
+  inline Response getResponse() { return result; }
+
+  inline LPN getLPN() {
+    if (!lpnValid) {
+      return InvalidLPN;
+    }
+
+    return lpn;
+  }
+
+  inline PPN getPPN() {
+    if (!ppnValid) {
+      return InvalidPPN;
+    }
+
+    return ppn;
+  }
+
+  inline uint32_t getOffset() { return offset; }
+  inline uint32_t getLength() { return length; }
+
+  inline void setResponse(Response r) { result = r; }
+};
+
+/* struct CopyList {
   PPN blockID;
   uint64_t eraseTag;
 
@@ -75,7 +136,7 @@ struct CopyList {
     RESTORE_SCALAR(in, size);
     iter = commandList.begin() + size;
   }
-};
+}; */
 
 }  // namespace SimpleSSD::FTL
 
