@@ -12,15 +12,10 @@
 
 #include "hil/common/dma_engine.hh"
 
-// Use SimpleSSD namespace instead of SimpleSSD::HIL
-namespace SimpleSSD {
+namespace SimpleSSD::HIL {
 
 // Forward definition
-namespace HIL {
-
 class HIL;
-
-}
 
 enum class Operation : uint16_t {
   None,             // NVMCplt. DMACplt.
@@ -46,15 +41,15 @@ enum class Response : uint16_t {
 
 class Request {
  private:
-  friend HIL::HIL;
+  friend HIL;
 
   Operation opcode;
   Response result;  //!< Request result
 
   uint32_t lbaSize;  //!< Not used by HIL
 
-  HIL::DMAEngine *dmaEngine;
-  HIL::DMATag dmaTag;
+  DMAEngine *dmaEngine;
+  DMATag dmaTag;
 
   Event eid;      //!< Completion event
   uint64_t data;  //!< Completion data
@@ -81,7 +76,7 @@ class Request {
     length = nlb * lbaSize;
   }
 
-  inline void setDMA(HIL::DMAEngine *engine, HIL::DMATag tag) {
+  inline void setDMA(DMAEngine *engine, DMATag tag) {
     dmaEngine = engine;
     dmaTag = tag;
   }
@@ -91,10 +86,10 @@ class Request {
     nlb = length / lbaSize;
   }
 
-  inline HIL::DMATag getDMA() { return dmaTag; }
+  inline DMATag getDMA() { return dmaTag; }
   inline Response getResponse() { return result; }
 
-  inline HIL::DMATag getDMA() const { return dmaTag; }
+  inline DMATag getDMA() const { return dmaTag; }
   inline uint64_t getTag() const { return requestTag; }
 
   void createCheckpoint(std::ostream &out) const noexcept;
@@ -103,7 +98,7 @@ class Request {
 
 class SubRequest {
  private:
-  friend HIL::HIL;
+  friend HIL;
 
   uint64_t requestTag;
 
@@ -172,9 +167,9 @@ class SubRequest {
   inline uint32_t getLength() { return length; }
 
   void createCheckpoint(std::ostream &) const noexcept;
-  void restoreCheckpoint(std::istream &, HIL::HIL *) noexcept;
+  void restoreCheckpoint(std::istream &, HIL *) noexcept;
 };
 
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::HIL
 
 #endif

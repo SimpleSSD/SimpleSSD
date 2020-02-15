@@ -9,14 +9,14 @@
 
 #include "hil/hil.hh"
 
-namespace SimpleSSD {
+namespace SimpleSSD::HIL {
 
 Request::Request()
     : opcode(Operation::None),
       result(Response::Success),
       lbaSize(0),
       dmaEngine(nullptr),
-      dmaTag(HIL::InvalidDMATag),
+      dmaTag(InvalidDMATag),
       eid(InvalidEventID),
       data(0),
       offset(0),
@@ -33,7 +33,7 @@ Request::Request(Event e, uint64_t c)
       result(Response::Success),
       lbaSize(0),
       dmaEngine(nullptr),
-      dmaTag(HIL::InvalidDMATag),
+      dmaTag(InvalidDMATag),
       eid(e),
       data(c),
       offset(0),
@@ -116,7 +116,7 @@ void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, address);
 }
 
-void SubRequest::restoreCheckpoint(std::istream &in, HIL::HIL *pHIL) noexcept {
+void SubRequest::restoreCheckpoint(std::istream &in, HIL *pHIL) noexcept {
   RESTORE_SCALAR(in, requestTag);
 
   uint64_t tag;
@@ -142,4 +142,4 @@ void SubRequest::restoreCheckpoint(std::istream &in, HIL::HIL *pHIL) noexcept {
   RESTORE_SCALAR(in, address);
 }
 
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::HIL
