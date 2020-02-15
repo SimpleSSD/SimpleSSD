@@ -16,6 +16,7 @@ namespace SimpleSSD::HIL {
 
 // Forward definition
 class HIL;
+class SubRequest;
 
 enum class Operation : uint16_t {
   None,             // NVMCplt. DMACplt.
@@ -42,6 +43,7 @@ enum class Response : uint16_t {
 class Request {
  private:
   friend HIL;
+  friend SubRequest;
 
   Operation opcode;
   Response result;  //!< Request result
@@ -161,6 +163,8 @@ class SubRequest {
   inline LPN getLPN() { return lpn; }
   inline bool getHit() { return hit; }
   inline const uint8_t *getBuffer() { return buffer; }
+
+  inline uint32_t getNLP() { return request->nlp; }
 
   /* Only for Flush, Trim and Format */
   inline LPN getOffset() { return (LPN)offset; }
