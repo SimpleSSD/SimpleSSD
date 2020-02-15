@@ -88,7 +88,7 @@ class Request {
   inline void setLength(uint32_t l) { length = l; }
 };
 
-/* struct CopyList {
+struct CopyList {
   PPN blockID;
   uint64_t eraseTag;
 
@@ -132,7 +132,7 @@ class Request {
     RESTORE_SCALAR(in, size);
     iter = commandList.begin() + size;
   }
-}; */
+};
 
 }  // namespace SimpleSSD::FTL
 

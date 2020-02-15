@@ -9,9 +9,8 @@
 
 namespace SimpleSSD::FTL {
 
-Request::Request(uint64_t t, Event e, uint64_t d)
-    : tag(t),
-      opcode(Operation::None),
+Request::Request(Event e, uint64_t d)
+    : opcode(Operation::None),
       result(Response::Success),
       lpn(InvalidLPN),
       ppn(InvalidPPN),
@@ -20,9 +19,8 @@ Request::Request(uint64_t t, Event e, uint64_t d)
       event(e),
       data(d) {}
 
-Request::Request(uint64_t t, Event e, uint64_t d, Operation o, LPN l)
-    : tag(t),
-      opcode(o),
+Request::Request(Event e, uint64_t d, Operation o, LPN l)
+    : opcode(o),
       result(Response::Success),
       lpn(l),
       ppn(InvalidPPN),
@@ -31,9 +29,8 @@ Request::Request(uint64_t t, Event e, uint64_t d, Operation o, LPN l)
       event(e),
       data(d) {}
 
-Request::Request(uint64_t t, Event e, uint64_t d, Operation o, LPN l, PPN p)
-    : tag(t),
-      opcode(o),
+Request::Request(Event e, uint64_t d, Operation o, LPN l, PPN p)
+    : opcode(o),
       result(Response::Success),
       lpn(l),
       ppn(p),
