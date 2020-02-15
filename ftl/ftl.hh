@@ -41,14 +41,14 @@ class FTL : public Object {
   FTL(ObjectData &);
   ~FTL();
 
-  void submit(SubRequest *);
-
   Parameter *getInfo();
   uint32_t getMappingGranularity();
 
   LPN getPageUsage(LPN, LPN);
-  bool isGC();
-  uint8_t isFormat();
+
+  void read(Request &);
+  void write(Request &);
+  void invalidate(LPN, uint32_t, Event, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
