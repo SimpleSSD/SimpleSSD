@@ -59,10 +59,13 @@ class Request {
   uint32_t offset;
   uint32_t length;
 
+  Event event;
+  uint64_t data;
+
  public:
-  Request(uint64_t);
-  Request(uint64_t, Operation, LPN);
-  Request(uint64_t, Operation, LPN, PPN);
+  Request(uint64_t, Event, uint64_t);
+  Request(uint64_t, Event, uint64_t, Operation, LPN);
+  Request(uint64_t, Event, uint64_t, Operation, LPN, PPN);
 
   inline Operation getOperation() { return opcode; }
   inline Response getResponse() { return result; }
@@ -72,6 +75,9 @@ class Request {
 
   inline uint32_t getOffset() { return offset; }
   inline uint32_t getLength() { return length; }
+
+  inline Event getEvent() { return event; }
+  inline uint64_t getEventData() { return data; }
 
   inline void setResponse(Response r) { result = r; }
 
