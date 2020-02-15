@@ -215,7 +215,7 @@ void SetAssociative::allocateDone(bool read, uint64_t tag) {
   manager->allocateDone(read, tag);
 }
 
-CPU::Function SetAssociative::lookup(SubRequest *sreq, bool read) {
+CPU::Function SetAssociative::lookup(HIL::SubRequest *sreq, bool read) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -244,16 +244,16 @@ CPU::Function SetAssociative::lookup(SubRequest *sreq, bool read) {
   return fstat;
 }
 
-CPU::Function SetAssociative::flush(SubRequest *sreq) {
+CPU::Function SetAssociative::flush(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   return fstat;
 }
 
-CPU::Function SetAssociative::erase(SubRequest *) {}
+CPU::Function SetAssociative::erase(HIL::SubRequest *) {}
 
-void SetAssociative::allocate(SubRequest *sreq, bool read) {
+void SetAssociative::allocate(HIL::SubRequest *sreq, bool read) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
   Event eid = read ? eventReadAllocateDone : eventWriteAllocateDone;

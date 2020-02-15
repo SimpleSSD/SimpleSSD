@@ -66,23 +66,23 @@ void ICL::setCallbackFunction(Event e) {
   pManager->setCallbackFunction(e);
 }
 
-void ICL::read(SubRequest *req) {
+void ICL::read(HIL::SubRequest *req) {
   pManager->read(req);
 }
 
-void ICL::write(SubRequest *req) {
+void ICL::write(HIL::SubRequest *req) {
   pManager->write(req);
 }
 
-void ICL::flush(SubRequest *req) {
+void ICL::flush(HIL::SubRequest *req) {
   pManager->flush(req);
 }
 
-void ICL::format(SubRequest *req) {
+void ICL::format(HIL::SubRequest *req) {
   pManager->erase(req);
 }
 
-void ICL::done(SubRequest *req) {
+void ICL::done(HIL::SubRequest *req) {
   pManager->dmaDone(req);
 }
 
@@ -129,7 +129,7 @@ void ICL::restoreCheckpoint(std::istream &in) noexcept {
   pFTL->restoreCheckpoint(in);
 }
 
-SubRequest *ICL::restoreSubRequest(uint64_t tag) noexcept {
+HIL::SubRequest *ICL::restoreSubRequest(uint64_t tag) noexcept {
   return pHIL->restoreSubRequest(tag);
 }
 

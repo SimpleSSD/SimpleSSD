@@ -48,19 +48,19 @@ class AbstractManager : public Object {
 
   /* Interface for ICL::ICL */
   //! Submit read request
-  virtual void read(SubRequest *) = 0;
+  virtual void read(HIL::SubRequest *) = 0;
 
   //! Submit write request
-  virtual void write(SubRequest *) = 0;
+  virtual void write(HIL::SubRequest *) = 0;
 
   //! Submit flush request
-  virtual void flush(SubRequest *) = 0;
+  virtual void flush(HIL::SubRequest *) = 0;
 
   //! Submit trim/format request (erase data in cache)
-  virtual void erase(SubRequest *) = 0;
+  virtual void erase(HIL::SubRequest *) = 0;
 
   //! Called by ICL when DMA is completed (for releasing cacheline)
-  virtual void dmaDone(SubRequest *) = 0;
+  virtual void dmaDone(HIL::SubRequest *) = 0;
 
   /* Interface for ICL::AbstractCache */
   /**

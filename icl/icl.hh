@@ -52,19 +52,19 @@ class ICL : public Object {
   void setCallbackFunction(Event);
 
   //! Read/Compare request
-  void read(SubRequest *);
+  void read(HIL::SubRequest *);
 
   //! Write request
-  void write(SubRequest *);
+  void write(HIL::SubRequest *);
 
   //! Flush request
-  void flush(SubRequest *);
+  void flush(HIL::SubRequest *);
 
   //! Format request
-  void format(SubRequest *);
+  void format(HIL::SubRequest *);
 
   //! Mark completion of DMA operation
-  void done(SubRequest *);
+  void done(HIL::SubRequest *);
 
   /**
    * \brief Get logical pages contains data
@@ -87,7 +87,7 @@ class ICL : public Object {
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 
-  SubRequest *restoreSubRequest(uint64_t) noexcept;
+  HIL::SubRequest *restoreSubRequest(uint64_t) noexcept;
 };
 
 }  // namespace ICL

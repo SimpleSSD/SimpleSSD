@@ -18,7 +18,7 @@ namespace SimpleSSD::ICL {
 
 class BasicCache : public AbstractManager {
  protected:
-  std::unordered_map<uint64_t, SubRequest *> requestQueue;
+  std::unordered_map<uint64_t, HIL::SubRequest *> requestQueue;
 
   Event eventDone;
   Event eventDrainDone;
@@ -30,11 +30,11 @@ class BasicCache : public AbstractManager {
   BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
   ~BasicCache();
 
-  void read(SubRequest *) override;
-  void write(SubRequest *) override;
-  void flush(SubRequest *) override;
-  void erase(SubRequest *) override;
-  void dmaDone(SubRequest *) override;
+  void read(HIL::SubRequest *) override;
+  void write(HIL::SubRequest *) override;
+  void flush(HIL::SubRequest *) override;
+  void erase(HIL::SubRequest *) override;
+  void dmaDone(HIL::SubRequest *) override;
 
   void allocateDone(bool, uint64_t) override;
   void flushDone(uint64_t) override;

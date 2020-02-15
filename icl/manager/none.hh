@@ -19,21 +19,21 @@ class NoCache : public AbstractManager {
   NoCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f) : AbstractManager(o, p, f) {}
   ~NoCache() {}
 
-  void read(SubRequest *) override {
+  void read(HIL::SubRequest *) override {
     // TODO: FTL
   }
 
-  void write(SubRequest *) override {
+  void write(HIL::SubRequest *) override {
     // TODO: FTL
   }
 
-  void flush(SubRequest *) override {}
+  void flush(HIL::SubRequest *) override {}
 
-  void erase(SubRequest *) override {
+  void erase(HIL::SubRequest *) override {
     // TODO: FTL
   }
 
-  void dmaDone(SubRequest *) override {}
+  void dmaDone(HIL::SubRequest *) override {}
 
   void allocateDone(bool, uint64_t) override {}
   void flushDone(uint64_t) override {}

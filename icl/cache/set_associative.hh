@@ -78,10 +78,10 @@ class SetAssociative : public AbstractCache {
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);
   ~SetAssociative();
 
-  CPU::Function lookup(SubRequest *, bool) override;
-  CPU::Function flush(SubRequest *) override;
-  CPU::Function erase(SubRequest *) override;
-  void allocate(SubRequest *, bool) override;
+  CPU::Function lookup(HIL::SubRequest *, bool) override;
+  CPU::Function flush(HIL::SubRequest *) override;
+  CPU::Function erase(HIL::SubRequest *) override;
+  void allocate(HIL::SubRequest *, bool) override;
   void dmaDone(LPN) override;
   void drainDone() override;
 

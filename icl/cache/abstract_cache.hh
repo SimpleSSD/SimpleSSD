@@ -40,7 +40,7 @@ class AbstractCache : public Object {
    * \param[in] isRead  True when read
    * \return  CPU execution latency
    */
-  virtual CPU::Function lookup(SubRequest *sreq, bool isRead) = 0;
+  virtual CPU::Function lookup(HIL::SubRequest *sreq, bool isRead) = 0;
 
   /**
    * \brief Flush cacheline
@@ -50,7 +50,7 @@ class AbstractCache : public Object {
    * \param[in] sreq  Current subrequest
    * \return  CPU execution latency
    */
-  virtual CPU::Function flush(SubRequest *sreq) = 0;
+  virtual CPU::Function flush(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Erase cacheline
@@ -60,7 +60,7 @@ class AbstractCache : public Object {
    * \param[in] sreq  Current subrequest
    * \return  CPU execution latency
    */
-  virtual CPU::Function erase(SubRequest *sreq) = 0;
+  virtual CPU::Function erase(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Allocate cacheline in cache
@@ -71,7 +71,7 @@ class AbstractCache : public Object {
    * \param[in] sreq  Current subrequest
    * \param[in] isRead  True when read
    */
-  virtual void allocate(SubRequest *sreq, bool isRead) = 0;
+  virtual void allocate(HIL::SubRequest *sreq, bool isRead) = 0;
 
   /**
    * \brief DMA done callback
