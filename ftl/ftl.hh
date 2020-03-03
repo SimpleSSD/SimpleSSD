@@ -26,28 +26,29 @@ namespace SimpleSSD::FTL {
  */
 class FTL : public Object {
  private:
-  struct FormatContext {
-    Event eid;
-    uint64_t data;
-  };
-
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
   AbstractFTL *pFTL;
 
+  uint64_t requestCounter;
+
+  std::unordered_map<uint64_t, Request> requestQueue;
+
+  Request *insertRequest(Request &&);
+
  public:
   FTL(ObjectData &);
   ~FTL();
 
   Parameter *getInfo();
-  uint32_t getMappingGranularity();
 
   LPN getPageUsage(LPN, LPN);
+  Request *getRequest(uint64_t);
 
-  void read(Request &);
-  void write(Request &);
+  void read(Request &&);
+  void write(Request &&);
   void invalidate(LPN, uint32_t, Event, uint64_t);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

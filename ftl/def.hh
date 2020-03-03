@@ -19,6 +19,8 @@
 
 namespace SimpleSSD::FTL {
 
+class FTL;
+
 typedef struct {
   uint64_t totalPhysicalBlocks;
   uint64_t totalPhysicalPages;
@@ -48,6 +50,8 @@ enum class Response : uint8_t {
 
 class Request {
  private:
+  friend FTL;
+
   uint64_t tag;
 
   Operation opcode;
@@ -63,9 +67,11 @@ class Request {
   uint64_t data;
 
  public:
-  Request(uint64_t, Event, uint64_t);
-  Request(uint64_t, Event, uint64_t, Operation, LPN);
-  Request(uint64_t, Event, uint64_t, Operation, LPN, PPN);
+  Request(Event, uint64_t);
+  Request(Event, uint64_t, Operation, LPN);
+  Request(Event, uint64_t, Operation, LPN, PPN);
+
+  inline uint64_t getTag() { return tag; }
 
   inline Operation getOperation() { return opcode; }
   inline Response getResponse() { return result; }

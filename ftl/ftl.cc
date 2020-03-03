@@ -14,7 +14,7 @@ namespace SimpleSSD {
 
 namespace FTL {
 
-FTL::FTL(ObjectData &o) : Object(o) {
+FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
   pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
@@ -66,24 +66,43 @@ FTL::~FTL() {
   delete pFTL;
 }
 
-Parameter *FTL::getInfo() {
-  return pMapper->getInfo();
+Request *FTL::insertRequest(Request &&req) {
+  auto ret = requestQueue.emplace(++requestCounter, std::move(req));
+
+  panic_if(!ret.second, "Duplicated request ID.");
+
+  ret.first->second.tag = ret.first->first;
+
+  return &ret.first->second;
 }
 
-uint32_t FTL::getMappingGranularity() {
-  return (uint32_t)pMapper->mappingGranularity();
+Parameter *FTL::getInfo() {
+  return pMapper->getInfo();
 }
 
 LPN FTL::getPageUsage(LPN lpnBegin, LPN lpnEnd) {
   return pMapper->getPageUsage(lpnBegin, lpnEnd);
 }
 
-void FTL::read(Request &req) {
-  pFTL->read(req);
+Request *FTL::getRequest(uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected command tag %" PRIu64 ".",
+           tag);
+
+  return &iter->second;
 }
 
-void FTL::write(Request &req) {
-  pFTL->write(req);
+void FTL::read(Request &&req) {
+  auto preq = insertRequest(std::move(req));
+
+  pFTL->read(preq);
+}
+
+void FTL::write(Request &&req) {
+  auto preq = insertRequest(std::move(req));
+
+  pFTL->write(preq);
 }
 
 void FTL::invalidate(LPN lpn, uint32_t nlp, Event eid, uint64_t data) {
