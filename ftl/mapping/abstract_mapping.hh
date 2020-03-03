@@ -58,10 +58,6 @@ class AbstractMapping : public Object {
   virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
   virtual LPN readSpare(std::vector<uint8_t> &spare);
 
-  virtual CPU::Function readMapping(SubRequest *) = 0;
-  virtual CPU::Function writeMapping(SubRequest *) = 0;
-  virtual CPU::Function invalidateMapping(SubRequest *) = 0;
-
  public:
   AbstractMapping(ObjectData &);
   virtual ~AbstractMapping() {}
@@ -71,73 +67,14 @@ class AbstractMapping : public Object {
   Parameter *getInfo();
   virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  //! PPN -> SPIndex (Page index in superpage)
-  virtual inline PPN getSPIndexFromPPN(PPN ppn) {
-    return ppn % param.superpage;
-  }
-
-  //! LPN -> SLPN / PPN -> SPPN
-  virtual inline LPN getSLPNfromLPN(LPN slpn) { return slpn / param.superpage; }
-
-  //! SPPN -> SBLK
-  virtual inline PPN getSBFromSPPN(PPN sppn) {
-    return sppn % (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! PPN -> BLK
-  virtual inline PPN getBlockFromPPN(PPN ppn) {
-    return ppn % param.totalPhysicalBlocks;
-  }
-
-  //! SBLK/SPIndex -> BLK
-  virtual inline PPN getBlockFromSB(PPN sblk, PPN sp) {
-    return sblk * param.superpage + sp;
-  }
-
-  //! SPPN -> Page (Page index in (super)block)
-  virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
-    return sppn / (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! SBLK/Page -> SPPN
-  virtual inline PPN makeSPPN(PPN superblock, PPN page) {
-    return superblock + page * (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! SBLK/SPIndex/Page -> PPN
-  virtual inline PPN makePPN(PPN superblock, PPN superpage, PPN page) {
-    return superblock * param.superpage + superpage +
-           page * param.totalPhysicalBlocks;
-  }
-
-  //! Mapping granularity
-  virtual inline LPN mappingGranularity() { return param.superpage; }
-
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
   virtual uint16_t getAge(PPN) = 0;
 
   // I/O interfaces
-  inline void readMapping(SubRequest *req, Event eid) {
-    CPU::Function fstat = readMapping(req);
-
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
-                     fstat);
-  }
-
-  inline void writeMapping(SubRequest *req, Event eid) {
-    CPU::Function fstat = writeMapping(req);
-
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
-                     fstat);
-  }
-
-  inline void invalidateMapping(SubRequest *req, Event eid) {
-    CPU::Function fstat = invalidateMapping(req);
-
-    scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, req->getTag(),
-                     fstat);
-  }
+  virtual void readMapping(Request *req, Event eid) = 0;
+  virtual void writeMapping(Request *req, Event eid) = 0;
+  virtual void invalidateMapping(Request *req, Event eid) = 0;
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
