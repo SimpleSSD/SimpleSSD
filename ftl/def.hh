@@ -22,15 +22,14 @@ namespace SimpleSSD::FTL {
 class FTL;
 
 typedef struct {
-  uint64_t totalPhysicalBlocks;
-  uint64_t totalPhysicalPages;
-  uint64_t totalLogicalBlocks;
-  uint64_t totalLogicalPages;
-  uint32_t pageSize;
+  uint64_t physicalBlocks;
+  uint64_t physicalPages;
+  uint64_t logicalBlocks;
+  uint64_t logicalPages;
+  uint32_t physicalPageSize;
+  uint32_t logicalPageSize;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
-  uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
-  uint64_t superpage;
 } Parameter;
 
 enum class Operation : uint8_t {

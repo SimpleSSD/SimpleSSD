@@ -16,15 +16,15 @@ AbstractMapping::AbstractMapping(ObjectData &o)
       readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
   auto way = readConfigUint(Section::FlashInterface, FIL::Config::Key::Way);
 
-  param.totalPhysicalBlocks =
+  param.physicalBlocks =
       channel * way * filparam->die * filparam->plane * filparam->block;
-  param.totalLogicalBlocks =
-      (uint64_t)(param.totalPhysicalBlocks *
+  param.logicalBlocks =
+      (uint64_t)(param.physicalBlocks *
                  (1.f - readConfigFloat(Section::FlashTranslation,
                                         Config::Key::OverProvisioningRatio)));
-  param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
-  param.totalLogicalPages = param.totalLogicalBlocks * filparam->page;
-  param.pageSize = filparam->pageSize;
+  param.physicalPages = param.physicalBlocks * filparam->page;
+  param.logicalPages = param.logicalBlocks * filparam->page;
+  param.physicalPageSize = filparam->pageSize;
   param.parallelism = channel * way * filparam->die * filparam->plane;
 
   for (uint8_t i = 0; i < 4; i++) {
@@ -46,34 +46,39 @@ AbstractMapping::AbstractMapping(ObjectData &o)
     }
   }
 
-  param.superpageLevel = (uint8_t)readConfigUint(
+  uint8_t superpageLevel = (uint8_t)readConfigUint(
       Section::FlashTranslation, Config::Key::SuperpageAllocation);
 
   // Validate superpage level
   uint8_t mask = FIL::PageAllocation::None;
-  param.superpage = 1;
+  uint32_t superpage = 1;
 
   for (uint8_t i = 0; i < 4; i++) {
-    if (param.superpageLevel & filparam->pageAllocation[i]) {
+    if (superpageLevel & filparam->pageAllocation[i]) {
       mask |= filparam->pageAllocation[i];
-      param.superpage *= param.parallelismLevel[i];
+      superpage *= param.parallelismLevel[i];
     }
     else {
       break;
     }
   }
 
-  panic_if(param.superpageLevel != mask,
-           "Invalid superpage configuration detected.");
-
-  param.superpageLevel = (uint8_t)popcount8(mask);
+  panic_if(superpageLevel != mask, "Invalid superpage configuration detected.");
 
   // Print mapping Information
-  debugprint(Log::DebugID::FTL, "Total physical pages %" PRIu64,
-             param.totalPhysicalPages);
-  debugprint(Log::DebugID::FTL, "Total logical pages %" PRIu64,
-             param.totalLogicalPages);
-  debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
+  debugprint(Log::DebugID::FTL, "Total physical pages: %" PRIu64,
+             param.physicalPages);
+  debugprint(Log::DebugID::FTL, "Physical page size: %" PRIu64,
+             param.physicalPageSize);
+
+  if (superpage != 1) {
+    debugprint(Log::DebugID::FTL, "Using superpage factor %u", superpage);
+  }
+
+  debugprint(Log::DebugID::FTL, "Total logical (super) pages: %" PRIu64,
+             param.logicalPages);
+  debugprint(Log::DebugID::FTL, "Logical (super) page size: %u",
+             param.logicalPageSize);
 }
 
 void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
