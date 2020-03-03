@@ -18,17 +18,23 @@
 
 namespace SimpleSSD::FTL {
 
+class FTL;
+
 class AbstractFTL : public Object {
+ private:
+  FTL *pFTL;
+
  protected:
   FIL::FIL *pFIL;
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
 
+  Request *getRequest(uint64_t tag);
+
  public:
-  AbstractFTL(ObjectData &o, FIL::FIL *f, Mapping::AbstractMapping *m,
-              BlockAllocator::AbstractAllocator *a)
-      : Object(o), pFIL(f), pMapper(m), pAllocator(a) {}
+  AbstractFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
+              BlockAllocator::AbstractAllocator *);
   virtual ~AbstractFTL() {}
 
   virtual void initialize() {}
