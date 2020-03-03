@@ -65,9 +65,9 @@ void FIL::submit(Operation opcode, Request &&_req) {
   uint64_t tag = ++requestCounter;
 
   _req.opcode = opcode;
-  _req.requestTag = tag;
+  _req.tag = tag;
 
-  auto ret = requestQueue.emplace(tag, _req);
+  auto ret = requestQueue.emplace(tag, std::move(_req));
 
   panic_if(!ret.second, "Request ID conflict.");
 

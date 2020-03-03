@@ -44,12 +44,14 @@ class FIL : public Object {
    * \param[in] req Request object
    */
   void read(Request &&req);
+
   /**
    * \brief Program/Write underlying NVM
    *
    * \param[in] req Request object
    */
   void program(Request &&req);
+
   /**
    * \brief Erase underlying NVM
    *

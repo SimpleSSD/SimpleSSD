@@ -47,7 +47,7 @@ FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
   // Base FTL routine
   switch (mapping) {
     default:
-      // pFTL = new BasicFTL(object, pFIL, pMapper, pAllocator);
+      // pFTL = new BasicFTL(object, this, pFIL, pMapper, pAllocator);
 
       break;
   }
