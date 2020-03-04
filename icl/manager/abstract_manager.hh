@@ -28,6 +28,10 @@ struct FlushContext {
 
   FlushContext(LPN l, uint64_t a)
       : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}
+
+  bool compare(FlushContext &a, FlushContext &b) {
+    return a.lpn < b.lpn;
+  }
 };
 
 class SequentialDetector {
@@ -106,11 +110,7 @@ class AbstractManager : public Object {
   //! Completion handler for other cache jobs
   virtual void cacheDone(uint64_t tag) = 0;
 
-  /**
-   * \brief Cache write-back requester
-   *
-   * FlushContext of this vector must be sequential and consecutive
-   */
+  //! Cache write-back requester
   virtual void drain(std::vector<FlushContext> &) = 0;
 };
 

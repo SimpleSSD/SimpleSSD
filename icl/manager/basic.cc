@@ -180,28 +180,42 @@ void BasicCache::cacheDone(uint64_t tag) {
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
-  // Verify
   panic_if(list.size() == 0, "Empty flush list.");
 
-  LPN begin = list.front().lpn;
-  LPN end = begin;
+  // Sort
+  std::sort(list.begin(), list.end(), FlushContext::compare);
 
-  for (auto &iter : list) {
-    panic_if(end++ != iter.lpn, "Invalid flush list.");
+  // Find consecutive group and submit
+  auto begin = list.begin();
+  auto prev = begin;
+  auto iter = std::next(begin);
+
+  for (; iter < list.end(); iter++) {
+    if (prev->lpn + 1 != iter->lpn) {
+      drainRange(begin, iter);
+
+      begin = iter;
+    }
+
+    prev++;
   }
 
-  // Submit
-  uint32_t nlp = (uint32_t)(end - begin);
+  drainRange(begin, list.end());
+}
 
-  for (auto &iter : list) {
+void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
+                            std::vector<FlushContext>::iterator end) {
+  uint32_t nlp = std::distance(begin, end);
+
+  for (auto iter = begin; iter < end; begin++) {
     uint64_t tag = ++drainCounter;
 
-    drainQueue.emplace(tag, iter);
+    drainQueue.emplace(tag, *iter);
 
-    auto req = FTL::Request(FTL::Operation::Write, iter.lpn, iter.offset,
-                            iter.length, begin, nlp, eventDrainDone, tag);
+    auto req = FTL::Request(FTL::Operation::Write, iter->lpn, iter->offset,
+                            iter->length, begin->lpn, nlp, eventDrainDone, tag);
 
-    req.setDRAMAddress(iter.address);
+    req.setDRAMAddress(iter->address);
   }
 
   drained += nlp;
