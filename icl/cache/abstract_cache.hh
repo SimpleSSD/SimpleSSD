@@ -37,9 +37,8 @@ class AbstractCache : public Object {
    * When write, setHit() should be called when cache hit and cold miss.
    *
    * \param[in] sreq    Current subrequest
-   * \return  CPU execution latency
    */
-  virtual CPU::Function lookup(HIL::SubRequest *sreq) = 0;
+  virtual void lookup(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Flush cacheline
@@ -47,9 +46,8 @@ class AbstractCache : public Object {
    * Flush cacheline in [offset, offset + length) range.
    *
    * \param[in] sreq  Current subrequest
-   * \return  CPU execution latency
    */
-  virtual CPU::Function flush(HIL::SubRequest *sreq) = 0;
+  virtual void flush(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Erase cacheline
@@ -57,9 +55,8 @@ class AbstractCache : public Object {
    * Erase (invalidate) cacheline in [offset, offset + length) range.
    *
    * \param[in] sreq  Current subrequest
-   * \return  CPU execution latency
    */
-  virtual CPU::Function erase(HIL::SubRequest *sreq) = 0;
+  virtual void erase(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Allocate cacheline in cache

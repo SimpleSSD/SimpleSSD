@@ -76,17 +76,8 @@ class AbstractManager : public Object {
    */
   virtual void lookupDone(uint64_t tag) = 0;
 
-  /**
-   * \brief Handler for cache allocation
-   *
-   * Called when allocating cacheline for new data has been completed
-   *
-   * \param[in] tag Tag of SubRequest
-   */
-  virtual void allocateDone(uint64_t tag) = 0;
-
-  //! Handler for cache flush
-  virtual void flushDone(uint64_t) = 0;
+  //! Completion handler for other cache jobs
+  virtual void cacheDone(uint64_t tag) = 0;
 
   //! Cache write-back requester
   virtual void drain(std::vector<FlushContext> &) = 0;
