@@ -254,21 +254,6 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
 
   switch (req.opcode) {
     case Operation::Read:
-      // Complete when all pending DMA operations are completed.
-      remove = true;
-
-      icl.done(&sreq);  // Mark as complete
-
-      if (req.dmaCounter == req.nlp) {
-        scheduleAbs(req.eid, req.data, now);
-
-        // Remove request
-        auto iter = requestQueue.find(req.requestTag);
-
-        requestQueue.erase(iter);
-      }
-
-      break;
     case Operation::Write:
       // Complete when all pending DMA operations are completed.
       remove = true;
