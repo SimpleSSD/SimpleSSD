@@ -10,7 +10,8 @@
 #include "hil/hil.hh"
 #include "icl/cache/abstract_cache.hh"
 // #include "icl/manager/basic.hh"
-#include "icl/manager/none.hh"
+// #include "icl/manager/none.hh"
+#include "icl/manager/abstract_manager.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
@@ -27,7 +28,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   switch (mode) {
     case Config::Mode::None:
-      pManager = new NoCache(object, this, pFTL);
+      // pManager = new NoCache(object, this, pFTL);
 
       break;
     case Config::Mode::SetAssociative:
