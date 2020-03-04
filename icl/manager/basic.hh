@@ -43,6 +43,9 @@ class BasicCache : public AbstractManager {
   LPN prefetchTrigger;
   LPN lastPrefetched;
 
+  uint64_t parallelism_first;
+  uint64_t parallelism_all;
+
   Event eventDrainDone;
   void drainDone(uint64_t);
 

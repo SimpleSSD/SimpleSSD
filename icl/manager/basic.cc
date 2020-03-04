@@ -49,6 +49,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
 
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f), detector(nullptr) {
+  auto ftlparam = f->getInfo();
   bool enable =
       readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
 
@@ -59,7 +60,7 @@ BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     auto ratio =
         readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio);
 
-    detector = new BasicDetector(f->getInfo()->pageSize, count, ratio);
+    detector = new BasicDetector(ftlparam->pageSize, count, ratio);
   }
 
   prefetchMode = (Config::Granularity)readConfigUint(Section::InternalCache,
@@ -67,6 +68,9 @@ BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
 
   prefetchTrigger = std::numeric_limits<LPN>::max();
   lastPrefetched = 0;
+
+  parallelism_all = ftlparam->parallelism;
+  parallelism_first = ftlparam->parallelismLevel[0];
 
   eventDrainDone = createEvent([this](uint64_t, uint64_t d) { drainDone(d); },
                                "ICL::BasicCache::eventDrainDone");
@@ -80,6 +84,40 @@ BasicCache::~BasicCache() {
 
 void BasicCache::read(HIL::SubRequest *req) {
   cache->lookup(req);
+
+  if (detector) {
+    bool old = detector->isEnabled();
+
+    detector->submitSubRequest(req);
+
+    if (detector->isEnabled()) {
+      LPN nextlpn = req->getLPN() + 1;
+
+      if (old) {
+        // Continued - prefetch
+        if (nextlpn < prefetchTrigger) {
+          // Not yet
+          return;
+        }
+
+        nextlpn = lastPrefetched;
+      }
+      else {
+        // First - read-ahead
+      }
+
+      // Make prefetch request
+      LPN begin = nextlpn;
+      LPN end = begin + (prefetchMode == Config::Granularity::AllLevel
+                             ? parallelism_all
+                             : parallelism_first);
+
+      prefetchTrigger = (begin + end) / 2;
+      lastPrefetched = end;
+
+      pICL->makeRequest(begin, end);
+    }
+  }
 }
 
 void BasicCache::write(HIL::SubRequest *req) {
