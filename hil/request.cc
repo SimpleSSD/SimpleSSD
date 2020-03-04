@@ -93,7 +93,7 @@ SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
       lpn(l),
       offset(o),
       length(s),
-      hit(false),
+      allocate(false),
       clear(false),
       buffer(nullptr),
       address(0) {}
@@ -107,7 +107,7 @@ void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, lpn);
   BACKUP_SCALAR(out, offset);
   BACKUP_SCALAR(out, length);
-  BACKUP_SCALAR(out, hit);
+  BACKUP_SCALAR(out, allocate);
   BACKUP_SCALAR(out, clear);
 
   if (clear) {
@@ -131,7 +131,7 @@ void SubRequest::restoreCheckpoint(std::istream &in, HIL *pHIL) noexcept {
   RESTORE_SCALAR(in, lpn);
   RESTORE_SCALAR(in, offset);
   RESTORE_SCALAR(in, length);
-  RESTORE_SCALAR(in, hit);
+  RESTORE_SCALAR(in, allocate);
   RESTORE_SCALAR(in, clear);
 
   if (clear) {

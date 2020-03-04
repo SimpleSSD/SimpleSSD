@@ -114,7 +114,7 @@ class SubRequest {
   uint64_t offset;  //!< Offset in DMA Tag
   uint32_t length;  //!< Length in DMA Tag
 
-  bool hit;    //!< Used in ICL, true when this request is served by cache
+  bool allocate;    //!< Used in ICL, true when cacheline allocation is required
   bool clear;  //!< Flag for buffer management
 
   // Device-side DMA address
@@ -143,7 +143,7 @@ class SubRequest {
       this->lpn = std::exchange(rhs.lpn, 0);
       this->offset = std::exchange(rhs.offset, 0);
       this->length = std::exchange(rhs.length, 0);
-      this->hit = std::exchange(rhs.hit, false);
+      this->allocate = std::exchange(rhs.allocate, false);
       this->clear = std::exchange(rhs.clear, false);
       this->buffer = std::exchange(rhs.buffer, nullptr);
       this->address = std::exchange(rhs.address, 0);
@@ -153,7 +153,7 @@ class SubRequest {
   }
 
   inline void setDRAMAddress(uint64_t addr) { address = addr; }
-  inline void setHit() { hit = true; }
+  inline void setAllocate() { allocate = true; }
   void setBuffer(uint8_t *data) { buffer = data; }
   void createBuffer() {
     clear = true;
@@ -163,7 +163,7 @@ class SubRequest {
 
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
-  inline bool getHit() { return hit; }
+  inline bool getAllocate() { return allocate; }
   inline const uint8_t *getBuffer() { return buffer; }
 
   inline Operation getOpcode() { return request->opcode; }
