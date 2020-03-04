@@ -183,13 +183,26 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
 
   switch (req.opcode) {
     case Operation::Read:
-      // Submit DMA (current chunk)
-      if (req.dmaCounter == 0) {
-        req.dmaBeginAt = now;
-      }
+      if (req.eid == InvalidEventID) {
+        // This is prefetch request
+        remove = true;
 
-      req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
-                           eventDMACompletion, sreq.requestTag);
+        // Remove request
+        auto iter = requestQueue.find(req.requestTag);
+
+        requestQueue.erase(iter);
+
+        delete &req;
+      }
+      else {
+        // Submit DMA (current chunk)
+        if (req.dmaCounter == 0) {
+          req.dmaBeginAt = now;
+        }
+
+        req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+                             eventDMACompletion, sreq.requestTag);
+      }
 
       break;
     case Operation::Write:

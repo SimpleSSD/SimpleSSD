@@ -67,6 +67,14 @@ class ICL : public Object {
   void done(HIL::SubRequest *);
 
   /**
+   * \brief Make read-ahead/prefetch request
+   *
+   * This function can generate arbitrary request without making completion to
+   * host.
+   */
+  void makeRequest(LPN slpn, LPN elpn);
+
+  /**
    * \brief Get logical pages contains data
    *
    * To implement per-namespace bases utilization, this function requires offset

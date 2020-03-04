@@ -87,6 +87,14 @@ void ICL::done(HIL::SubRequest *req) {
   pManager->dmaDone(req);
 }
 
+void ICL::makeRequest(LPN slpn, LPN elpn) {
+  auto *req = new HIL::Request(InvalidEventID, 0);
+
+  req->setAddress(slpn, elpn - slpn, logicalPageSize);
+
+  pHIL->read(req);
+}
+
 LPN ICL::getPageUsage(LPN offset, LPN length) {
   return pFTL->getPageUsage(offset, length);
 }
