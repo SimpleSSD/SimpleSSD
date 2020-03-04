@@ -59,7 +59,7 @@ void HIL::submit(Operation opcode, Request *req) {
 
     convertFunction(req->offset, req->length, slpn, nlp, skipFront, skipEnd);
 
-    panic_if(req->nlp == 0, "Unexpected length of request.");
+    panic_if(nlp == 0, "Unexpected length of request.");
 
     // Make subrequests
     for (uint32_t i = 0; i < nlp; i++) {
@@ -85,6 +85,9 @@ void HIL::submit(Operation opcode, Request *req) {
 
       subrequestList.emplace_back(&sreq.first->second);
     }
+
+    req->slpn = slpn;
+    req->nlp = nlp;
   }
   else {
     ++subrequestCounter;
@@ -98,9 +101,10 @@ void HIL::submit(Operation opcode, Request *req) {
     sreq.first->second.length = req->length;
 
     subrequestList.emplace_back(&sreq.first->second);
+
+    req->nlp = 1;
   }
 
-  req->nlp = subrequestList.size();
   req->nvmBeginAt = getTick();
 
   switch (opcode) {

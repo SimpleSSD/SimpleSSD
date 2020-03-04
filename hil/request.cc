@@ -26,7 +26,8 @@ Request::Request()
       nlp(0),
       dmaBeginAt(0),
       nvmBeginAt(0),
-      requestTag(0) {}
+      requestTag(0),
+      slpn(0) {}
 
 Request::Request(Event e, uint64_t c)
     : opcode(Operation::None),
@@ -43,7 +44,8 @@ Request::Request(Event e, uint64_t c)
       nlp(0),
       dmaBeginAt(0),
       nvmBeginAt(0),
-      requestTag(0) {}
+      requestTag(0),
+      slpn(0) {}
 
 void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, opcode);
@@ -59,6 +61,7 @@ void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dmaBeginAt);
   BACKUP_SCALAR(out, nvmBeginAt);
   BACKUP_SCALAR(out, requestTag);
+  BACKUP_SCALAR(out, slpn);
 }
 
 void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
@@ -75,6 +78,7 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, dmaBeginAt);
   RESTORE_SCALAR(in, nvmBeginAt);
   RESTORE_SCALAR(in, requestTag);
+  RESTORE_SCALAR(in, slpn);
 }
 
 SubRequest::SubRequest()

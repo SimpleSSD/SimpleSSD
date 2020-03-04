@@ -68,6 +68,8 @@ class Request {
 
   uint64_t requestTag;  //!< Unique ID for HIL
 
+  LPN slpn;  //!< Starting logical page number
+
  public:
   Request();
   Request(Event, uint64_t);
@@ -112,8 +114,8 @@ class SubRequest {
   uint64_t offset;  //!< Offset in DMA Tag
   uint32_t length;  //!< Length in DMA Tag
 
-  bool hit;  //!< Used in ICL, true when this request is served by cache
-  bool clear;
+  bool hit;    //!< Used in ICL, true when this request is served by cache
+  bool clear;  //!< Flag for buffer management
 
   // Device-side DMA address
   uint8_t *buffer;   //!< Buffer for DMA (real data)
@@ -164,6 +166,7 @@ class SubRequest {
   inline bool getHit() { return hit; }
   inline const uint8_t *getBuffer() { return buffer; }
 
+  inline LPN getSLPN() { return request->slpn; }
   inline uint32_t getNLP() { return request->nlp; }
 
   /* Only for Flush, Trim and Format */
