@@ -16,24 +16,9 @@ namespace SimpleSSD::FTL {
 
 class BasicFTL : public AbstractFTL {
  protected:
-  struct FormatContext {
-    Event eid;
-    uint64_t data;
-
-    FormatContext() : eid(InvalidEventID), data(0) {}
-  };
-
   uint32_t pageSize;
 
   bool mergeReadModifyWrite;
-
-  bool gcInProgress;
-  std::deque<PPN> gcBlockList;
-  CopyList gcCopyList;
-  uint64_t gcBeginAt;
-
-  uint8_t formatInProgress;
-  FormatContext fctx;
 
   // Statistics
   struct {
@@ -44,7 +29,7 @@ class BasicFTL : public AbstractFTL {
   } stat;
 
   virtual inline void triggerGC() {
-    if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
+    if (pAllocator->checkGCThreshold()) {
       scheduleNow(eventGCTrigger);
     }
   }

@@ -12,7 +12,7 @@ namespace SimpleSSD::FTL {
 BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                    Mapping::AbstractMapping *m,
                    BlockAllocator::AbstractAllocator *a)
-    : AbstractFTL(o, p, f, m, a), gcInProgress(false), formatInProgress(0) {
+    : AbstractFTL(o, p, f, m, a) {
   memset(&stat, 0, sizeof(stat));
 
   pageSize = pMapper->getInfo()->pageSize;
@@ -130,81 +130,23 @@ void BasicFTL::resetStatValues() noexcept {
 }
 
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, mergeReadModifyWrite);
-  BACKUP_SCALAR(out, gcInProgress);
-  BACKUP_SCALAR(out, gcBeginAt);
-
-  BACKUP_SCALAR(out, formatInProgress);
-  BACKUP_EVENT(out, fctx.eid);
-  BACKUP_SCALAR(out, fctx.data);
-
-  gcCopyList.createCheckpoint(out);
-
-  uint64_t size = gcBlockList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : gcBlockList) {
-    BACKUP_SCALAR(out, iter);
-  }
-
-  BACKUP_EVENT(out, eventReadDoFIL);
-  BACKUP_EVENT(out, eventReadFull);
-  BACKUP_EVENT(out, eventWriteFindDone);
-  BACKUP_EVENT(out, eventWriteTranslate);
-  BACKUP_EVENT(out, eventWriteDoFIL);
-  BACKUP_EVENT(out, eventReadModifyDone);
+  BACKUP_SCALAR(out, stat);
+  BACKUP_EVENT(out, eventReadSubmit);
+  BACKUP_EVENT(out, eventReadDone);
+  BACKUP_EVENT(out, eventWriteSubmit);
   BACKUP_EVENT(out, eventWriteDone);
-  BACKUP_EVENT(out, eventInvalidateDoFIL);
+  BACKUP_EVENT(out, eventInvalidateSubmit);
   BACKUP_EVENT(out, eventGCTrigger);
-  BACKUP_EVENT(out, eventGCGetBlockList);
-  BACKUP_EVENT(out, eventGCRead);
-  BACKUP_EVENT(out, eventGCWriteMapping);
-  BACKUP_EVENT(out, eventGCWrite);
-  BACKUP_EVENT(out, eventGCWriteDone);
-  BACKUP_EVENT(out, eventGCErase);
-  BACKUP_EVENT(out, eventGCEraseDone);
-  BACKUP_EVENT(out, eventGCDone);
 }
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_SCALAR(in, mergeReadModifyWrite);
-  RESTORE_SCALAR(in, gcInProgress);
-  RESTORE_SCALAR(in, gcBeginAt);
-
-  RESTORE_SCALAR(in, formatInProgress);
-  RESTORE_EVENT(in, fctx.eid);
-  RESTORE_SCALAR(in, fctx.data);
-
-  gcCopyList.restoreCheckpoint(in);
-
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    PPN ppn;
-
-    RESTORE_SCALAR(in, ppn);
-
-    gcBlockList.emplace_back(ppn);
-  }
-
-  RESTORE_EVENT(in, eventReadDoFIL);
-  RESTORE_EVENT(in, eventReadFull);
-  RESTORE_EVENT(in, eventWriteFindDone);
-  RESTORE_EVENT(in, eventWriteTranslate);
-  RESTORE_EVENT(in, eventWriteDoFIL);
-  RESTORE_EVENT(in, eventReadModifyDone);
+  RESTORE_SCALAR(in, stat);
+  RESTORE_EVENT(in, eventReadSubmit);
+  RESTORE_EVENT(in, eventReadDone);
+  RESTORE_EVENT(in, eventWriteSubmit);
   RESTORE_EVENT(in, eventWriteDone);
-  RESTORE_EVENT(in, eventInvalidateDoFIL);
+  RESTORE_EVENT(in, eventInvalidateSubmit);
   RESTORE_EVENT(in, eventGCTrigger);
-  RESTORE_EVENT(in, eventGCGetBlockList);
-  RESTORE_EVENT(in, eventGCRead);
-  RESTORE_EVENT(in, eventGCWriteMapping);
-  RESTORE_EVENT(in, eventGCWrite);
-  RESTORE_EVENT(in, eventGCWriteDone);
-  RESTORE_EVENT(in, eventGCErase);
-  RESTORE_EVENT(in, eventGCEraseDone);
-  RESTORE_EVENT(in, eventGCDone);
 }
 
 }  // namespace SimpleSSD::FTL
