@@ -10,12 +10,14 @@
 namespace SimpleSSD::FTL {
 
 Request::Request(Event e, uint64_t d)
-    : opcode(Operation::None),
-      result(Response::Success),
-      lpn(InvalidLPN),
+    : lpn(InvalidLPN),
       ppn(InvalidPPN),
+      offset(0),
+      length(0),
       slpn(0),
       nlp(0),
+      opcode(Operation::None),
+      result(Response::Success),
       event(e),
       data(d),
       counter(0) {}
@@ -46,6 +48,8 @@ Request::Request(Event e, HIL::SubRequest *r)
       break;
   }
 
+  offset = (uint32_t)r->getOffset();
+  length = r->getLength();
   lpn = r->getLPN();
   slpn = r->getSLPN();
   nlp = r->getNLP();
@@ -58,6 +62,8 @@ void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, result);
   BACKUP_SCALAR(out, lpn);
   BACKUP_SCALAR(out, ppn);
+  BACKUP_SCALAR(out, offset);
+  BACKUP_SCALAR(out, length);
   BACKUP_SCALAR(out, slpn);
   BACKUP_SCALAR(out, nlp);
   BACKUP_EVENT(out, event);
@@ -70,6 +76,8 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, result);
   RESTORE_SCALAR(in, lpn);
   RESTORE_SCALAR(in, ppn);
+  RESTORE_SCALAR(in, offset);
+  RESTORE_SCALAR(in, length);
   RESTORE_SCALAR(in, slpn);
   RESTORE_SCALAR(in, nlp);
   RESTORE_EVENT(in, event);

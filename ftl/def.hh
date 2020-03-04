@@ -56,16 +56,19 @@ class Request {
 
   uint64_t tag;
 
-  Operation opcode;
-  Response result;
-
   // Current request information (Invalid when Trim/Format)
   LPN lpn;
   PPN ppn;
 
+  uint32_t offset;
+  uint32_t length;
+
   // Full request information (Or current request info when Trim/Format)
   LPN slpn;
   uint32_t nlp;
+
+  Operation opcode;
+  Response result;
 
   Event event;
   uint64_t data;
@@ -85,6 +88,9 @@ class Request {
   inline LPN getSLPN() { return slpn; }
   inline uint32_t getNLP() { return nlp; }
 
+  inline uint32_t getOffset() { return offset; }
+  inline uint32_t getLength() { return length; }
+
   inline Event getEvent() { return event; }
   inline uint64_t getEventData() { return data; }
 
@@ -92,9 +98,6 @@ class Request {
 
   inline void setLPN(LPN l) { lpn = l; }
   inline void setPPN(PPN p) { ppn = p; }
-
-  inline void setSLPN(LPN s) { slpn = s; }
-  inline void setNLP(uint32_t l) { nlp = l; }
 
   uint32_t counter;
 
