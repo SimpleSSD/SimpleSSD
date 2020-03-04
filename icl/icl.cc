@@ -99,6 +99,10 @@ uint32_t ICL::getLPNSize() {
   return logicalPageSize;
 }
 
+HIL::SubRequest *ICL::getSubRequest(uint64_t tag) {
+  return pHIL->getSubRequest(tag);
+}
+
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   pCache->getStatList(list, prefix + "icl.");
   pFTL->getStatList(list, prefix);

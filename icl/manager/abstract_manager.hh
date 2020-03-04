@@ -34,6 +34,10 @@ class AbstractManager : public Object {
 
   Event eventICLCompletion;
 
+  inline HIL::SubRequest *getSubRequest(uint64_t tag) {
+    return pICL->getSubRequest(tag);
+  }
+
  public:
   AbstractManager(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
       : Object(o),

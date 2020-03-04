@@ -80,6 +80,8 @@ class ICL : public Object {
   //! Get bytesize of one logical page.
   uint32_t getLPNSize();
 
+  HIL::SubRequest *getSubRequest(uint64_t);
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
