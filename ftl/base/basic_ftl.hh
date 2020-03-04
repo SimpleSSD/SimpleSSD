@@ -23,35 +23,11 @@ class BasicFTL : public AbstractFTL {
     FormatContext() : eid(InvalidEventID), data(0) {}
   };
 
-  struct ReadModifyWriteContext {
-    Event originalEvent;
-    uint64_t originalTag;
-
-    bool readPending;
-    bool writePending;
-
-    uint64_t readTag;
-    uint64_t writeTag;
-
-    LPN offset;
-    LPN length;
-
-    ReadModifyWriteContext(Event e, uint64_t t)
-        : originalEvent(e),
-          originalTag(t),
-          readPending(false),
-          writePending(false),
-          readTag(0),
-          writeTag(0),
-          offset(InvalidLPN),
-          length(InvalidLPN) {}
-  };
+  uint32_t logicalPageSize;
+  uint32_t superpage;
 
   bool mergeReadModifyWrite;
   bool allowPageRead;
-  LPN mappingGranularity;
-
-  std::list<SubRequest *> writePendingQueue;
 
   bool gcInProgress;
   std::deque<PPN> gcBlockList;
@@ -60,8 +36,6 @@ class BasicFTL : public AbstractFTL {
 
   uint8_t formatInProgress;
   FormatContext fctx;
-
-  std::list<ReadModifyWriteContext> rmwList;
 
   // Statistics
   struct {
@@ -72,38 +46,22 @@ class BasicFTL : public AbstractFTL {
   } stat;
 
   virtual inline void triggerGC() {
-    if ((pAllocator->checkGCThreshold() || writePendingQueue.size() > 0) &&
-        formatInProgress == 0) {
+    if (pAllocator->checkGCThreshold() && formatInProgress == 0) {
       scheduleNow(eventGCTrigger);
     }
   }
 
-  void read_find(Command &);
-
   Event eventReadDoFIL;
   void read_doFIL(uint64_t);
 
-  Event eventReadFull;
-  void read_readDone(uint64_t);
-
-  void write_find(Command &);
-
-  Event eventWriteFindDone;
-  void write_findDone();
-
-  Event eventWriteTranslate;
-  void write_translate(uint64_t);
+  Event eventReadDone;
+  void read_done(uint64_t);
 
   Event eventWriteDoFIL;
   void write_doFIL(uint64_t);
 
-  Event eventReadModifyDone;
-  void write_readModifyDone();
-
   Event eventWriteDone;
-  void write_rmwDone();
-
-  void invalidate_find(Command &);
+  void write_done(uint64_t);
 
   Event eventInvalidateDoFIL;
   void invalidate_doFIL(uint64_t, uint64_t);
@@ -136,13 +94,13 @@ class BasicFTL : public AbstractFTL {
   void gc_done(uint64_t);
 
  public:
-  BasicFTL(ObjectData &, FIL::FIL *, Mapping::AbstractMapping *,
+  BasicFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
            BlockAllocator::AbstractAllocator *);
   virtual ~BasicFTL();
 
-  void submit(SubRequest *) override;
-  bool isGC() override;
-  uint8_t isFormat() override;
+  void read(Request *) override;
+  void write(Request *) override;
+  void invalidate(LPN, uint32_t, Event, uint64_t) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

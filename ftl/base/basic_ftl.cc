@@ -9,31 +9,26 @@
 
 namespace SimpleSSD::FTL {
 
-BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
+BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                    Mapping::AbstractMapping *m,
                    BlockAllocator::AbstractAllocator *a)
-    : AbstractFTL(o, c, f, m, a), gcInProgress(false), formatInProgress(0) {
+    : AbstractFTL(o, p, f, m, a), gcInProgress(false), formatInProgress(0) {
   memset(&stat, 0, sizeof(stat));
+
+  logicalPageSize = pMapper->getInfo()->logicalPageSize;
+  superpage = logicalPageSize / pMapper->getInfo()->physicalPageSize;
+
+  panic_if(superpage == 0, "Invalid superpage factor.");
 
   // Create events
   eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
                                "FTL::BasicFTL::eventReadDoFIL");
-  eventReadFull =
-      createEvent([this](uint64_t, uint64_t d) { read_readDone(d); },
-                  "FTL::BasicFTL::eventReadFull");
-  eventWriteFindDone =
-      createEvent([this](uint64_t, uint64_t) { write_findDone(); },
-                  "FTL::BasicFTL::eventWriteFindDone");
-  eventWriteTranslate =
-      createEvent([this](uint64_t, uint64_t d) { write_translate(d); },
-                  "FTL::BasicFTL::eventWriteTranslate");
+  eventReadDone = createEvent([this](uint64_t, uint64_t d) { read_done(d); },
+                              "FTL::BasicFTL::eventReadDone");
   eventWriteDoFIL =
       createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
                   "FTL::BasicFTL::eventWriteDoFIL");
-  eventReadModifyDone =
-      createEvent([this](uint64_t, uint64_t) { write_readModifyDone(); },
-                  "FTL::BasicFTL::eventReadModifyDone");
-  eventWriteDone = createEvent([this](uint64_t, uint64_t) { write_rmwDone(); },
+  eventWriteDone = createEvent([this](uint64_t, uint64_t) { write_done(); },
                                "FTL::BasicFTL::eventWriteDone");
   eventInvalidateDoFIL =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_doFIL(t, d); },
@@ -58,7 +53,6 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
   eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
                             "FTL::BasicFTL::eventGCDone");
 
-  mappingGranularity = pMapper->mappingGranularity();
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
   allowPageRead = readConfigBoolean(Section::FlashTranslation,
@@ -67,282 +61,52 @@ BasicFTL::BasicFTL(ObjectData &o, CommandManager *c, FIL::FIL *f,
 
 BasicFTL::~BasicFTL() {}
 
-void BasicFTL::read_find(Command &cmd) {
-  Command *pcmd = &cmd;
-
-  // Check write pending queue
-  for (auto &iter : writePendingQueue) {
-    if (iter->offset <= cmd.offset &&
-        cmd.offset + cmd.length <= iter->offset + iter->length) {
-      // Current read command can be served by write pending queue
-      scheduleNow(cmd.eid, cmd.tag);
-
-      return;
-    }
-  }
-
-  // If we don't allow page-level read, (Always aligned when granularity is 1)
-  if (!allowPageRead && mappingGranularity != 1) {
-    // Check this request is aligned to mapping granularity
-    LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
-    LPN alignedEnd = DIVCEIL(cmd.offset + cmd.length, mappingGranularity) *
-                     mappingGranularity;
-
-    if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd) {
-      // If not aligned, we need to read full-sized superpage
-      uint64_t tag = makeFTLCommandTag();
-
-      commandManager->createICLRead(tag, eventReadFull, alignedBegin,
-                                    alignedEnd - alignedBegin, 0);
-
-      auto &rcmd = commandManager->getCommand(tag);
-
-      // Store original command in beginAt variable
-      rcmd.beginAt = cmd.tag;
-
-      // Override pcmd
-      pcmd = &rcmd;
-    }
-  }
-
-  pMapper->readMapping(*pcmd, eventReadDoFIL);
+void BasicFTL::read(Request *cmd) {
+  pMapper->readMapping(cmd, eventReadDoFIL);
 }
 
 void BasicFTL::read_doFIL(uint64_t tag) {
+  auto req = getRequest(tag);
+
   // Now we have PPN
-  pFIL->submit(tag);
+  pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
 }
 
-void BasicFTL::read_readDone(uint64_t tag) {
-  auto &rcmd = commandManager->getCommand(tag);
-  auto &cmd = commandManager->getCommand(rcmd.beginAt);
+void BasicFTL::read_done(uint64_t tag) {
+  auto req = getRequest(tag);
 
-  rcmd.counter++;
-
-  if (rcmd.counter + cmd.length > rcmd.length) {
-    scheduleNow(cmd.eid, cmd.tag);
-  }
-
-  if (rcmd.counter == rcmd.length) {
-    commandManager->destroyCommand(tag);
-  }
+  scheduleNow(req->getEvent(), req->getEventData());
 }
 
-void BasicFTL::write_find(Command &cmd) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  // Check we have blocks (we need to stall writes)
-  if (UNLIKELY(pAllocator->stallRequest())) {
-    writePendingQueue.push_back(&cmd);
-
-    triggerGC();
-
-    return;
-  }
-
-  // Check this request is aligned to mapping granularity
-  LPN alignedBegin = cmd.offset / mappingGranularity * mappingGranularity;
-  LPN alignedEnd =
-      DIVCEIL(cmd.offset + cmd.length, mappingGranularity) * mappingGranularity;
-
-  if (alignedBegin != cmd.offset || cmd.offset + cmd.length != alignedEnd ||
-      cmd.subCommandList.front().skipFront > 0 ||
-      cmd.subCommandList.back().skipEnd > 0) {
-    bool merged = false;
-
-    // Not aligned - read-modify-write
-    warn_if(alignedBegin + mappingGranularity != alignedEnd,
-            "Merge might fail. (I/O size > one mapping granularity)");
-
-    // 1. Check merge
-    if (mergeReadModifyWrite) {
-      for (auto entry = rmwList.begin(); entry != rmwList.end(); ++entry) {
-        // Not written yet
-        if (!entry->writePending) {
-          if (entry->offset == alignedBegin) {
-            merged = true;
-
-            // Merge with this request
-            ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
-
-            // Record how many completion is needed
-            ctx.writeTag = cmd.length;
-
-            rmwList.emplace(++entry, ctx);
-
-            break;
-          }
-        }
-      }
-    }
-
-    if (!merged) {
-      // 2. Create read request
-      ReadModifyWriteContext ctx(cmd.eid, cmd.tag);
-
-      ctx.offset = alignedBegin;
-      ctx.length = alignedEnd - alignedBegin;
-
-      uint64_t tag = makeFTLCommandTag();
-
-      commandManager->createICLRead(tag, eventReadModifyDone, ctx.offset,
-                                    ctx.length, 0);
-
-      auto &rcmd = commandManager->getCommand(tag);
-
-      // 2-1. Prepare exclude [cmd.offset, cmd.offset + cmd.length)
-      LPN excludeBegin = cmd.offset;
-      LPN excludeEnd = cmd.offset + cmd.length;
-
-      // 2-1-1. We need to include cmd.offset when skipFront > 0
-      if (cmd.subCommandList.front().skipFront > 0) {
-        excludeBegin++;
-      }
-
-      // 2-1-2. We need to include cmd.offset + cmd.length - 1 when skipEnd > 0
-      if (cmd.subCommandList.back().skipEnd > 0) {
-        excludeEnd--;
-      }
-
-      // 2-1-3. Exclude
-      for (auto &scmd : rcmd.subCommandList) {
-        if (excludeBegin <= scmd.lpn && scmd.lpn < excludeEnd) {
-          scmd.lpn = InvalidLPN;
-          scmd.ppn = InvalidPPN;
-
-          rcmd.counter++;
-        }
-      }
-
-      ctx.readTag = tag;
-
-      // 3. Create write request [alignedBegin, alignedEnd)
-      tag = makeFTLCommandTag();
-
-      commandManager->createICLWrite(tag, eventWriteDone, ctx.offset,
-                                     ctx.length, 0, 0, 0);
-
-      auto &wcmd = commandManager->getCommand(tag);
-
-      wcmd.counter = mappingGranularity - cmd.length;
-
-      ctx.writeTag = tag;
-
-      rmwList.emplace_back(ctx);
-    }
+void BasicFTL::write(Request *cmd) {
+  // Smaller than one logical (super) page
+  if (cmd->getLength() != logicalPageSize) {
+    // Perform read-modify-write
+    panic("RMW not implemented.");
   }
   else {
     pMapper->writeMapping(cmd, eventWriteDoFIL);
 
     return;
   }
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eventWriteFindDone,
-                   fstat);
-}
-
-void BasicFTL::write_findDone() {
-  if (rmwList.size() > 0) {
-    auto &job = rmwList.front();
-
-    if (!job.readPending) {
-      job.readPending = true;
-
-      // Translate
-      auto &rcmd = commandManager->getCommand(job.readTag);
-      pMapper->readMapping(rcmd, eventWriteTranslate);
-    }
-  }
-}
-
-void BasicFTL::write_translate(uint64_t tag) {
-  pFIL->submit(tag);
 }
 
 void BasicFTL::write_doFIL(uint64_t tag) {
+  auto req = getRequest(tag);
+
   // Now we have PPN
-  pFIL->submit(tag);
+  pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
 
   triggerGC();
 }
 
-void BasicFTL::write_readModifyDone() {
-  auto &job = rmwList.front();
-  auto &rcmd = commandManager->getCommand(job.readTag);
+void BasicFTL::write_done(uint64_t tag) {
+  auto req = getRequest(tag);
 
-  rcmd.counter++;
-
-  if (rcmd.counter == rcmd.length) {
-    job.writePending = true;
-
-    // Translate
-    auto &wcmd = commandManager->getCommand(job.writeTag);
-    pMapper->writeMapping(wcmd, eventWriteTranslate);
-  }
+  scheduleNow(req->getEvent(), req->getEventData());
 }
 
-void BasicFTL::write_rmwDone() {
-  auto &job = rmwList.front();
-  LPN completed = 0;
-
-  if (job.readTag > 0) {
-    auto &wcmd = commandManager->getCommand(job.writeTag);
-
-    for (auto &iter : wcmd.subCommandList) {
-      if (iter.status == Status::Done) {
-        completed++;
-      }
-      else {
-        completed++;
-
-        iter.status = Status::Done;
-
-        break;
-      }
-    }
-
-    if (wcmd.counter < completed) {
-      scheduleNow(job.originalEvent, job.originalTag);
-    }
-  }
-  else {
-    // We stored original length (cmd.length) to writeTag
-    if (job.writeTag-- > 0) {
-      // Complete cmd.length count
-      scheduleNow(job.originalEvent, job.originalTag);
-      scheduleNow(eventWriteDone);
-    }
-    else {
-      // We are done
-      completed = mappingGranularity;
-    }
-  }
-
-  if (completed == mappingGranularity) {
-    if (job.readTag > 0) {
-      commandManager->destroyCommand(job.readTag);
-      commandManager->destroyCommand(job.writeTag);
-    }
-
-    rmwList.pop_front();
-
-    if (rmwList.size() > 0) {
-      // Check merged
-      if (rmwList.front().readTag == 0) {
-        // Call this function again
-        scheduleNow(eventWriteDone);
-      }
-      else {
-        scheduleNow(eventWriteFindDone);
-      }
-    }
-
-    triggerGC();
-  }
-}
-
-void BasicFTL::invalidate_find(Command &cmd) {
+void BasicFTL::invalidate_find(Request &cmd) {
   pMapper->invalidateMapping(cmd, eventInvalidateDoFIL);
 }
 
@@ -539,43 +303,6 @@ void BasicFTL::gc_done(uint64_t now) {
   }
 
   triggerGC();
-}
-
-void BasicFTL::submit(uint64_t tag) {
-  auto &cmd = commandManager->getCommand(tag);
-
-  switch (cmd.opcode) {
-    case Operation::Read:
-      read_find(cmd);
-
-      break;
-    case Operation::Write:
-      write_find(cmd);
-
-      break;
-    case Operation::Trim:
-    case Operation::Format:
-      invalidate_find(cmd);
-
-      break;
-    default:
-      panic("Unexpected opcode.");
-
-      break;
-  }
-}
-
-bool BasicFTL::isGC() {
-  return gcInProgress;
-}
-
-uint8_t BasicFTL::isFormat() {
-  if (gcInProgress) {
-    return 0;
-  }
-  else {
-    return formatInProgress;
-  }
 }
 
 void BasicFTL::getStatList(std::vector<Stat> &list,
