@@ -126,9 +126,9 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   eventLookupDone =
       createEvent([this](uint64_t, uint64_t d) { manager->lookupDone(d); },
                   "ICL::SetAssociative::eventLookupDone");
-  eventFlushMemory =
+  eventReadTag =
       createEvent([this](uint64_t, uint64_t d) { readAll(d, eventCacheDone); },
-                  "ICL::SetAssociative::eventFlushMemory");
+                  "ICL::SetAssociative::eventReadTag");
   eventCacheDone =
       createEvent([this](uint64_t, uint64_t d) { manager->cacheDone(d); },
                   "ICL::SetAssociative::eventCacheDone");
@@ -276,11 +276,26 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
 
   manager->drain(list);
 
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventFlushMemory,
-                   sreq->getTag(), fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventReadTag, sreq->getTag(),
+                   fstat);
 }
 
-void SetAssociative::erase(HIL::SubRequest *) {}
+void SetAssociative::erase(HIL::SubRequest *sreq) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  LPN slpn = sreq->getOffset();
+  uint32_t nlp = sreq->getLength();
+
+  for (auto &iter : cacheline) {
+    if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
+      iter.valid = false;
+    }
+  }
+
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventReadTag, sreq->getTag(),
+                   fstat);
+}
 
 void SetAssociative::allocate(HIL::SubRequest *sreq) {
   CPU::Function fstat;

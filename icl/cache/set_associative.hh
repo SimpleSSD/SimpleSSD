@@ -88,7 +88,7 @@ class SetAssociative : public AbstractCache {
   Event eventLookupMemory;
   Event eventLookupDone;
 
-  Event eventFlushMemory;
+  Event eventReadTag;
 
   Event eventCacheDone;
 
