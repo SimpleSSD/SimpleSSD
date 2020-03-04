@@ -112,17 +112,20 @@ HIL::SubRequest *ICL::getSubRequest(uint64_t tag) {
 }
 
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  pCache->getStatList(list, prefix + "icl.");
+  pCache->getStatList(list, prefix + "icl.cache.");
+  pManager->getStatList(list, prefix + "icl.manager.");
   pFTL->getStatList(list, prefix);
 }
 
 void ICL::getStatValues(std::vector<double> &values) noexcept {
   pCache->getStatValues(values);
+  pManager->getStatValues(values);
   pFTL->getStatValues(values);
 }
 
 void ICL::resetStatValues() noexcept {
   pCache->resetStatValues();
+  pManager->resetStatValues();
   pFTL->resetStatValues();
 }
 
@@ -131,6 +134,7 @@ void ICL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, logicalPageSize);
 
   pCache->createCheckpoint(out);
+  pManager->createCheckpoint(out);
   pFTL->createCheckpoint(out);
 }
 
@@ -139,6 +143,7 @@ void ICL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, logicalPageSize);
 
   pCache->restoreCheckpoint(in);
+  pManager->restoreCheckpoint(in);
   pFTL->restoreCheckpoint(in);
 }
 

@@ -95,6 +95,9 @@ BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
   parallelism_all = ftlparam->parallelism;
   parallelism_first = ftlparam->parallelismLevel[0];
 
+  prefetched = 0;
+  drained = 0;
+
   eventDrainDone = createEvent([this](uint64_t, uint64_t d) { drainDone(d); },
                                "ICL::BasicCache::eventDrainDone");
 }
@@ -137,6 +140,8 @@ void BasicCache::read(HIL::SubRequest *req) {
 
       prefetchTrigger = (begin + end) / 2;
       lastPrefetched = end;
+
+      prefetched += end - begin;
 
       pICL->makeRequest(begin, end);
     }
@@ -199,6 +204,8 @@ void BasicCache::drain(std::vector<FlushContext> &list) {
 
     req.setDRAMAddress(iter.address);
   }
+
+  drained += nlp;
 }
 
 void BasicCache::drainDone(uint64_t tag) {
@@ -211,11 +218,21 @@ void BasicCache::drainDone(uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void BasicCache::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void BasicCache::getStatList(std::vector<Stat> &list,
+                             std::string prefix) noexcept {
+  list.emplace_back(prefix + "prefetched", "Prefetched pages.");
+  list.emplace_back(prefix + "drained", "Written pages.");
+}
 
-void BasicCache::getStatValues(std::vector<double> &) noexcept {}
+void BasicCache::getStatValues(std::vector<double> &values) noexcept {
+  values.emplace_back((double)prefetched);
+  values.emplace_back((double)drained);
+}
 
-void BasicCache::resetStatValues() noexcept {}
+void BasicCache::resetStatValues() noexcept {
+  prefetched = 0;
+  drained = 0;
+}
 
 void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
   bool exist = detector != nullptr;

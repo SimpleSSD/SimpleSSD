@@ -55,6 +55,10 @@ class BasicCache : public AbstractManager {
   Event eventDrainDone;
   void drainDone(uint64_t);
 
+  // Statistics
+  uint64_t prefetched;
+  uint64_t drained;
+
  public:
   BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
   ~BasicCache();
