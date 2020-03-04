@@ -332,6 +332,15 @@ uint32_t HIL::getLPNSize() {
   return icl.getLPNSize();
 }
 
+SubRequest *HIL::getSubRequest(uint64_t tag) {
+  auto iter = subrequestQueue.find(tag);
+
+  panic_if(iter == subrequestQueue.end(), "Unexpected SubRequest %" PRIu64 ".",
+           tag);
+
+  return &iter->second;
+}
+
 void HIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   icl.getStatList(list, prefix);
 }
