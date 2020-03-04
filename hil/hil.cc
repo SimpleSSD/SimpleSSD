@@ -50,17 +50,17 @@ void HIL::submit(Operation opcode, Request *req) {
 
   std::vector<SubRequest *> subrequestList;
 
+  // Make LPN address
+  LPN slpn;
+  uint32_t nlp;
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
+  convertFunction(req->offset, req->length, slpn, nlp, skipFront, skipEnd);
+
+  panic_if(nlp == 0, "Unexpected length of request.");
+
   if (opcode < Operation::Flush) {
-    // Make LPN address
-    LPN slpn;
-    uint32_t nlp;
-    uint32_t skipFront;
-    uint32_t skipEnd;
-
-    convertFunction(req->offset, req->length, slpn, nlp, skipFront, skipEnd);
-
-    panic_if(nlp == 0, "Unexpected length of request.");
-
     // Make subrequests
     for (uint32_t i = 0; i < nlp; i++) {
       uint64_t offset = lpnSize * i - skipFront;
@@ -97,8 +97,8 @@ void HIL::submit(Operation opcode, Request *req) {
 
     panic_if(!sreq.second, "SubRequest ID conflict.");
 
-    sreq.first->second.offset = req->offset;
-    sreq.first->second.length = req->length;
+    sreq.first->second.offset = slpn;
+    sreq.first->second.length = nlp;
 
     subrequestList.emplace_back(&sreq.first->second);
 
