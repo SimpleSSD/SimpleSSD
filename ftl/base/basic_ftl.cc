@@ -21,15 +21,18 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   panic_if(superpage == 0, "Invalid superpage factor.");
 
   // Create events
-  eventReadDoFIL = createEvent([this](uint64_t, uint64_t d) { read_doFIL(d); },
-                               "FTL::BasicFTL::eventReadDoFIL");
+  eventReadSubmit =
+      createEvent([this](uint64_t, uint64_t d) { read_submit(d); },
+                  "FTL::BasicFTL::eventReadSubmit");
   eventReadDone = createEvent([this](uint64_t, uint64_t d) { read_done(d); },
                               "FTL::BasicFTL::eventReadDone");
-  eventWriteDoFIL =
-      createEvent([this](uint64_t, uint64_t d) { write_doFIL(d); },
-                  "FTL::BasicFTL::eventWriteDoFIL");
+
+  eventWriteSubmit =
+      createEvent([this](uint64_t, uint64_t d) { write_submit(d); },
+                  "FTL::BasicFTL::eventWriteSubmit");
   eventWriteDone = createEvent([this](uint64_t, uint64_t) { write_done(); },
                                "FTL::BasicFTL::eventWriteDone");
+
   eventInvalidateDoFIL =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_doFIL(t, d); },
                   "FTL::BasicFTL::eventInvalidateDoFIL");
@@ -62,10 +65,10 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 BasicFTL::~BasicFTL() {}
 
 void BasicFTL::read(Request *cmd) {
-  pMapper->readMapping(cmd, eventReadDoFIL);
+  pMapper->readMapping(cmd, eventReadSubmit);
 }
 
-void BasicFTL::read_doFIL(uint64_t tag) {
+void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   PPN ppn = req->getPPN() * superpage;
@@ -92,13 +95,13 @@ void BasicFTL::write(Request *cmd) {
     panic("RMW not implemented.");
   }
   else {
-    pMapper->writeMapping(cmd, eventWriteDoFIL);
+    pMapper->writeMapping(cmd, eventWriteSubmit);
 
     return;
   }
 }
 
-void BasicFTL::write_doFIL(uint64_t tag) {
+void BasicFTL::write_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   PPN ppn = req->getPPN() * superpage;

@@ -51,14 +51,14 @@ class BasicFTL : public AbstractFTL {
     }
   }
 
-  Event eventReadDoFIL;
-  void read_doFIL(uint64_t);
+  Event eventReadSubmit;
+  void read_submit(uint64_t);
 
   Event eventReadDone;
   void read_done(uint64_t);
 
-  Event eventWriteDoFIL;
-  void write_doFIL(uint64_t);
+  Event eventWriteSubmit;
+  void write_submit(uint64_t);
 
   Event eventWriteDone;
   void write_done(uint64_t);
