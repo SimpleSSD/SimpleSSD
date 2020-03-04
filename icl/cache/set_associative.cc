@@ -268,6 +268,22 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
   }
   else {
     sreq->setDRAMAddress(makeDataAddress(set, way));
+
+    // Check NAND/DMA is pending when request is write
+    auto opcode = sreq->getOpcode();
+
+    if (opcode == HIL::Operation::Write ||
+        opcode == HIL::Operation::WriteZeroes) {
+      auto &line = cacheline.at(set * waySize + way);
+
+      if (line.dmaPending || line.nvmPending) {
+        // We need to stall this lookup
+        lookupList.emplace(line.tag, sreq->getTag());
+
+        // TODO: This is not a solution
+        return;
+      }
+    }
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupMemory,
@@ -332,13 +348,23 @@ void SetAssociative::dmaDone(LPN lpn) {
   getValidWay(lpn, way);
 
   if (way < waySize) {
-    cacheline.at(set * waySize + way).dmaPending = false;
+    auto &line = cacheline.at(set * waySize + way);
+
+    line.dmaPending = false;
+
+    auto iter = lookupList.find(line.tag);
+
+    if (iter != lookupList.end()) {
+      manager->lookupDone(iter->second);
+      lookupList.erase(iter);
+    }
   }
 }
 
 void SetAssociative::nvmDone(LPN lpn) {
   bool found = false;
 
+  // Flush
   for (auto iter = flushList.begin(); iter != flushList.end(); iter++) {
     auto fr = iter->lpnList.find(lpn);
 
@@ -363,6 +389,7 @@ void SetAssociative::nvmDone(LPN lpn) {
     }
   }
 
+  // Eviction
   if (!found) {
     auto iter = evictList.find(lpn);
 
@@ -375,6 +402,16 @@ void SetAssociative::nvmDone(LPN lpn) {
     evictList.erase(iter);
 
     // TODO: Check allocation space
+  }
+
+  // Lookup
+  {
+    auto iter = lookupList.find(lpn);
+
+    if (iter != lookupList.end()) {
+      manager->lookupDone(iter->second);
+      lookupList.erase(iter);
+    }
   }
 }
 
