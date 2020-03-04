@@ -91,6 +91,8 @@ class Request {
 
   inline void setOffset(uint32_t o) { offset = o; }
   inline void setLength(uint32_t l) { length = l; }
+
+  uint32_t counter;
 };
 
 struct CopyList {

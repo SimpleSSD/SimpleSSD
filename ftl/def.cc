@@ -17,7 +17,8 @@ Request::Request(Event e, uint64_t d)
       offset(0),
       length(0),
       event(e),
-      data(d) {}
+      data(d),
+      counter(0) {}
 
 Request::Request(Event e, uint64_t d, Operation o, LPN l)
     : opcode(o),
@@ -27,7 +28,8 @@ Request::Request(Event e, uint64_t d, Operation o, LPN l)
       offset(0),
       length(0),
       event(e),
-      data(d) {}
+      data(d),
+      counter(0) {}
 
 Request::Request(Event e, uint64_t d, Operation o, LPN l, PPN p)
     : opcode(o),
@@ -37,6 +39,7 @@ Request::Request(Event e, uint64_t d, Operation o, LPN l, PPN p)
       offset(0),
       length(0),
       event(e),
-      data(d) {}
+      data(d),
+      counter(0) {}
 
 }  // namespace SimpleSSD::FTL

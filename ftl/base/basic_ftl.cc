@@ -68,14 +68,21 @@ void BasicFTL::read(Request *cmd) {
 void BasicFTL::read_doFIL(uint64_t tag) {
   auto req = getRequest(tag);
 
-  // Now we have PPN
-  pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
+  PPN ppn = req->getPPN() * superpage;
+
+  for (uint32_t i = 0; i < superpage; i++) {
+    pFIL->read(FIL::Request(ppn + i, eventReadDone, tag));
+  }
 }
 
 void BasicFTL::read_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  scheduleNow(req->getEvent(), req->getEventData());
+  req->counter++;
+
+  if (req->counter == superpage) {
+    completeRequest(req);
+  }
 }
 
 void BasicFTL::write(Request *cmd) {
@@ -94,8 +101,11 @@ void BasicFTL::write(Request *cmd) {
 void BasicFTL::write_doFIL(uint64_t tag) {
   auto req = getRequest(tag);
 
-  // Now we have PPN
-  pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
+  PPN ppn = req->getPPN() * superpage;
+
+  for (uint32_t i = 0; i < superpage; i++) {
+    pFIL->read(FIL::Request(ppn + i, eventReadDone, tag));
+  }
 
   triggerGC();
 }
@@ -103,7 +113,11 @@ void BasicFTL::write_doFIL(uint64_t tag) {
 void BasicFTL::write_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  scheduleNow(req->getEvent(), req->getEventData());
+  req->counter++;
+
+  if (req->counter == superpage) {
+    completeRequest(req);
+  }
 }
 
 void BasicFTL::invalidate_find(Request &cmd) {
