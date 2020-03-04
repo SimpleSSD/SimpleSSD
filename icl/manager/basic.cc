@@ -11,6 +11,43 @@
 
 namespace SimpleSSD::ICL {
 
+SequentialDetector::SequentialDetector(uint32_t p, uint64_t c, uint64_t r)
+    : enabled(false),
+      pageSize(p),
+      lastRequestTag(1),
+      lpn(std::numeric_limits<LPN>::max()),
+      offset(0),
+      length(0),
+      hitCounter(0),
+      accessCounter(0),
+      triggerCount(c),
+      triggerRatio(r) {}
+
+void SequentialDetector::submitSubRequest(HIL::SubRequest *req) {
+  if (lastRequestTag != req->getParentTag()) {
+    if (lpn * pageSize + offset + length == req->getLPN() * pageSize + offset) {
+      if (!enabled) {
+        hitCounter++;
+        accessCounter += length;
+
+        if (hitCounter >= triggerCount &&
+            accessCounter / pageSize >= triggerRatio) {
+          enabled = true;
+        }
+      }
+    }
+    else {
+      enabled = false;
+      hitCounter = 0;
+      accessCounter = 0;
+    }
+  }
+
+  lpn = req->getLPN();
+  offset = (uint32_t)req->getOffset();
+  length = req->getLength();
+}
+
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f) {
   eventDrainDone = createEvent([this](uint64_t, uint64_t d) { drainDone(d); },

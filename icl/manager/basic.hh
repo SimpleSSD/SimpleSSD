@@ -16,6 +16,30 @@
 
 namespace SimpleSSD::ICL {
 
+class SequentialDetector {
+ private:
+  bool enabled;
+
+  uint32_t pageSize;
+
+  uint64_t lastRequestTag;
+  LPN lpn;
+  uint32_t offset;
+  uint32_t length;
+
+  uint32_t hitCounter;
+  uint32_t accessCounter;
+
+  const uint64_t triggerCount;
+  const uint64_t triggerRatio;
+
+ public:
+  SequentialDetector(uint32_t, uint64_t, uint64_t);
+
+  inline bool isEnabled() { return enabled; }
+  void submitSubRequest(HIL::SubRequest *);
+};
+
 class BasicCache : public AbstractManager {
  protected:
   Event eventDrainDone;
