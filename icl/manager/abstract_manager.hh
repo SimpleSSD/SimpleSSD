@@ -68,14 +68,22 @@ class AbstractManager : public Object {
 
   /* Interface for ICL::AbstractCache */
   /**
+   * \brief Handler for cache lookup
+   *
+   * Called when cacheline lockup has been completed
+   *
+   * \param[in] tag Tag of SubRequest
+   */
+  virtual void lookupDone(uint64_t tag) = 0;
+
+  /**
    * \brief Handler for cache allocation
    *
    * Called when allocating cacheline for new data has been completed
    *
-   * \param[in] read  True when SubRequest(tag) was read
-   * \param[in] tag   Tag of SubRequest
+   * \param[in] tag Tag of SubRequest
    */
-  virtual void allocateDone(bool read, uint64_t tag) = 0;
+  virtual void allocateDone(uint64_t tag) = 0;
 
   //! Handler for cache flush
   virtual void flushDone(uint64_t) = 0;

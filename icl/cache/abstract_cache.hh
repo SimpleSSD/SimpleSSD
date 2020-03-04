@@ -37,10 +37,9 @@ class AbstractCache : public Object {
    * When write, setHit() should be called when cache hit and cold miss.
    *
    * \param[in] sreq    Current subrequest
-   * \param[in] isRead  True when read
    * \return  CPU execution latency
    */
-  virtual CPU::Function lookup(HIL::SubRequest *sreq, bool isRead) = 0;
+  virtual CPU::Function lookup(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief Flush cacheline
@@ -69,9 +68,8 @@ class AbstractCache : public Object {
    * AbstractManager::drain for data write-back.
    *
    * \param[in] sreq  Current subrequest
-   * \param[in] isRead  True when read
    */
-  virtual void allocate(HIL::SubRequest *sreq, bool isRead) = 0;
+  virtual void allocate(HIL::SubRequest *sreq) = 0;
 
   /**
    * \brief DMA done callback
