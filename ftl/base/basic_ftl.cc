@@ -16,7 +16,8 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   memset(&stat, 0, sizeof(stat));
 
   logicalPageSize = pMapper->getInfo()->logicalPageSize;
-  superpage = logicalPageSize / pMapper->getInfo()->physicalPageSize;
+  physicalPageSize = pMapper->getInfo()->physicalPageSize;
+  superpage = logicalPageSize / physicalPageSize;
 
   panic_if(superpage == 0, "Invalid superpage factor.");
 
@@ -72,9 +73,18 @@ void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   PPN ppn = req->getPPN() * superpage;
+  uint32_t start = 0;
+  uint32_t end = superpage;
 
-  for (uint32_t i = 0; i < superpage; i++) {
-    pFIL->read(FIL::Request(ppn + i, eventReadDone, tag));
+  if (superpage > 1 && allowPageRead) {
+    start = req->getOffset() / physicalPageSize;
+    end = DIVCEIL(req->getOffset() + req->getLength(), physicalPageSize);
+
+    req->counter = superpage - (end - start);
+  }
+
+  for (; start < end; start++) {
+    pFIL->read(FIL::Request(ppn + start, eventReadDone, tag));
   }
 }
 
@@ -123,7 +133,7 @@ void BasicFTL::write_done(uint64_t tag) {
   }
 }
 
-void BasicFTL::invalidate_find(Request &cmd) {
+void BasicFTL::invalidate(LPN slpn, uint32_t nlp, Event eid, uint64_t data) {
   pMapper->invalidateMapping(cmd, eventInvalidateDoFIL);
 }
 
