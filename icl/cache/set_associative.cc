@@ -329,7 +329,6 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 }
 
 void SetAssociative::dmaDone(LPN lpn) {
-  LPN lpn = sreq->getLPN();
   uint32_t set = getSetIdx(lpn);
   uint32_t way;
 
