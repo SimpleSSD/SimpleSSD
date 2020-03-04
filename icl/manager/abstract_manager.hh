@@ -25,6 +25,20 @@ struct FlushContext {
   FlushContext(LPN l, uint64_t a) : lpn(l), address(a) {}
 };
 
+class SequentialDetector {
+ protected:
+  bool enabled;
+
+  uint32_t pageSize;
+
+ public:
+  SequentialDetector(uint32_t p) : enabled(false), pageSize(p) {}
+
+  inline bool isEnabled() { return enabled; }
+
+  virtual void submitSubRequest(HIL::SubRequest *) = 0;
+};
+
 class AbstractManager : public Object {
  protected:
   ICL::ICL *pICL;

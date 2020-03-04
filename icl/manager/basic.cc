@@ -11,9 +11,8 @@
 
 namespace SimpleSSD::ICL {
 
-SequentialDetector::SequentialDetector(uint32_t p, uint64_t c, uint64_t r)
-    : enabled(false),
-      pageSize(p),
+BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
+    : SequentialDetector(p),
       lastRequestTag(1),
       lpn(std::numeric_limits<LPN>::max()),
       offset(0),
@@ -23,7 +22,7 @@ SequentialDetector::SequentialDetector(uint32_t p, uint64_t c, uint64_t r)
       triggerCount(c),
       triggerRatio(r) {}
 
-void SequentialDetector::submitSubRequest(HIL::SubRequest *req) {
+void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   if (lastRequestTag != req->getParentTag()) {
     if (lpn * pageSize + offset + length == req->getLPN() * pageSize + offset) {
       if (!enabled) {
