@@ -140,15 +140,30 @@ CPU::Function SetAssociative::randomEviction(uint32_t set, uint32_t &way) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  do {
-    way = dist(gen);
+  // Check all lines are pending
+  bool skip = true;
 
+  for (way = 0; way < waySize; way++) {
     auto &line = cacheline[set * waySize + way];
 
-    if (line.valid) {
+    if (!line.dmaPending && !line.nvmPending) {
+      skip = false;
+
       break;
     }
-  } while (true);
+  }
+
+  if (!skip) {
+    do {
+      way = dist(gen);
+
+      auto &line = cacheline[set * waySize + way];
+
+      if (line.valid) {
+        break;
+      }
+    } while (true);
+  }
 
   return fstat;
 }
@@ -157,11 +172,15 @@ CPU::Function SetAssociative::fifoEviction(uint32_t set, uint32_t &way) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
+  way = waySize;
+
   uint64_t min = std::numeric_limits<uint64_t>::max();
 
   for (uint32_t i = 0; i < waySize; i++) {
-    if (cacheline[set * waySize + i].insertedAt < min) {
-      min = cacheline[set * waySize + i].insertedAt;
+    auto &line = cacheline[set * waySize + i];
+
+    if (line.insertedAt < min && !line.dmaPending && !line.nvmPending) {
+      min = line.insertedAt;
       way = i;
     }
   }
@@ -173,11 +192,15 @@ CPU::Function SetAssociative::lruEviction(uint32_t set, uint32_t &way) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
+  way = waySize;
+
   uint64_t min = std::numeric_limits<uint64_t>::max();
 
   for (uint32_t i = 0; i < waySize; i++) {
-    if (cacheline[set * waySize + i].accessedAt < min) {
-      min = cacheline[set * waySize + i].accessedAt;
+    auto &line = cacheline[set * waySize + i];
+
+    if (line.accessedAt < min && !line.dmaPending && !line.nvmPending) {
+      min = line.accessedAt;
       way = i;
     }
   }
