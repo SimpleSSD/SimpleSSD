@@ -126,8 +126,7 @@ class SubRequest {
   SubRequest(uint64_t, Request *);
   SubRequest(uint64_t, Request *, LPN, uint64_t, uint32_t);
   SubRequest(const SubRequest &) = delete;
-  SubRequest(SubRequest &&rhs) noexcept
-      : requestTag(rhs.requestTag), clear(false), buffer(nullptr) {
+  SubRequest(SubRequest &&rhs) noexcept : clear(false), buffer(nullptr) {
     *this = std::move(rhs);
   }
   ~SubRequest() {
@@ -139,6 +138,7 @@ class SubRequest {
   SubRequest &operator=(const SubRequest &) = delete;
   SubRequest &operator=(SubRequest &&rhs) {
     if (this != &rhs) {
+      this->requestTag = std::exchange(rhs.requestTag, 0);
       this->request = std::exchange(rhs.request, nullptr);
       this->lpn = std::exchange(rhs.lpn, 0);
       this->offset = std::exchange(rhs.offset, 0);
