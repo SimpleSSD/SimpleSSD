@@ -266,6 +266,9 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     // Miss, we need allocation
     sreq->setAllocate();
   }
+  else {
+    sreq->setDRAMAddress(makeDataAddress(set, way));
+  }
 
   object.memory->read(cacheTagBaseAddress, cacheTagSize * waySize,
                       InvalidEventID);
