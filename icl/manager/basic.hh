@@ -42,12 +42,9 @@ class BasicCache : public AbstractManager {
  protected:
   SequentialDetector *detector;
 
-  Config::Granularity prefetchMode;
+  uint64_t prefetchCount;
   LPN prefetchTrigger;
   LPN lastPrefetched;
-
-  uint64_t parallelism_first;
-  uint64_t parallelism_all;
 
   uint64_t drainCounter;
   std::unordered_map<uint64_t, FlushContext> drainQueue;

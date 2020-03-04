@@ -86,14 +86,15 @@ BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     detector = new BasicDetector(ftlparam->pageSize, count, ratio);
   }
 
-  prefetchMode = (Config::Granularity)readConfigUint(Section::InternalCache,
-                                                     Config::Key::PrefetchMode);
+  auto prefetchMode = (Config::Granularity)readConfigUint(
+      Section::InternalCache, Config::Key::PrefetchMode);
 
   prefetchTrigger = std::numeric_limits<LPN>::max();
   lastPrefetched = 0;
 
-  parallelism_all = ftlparam->parallelism;
-  parallelism_first = ftlparam->parallelismLevel[0];
+  prefetchCount = prefetchMode == Config::Granularity::AllLevel
+                      ? ftlparam->parallelism
+                      : ftlparam->parallelismLevel[0];
 
   prefetched = 0;
   drained = 0;
@@ -134,14 +135,12 @@ void BasicCache::read(HIL::SubRequest *req) {
 
       // Make prefetch request
       LPN begin = nextlpn;
-      LPN end = begin + (prefetchMode == Config::Granularity::AllLevel
-                             ? parallelism_all
-                             : parallelism_first);
+      LPN end = begin + prefetchCount;
 
       prefetchTrigger = (begin + end) / 2;
       lastPrefetched = end;
 
-      prefetched += end - begin;
+      prefetched += prefetchCount;
 
       pICL->makeRequest(begin, end);
     }
