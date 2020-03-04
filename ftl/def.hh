@@ -57,21 +57,23 @@ class Request {
   uint64_t tag;
 
   // Current request information (Invalid when Trim/Format)
-  LPN lpn;
-  PPN ppn;
+  LPN lpn;  //!< Requested LPN or stored LPN in spare area
+  PPN ppn;  //!< Translated PPN
 
-  uint32_t offset;
-  uint32_t length;
+  uint32_t offset;  //!< Byte offset in current page
+  uint32_t length;  //!< Byte length in current page
 
   // Full request information (Or current request info when Trim/Format)
-  LPN slpn;
-  uint32_t nlp;
+  LPN slpn;      //!< Starting LPN of parent request
+  uint32_t nlp;  //!< Number of pages in parent request
 
   Operation opcode;
   Response result;
 
-  Event event;
-  uint64_t data;
+  Event event;    //!< Completion event
+  uint64_t data;  //!< Tag of HIL::Request
+
+  uint64_t address;  //!< Physical address of internal DRAM
 
  public:
   Request(Event, uint64_t);
@@ -94,10 +96,14 @@ class Request {
   inline Event getEvent() { return event; }
   inline uint64_t getEventData() { return data; }
 
+  inline uint64_t getDRAMAddress() { return address; }
+
   inline void setResponse(Response r) { result = r; }
 
   inline void setLPN(LPN l) { lpn = l; }
   inline void setPPN(PPN p) { ppn = p; }
+
+  inline void setDRAMAddress(uint64_t addr) { address = addr; };
 
   uint32_t counter;
 

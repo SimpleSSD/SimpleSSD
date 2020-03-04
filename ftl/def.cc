@@ -20,10 +20,15 @@ Request::Request(Event e, uint64_t d)
       result(Response::Success),
       event(e),
       data(d),
+      address(0),
       counter(0) {}
 
 Request::Request(Event e, HIL::SubRequest *r)
-    : result(Response::Success), ppn(InvalidPPN), event(e), counter(0) {
+    : result(Response::Success),
+      ppn(InvalidPPN),
+      event(e),
+      address(0),
+      counter(0) {
   // Opcode
   switch (r->getOpcode()) {
     case HIL::Operation::Read:
@@ -68,6 +73,8 @@ void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, nlp);
   BACKUP_EVENT(out, event);
   BACKUP_SCALAR(out, data);
+  BACKUP_SCALAR(out, address);
+  BACKUP_SCALAR(out, counter);
 }
 
 void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
@@ -82,6 +89,8 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, nlp);
   RESTORE_EVENT(in, event);
   RESTORE_SCALAR(in, data);
+  RESTORE_SCALAR(in, address);
+  RESTORE_SCALAR(in, counter);
 }
 
 }  // namespace SimpleSSD::FTL
