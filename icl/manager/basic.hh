@@ -39,6 +39,10 @@ class BasicCache : public AbstractManager {
  protected:
   SequentialDetector *detector;
 
+  Config::Granularity prefetchMode;
+  LPN prefetchTrigger;
+  LPN lastPrefetched;
+
   Event eventDrainDone;
   void drainDone(uint64_t);
 

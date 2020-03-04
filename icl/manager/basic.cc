@@ -48,12 +48,35 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
 }
 
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
-    : AbstractManager(o, p, f) {
+    : AbstractManager(o, p, f), detector(nullptr) {
+  bool enable =
+      readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
+
+  if (enable) {
+    // Create sequential I/O detector
+    auto count =
+        readConfigUint(Section::InternalCache, Config::Key::PrefetchCount);
+    auto ratio =
+        readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio);
+
+    detector = new BasicDetector(f->getInfo()->pageSize, count, ratio);
+  }
+
+  prefetchMode = (Config::Granularity)readConfigUint(Section::InternalCache,
+                                                     Config::Key::PrefetchMode);
+
+  prefetchTrigger = std::numeric_limits<LPN>::max();
+  lastPrefetched = 0;
+
   eventDrainDone = createEvent([this](uint64_t, uint64_t d) { drainDone(d); },
                                "ICL::BasicCache::eventDrainDone");
 }
 
-BasicCache::~BasicCache() {}
+BasicCache::~BasicCache() {
+  if (detector) {
+    delete detector;
+  }
+}
 
 void BasicCache::read(HIL::SubRequest *req) {
   cache->lookup(req);
