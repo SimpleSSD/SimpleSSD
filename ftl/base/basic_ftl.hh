@@ -61,35 +61,11 @@ class BasicFTL : public AbstractFTL {
   Event eventWriteDone;
   void write_done(uint64_t);
 
-  Event eventInvalidateDoFIL;
-  void invalidate_doFIL(uint64_t, uint64_t);
+  Event eventInvalidateSubmit;
+  void invalidate_submit(uint64_t, uint64_t);
 
   Event eventGCTrigger;
   void gc_trigger(uint64_t);
-
-  Event eventGCGetBlockList;
-  void gc_blockinfo();
-
-  Event eventGCRead;
-  void gc_read();
-
-  Event eventGCWriteMapping;
-  void gc_write();
-
-  Event eventGCWrite;
-  void gc_writeDoFIL();
-
-  Event eventGCWriteDone;
-  void gc_writeDone();
-
-  Event eventGCErase;
-  void gc_erase();
-
-  Event eventGCEraseDone;
-  void gc_eraseDone();
-
-  Event eventGCDone;
-  void gc_done(uint64_t);
 
  public:
   BasicFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
