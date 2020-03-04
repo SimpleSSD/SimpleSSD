@@ -270,9 +270,6 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     sreq->setDRAMAddress(makeDataAddress(set, way));
   }
 
-  object.memory->read(cacheTagBaseAddress, cacheTagSize * waySize,
-                      InvalidEventID);
-
   scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupMemory,
                    sreq->getTag(), fstat);
 }
