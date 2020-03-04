@@ -18,8 +18,8 @@ namespace SimpleSSD::ICL {
 ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   auto *param = pFTL->getInfo();
 
-  totalLogicalPages = param->totalLogicalPages;
-  logicalPageSize = param->pageSize;
+  totalLogicalPages = param->logicalPages;
+  logicalPageSize = param->logicalPageSize;
 
   // Create cache manager
   auto mode = (Config::Mode)readConfigUint(Section::InternalCache,
