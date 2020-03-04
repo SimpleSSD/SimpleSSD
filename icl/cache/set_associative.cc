@@ -302,7 +302,17 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   CPU::markFunction(fstat);
 }
 
-void SetAssociative::dmaDone(LPN) {}
+void SetAssociative::dmaDone(LPN lpn) {
+  LPN lpn = sreq->getLPN();
+  uint32_t set = getSetIdx(lpn);
+  uint32_t way;
+
+  getValidWay(lpn, way);
+
+  if (way < waySize) {
+    cacheline.at(set * waySize + way).dmaPending = false;
+  }
+}
 
 void SetAssociative::nvmDone(LPN lpn) {
   bool found = false;
@@ -335,6 +345,10 @@ void SetAssociative::nvmDone(LPN lpn) {
     auto iter = evictList.find(lpn);
 
     panic_if(iter == evictList.end(), "Unexpected completion.");
+
+    auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
+
+    line.nvmPending = false;
 
     evictList.erase(iter);
 
