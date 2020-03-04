@@ -55,8 +55,8 @@ class AbstractMapping : public Object {
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
-  virtual void makeSpare(LPN lpn, std::vector<uint8_t> &spare);
-  virtual LPN readSpare(std::vector<uint8_t> &spare);
+  virtual void makeSpare(LPN, std::vector<uint8_t> &);
+  virtual LPN readSpare(std::vector<uint8_t> &);
 
  public:
   AbstractMapping(ObjectData &);
@@ -72,9 +72,22 @@ class AbstractMapping : public Object {
   virtual uint16_t getAge(PPN) = 0;
 
   // I/O interfaces
-  virtual void readMapping(Request *req, Event eid) = 0;
-  virtual void writeMapping(Request *req, Event eid) = 0;
-  virtual void invalidateMapping(Request *req, Event eid) = 0;
+  virtual void readMapping(Request *, Event) = 0;
+  virtual void writeMapping(Request *, Event) = 0;
+  virtual void invalidateMapping(Request *, Event) = 0;
+
+  /**
+   * \brief Check whether read-modify-write is needed
+   *
+   * Check full-sized request by getSLPN and getNLP function and determine
+   * creating larger mapping table entry is possible.
+   *
+   * \param[in]   req   Request structure
+   * \param[out]  slpn  Starting LPN of data range should be read
+   * \param[out]  nlp   Number of pages should be read
+   * \return  Return true if read-modify-write is required
+   */
+  virtual bool prepareReadModifyWrite(Request *req, LPN &slpn, uint32_t &nlp) = 0;
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;

@@ -15,11 +15,7 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
     : AbstractFTL(o, p, f, m, a), gcInProgress(false), formatInProgress(0) {
   memset(&stat, 0, sizeof(stat));
 
-  logicalPageSize = pMapper->getInfo()->logicalPageSize;
-  physicalPageSize = pMapper->getInfo()->physicalPageSize;
-  superpage = logicalPageSize / physicalPageSize;
-
-  panic_if(superpage == 0, "Invalid superpage factor.");
+  pageSize = pMapper->getInfo()->pageSize;
 
   // Create events
   eventReadSubmit =
@@ -70,37 +66,26 @@ void BasicFTL::read(Request *cmd) {
 void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
-  PPN ppn = req->getPPN() * superpage;
-  uint32_t start = 0;
-  uint32_t end = superpage;
-
-  if (superpage > 1 && allowPageRead) {
-    start = req->getOffset() / physicalPageSize;
-    end = DIVCEIL(req->getOffset() + req->getLength(), physicalPageSize);
-
-    req->counter = superpage - (end - start);
-  }
-
-  for (; start < end; start++) {
-    pFIL->read(FIL::Request(ppn + start, eventReadDone, tag));
-  }
+  pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
 }
 
 void BasicFTL::read_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  req->counter++;
-
-  if (req->counter == superpage) {
-    completeRequest(req);
-  }
+  completeRequest(req);
 }
 
 void BasicFTL::write(Request *cmd) {
+  LPN slpn = cmd->getLPN();
+  uint32_t nlp = 1;
+
   // Smaller than one logical (super) page
-  if (cmd->getLength() != logicalPageSize) {
+  if (cmd->getLength() != pageSize ||
+      pMapper->prepareReadModifyWrite(cmd, slpn, nlp)) {
     // Perform read-modify-write
     panic("RMW not implemented.");
+
+    // TODO: Read slpn + nlp range and write same range
   }
   else {
     pMapper->writeMapping(cmd, eventWriteSubmit);
@@ -112,11 +97,7 @@ void BasicFTL::write(Request *cmd) {
 void BasicFTL::write_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
-  PPN ppn = req->getPPN() * superpage;
-
-  for (uint32_t i = 0; i < superpage; i++) {
-    pFIL->read(FIL::Request(ppn + i, eventReadDone, tag));
-  }
+  pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
 
   triggerGC();
 }
@@ -124,11 +105,7 @@ void BasicFTL::write_submit(uint64_t tag) {
 void BasicFTL::write_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  req->counter++;
-
-  if (req->counter == superpage) {
-    completeRequest(req);
-  }
+  completeRequest(req);
 }
 
 void BasicFTL::invalidate(LPN slpn, uint32_t nlp, Event eid, uint64_t data) {

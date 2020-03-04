@@ -23,9 +23,7 @@ class BasicFTL : public AbstractFTL {
     FormatContext() : eid(InvalidEventID), data(0) {}
   };
 
-  uint32_t logicalPageSize;
-  uint32_t physicalPageSize;
-  uint32_t superpage;
+  uint32_t pageSize;
 
   bool mergeReadModifyWrite;
 
