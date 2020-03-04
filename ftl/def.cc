@@ -14,32 +14,66 @@ Request::Request(Event e, uint64_t d)
       result(Response::Success),
       lpn(InvalidLPN),
       ppn(InvalidPPN),
-      offset(0),
-      length(0),
+      slpn(0),
+      nlp(0),
       event(e),
       data(d),
       counter(0) {}
 
-Request::Request(Event e, uint64_t d, Operation o, LPN l)
-    : opcode(o),
-      result(Response::Success),
-      lpn(l),
-      ppn(InvalidPPN),
-      offset(0),
-      length(0),
-      event(e),
-      data(d),
-      counter(0) {}
+Request::Request(Event e, HIL::SubRequest *r)
+    : result(Response::Success), ppn(InvalidPPN), event(e), counter(0) {
+  // Opcode
+  switch (r->getOpcode()) {
+    case HIL::Operation::Read:
+      opcode = Operation::Read;
 
-Request::Request(Event e, uint64_t d, Operation o, LPN l, PPN p)
-    : opcode(o),
-      result(Response::Success),
-      lpn(l),
-      ppn(p),
-      offset(0),
-      length(0),
-      event(e),
-      data(d),
-      counter(0) {}
+      break;
+    case HIL::Operation::Write:
+    case HIL::Operation::WriteZeroes:
+      opcode = Operation::Write;
+
+      break;
+    case HIL::Operation::Trim:
+      opcode = Operation::Trim;
+
+      break;
+    case HIL::Operation::Format:
+      opcode = Operation::Format;
+
+      break;
+    default:
+      // TODO: Panic here
+      break;
+  }
+
+  lpn = r->getLPN();
+  slpn = r->getSLPN();
+  nlp = r->getNLP();
+  data = r->getTag();
+}
+
+void Request::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, tag);
+  BACKUP_SCALAR(out, opcode);
+  BACKUP_SCALAR(out, result);
+  BACKUP_SCALAR(out, lpn);
+  BACKUP_SCALAR(out, ppn);
+  BACKUP_SCALAR(out, slpn);
+  BACKUP_SCALAR(out, nlp);
+  BACKUP_EVENT(out, event);
+  BACKUP_SCALAR(out, data);
+}
+
+void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
+  RESTORE_SCALAR(in, tag);
+  RESTORE_SCALAR(in, opcode);
+  RESTORE_SCALAR(in, result);
+  RESTORE_SCALAR(in, lpn);
+  RESTORE_SCALAR(in, ppn);
+  RESTORE_SCALAR(in, slpn);
+  RESTORE_SCALAR(in, nlp);
+  RESTORE_EVENT(in, event);
+  RESTORE_SCALAR(in, data);
+}
 
 }  // namespace SimpleSSD::FTL

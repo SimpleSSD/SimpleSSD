@@ -166,6 +166,7 @@ class SubRequest {
   inline bool getHit() { return hit; }
   inline const uint8_t *getBuffer() { return buffer; }
 
+  inline Operation getOpcode() { return request->opcode; }
   inline LPN getSLPN() { return request->slpn; }
   inline uint32_t getNLP() { return request->nlp; }
 

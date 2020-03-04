@@ -13,6 +13,7 @@
 #include <cinttypes>
 #include <unordered_map>
 
+#include "hil/request.hh"
 #include "sim/event.hh"
 #include "sim/object.hh"
 #include "util/bitset.hh"
@@ -36,7 +37,8 @@ enum class Operation : uint8_t {
   None,
   Read,
   Write,
-  Erase,
+  Trim,
+  Format,
 };
 
 enum class Response : uint8_t {
@@ -56,19 +58,20 @@ class Request {
   Operation opcode;
   Response result;
 
+  // Current request information (Invalid when Trim/Format)
   LPN lpn;
   PPN ppn;
 
-  uint32_t offset;
-  uint32_t length;
+  // Full request information (Or current request info when Trim/Format)
+  LPN slpn;
+  uint32_t nlp;
 
   Event event;
   uint64_t data;
 
  public:
   Request(Event, uint64_t);
-  Request(Event, uint64_t, Operation, LPN);
-  Request(Event, uint64_t, Operation, LPN, PPN);
+  Request(Event, HIL::SubRequest *);
 
   inline uint64_t getTag() { return tag; }
 
@@ -78,8 +81,8 @@ class Request {
   inline LPN getLPN() { return lpn; }
   inline PPN getPPN() { return ppn; }
 
-  inline uint32_t getOffset() { return offset; }
-  inline uint32_t getLength() { return length; }
+  inline LPN getSLPN() { return slpn; }
+  inline uint32_t getNLP() { return nlp; }
 
   inline Event getEvent() { return event; }
   inline uint64_t getEventData() { return data; }
@@ -89,10 +92,13 @@ class Request {
   inline void setLPN(LPN l) { lpn = l; }
   inline void setPPN(PPN p) { ppn = p; }
 
-  inline void setOffset(uint32_t o) { offset = o; }
-  inline void setLength(uint32_t l) { length = l; }
+  inline void setSLPN(LPN s) { slpn = s; }
+  inline void setNLP(uint32_t l) { nlp = l; }
 
   uint32_t counter;
+
+  void createCheckpoint(std::ostream &out) const noexcept;
+  void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
 };
 
 struct CopyList {
