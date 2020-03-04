@@ -114,8 +114,8 @@ class SubRequest {
   uint64_t offset;  //!< Offset in DMA Tag
   uint32_t length;  //!< Length in DMA Tag
 
-  bool allocate;    //!< Used in ICL, true when cacheline allocation is required
-  bool clear;  //!< Flag for buffer management
+  bool allocate;  //!< Used in ICL, true when cacheline allocation is required
+  bool clear;     //!< Flag for buffer management
 
   // Device-side DMA address
   uint8_t *buffer;   //!< Buffer for DMA (real data)
@@ -167,6 +167,7 @@ class SubRequest {
   inline const uint8_t *getBuffer() { return buffer; }
 
   inline Operation getOpcode() { return request->opcode; }
+  inline uint64_t getParentTag() { return request->requestTag; }
   inline LPN getSLPN() { return request->slpn; }
   inline uint32_t getNLP() { return request->nlp; }
 
