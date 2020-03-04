@@ -78,6 +78,7 @@ class Request {
  public:
   Request(Event, uint64_t);
   Request(Event, HIL::SubRequest *);
+  Request(Operation, LPN, uint32_t, uint32_t, LPN, uint32_t, Event, uint64_t);
 
   inline uint64_t getTag() { return tag; }
 

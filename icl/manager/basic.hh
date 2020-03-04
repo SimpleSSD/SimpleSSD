@@ -46,6 +46,9 @@ class BasicCache : public AbstractManager {
   uint64_t parallelism_first;
   uint64_t parallelism_all;
 
+  uint64_t drainCounter;
+  std::unordered_map<uint64_t, FlushContext> drainQueue;
+
   Event eventDrainDone;
   void drainDone(uint64_t);
 

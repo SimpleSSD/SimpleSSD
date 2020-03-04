@@ -85,13 +85,6 @@ class AbstractCache : public Object {
    * \param[in] lpn LPN address than completed
    */
   virtual void nvmDone(LPN lpn) = 0;
-
-  /**
-   * \brief Drain done callback
-   *
-   * Called when drain (write-back) operation has been completed.
-   */
-  virtual void drainDone() = 0;
 };
 
 }  // namespace SimpleSSD::ICL

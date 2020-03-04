@@ -61,6 +61,21 @@ Request::Request(Event e, HIL::SubRequest *r)
   data = r->getTag();
 }
 
+Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
+                 uint32_t nl, Event e, uint64_t d)
+    : lpn(l),
+      ppn(InvalidPPN),
+      offset(o),
+      length(s),
+      slpn(sl),
+      nlp(nl),
+      opcode(op),
+      result(Response::Success),
+      event(e),
+      data(d),
+      address(0),
+      counter(0) {}
+
 void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, tag);
   BACKUP_SCALAR(out, opcode);

@@ -20,9 +20,14 @@ class AbstractCache;
 struct FlushContext {
   LPN lpn;           // Logical address of request
   uint64_t address;  // Physical address of internal DRAM
-  uint8_t *buffer;   // Data (for simulation)
 
-  FlushContext(LPN l, uint64_t a) : lpn(l), address(a) {}
+  uint32_t offset;  // Offset in page
+  uint32_t length;  // Length in page
+
+  uint8_t *buffer;  // Data (for simulation)
+
+  FlushContext(LPN l, uint64_t a)
+      : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}
 };
 
 class SequentialDetector {
@@ -93,7 +98,11 @@ class AbstractManager : public Object {
   //! Completion handler for other cache jobs
   virtual void cacheDone(uint64_t tag) = 0;
 
-  //! Cache write-back requester
+  /**
+   * \brief Cache write-back requester
+   *
+   * FlushContext of this vector must be sequential and consecutive
+   */
   virtual void drain(std::vector<FlushContext> &) = 0;
 };
 

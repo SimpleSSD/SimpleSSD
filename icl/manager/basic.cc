@@ -48,7 +48,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
 }
 
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
-    : AbstractManager(o, p, f), detector(nullptr) {
+    : AbstractManager(o, p, f), detector(nullptr), drainCounter(0) {
   auto ftlparam = f->getInfo();
   bool enable =
       readConfigBoolean(Section::InternalCache, Config::Key::EnablePrefetch);
@@ -153,10 +153,40 @@ void BasicCache::cacheDone(uint64_t tag) {
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
-  // TODO: FTL end with drainDone
+  // Verify
+  panic_if(list.size() == 0, "Empty flush list.");
+
+  LPN begin = list.front().lpn;
+  LPN end = begin;
+
+  for (auto &iter : list) {
+    panic_if(end++ != iter.lpn, "Invalid flush list.");
+  }
+
+  // Submit
+  uint32_t nlp = (uint32_t)(end - begin);
+
+  for (auto &iter : list) {
+    uint64_t tag = ++drainCounter;
+
+    drainQueue.emplace(tag, iter);
+
+    auto req = FTL::Request(FTL::Operation::Write, iter.lpn, iter.offset,
+                            iter.length, begin, nlp, eventDrainDone, tag);
+
+    req.setDRAMAddress(iter.address);
+  }
 }
 
-void BasicCache::drainDone(uint64_t tag) {}
+void BasicCache::drainDone(uint64_t tag) {
+  auto iter = drainQueue.find(tag);
+
+  panic_if(iter == drainQueue.end(), "Unexpected drain ID %" PRIu64 ".", tag);
+
+  cache->nvmDone(iter->second.lpn);
+
+  drainQueue.erase(iter);
+}
 
 void BasicCache::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
