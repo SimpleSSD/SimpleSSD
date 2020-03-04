@@ -48,10 +48,10 @@ class SetAssociative : public AbstractCache {
   CPU::Function getEmptyWay(uint32_t, uint32_t &);
   CPU::Function getValidWay(LPN, uint32_t &);
 
-  Event eventReadAllocateDone;
-  Event eventWriteAllocateDone;
+  void readSet(uint64_t, Event);
 
-  void allocateDone(bool, uint64_t);
+  Event eventLookupMemory;
+  Event eventLookupDone;
 
  public:
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);

@@ -45,6 +45,10 @@ class AbstractCache : public Object {
   AbstractManager *manager;
   FTL::Parameter *parameter;
 
+  inline HIL::SubRequest *getSubRequest(uint64_t tag) {
+    return manager->getSubRequest(tag);
+  }
+
  public:
   AbstractCache(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
       : Object(o), manager(m), parameter(p) {}

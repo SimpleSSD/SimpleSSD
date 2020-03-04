@@ -120,12 +120,12 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   }
 
   // Create events
-  eventReadAllocateDone =
-      createEvent([this](uint64_t, uint64_t d) { allocateDone(true, d); },
-                  "ICL::SetAssociative::eventReadAllocateDone");
-  eventWriteAllocateDone =
-      createEvent([this](uint64_t, uint64_t d) { allocateDone(false, d); },
-                  "ICL::SetAssociative::eventWriteAllocateDone");
+  eventLookupMemory =
+      createEvent([this](uint64_t, uint64_t d) { readSet(d, eventLookupDone); },
+                  "ICL::SetAssociative::eventLookupMemory");
+  eventLookupDone =
+      createEvent([this](uint64_t, uint64_t d) { manager->lookupDone(d); },
+                  "ICL::SetAssociative::eventLookupDone");
 }
 
 SetAssociative::~SetAssociative() {}
@@ -211,11 +211,15 @@ CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
   return fstat;
 }
 
-void SetAssociative::allocateDone(bool read, uint64_t tag) {
-  manager->allocateDone(read, tag);
+void SetAssociative::readSet(uint64_t tag, Event eid) {
+  auto req = getSubRequest(tag);
+  auto set = getSetIdx(req->getLPN());
+
+  object.memory->read(cacheTagBaseAddress + cacheTagSize * waySize * set,
+                      cacheTagSize * waySize, eid, tag);
 }
 
-CPU::Function SetAssociative::lookup(HIL::SubRequest *sreq, bool read) {
+void SetAssociative::lookup(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -225,23 +229,16 @@ CPU::Function SetAssociative::lookup(HIL::SubRequest *sreq, bool read) {
 
   fstat += getValidWay(lpn, way);
 
-  if (way != waySize) {
-    // Hit
-    sreq->setHit();
-  }
-  else if (!read) {
-    getEmptyWay(set, way);  // Don't add fstat here
-
-    if (way != waySize) {
-      // Cold miss
-      sreq->setHit();
-    }
+  if (way == waySize) {
+    // Miss, we need allocation
+    sreq->setAllocate();
   }
 
   object.memory->read(cacheTagBaseAddress, cacheTagSize * waySize,
                       InvalidEventID);
 
-  return fstat;
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupMemory,
+                   sreq->getTag(), fstat);
 }
 
 CPU::Function SetAssociative::flush(HIL::SubRequest *sreq) {
