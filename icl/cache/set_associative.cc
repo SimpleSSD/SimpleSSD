@@ -409,6 +409,13 @@ void SetAssociative::nvmDone(LPN lpn) {
     auto iter = lookupList.find(lpn);
 
     if (iter != lookupList.end()) {
+      if (found) {
+        // This was flush -> cacheline looked up was invalidated
+        auto req = getSubRequest(iter->second);
+
+        req->setAllocate();
+      }
+
       manager->lookupDone(iter->second);
       lookupList.erase(iter);
     }
