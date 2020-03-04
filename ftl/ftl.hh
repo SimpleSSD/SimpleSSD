@@ -46,6 +46,7 @@ class FTL : public Object {
 
   LPN getPageUsage(LPN, LPN);
   Request *getRequest(uint64_t);
+  void completeRequest(Request *);
 
   void read(Request &&);
   void write(Request &&);

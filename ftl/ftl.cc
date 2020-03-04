@@ -93,6 +93,14 @@ Request *FTL::getRequest(uint64_t tag) {
   return &iter->second;
 }
 
+void FTL::completeRequest(Request *req) {
+  scheduleNow(req->event, req->data);
+
+  auto iter = requestQueue.find(req->tag);
+
+  requestQueue.erase(iter);
+}
+
 void FTL::read(Request &&req) {
   auto preq = insertRequest(std::move(req));
 

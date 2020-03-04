@@ -20,4 +20,8 @@ Request *AbstractFTL::getRequest(uint64_t tag) {
   return pFTL->getRequest(tag);
 }
 
+void AbstractFTL::completeRequest(Request *req) {
+  pFTL->completeRequest(req);
+}
+
 }  // namespace SimpleSSD::FTL

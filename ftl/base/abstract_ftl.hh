@@ -30,7 +30,8 @@ class AbstractFTL : public Object {
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
 
-  Request *getRequest(uint64_t tag);
+  Request *getRequest(uint64_t);
+  void completeRequest(Request *);
 
  public:
   AbstractFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
