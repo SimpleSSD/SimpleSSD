@@ -21,9 +21,9 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
 
-  uint32_t lineSize = parameter->pageSize;
+  cacheDataSize = parameter->pageSize;
 
-  sectorsInCacheLine = lineSize / minIO;
+  sectorsInCacheLine = cacheDataSize / minIO;
 
   // Allocate cachelines
   setSize = 0;
@@ -36,10 +36,10 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   if (waySize == 0) {
     // Fully-associative
     setSize = 1;
-    waySize = MAX(cacheSize / lineSize, 1);
+    waySize = MAX(cacheSize / cacheDataSize, 1);
   }
   else {
-    setSize = MAX(cacheSize / lineSize / waySize, 1);
+    setSize = MAX(cacheSize / cacheDataSize / waySize, 1);
   }
 
   cacheline.reserve(setSize * waySize);
@@ -48,12 +48,12 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
     cacheline.emplace_back(CacheLine(sectorsInCacheLine));
   }
 
-  cacheSize = (uint64_t)setSize * waySize * lineSize;
+  cacheSize = (uint64_t)setSize * waySize * cacheDataSize;
 
   debugprint(
       Log::DebugID::ICL_SetAssociative,
       "CREATE  | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
-      setSize, waySize, lineSize, cacheSize);
+      setSize, waySize, cacheDataSize, cacheSize);
 
   // # pages to evict once
   switch (evictMode) {
@@ -126,6 +126,12 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   eventLookupDone =
       createEvent([this](uint64_t, uint64_t d) { manager->lookupDone(d); },
                   "ICL::SetAssociative::eventLookupDone");
+  eventFlushMemory =
+      createEvent([this](uint64_t, uint64_t d) { readAll(d, eventCacheDone); },
+                  "ICL::SetAssociative::eventFlushMemory");
+  eventCacheDone =
+      createEvent([this](uint64_t, uint64_t d) { manager->cacheDone(d); },
+                  "ICL::SetAssociative::eventCacheDone");
 }
 
 SetAssociative::~SetAssociative() {}
@@ -211,12 +217,16 @@ CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
   return fstat;
 }
 
+void SetAssociative::readAll(uint64_t tag, Event eid) {
+  object.memory->read(cacheTagBaseAddress, cacheTagSize * setSize * waySize,
+                      eid, tag);
+}
+
 void SetAssociative::readSet(uint64_t tag, Event eid) {
   auto req = getSubRequest(tag);
   auto set = getSetIdx(req->getLPN());
 
-  object.memory->read(cacheTagBaseAddress + cacheTagSize * waySize * set,
-                      cacheTagSize * waySize, eid, tag);
+  object.memory->read(makeTagAddress(set), cacheTagSize * waySize, eid, tag);
 }
 
 void SetAssociative::lookup(HIL::SubRequest *sreq) {
@@ -241,39 +251,81 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
                    sreq->getTag(), fstat);
 }
 
-CPU::Function SetAssociative::flush(HIL::SubRequest *sreq) {
+void SetAssociative::flush(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  return fstat;
+  std::vector<FlushContext> list;
+
+  LPN slpn = sreq->getOffset();
+  uint32_t nlp = sreq->getLength();
+  uint64_t i = 0;
+
+  for (auto &iter : cacheline) {
+    if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
+        slpn <= iter.tag && iter.tag < slpn + nlp) {
+      iter.nvmPending = true;
+
+      list.emplace_back(iter.tag, cacheDataBaseAddress + cacheDataSize * i);
+    }
+
+    i++;
+  }
+
+  flushList.emplace_back(sreq->getTag(), slpn, nlp, (uint32_t)list.size());
+
+  manager->drain(list);
+
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventFlushMemory,
+                   sreq->getTag(), fstat);
 }
 
-CPU::Function SetAssociative::erase(HIL::SubRequest *) {}
+void SetAssociative::erase(HIL::SubRequest *) {}
 
-void SetAssociative::allocate(HIL::SubRequest *sreq, bool read) {
+void SetAssociative::allocate(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
-  Event eid = read ? eventReadAllocateDone : eventWriteAllocateDone;
-
-  uint32_t set = getSetIdx(sreq->getLPN());
-  uint32_t way;
-
-  // Find victim in current set
-  fstat += getEmptyWay(set, way);
-
-  if (way != waySize) {
-    // Done
-  }
-  else {
-    // Collect victim lines
-  }
-
-  scheduleFunction(CPU::CPUGroup::InternalCache, eid, sreq->getTag(), fstat);
 }
 
 void SetAssociative::dmaDone(LPN) {}
 
-void SetAssociative::drainDone() {}
+void SetAssociative::nvmDone(LPN lpn) {
+  bool found = false;
+
+  for (auto iter = flushList.begin(); iter != flushList.end(); iter++) {
+    auto fr = iter->lpnList.find(lpn);
+
+    if (fr != iter->lpnList.end()) {
+      auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
+
+      // Clear all
+      line.data = 0;
+
+      // Erase
+      iter->lpnList.erase(fr);
+
+      if (iter->lpnList.size() == 0) {
+        manager->cacheDone(iter->tag);
+
+        flushList.erase(iter);
+      }
+
+      found = true;
+
+      break;
+    }
+  }
+
+  if (!found) {
+    auto iter = evictList.find(lpn);
+
+    panic_if(iter == evictList.end(), "Unexpected completion.");
+
+    evictList.erase(iter);
+
+    // TODO: Check allocation space
+  }
+}
 
 void SetAssociative::getStatList(std::vector<Stat> &, std::string) noexcept {}
 

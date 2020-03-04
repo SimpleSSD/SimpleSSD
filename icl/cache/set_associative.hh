@@ -27,13 +27,31 @@ class SetAssociative : public AbstractCache {
   uint32_t pagesToEvict;
 
   uint32_t cacheTagSize;
+  uint32_t cacheDataSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 
   std::vector<CacheLine> cacheline;
   std::function<CPU::Function(uint32_t, uint32_t &)> evictFunction;
 
-  // Pending queues
+  struct LineInfo {
+    uint32_t set;
+    uint32_t way;
+  };
+
+  // Flush
+  struct FlushRequest {
+    uint64_t tag;
+
+    std::unordered_map<LPN, LineInfo> lpnList;
+  };
+
+  std::list<FlushRequest> flushList;
+
+  // Eviction
+  std::unordered_map<LPN, LineInfo> evictList;
+
+  // Allocation pending
 
   // Victim selection
   std::random_device rd;
@@ -48,10 +66,31 @@ class SetAssociative : public AbstractCache {
   CPU::Function getEmptyWay(uint32_t, uint32_t &);
   CPU::Function getValidWay(LPN, uint32_t &);
 
+  inline uint64_t makeTagAddress(uint32_t set) {
+    return cacheTagBaseAddress + cacheTagSize * waySize * set;
+  }
+
+  inline uint64_t makeTagAddress(uint32_t set, uint32_t way) {
+    return cacheTagBaseAddress + cacheTagSize * (waySize * set + way);
+  }
+
+  inline uint64_t makeDataAddress(uint32_t set) {
+    return cacheDataBaseAddress + cacheDataSize * waySize * set;
+  }
+
+  inline uint64_t makeDataAddress(uint32_t set, uint32_t way) {
+    return cacheDataBaseAddress + cacheDataSize * (waySize * set + way);
+  }
+
+  void readAll(uint64_t, Event);
   void readSet(uint64_t, Event);
 
   Event eventLookupMemory;
   Event eventLookupDone;
+
+  Event eventFlushMemory;
+
+  Event eventCacheDone;
 
  public:
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);
