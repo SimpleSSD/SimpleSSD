@@ -27,11 +27,11 @@ typedef struct {
   uint64_t totalPhysicalPages;
   uint64_t totalLogicalBlocks;
   uint64_t totalLogicalPages;
-  uint32_t pageSize;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
-  uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
   uint64_t superpage;
+  uint32_t pageSize;
+  uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
 
 enum class Operation : uint8_t {

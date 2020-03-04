@@ -113,8 +113,10 @@ void FTL::write(Request &&req) {
   pFTL->write(preq);
 }
 
-void FTL::invalidate(LPN lpn, uint32_t nlp, Event eid, uint64_t data) {
-  pFTL->invalidate(lpn, nlp, eid, data);
+void FTL::invalidate(Request &&req) {
+  auto preq = insertRequest(std::move(req));
+
+  pFTL->invalidate(preq);
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

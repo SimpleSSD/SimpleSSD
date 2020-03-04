@@ -42,7 +42,7 @@ class AbstractFTL : public Object {
 
   virtual void read(Request *) = 0;
   virtual void write(Request *) = 0;
-  virtual void invalidate(LPN, uint32_t, Event, uint64_t) = 0;
+  virtual void invalidate(Request *) = 0;
 };
 
 }  // namespace SimpleSSD::FTL

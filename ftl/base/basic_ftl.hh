@@ -101,7 +101,7 @@ class BasicFTL : public AbstractFTL {
 
   void read(Request *) override;
   void write(Request *) override;
-  void invalidate(LPN, uint32_t, Event, uint64_t) override;
+  void invalidate(Request *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
