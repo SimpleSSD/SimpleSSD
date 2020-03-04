@@ -33,6 +33,9 @@ class BasicDetector : public SequentialDetector {
   BasicDetector(uint32_t, uint64_t, uint64_t);
 
   void submitSubRequest(HIL::SubRequest *) override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &, ObjectData &) noexcept override;
 };
 
 class BasicCache : public AbstractManager {

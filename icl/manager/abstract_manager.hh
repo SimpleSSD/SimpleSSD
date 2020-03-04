@@ -42,6 +42,14 @@ class SequentialDetector {
   inline bool isEnabled() { return enabled; }
 
   virtual void submitSubRequest(HIL::SubRequest *) = 0;
+
+  virtual void createCheckpoint(std::ostream &out) const noexcept {
+    BACKUP_SCALAR(out, enabled);
+  }
+
+  virtual void restoreCheckpoint(std::istream &in, ObjectData &) noexcept {
+    RESTORE_SCALAR(in, enabled);
+  }
 };
 
 class AbstractManager : public Object {

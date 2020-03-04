@@ -47,6 +47,29 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   length = req->getLength();
 }
 
+void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
+  SequentialDetector::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, lastRequestTag);
+  BACKUP_SCALAR(out, lpn);
+  BACKUP_SCALAR(out, offset);
+  BACKUP_SCALAR(out, length);
+  BACKUP_SCALAR(out, hitCounter);
+  BACKUP_SCALAR(out, accessCounter);
+}
+
+void BasicDetector::restoreCheckpoint(std::istream &in,
+                                      ObjectData &object) noexcept {
+  SequentialDetector::restoreCheckpoint(in, object);
+
+  RESTORE_SCALAR(in, lastRequestTag);
+  RESTORE_SCALAR(in, lpn);
+  RESTORE_SCALAR(in, offset);
+  RESTORE_SCALAR(in, length);
+  RESTORE_SCALAR(in, hitCounter);
+  RESTORE_SCALAR(in, accessCounter);
+}
+
 BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f), detector(nullptr), drainCounter(0) {
   auto ftlparam = f->getInfo();
@@ -194,8 +217,63 @@ void BasicCache::getStatValues(std::vector<double> &) noexcept {}
 
 void BasicCache::resetStatValues() noexcept {}
 
-void BasicCache::createCheckpoint(std::ostream &out) const noexcept {}
+void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
+  bool exist = detector != nullptr;
 
-void BasicCache::restoreCheckpoint(std::istream &in) noexcept {}
+  BACKUP_SCALAR(out, exist);
+
+  if (exist) {
+    detector->createCheckpoint(out);
+  }
+
+  BACKUP_SCALAR(out, prefetchTrigger);
+  BACKUP_SCALAR(out, lastPrefetched);
+
+  BACKUP_SCALAR(out, drainCounter);
+
+  uint64_t size = drainQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : drainQueue) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.lpn);
+    BACKUP_SCALAR(out, iter.second.address);
+    BACKUP_SCALAR(out, iter.second.offset);
+    BACKUP_SCALAR(out, iter.second.length);
+  }
+
+  BACKUP_EVENT(out, eventDrainDone);
+}
+
+void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
+  bool exist;
+
+  RESTORE_SCALAR(in, exist);
+
+  panic_if((exist && !detector) || (!exist && detector),
+           "Existance of sequential detector not matched.");
+
+  RESTORE_SCALAR(in, prefetchTrigger)
+  RESTORE_SCALAR(in, lastPrefetched);
+
+  RESTORE_SCALAR(in, drainCounter);
+
+  uint64_t size;
+  uint64_t tag;
+  FlushContext ctx(0, 0);
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, ctx.lpn);
+    RESTORE_SCALAR(in, ctx.address);
+    RESTORE_SCALAR(in, ctx.offset);
+    RESTORE_SCALAR(in, ctx.length);
+
+    drainQueue.emplace(tag, ctx);
+  }
+}
 
 }  // namespace SimpleSSD::ICL
