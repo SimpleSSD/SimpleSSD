@@ -28,7 +28,6 @@ class BasicFTL : public AbstractFTL {
   uint32_t superpage;
 
   bool mergeReadModifyWrite;
-  bool allowPageRead;
 
   bool gcInProgress;
   std::deque<PPN> gcBlockList;

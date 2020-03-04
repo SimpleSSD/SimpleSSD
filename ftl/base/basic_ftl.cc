@@ -59,8 +59,6 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
-  allowPageRead = readConfigBoolean(Section::FlashTranslation,
-                                    Config::Key::AllowPageLevelRead);
 }
 
 BasicFTL::~BasicFTL() {}
