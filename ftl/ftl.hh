@@ -50,7 +50,7 @@ class FTL : public Object {
 
   void read(Request &&);
   void write(Request &&);
-  void invalidate(LPN, uint32_t, Event, uint64_t);
+  void invalidate(Request &&);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

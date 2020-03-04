@@ -20,30 +20,25 @@ class NoCache : public AbstractManager {
   ~NoCache() {}
 
   void read(HIL::SubRequest *sreq) override {
-    auto req = FTL::Request(sreq->getTag(), eventICLCompletion, sreq->getTag(),
-                            FTL::Operation::Read, sreq->getLPN());
-
-    req.setLength(sreq->getNLP());
-
-    pFTL->read(req);
+    pFTL->read(FTL::Request(eventICLCompletion, sreq));
   }
 
   void write(HIL::SubRequest *sreq) override {
-    auto req = FTL::Request(sreq->getTag(), eventICLCompletion, sreq->getTag(),
-                            FTL::Operation::Read, sreq->getLPN());
-
-    req.setLength(sreq->getNLP());
-
-    pFTL->write(req);
+    pFTL->write(FTL::Request(eventICLCompletion, sreq));
   }
 
   void flush(HIL::SubRequest *sreq) override {
+    // Nothing to flush
     scheduleNow(eventICLCompletion, sreq->getTag());
   }
 
   void erase(HIL::SubRequest *sreq) override {
-    pFTL->invalidate(sreq->getOffset(), sreq->getLength(), eventICLCompletion,
-                     sreq->getTag());
+    auto req = FTL::Request(eventICLCompletion, sreq);
+
+    req.setSLPN(sreq->getOffset());
+    req.setNLP(sreq->getLength());
+
+    pFTL->invalidate(std::move(req));
   }
 
   void dmaDone(HIL::SubRequest *) override {}
