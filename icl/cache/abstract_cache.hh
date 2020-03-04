@@ -17,6 +17,27 @@ namespace SimpleSSD::ICL {
 
 class AbstractManager;
 
+struct CacheLine {
+  union {
+    uint8_t data;
+    struct {
+      uint8_t valid : 1;       //!< Entry is valid
+      uint8_t dirty : 1;       //!< Entry is dirty - should be written back
+      uint8_t nvmPending : 1;  //!< Currently in reading/writing to NVM
+      uint8_t dmaPending : 1;  //!< Currently in reading/writing to Host
+      uint8_t rsvd : 4;
+    };
+  };
+
+  LPN tag;              //!< LPN address of this cacheline
+  uint64_t insertedAt;  //!< Inserted time
+  uint64_t accessedAt;  //!< Created time
+  Bitset validbits;     //!< Valid sector bits
+
+  CacheLine(uint64_t size)
+      : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
+};
+
 class AbstractCache : public Object {
  protected:
   static const uint64_t minIO = 512;
@@ -32,9 +53,8 @@ class AbstractCache : public Object {
   /**
    * \brief Lookup cache
    *
-   * Set sreq->setHit() when current subrequest is found on cache.
-   * When read, setHit() should be called when cache hit.
-   * When write, setHit() should be called when cache hit and cold miss.
+   * Set sreq->setAllocate() when cache needs new cacheline for current
+   * subrequest. Call manager->lookupDone when completed.
    *
    * \param[in] sreq    Current subrequest
    */
@@ -43,7 +63,8 @@ class AbstractCache : public Object {
   /**
    * \brief Flush cacheline
    *
-   * Flush cacheline in [offset, offset + length) range.
+   * Flush cacheline in [offset, offset + length) range. Call manager->cacheDone
+   * when completed. Use manager->drain for data write-back.
    *
    * \param[in] sreq  Current subrequest
    */
@@ -52,7 +73,8 @@ class AbstractCache : public Object {
   /**
    * \brief Erase cacheline
    *
-   * Erase (invalidate) cacheline in [offset, offset + length) range.
+   * Erase (invalidate) cacheline in [offset, offset + length) range. Call
+   * manager->cacheDone when completed.
    *
    * \param[in] sreq  Current subrequest
    */
@@ -62,7 +84,7 @@ class AbstractCache : public Object {
    * \brief Allocate cacheline in cache
    *
    * When miss, cache should make place to store new data. Call
-   * AbstractManager::drain for data write-back.
+   * manager->cacheDone when completed. Use manager->drain for data write-back.
    *
    * \param[in] sreq  Current subrequest
    */

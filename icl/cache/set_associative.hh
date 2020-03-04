@@ -19,27 +19,6 @@ namespace SimpleSSD::ICL {
 
 class SetAssociative : public AbstractCache {
  protected:
-  struct CacheLine {
-    union {
-      uint8_t data;
-      struct {
-        uint8_t valid : 1;
-        uint8_t dirty : 1;
-        uint8_t nvmPending : 1;
-        uint8_t dmaPending : 1;
-        uint8_t rsvd : 4;
-      };
-    };
-
-    LPN tag;
-    uint64_t insertedAt;
-    uint64_t accessedAt;
-    Bitset validbits;
-
-    CacheLine(uint64_t size)
-        : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
-  };
-
   uint32_t sectorsInCacheLine;
   uint32_t setSize;
   uint32_t waySize;
@@ -78,12 +57,12 @@ class SetAssociative : public AbstractCache {
   SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);
   ~SetAssociative();
 
-  CPU::Function lookup(HIL::SubRequest *, bool) override;
-  CPU::Function flush(HIL::SubRequest *) override;
-  CPU::Function erase(HIL::SubRequest *) override;
-  void allocate(HIL::SubRequest *, bool) override;
+  void lookup(HIL::SubRequest *) override;
+  void flush(HIL::SubRequest *) override;
+  void erase(HIL::SubRequest *) override;
+  void allocate(HIL::SubRequest *) override;
   void dmaDone(LPN) override;
-  void drainDone() override;
+  void nvmDone(LPN) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
