@@ -30,7 +30,7 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   eventWriteSubmit =
       createEvent([this](uint64_t, uint64_t d) { write_submit(d); },
                   "FTL::BasicFTL::eventWriteSubmit");
-  eventWriteDone = createEvent([this](uint64_t, uint64_t) { write_done(); },
+  eventWriteDone = createEvent([this](uint64_t, uint64_t d) { write_done(d); },
                                "FTL::BasicFTL::eventWriteDone");
 
   eventInvalidateDoFIL =
