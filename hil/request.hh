@@ -161,6 +161,7 @@ class SubRequest {
     buffer = (uint8_t *)calloc(length, 1);
   }
 
+  inline uint64_t getDRAMAddress() { return address; }
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
   inline bool getAllocate() { return allocate; }

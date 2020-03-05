@@ -24,11 +24,7 @@ Request::Request(Event e, uint64_t d)
       counter(0) {}
 
 Request::Request(Event e, HIL::SubRequest *r)
-    : result(Response::Success),
-      ppn(InvalidPPN),
-      event(e),
-      address(0),
-      counter(0) {
+    : result(Response::Success), ppn(InvalidPPN), event(e), counter(0) {
   // Opcode
   switch (r->getOpcode()) {
     case HIL::Operation::Read:
@@ -59,6 +55,7 @@ Request::Request(Event e, HIL::SubRequest *r)
   slpn = r->getSLPN();
   nlp = r->getNLP();
   data = r->getTag();
+  address = r->getDRAMAddress();
 }
 
 Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
