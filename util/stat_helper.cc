@@ -15,6 +15,10 @@ void CountStat::add() noexcept {
   count++;
 }
 
+uint64_t CountStat::getCount() noexcept {
+  return count;
+}
+
 void CountStat::clear() noexcept {
   count = 0;
 }
