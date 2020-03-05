@@ -117,6 +117,7 @@ set(SRC_MEM
 set(SRC_HIL
   hil/convert.cc
   hil/hil.cc
+  hil/request.cc
 )
 set(SRC_HIL_COMMON
   hil/common/dma_engine.cc
@@ -156,6 +157,13 @@ set(SRC_HIL_NVME_COMMAND
 set(SRC_ICL
   icl/icl.cc
 )
+set(SRC_ICL_CACHE
+  icl/cache/abstract_cache.cc
+  icl/cache/set_associative.cc
+)
+set(SRC_ICL_MANAGER
+  icl/manager/basic.cc
+)
 set(SRC_FTL
   ftl/ftl.cc
 )
@@ -163,6 +171,7 @@ set(SRC_FTL_ALLOC
   ftl/allocator/basic_allocator.cc
 )
 set(SRC_FTL_BASE
+  ftl/base/abstract_ftl.cc
   ftl/base/basic_ftl.cc
 )
 set(SRC_FTL_MAPPING
@@ -198,6 +207,7 @@ set(SRC_UTIL
   util/interface.cc
   util/path.cc
   util/sorted_map.cc
+  util/stat_helper.cc
 )
 
 # Source group for MSVC
@@ -208,6 +218,8 @@ SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
 SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
+SOURCE_GROUP("Source Files\\icl\\cache" FILES ${SRC_ICL_CACHE})
+SOURCE_GROUP("Source Files\\icl\\manager" FILES ${SRC_ICL_MANAGER})
 SOURCE_GROUP("Source Files\\ftl" FILES ${SRC_FTL})
 SOURCE_GROUP("Source Files\\ftl\\allocator" FILES ${SRC_FTL_ALLOC})
 SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
@@ -225,6 +237,8 @@ set(SRCS
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
   ${SRC_ICL}
+  ${SRC_ICL_CACHE}
+  ${SRC_ICL_MANAGER}
   ${SRC_FTL}
   ${SRC_FTL_ALLOC}
   ${SRC_FTL_BASE}
