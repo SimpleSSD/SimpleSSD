@@ -29,7 +29,9 @@ struct FlushContext {
   FlushContext(LPN l, uint64_t a)
       : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}
 
-  bool compare(FlushContext &a, FlushContext &b) { return a.lpn < b.lpn; }
+  static bool compare(FlushContext &a, FlushContext &b) {
+    return a.lpn < b.lpn;
+  }
 };
 
 class SequentialDetector {
@@ -40,6 +42,7 @@ class SequentialDetector {
 
  public:
   SequentialDetector(uint32_t p) : enabled(false), pageSize(p) {}
+  virtual ~SequentialDetector() {}
 
   inline bool isEnabled() { return enabled; }
 

@@ -73,7 +73,7 @@ void BasicDetector::restoreCheckpoint(std::istream &in,
   RESTORE_SCALAR(in, accessCounter);
 }
 
-BasicCache::BasicCache(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
+BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f), detector(nullptr), drainCounter(0) {
   auto ftlparam = f->getInfo();
   bool enable =

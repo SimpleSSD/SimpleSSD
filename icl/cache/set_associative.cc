@@ -329,6 +329,7 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
   CPU::markFunction(fstat);
 
   std::vector<FlushContext> list;
+  std::unordered_map<LPN, LineInfo> lpnList;
 
   LPN slpn = sreq->getOffset();
   uint32_t nlp = sreq->getLength();
@@ -344,12 +345,16 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
 
       ret.offset = iter.validbits.ctz() * minIO;
       ret.length = cacheDataSize - iter.validbits.clz() * minIO - ret.offset;
+
+      lpnList.emplace(iter.tag, LineInfo(i / waySize, i % waySize));
     }
 
     i++;
   }
 
-  flushList.emplace_back(sreq->getTag(), slpn, nlp, (uint32_t)list.size());
+  auto ret = flushList.emplace_back(sreq->getTag());
+
+  ret.lpnList = std::move(lpnList);
 
   manager->drain(list);
 

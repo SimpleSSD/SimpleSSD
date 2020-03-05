@@ -60,7 +60,7 @@ class BasicCache : public AbstractManager {
   uint64_t drained;
 
  public:
-  BasicCache(ObjectData &, ICL::ICL *, FTL::FTL *);
+  BasicCache(ObjectData &, ICL *, FTL::FTL *);
   ~BasicCache();
 
   void read(HIL::SubRequest *) override;

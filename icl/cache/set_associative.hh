@@ -37,6 +37,9 @@ class SetAssociative : public AbstractCache {
   struct LineInfo {
     uint32_t set;
     uint32_t way;
+
+    LineInfo() {}
+    LineInfo(uint32_t s, uint32_t w) : set(s), way(w) {}
   };
 
   // Lookup pending
@@ -47,6 +50,9 @@ class SetAssociative : public AbstractCache {
     uint64_t tag;
 
     std::unordered_map<LPN, LineInfo> lpnList;
+
+    FlushRequest() {}
+    FlushRequest(uint64_t t) : tag(t) {}
   };
 
   std::list<FlushRequest> flushList;
