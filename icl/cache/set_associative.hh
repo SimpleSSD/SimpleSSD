@@ -55,6 +55,7 @@ class SetAssociative : public AbstractCache {
   std::unordered_map<LPN, LineInfo> evictList;
 
   // Allocation pending
+  std::unordered_map<uint32_t, uint64_t> allocateList;
 
   // Victim selection
   std::random_device rd;
@@ -87,6 +88,9 @@ class SetAssociative : public AbstractCache {
 
   void readAll(uint64_t, Event);
   void readSet(uint64_t, Event);
+
+  void tryLookup(LPN, bool = false);
+  void tryAllocate(LPN);
 
   Event eventLookupMemory;
   Event eventLookupDone;

@@ -252,6 +252,36 @@ void SetAssociative::readSet(uint64_t tag, Event eid) {
   object.memory->read(makeTagAddress(set), cacheTagSize * waySize, eid, tag);
 }
 
+void SetAssociative::tryLookup(LPN lpn, bool flush) {
+  auto iter = lookupList.find(lpn);
+
+  if (iter != lookupList.end()) {
+    if (flush) {
+      // This was flush -> cacheline looked up was invalidated
+      auto req = getSubRequest(iter->second);
+
+      req->setAllocate();
+    }
+
+    manager->lookupDone(iter->second);
+    lookupList.erase(iter);
+  }
+}
+
+void SetAssociative::tryAllocate(LPN lpn) {
+  auto iter = allocateList.find(getSetIdx(lpn));
+
+  if (iter != allocateList.end()) {
+    // Try allocate again
+    auto req = getSubRequest(iter->second);
+
+    // Must erase first
+    allocateList.erase(iter);
+
+    allocate(req);
+  }
+}
+
 void SetAssociative::lookup(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -339,6 +369,41 @@ void SetAssociative::erase(HIL::SubRequest *sreq) {
 void SetAssociative::allocate(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
+
+  LPN lpn = sreq->getLPN();
+  uint32_t set = getSetIdx(lpn);
+  uint32_t way;
+  bool miss = false;
+
+  // Try allocate
+  fstat += getEmptyWay(lpn, way);
+
+  if (way == waySize) {
+    miss = true;
+  }
+  else {
+    auto &line = cacheline.at(set * waySize + way);
+
+    if (line.dmaPending || line.nvmPending) {
+      miss = true;
+    }
+  }
+
+  if (miss) {
+    // Insert into pending queue
+    allocateList.emplace(set, sreq->getTag());
+
+    // TODO: This is not a solution
+    return;
+  }
+  else {
+    // Set DRAM address
+    sreq->setDRAMAddress(makeDataAddress(set, way));
+  }
+
+  // No memory access because we already do that in lookup phase
+  scheduleFunction(CPU::CPUGroup::InternalCache, eventCacheDone, sreq->getTag(),
+                   fstat);
 }
 
 void SetAssociative::dmaDone(LPN lpn) {
@@ -352,12 +417,11 @@ void SetAssociative::dmaDone(LPN lpn) {
 
     line.dmaPending = false;
 
-    auto iter = lookupList.find(line.tag);
+    // Lookup
+    tryLookup(lpn);
 
-    if (iter != lookupList.end()) {
-      manager->lookupDone(iter->second);
-      lookupList.erase(iter);
-    }
+    // Allocate
+    tryAllocate(lpn);
   }
 }
 
@@ -405,21 +469,10 @@ void SetAssociative::nvmDone(LPN lpn) {
   }
 
   // Lookup
-  {
-    auto iter = lookupList.find(lpn);
+  tryLookup(lpn, found);
 
-    if (iter != lookupList.end()) {
-      if (found) {
-        // This was flush -> cacheline looked up was invalidated
-        auto req = getSubRequest(iter->second);
-
-        req->setAllocate();
-      }
-
-      manager->lookupDone(iter->second);
-      lookupList.erase(iter);
-    }
-  }
+  // Allocate
+  tryAllocate(lpn);
 }
 
 void SetAssociative::getStatList(std::vector<Stat> &, std::string) noexcept {}
