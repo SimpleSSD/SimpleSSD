@@ -300,11 +300,15 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     sreq->setDRAMAddress(makeDataAddress(set, way));
 
     // Check NAND/DMA is pending when request is write
+    auto &line = cacheline.at(set * waySize + way);
     auto opcode = sreq->getOpcode();
+
+    // Update
+    line.accessedAt = getTick();
 
     if (opcode == HIL::Operation::Write ||
         opcode == HIL::Operation::WriteZeroes) {
-      auto &line = cacheline.at(set * waySize + way);
+      line.dirty = true;
 
       if (line.dmaPending || line.nvmPending) {
         // We need to stall this lookup
@@ -335,7 +339,11 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
         slpn <= iter.tag && iter.tag < slpn + nlp) {
       iter.nvmPending = true;
 
-      list.emplace_back(iter.tag, cacheDataBaseAddress + cacheDataSize * i);
+      auto ret =
+          list.emplace_back(iter.tag, cacheDataBaseAddress + cacheDataSize * i);
+
+      ret.offset = iter.validbits.ctz() * minIO;
+      ret.length = cacheDataSize - iter.validbits.clz() * minIO - ret.offset;
     }
 
     i++;
@@ -358,7 +366,8 @@ void SetAssociative::erase(HIL::SubRequest *sreq) {
 
   for (auto &iter : cacheline) {
     if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
-      iter.valid = false;
+      iter.data = 0;
+      iter.validbits.reset();
     }
   }
 
@@ -399,6 +408,24 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   else {
     // Set DRAM address
     sreq->setDRAMAddress(makeDataAddress(set, way));
+
+    // Fill cacheline
+    auto &line = cacheline.at(set * waySize + way);
+
+    line.valid = true;
+    line.insertedAt = getTick();
+    line.accessedAt = getTick();
+
+    // Partial update only if write
+    auto opcode = sreq->getOpcode();
+
+    if (opcode == HIL::Operation::Write ||
+        opcode == HIL::Operation::WriteZeroes) {
+      updateSkip(line.validbits, sreq);
+    }
+    else {
+      line.validbits.set();
+    }
   }
 
   // No memory access because we already do that in lookup phase

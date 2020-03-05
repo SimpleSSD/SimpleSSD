@@ -86,6 +86,24 @@ class SetAssociative : public AbstractCache {
     return cacheDataBaseAddress + cacheDataSize * (waySize * set + way);
   }
 
+  inline void updateSkip(Bitset &bitset, HIL::SubRequest *req) {
+    uint32_t skipFront =
+        req->getOffset() - (req->getLPN() - req->getSLPN()) * cacheDataSize;
+    uint32_t skipEnd = cacheDataSize - req->getLength() - skipFront;
+    uint32_t skipFrontBit = skipFront / minIO;
+    uint32_t skipEndBit = skipEnd / minIO;
+
+    panic_if(skipFront > cacheDataSize || skipEnd > cacheDataSize, "Error.");
+    panic_if(skipFront % minIO || skipEnd % minIO,
+             "Skip bytes are not aligned to sector size.");
+
+    skipEndBit = sectorsInCacheLine - skipEndBit;
+
+    for (; skipFrontBit < skipEndBit; skipFrontBit++) {
+      bitset.set(skipFrontBit);
+    }
+  }
+
   void readAll(uint64_t, Event);
   void readSet(uint64_t, Event);
 
