@@ -462,8 +462,8 @@ void SetAssociative::nvmDone(LPN lpn) {
     if (fr != iter->lpnList.end()) {
       auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
 
-      // Clear all
-      line.data = 0;
+      // Not dirty now
+      line.dirty = false;
 
       // Erase
       iter->lpnList.erase(fr);
@@ -491,8 +491,6 @@ void SetAssociative::nvmDone(LPN lpn) {
     line.nvmPending = false;
 
     evictList.erase(iter);
-
-    // TODO: Check allocation space
   }
 
   // Lookup
