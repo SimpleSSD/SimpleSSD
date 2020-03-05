@@ -172,7 +172,7 @@ class SubRequest {
   inline uint32_t getNLP() { return request->nlp; }
 
   /* Only for Flush, Trim and Format */
-  inline LPN getOffset() { return (LPN)offset; }
+  inline uint64_t getOffset() { return offset; }
   inline uint32_t getLength() { return length; }
 
   void createCheckpoint(std::ostream &) const noexcept;

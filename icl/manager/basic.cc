@@ -43,7 +43,10 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   }
 
   lpn = req->getLPN();
-  offset = (uint32_t)req->getOffset();
+
+  LPN diff = (lpn - req->getSLPN()) * pageSize;
+
+  offset = req->getOffset() - diff;
   length = req->getLength();
 }
 
@@ -176,7 +179,16 @@ void BasicCache::lookupDone(uint64_t tag) {
 }
 
 void BasicCache::cacheDone(uint64_t tag) {
-  scheduleNow(eventICLCompletion, tag);
+  auto req = getSubRequest(tag);
+  auto opcode = req->getOpcode();
+
+  if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
+    // Submit to FIL
+    pFTL->invalidate(FTL::Request(eventICLCompletion, req));
+  }
+  else {
+    scheduleNow(eventICLCompletion, tag);
+  }
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
