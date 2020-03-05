@@ -61,7 +61,7 @@ class PALOLD : public AbstractNVM {
   Convert convertObject;
   ConvertFunction convertCPDPBP;
 
-  NANDBackingFile backingFile;
+  // NANDBackingFile backingFile;
 
   uint64_t channelMultiplier;
   uint64_t wayMultiplier;

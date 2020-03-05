@@ -23,7 +23,9 @@
 namespace SimpleSSD::FIL::NVM {
 
 PALOLD::PALOLD(ObjectData &o, Event e)
-    : AbstractNVM(o, e), lastResetTick(0), convertObject(o), backingFile(o) {
+    : AbstractNVM(o, e),
+      lastResetTick(0),
+      convertObject(o) /* , backingFile(o) */ {
   param = object.config->getNANDStructure();
 
   memset(&stat, 0, sizeof(stat));
@@ -81,10 +83,10 @@ void PALOLD::submit(Request *req) {
 
   convertCPDPBP(cplt.ppn, cplt.addr);
 
-  uint64_t blockID = cplt.addr.Channel * channelMultiplier +
-                     cplt.addr.Package * wayMultiplier +
-                     cplt.addr.Die * dieMultiplier +
-                     cplt.addr.Plane * planeMultiplier + cplt.addr.Block;
+  /* uint64_t blockID = cplt.addr.Channel * channelMultiplier +
+                       cplt.addr.Package * wayMultiplier +
+                       cplt.addr.Die * dieMultiplier +
+                       cplt.addr.Plane * planeMultiplier + cplt.addr.Block; */
 
   switch (req->getOpcode()) {
     case Operation::Read:
@@ -104,7 +106,7 @@ void PALOLD::submit(Request *req) {
     case Operation::Erase:
       cplt.oper = OPER_ERASE;
 
-      backingFile.erase(blockID);
+      // backingFile.erase(blockID);
 
       stat.eraseCount++;
       break;
