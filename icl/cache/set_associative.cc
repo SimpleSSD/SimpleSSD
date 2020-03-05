@@ -481,8 +481,145 @@ void SetAssociative::getStatValues(std::vector<double> &) noexcept {}
 
 void SetAssociative::resetStatValues() noexcept {}
 
-void SetAssociative::createCheckpoint(std::ostream &) const noexcept {}
+void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, sectorsInCacheLine);
+  BACKUP_SCALAR(out, setSize);
+  BACKUP_SCALAR(out, waySize);
 
-void SetAssociative::restoreCheckpoint(std::istream &) noexcept {}
+  uint64_t size = cacheline.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : cacheline) {
+    iter.createCheckpoint(out);
+  }
+
+  size = lookupList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : lookupList) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  size = flushList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : flushList) {
+    BACKUP_SCALAR(out, iter.tag);
+
+    size = iter.lpnList.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iiter : iter.lpnList) {
+      BACKUP_SCALAR(out, iiter.first);
+      BACKUP_SCALAR(out, iiter.second);
+    }
+  }
+
+  size = evictList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : evictList) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  size = allocateList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : allocateList) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  BACKUP_EVENT(out, eventLookupMemory);
+  BACKUP_EVENT(out, eventLookupDone);
+  BACKUP_EVENT(out, eventReadTag);
+  BACKUP_EVENT(out, eventCacheDone);
+}
+
+void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
+  uint32_t tmp32;
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != sectorsInCacheLine, "Cacheline size mismatch.");
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != setSize, "Set size mismatch.");
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != waySize, "Way size mismatch.");
+
+  uint64_t size;
+  CacheLine line(sectorsInCacheLine);
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    line.restoreCheckpoint(in);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    LPN lpn;
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, lpn);
+    RESTORE_SCALAR(in, tag);
+
+    lookupList.emplace(lpn, tag);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    FlushRequest req;
+
+    uint64_t ssize;
+    LineInfo info;
+    LPN lpn;
+
+    RESTORE_SCALAR(in, req.tag);
+    RESTORE_SCALAR(in, ssize);
+
+    for (uint64_t j = 0; j < ssize; j++) {
+      RESTORE_SCALAR(in, lpn);
+      RESTORE_SCALAR(in, info);
+
+      req.lpnList.emplace(lpn, info);
+    }
+
+    flushList.emplace_back(req);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    LPN lpn;
+    LineInfo info;
+
+    RESTORE_SCALAR(in, lpn);
+    RESTORE_SCALAR(in, info);
+
+    evictList.emplace(lpn, info);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tmp32);
+    RESTORE_SCALAR(in, tag);
+
+    allocateList.emplace(tmp32, tag);
+  }
+
+  RESTORE_EVENT(in, eventLookupMemory);
+  RESTORE_EVENT(in, eventLookupDone);
+  RESTORE_EVENT(in, eventReadTag);
+  RESTORE_EVENT(in, eventCacheDone);
+}
 
 }  // namespace SimpleSSD::ICL

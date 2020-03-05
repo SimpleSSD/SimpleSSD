@@ -36,6 +36,24 @@ struct CacheLine {
 
   CacheLine(uint64_t size)
       : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
+
+  void createCheckpoint(std::ostream &out) const noexcept {
+    BACKUP_SCALAR(out, data);
+    BACKUP_SCALAR(out, tag);
+    BACKUP_SCALAR(out, insertedAt);
+    BACKUP_SCALAR(out, accessedAt);
+
+    validbits.createCheckpoint(out);
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept {
+    RESTORE_SCALAR(in, data);
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, insertedAt);
+    RESTORE_SCALAR(in, accessedAt);
+
+    validbits.restoreCheckpoint(in);
+  }
 };
 
 class AbstractCache : public Object {
