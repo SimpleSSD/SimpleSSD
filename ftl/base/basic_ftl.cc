@@ -51,6 +51,8 @@ void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
+
+  object.memory->write(req->getDRAMAddress, pageSize, InvalidEventID);
 }
 
 void BasicFTL::read_done(uint64_t tag) {
@@ -82,6 +84,8 @@ void BasicFTL::write_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
+
+  object.memory->read(req->getDRAMAddress, pageSize, InvalidEventID);
 
   triggerGC();
 }
