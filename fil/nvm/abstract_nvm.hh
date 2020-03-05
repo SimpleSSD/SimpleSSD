@@ -12,6 +12,7 @@
 
 #include <cinttypes>
 
+#include "fil/request.hh"
 #include "ftl/def.hh"
 #include "sim/object.hh"
 

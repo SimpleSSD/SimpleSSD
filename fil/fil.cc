@@ -77,7 +77,7 @@ void FIL::submit(Operation opcode, Request &&_req) {
   pScheduler->submit(&req);
 }
 
-void FIL::completion(uint64_t now, uint64_t tag) {
+void FIL::completion(uint64_t, uint64_t tag) {
   auto iter = requestQueue.find(tag);
 
   panic_if(iter == requestQueue.end(), "Unexpected request %" PRIx64 "h.", tag);

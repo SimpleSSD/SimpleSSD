@@ -29,9 +29,7 @@ struct FlushContext {
   FlushContext(LPN l, uint64_t a)
       : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}
 
-  bool compare(FlushContext &a, FlushContext &b) {
-    return a.lpn < b.lpn;
-  }
+  bool compare(FlushContext &a, FlushContext &b) { return a.lpn < b.lpn; }
 };
 
 class SequentialDetector {
@@ -58,7 +56,7 @@ class SequentialDetector {
 
 class AbstractManager : public Object {
  protected:
-  ICL::ICL *pICL;
+  ICL *pICL;
 
   FTL::FTL *pFTL;
   AbstractCache *cache;
@@ -66,7 +64,7 @@ class AbstractManager : public Object {
   Event eventICLCompletion;
 
  public:
-  AbstractManager(ObjectData &o, ICL::ICL *p, FTL::FTL *f)
+  AbstractManager(ObjectData &o, ICL *p, FTL::FTL *f)
       : Object(o),
         pICL(p),
         pFTL(f),

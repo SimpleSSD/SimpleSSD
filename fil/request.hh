@@ -43,6 +43,7 @@ class Request {
       : lpn(InvalidLPN), ppn(p), eid(e), data(d) {}
 
   inline uint64_t getTag() { return tag; }
+  inline Operation getOpcode() { return opcode; }
 
   inline LPN getLPN() { return lpn; }
   inline PPN getPPN() { return ppn; }

@@ -63,14 +63,11 @@ class AbstractCache : public Object {
   AbstractManager *manager;
   FTL::Parameter *parameter;
 
-  inline HIL::SubRequest *getSubRequest(uint64_t tag) {
-    return manager->getSubRequest(tag);
-  }
+  HIL::SubRequest *getSubRequest(uint64_t);
 
  public:
-  AbstractCache(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
-      : Object(o), manager(m), parameter(p) {}
-  virtual ~AbstractCache() {}
+  AbstractCache(ObjectData &, AbstractManager *, FTL::Parameter *);
+  virtual ~AbstractCache();
 
   /**
    * \brief Lookup cache

@@ -32,11 +32,11 @@ SRAM::SRAM(ObjectData &o)
 
 SRAM::~SRAM() {}
 
-uint64_t SRAM::preSubmitRead(Request *req) {
+uint64_t SRAM::preSubmitRead(Request *) {
   return pStructure->readCycles;
 }
 
-uint64_t SRAM::preSubmitWrite(Request *req) {
+uint64_t SRAM::preSubmitWrite(Request *) {
   return pStructure->writeCycles;
 }
 

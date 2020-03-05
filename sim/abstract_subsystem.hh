@@ -54,7 +54,7 @@ class AbstractSubsystem : public Object {
   virtual ControllerID createController(Interface *) noexcept = 0;
   virtual AbstractController *getController(ControllerID) noexcept = 0;
 
-  virtual Request *restoreRequest(uint64_t) noexcept = 0;
+  virtual HIL::Request *restoreRequest(uint64_t) noexcept = 0;
 };
 
 }  // namespace SimpleSSD

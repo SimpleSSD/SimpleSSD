@@ -19,7 +19,7 @@ Subsystem::Subsystem(ObjectData &o)
       controllerID(0),
       allocatedLogicalPages(0),
       dispatching(false) {
-  pHIL = new HIL(o);
+  pHIL = new HIL(o, this);
 
   // Create commands
   commandDeleteSQ = new DeleteSQ(object, this);

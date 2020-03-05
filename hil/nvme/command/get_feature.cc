@@ -73,8 +73,8 @@ void GetFeature::setRequest(ControllerData *cdata, SQContext *req) {
 
         break;
       case FeatureID::VolatileWriteCache: {
-        bool enabled = readConfigBoolean(Section::InternalCache,
-                                         ICL::Config::Key::EnableCache);
+        bool enabled = readConfigUint(Section::InternalCache,
+                                      ICL::Config::Key::CacheMode) != 0;
 
         tag->cqc->getData()->dword0 = enabled ? 1 : 0;
       } break;

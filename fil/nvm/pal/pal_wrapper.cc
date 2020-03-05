@@ -76,7 +76,7 @@ void PALOLD::submit(Request *req) {
   Complete cplt;
 
   cplt.id = req->getTag();
-  cplt.ppn = req->getAddress();
+  cplt.ppn = req->getPPN();
   cplt.beginAt = getTick();
 
   convertCPDPBP(cplt.ppn, cplt.addr);
@@ -86,18 +86,18 @@ void PALOLD::submit(Request *req) {
                      cplt.addr.Die * dieMultiplier +
                      cplt.addr.Plane * planeMultiplier + cplt.addr.Block;
 
-  switch (req->getOperation()) {
+  switch (req->getOpcode()) {
     case Operation::Read:
       cplt.oper = OPER_READ;
 
-      req->setData(backingFile.read(blockID, cplt.addr.Page));
+      // req->setData(backingFile.read(blockID, cplt.addr.Page));
 
       stat.readCount++;
       break;
     case Operation::Program:
       cplt.oper = OPER_WRITE;
 
-      backingFile.write(blockID, cplt.addr.Page, req->getData());
+      // backingFile.write(blockID, cplt.addr.Page, req->getData());
 
       stat.writeCount++;
       break;

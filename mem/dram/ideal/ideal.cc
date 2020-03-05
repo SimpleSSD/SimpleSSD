@@ -30,7 +30,7 @@ IdealDRAM::~IdealDRAM() {
   // DO NOTHING
 }
 
-uint64_t IdealDRAM::preSubmit(Request *req) {
+uint64_t IdealDRAM::preSubmit(Request *) {
   return packetLatency;
 }
 
