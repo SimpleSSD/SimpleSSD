@@ -35,41 +35,6 @@ enum Index : uint8_t {
   Level4,
 };
 
-enum class Operation : uint8_t {
-  None,
-  Read,
-  Program,
-  Erase,
-};
-
-class Request {
- private:
-  friend FIL;
-
-  uint64_t tag;
-  Operation opcode;
-
-  LPN lpn;
-  PPN ppn;
-
-  Event eid;
-  uint64_t data;
-
- public:
-  Request(PPN p, Event e, uint64_t d)
-      : lpn(InvalidLPN), ppn(p), eid(e), data(d) {}
-
-  inline uint64_t getTag() { return tag; }
-
-  inline LPN getLPN() { return lpn; }
-  inline PPN getPPN() { return ppn; }
-
-  inline Event getEvent() { return eid; }
-  inline uint64_t getEventData() { return data; }
-
-  inline void setLPN(LPN l) { lpn = l; }
-};
-
 }  // namespace SimpleSSD::FIL
 
 #endif

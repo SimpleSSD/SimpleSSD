@@ -29,34 +29,28 @@ class Request {
  private:
   friend FIL;
 
-  uint64_t requestTag;
-
-  bool multiplane;
+  uint64_t tag;
   Operation opcode;
 
-  PPN address;
-
-  uint8_t *buffer;
+  LPN lpn;
+  PPN ppn;
 
   Event eid;
   uint64_t data;
 
  public:
-  Request(PPN a, Event e, uint64_t d)
-      : multiplane(false),
-        opcode(Operation::None),
-        address(a),
-        buffer(nullptr),
-        eid(e),
-        data(d) {}
+  Request(PPN p, Event e, uint64_t d)
+      : lpn(InvalidLPN), ppn(p), eid(e), data(d) {}
 
-  inline const uint64_t getTag() { return requestTag; }
-  inline bool getMultiPlane() { return multiplane; }
-  inline Operation getOperation() { return opcode; }
-  inline PPN getAddress() { return address; }
-  inline const uint8_t *getData() { return buffer; }
+  inline uint64_t getTag() { return tag; }
 
-  inline void setData(const uint8_t *ptr) { buffer = (uint8_t *)ptr; }
+  inline LPN getLPN() { return lpn; }
+  inline PPN getPPN() { return ppn; }
+
+  inline Event getEvent() { return eid; }
+  inline uint64_t getEventData() { return data; }
+
+  inline void setLPN(LPN l) { lpn = l; }
 };
 
 }  // namespace SimpleSSD::FIL
