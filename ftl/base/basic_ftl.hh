@@ -20,6 +20,62 @@ class BasicFTL : public AbstractFTL {
 
   bool mergeReadModifyWrite;
 
+  uint64_t minMappingSize;
+
+  // Pending request
+  std::vector<Request *> pendingList;
+  LPN pendingLPN;
+
+  struct ReadModifyWriteContext {
+    LPN alignedBegin;
+    LPN chunkBegin;
+
+    std::vector<Request *> list;
+
+    ReadModifyWriteContext *next;
+    ReadModifyWriteContext *last;
+
+    bool writePending;
+    uint64_t counter;
+
+    ReadModifyWriteContext()
+        : alignedBegin(InvalidLPN),
+          chunkBegin(InvalidLPN),
+          next(nullptr),
+          last(nullptr),
+          writePending(false),
+          counter(0) {}
+    ReadModifyWriteContext(uint64_t size)
+        : alignedBegin(InvalidLPN),
+          chunkBegin(InvalidLPN),
+          list(size, nullptr),
+          next(nullptr),
+          last(nullptr),
+          writePending(false),
+          counter(0) {}
+
+    void push_back(ReadModifyWriteContext *val) {
+      if (last == nullptr) {
+        next = val;
+        last = val;
+      }
+      else {
+        last->next = val;
+        last = val;
+      }
+    }
+  };
+
+  std::list<ReadModifyWriteContext> rmwList;
+
+  ReadModifyWriteContext *getRMWContext(uint64_t, Request ** = nullptr);
+
+  std::deque<std::pair<Event, uint64_t>> mergeList;
+
+  inline LPN getAlignedLPN(LPN lpn) {
+    return lpn / mergeReadModifyWrite * mergeReadModifyWrite;
+  }
+
   // Statistics
   struct {
     uint64_t count;
@@ -46,11 +102,29 @@ class BasicFTL : public AbstractFTL {
   Event eventWriteDone;
   void write_done(uint64_t);
 
+  Event eventPartialReadSubmit;
+  void rmw_readSubmit(uint64_t);
+
+  Event eventPartialReadDone;
+  void rmw_readDone(uint64_t);
+
+  Event eventPartialWriteSubmit;
+  void rmw_writeSubmit(uint64_t);
+
+  Event eventPartialWriteDone;
+  void rmw_writeDone(uint64_t);
+
+  Event eventMergedWriteDone;
+  void rmw_mergeDone();
+
   Event eventInvalidateSubmit;
   void invalidate_submit(uint64_t, uint64_t);
 
   Event eventGCTrigger;
   void gc_trigger(uint64_t);
+
+  void backup(std::ostream &, const std::vector<Request *> &) const noexcept;
+  void restore(std::istream &, std::vector<Request *> &) noexcept;
 
  public:
   BasicFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,

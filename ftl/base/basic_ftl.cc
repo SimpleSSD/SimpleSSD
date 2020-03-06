@@ -17,6 +17,11 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 
   pageSize = pMapper->getInfo()->pageSize;
 
+  pMapper->getMappingSize(&minMappingSize);
+
+  pendingList = std::vector<Request *>(minMappingSize, nullptr);
+  pendingLPN = InvalidLPN;
+
   // Create events
   eventReadSubmit =
       createEvent([this](uint64_t, uint64_t d) { read_submit(d); },
@@ -29,6 +34,21 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                   "FTL::BasicFTL::eventWriteSubmit");
   eventWriteDone = createEvent([this](uint64_t, uint64_t d) { write_done(d); },
                                "FTL::BasicFTL::eventWriteDone");
+  eventPartialReadSubmit =
+      createEvent([this](uint64_t, uint64_t d) { rmw_readSubmit(d); },
+                  "FTL::BasicFTL::eventPartialReadSubmit");
+  eventPartialReadDone =
+      createEvent([this](uint64_t, uint64_t d) { rmw_readDone(d); },
+                  "FTL::BasicFTL::eventPartialReadDone");
+  eventPartialWriteSubmit =
+      createEvent([this](uint64_t, uint64_t d) { rmw_writeSubmit(d); },
+                  "FTL::BasicFTL::eventPartialWriteSubmit");
+  eventPartialWriteDone =
+      createEvent([this](uint64_t, uint64_t d) { rmw_writeDone(d); },
+                  "FTL::BasicFTL::eventPartialWriteDone");
+  eventMergedWriteDone =
+      createEvent([this](uint64_t, uint64_t d) { rmw_mergeDone(); },
+                  "FTL::BasicFTL::eventMergedWriteDone");
 
   eventInvalidateSubmit =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_submit(t, d); },
@@ -42,6 +62,25 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 }
 
 BasicFTL::~BasicFTL() {}
+
+BasicFTL::ReadModifyWriteContext *BasicFTL::getRMWContext(uint64_t tag,
+                                                          Request **ppcmd) {
+  for (auto &iter : rmwList) {
+    for (auto &cmd : iter.list) {
+      if (cmd && cmd->getTag() == tag) {
+        if (ppcmd) {
+          *ppcmd = cmd;
+        }
+
+        return &iter;
+      }
+    }
+  }
+
+  panic("Unexpected tag in read-modify-write.");
+
+  return nullptr;
+}
 
 void BasicFTL::read(Request *cmd) {
   pMapper->readMapping(cmd, eventReadSubmit);
@@ -62,22 +101,67 @@ void BasicFTL::read_done(uint64_t tag) {
 }
 
 void BasicFTL::write(Request *cmd) {
-  LPN slpn = cmd->getLPN();
-  uint32_t nlp = 1;
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
 
-  // Smaller than one logical (super) page
-  if (cmd->getLength() != pageSize ||
-      pMapper->prepareReadModifyWrite(cmd, slpn, nlp)) {
-    // Perform read-modify-write
-    panic("RMW not implemented.");
+  LPN lpn = cmd->getLPN();
+  LPN slpn = cmd->getSLPN();
+  uint32_t nlp = cmd->getNLP();
 
-    // TODO: Read slpn + nlp range and write same range
+  LPN alignedBegin = getAlignedLPN(lpn);
+  LPN alignedEnd = alignedBegin + minMappingSize;
+
+  LPN chunkBegin = MAX(slpn, alignedBegin);
+  LPN chunkEnd = MIN(slpn + nlp, alignedEnd);
+
+  // Store to pending list
+  pendingList.at(lpn - alignedBegin) = cmd;
+
+  // Check cmd is final of current chunk
+  if (lpn == chunkEnd) {
+    // Not aligned to minMappingSize
+    if (alignedBegin != chunkBegin || alignedEnd != chunkEnd) {
+      bool merged = false;
+
+      if (mergeReadModifyWrite) {
+        for (auto &iter : rmwList) {
+          if (iter.alignedBegin == alignedBegin && !iter.writePending) {
+            auto pctx = new ReadModifyWriteContext();
+
+            pctx->alignedBegin = alignedBegin;
+            pctx->chunkBegin = chunkBegin;
+            pctx->list = std::move(pendingList);
+            iter.push_back(pctx);
+
+            merged = true;
+          }
+        }
+      }
+
+      if (!merged) {
+        auto ret = rmwList.emplace_back(pendingLPN, ReadModifyWriteContext());
+
+        ret.list = std::move(pendingList);
+        ret.alignedBegin = alignedBegin;
+        ret.chunkBegin = chunkBegin;
+
+        // Do read translation - no need for loop
+        pMapper->readMapping(pendingList.at(chunkBegin - alignedBegin),
+                             eventPartialReadSubmit);
+      }
+    }
+    else {
+      // No need for loop
+      pMapper->writeMapping(pendingList.at(chunkBegin - alignedBegin),
+                            eventWriteSubmit);
+    }
   }
   else {
-    pMapper->writeMapping(cmd, eventWriteSubmit);
-
-    return;
+    pendingLPN = alignedBegin;
+    pendingList = std::vector<Request *>(minMappingSize, nullptr);
   }
+
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID, fstat);
 }
 
 void BasicFTL::write_submit(uint64_t tag) {
@@ -96,6 +180,102 @@ void BasicFTL::write_done(uint64_t tag) {
   completeRequest(req);
 }
 
+void BasicFTL::rmw_readSubmit(uint64_t tag) {
+  auto ctx = getRMWContext(tag);
+
+  // Get first command
+  auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+
+  // Convert SPPN to PPN
+  PPN ppnBegin = cmd->getPPN() * minMappingSize;
+
+  for (auto &cmd : ctx->list) {
+    if (cmd) {
+      pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, cmd->getTag()));
+      ctx->counter++;
+    }
+
+    ppnBegin++;
+  }
+}
+
+void BasicFTL::rmw_readDone(uint64_t tag) {
+  auto ctx = getRMWContext(tag);
+
+  ctx->counter--;
+
+  if (ctx->counter == 0) {
+    // Get first command
+    auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+
+    // Write translation
+    pMapper->writeMapping(cmd, eventPartialWriteSubmit);
+  }
+}
+
+void BasicFTL::rmw_writeSubmit(uint64_t tag) {
+  auto ctx = getRMWContext(tag);
+
+  ctx->writePending = true;
+
+  // Get first command
+  auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+
+  // Convert SPPN to PPN
+  PPN ppnBegin = cmd->getPPN() * minMappingSize;
+
+  for (auto &cmd : ctx->list) {
+    pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, cmd->getTag()));
+    ctx->counter++;
+
+    ppnBegin++;
+  }
+}
+
+void BasicFTL::rmw_writeDone(uint64_t tag) {
+  Request *cmd = nullptr;
+  auto ctx = getRMWContext(tag, &cmd);
+
+  ctx->counter--;
+
+  scheduleNow(cmd->getEvent(), cmd->getEventData());
+
+  if (ctx->counter == 0) {
+    bool call = false;
+    auto next = ctx->next;
+
+    while (next) {
+      // Completion of all requests
+      for (auto cmd : next->list) {
+        mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+      }
+
+      next = next->next;
+      delete ctx->next;
+
+      call = true;
+    }
+
+    if (call && !isScheduled(eventMergedWriteDone)) {
+      scheduleNow(eventMergedWriteDone);
+    }
+  }
+}
+
+void BasicFTL::rmw_mergeDone() {
+  if (mergeList.size() > 0) {
+    auto iter = mergeList.front();
+
+    scheduleNow(iter.first, iter.second);
+
+    mergeList.pop_front();
+
+    if (mergeList.size() > 0) {
+      scheduleNow(eventMergedWriteDone);
+    }
+  }
+}
+
 void BasicFTL::invalidate(Request *cmd) {
   pMapper->invalidateMapping(cmd, eventInvalidateSubmit);
 }
@@ -110,6 +290,45 @@ void BasicFTL::invalidate_submit(uint64_t, uint64_t tag) {
 
 void BasicFTL::gc_trigger(uint64_t) {
   panic("GC not implemented.")
+}
+
+void BasicFTL::backup(std::ostream &out,
+                      const std::vector<Request *> &list) const noexcept {
+  bool exist;
+  uint64_t size = list.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : list) {
+    exist = iter != nullptr;
+
+    BACKUP_SCALAR(out, exist);
+
+    if (exist) {
+      uint64_t tag = iter->getTag();
+
+      BACKUP_SCALAR(out, tag);
+    }
+  }
+}
+
+void BasicFTL::restore(std::istream &in,
+                       std::vector<Request *> &list) noexcept {
+  bool exist;
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  uint64_t tag;
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, exist);
+
+    if (exist) {
+      RESTORE_SCALAR(in, tag);
+
+      list.emplace_back(getRequest(tag));
+    }
+  }
 }
 
 void BasicFTL::getStatList(std::vector<Stat> &list,
@@ -134,6 +353,57 @@ void BasicFTL::resetStatValues() noexcept {
 }
 
 void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
+  bool exist;
+  uint64_t size;
+
+  backup(out, pendingList);
+
+  BACKUP_SCALAR(out, pendingLPN);
+
+  size = rmwList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : rmwList) {
+    BACKUP_SCALAR(out, iter.alignedBegin);
+    BACKUP_SCALAR(out, iter.chunkBegin);
+
+    backup(out, iter.list);
+
+    BACKUP_SCALAR(out, iter.writePending);
+    BACKUP_SCALAR(out, iter.counter);
+
+    exist = iter.next != nullptr;
+    auto next = iter.next;
+
+    while (true) {
+      BACKUP_SCALAR(out, exist);
+
+      if (exist) {
+        BACKUP_SCALAR(out, next->alignedBegin);
+        BACKUP_SCALAR(out, next->chunkBegin);
+
+        backup(out, next->list);
+
+        BACKUP_SCALAR(out, next->writePending);
+        BACKUP_SCALAR(out, next->counter);
+
+        next = next->next;
+        exist = next != nullptr;
+      }
+      else {
+        break;
+      }
+    }
+  }
+
+  size = mergeList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : mergeList) {
+    BACKUP_EVENT(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
   BACKUP_SCALAR(out, stat);
   BACKUP_EVENT(out, eventReadSubmit);
   BACKUP_EVENT(out, eventReadDone);
@@ -144,6 +414,60 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
+  bool exist;
+  uint64_t size;
+
+  restore(in, pendingList);
+
+  RESTORE_SCALAR(in, pendingLPN);
+
+  RESTORE_SCALAR(in, size);
+
+  ReadModifyWriteContext cur;
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, cur.alignedBegin);
+    RESTORE_SCALAR(in, cur.chunkBegin);
+
+    restore(in, cur.list);
+
+    RESTORE_SCALAR(in, cur.writePending);
+    RESTORE_SCALAR(in, cur.counter);
+
+    while (true) {
+      RESTORE_SCALAR(in, exist);
+
+      if (exist) {
+        ReadModifyWriteContext *next = new ReadModifyWriteContext();
+
+        RESTORE_SCALAR(in, next->alignedBegin);
+        RESTORE_SCALAR(in, next->chunkBegin);
+
+        restore(in, next->list);
+
+        RESTORE_SCALAR(in, next->writePending);
+        RESTORE_SCALAR(in, next->counter);
+
+        cur.push_back(next);
+      }
+      else {
+        break;
+      }
+    }
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    Event eid;
+    uint64_t tag;
+
+    RESTORE_EVENT(in, eid);
+    RESTORE_SCALAR(in, tag);
+
+    mergeList.emplace_back(eid, tag);
+  }
+
   RESTORE_SCALAR(in, stat);
   RESTORE_EVENT(in, eventReadSubmit);
   RESTORE_EVENT(in, eventReadDone);

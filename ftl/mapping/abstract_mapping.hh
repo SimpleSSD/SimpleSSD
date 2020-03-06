@@ -77,17 +77,15 @@ class AbstractMapping : public Object {
   virtual void invalidateMapping(Request *, Event) = 0;
 
   /**
-   * \brief Check whether read-modify-write is needed
+   * \brief Get minimum and preferred mapping granularity
    *
-   * Check full-sized request by getSLPN and getNLP function and determine
-   * creating larger mapping table entry is possible.
+   * Return minimum (which not making read-modify-write operation) mapping
+   * granularity and preferred (which can make best performance) mapping size.
    *
-   * \param[in]   req   Request structure
-   * \param[out]  slpn  Starting LPN of data range should be read
-   * \param[out]  nlp   Number of pages should be read
-   * \return  Return true if read-modify-write is required
+   * \param[out]  min     Minimum mapping granularity
+   * \param[out]  prefer  Preferred mapping granularity
    */
-  virtual bool prepareReadModifyWrite(Request *req, LPN &slpn, uint32_t &nlp) = 0;
+  virtual void getMappingSize(uint64_t *min, uint64_t *prefer = nullptr) = 0;
 
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
