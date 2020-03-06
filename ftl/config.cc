@@ -21,6 +21,7 @@ const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
 const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_PARTIAL_MAPPING_TABLE_RATIO[] = "VLTableRatio";
 const char NAME_MERGE_THRESHOLD[] = "MergeThreshold";
+const char NAME_DEMAND_PAGING[] = "DemandPaging";
 
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
@@ -30,6 +31,7 @@ Config::Config() {
   invalidFillRatio = 0.f;
 
   mergeRMW = false;
+  demandPaging = false;
 
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
@@ -60,6 +62,7 @@ void Config::loadFrom(pugi::xml_node &section) {
         LOAD_NAME_FLOAT(node2, NAME_OVERPROVISION_RATIO, overProvision);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
         LOAD_NAME_BOOLEAN(node2, NAME_MERGE_RMW, mergeRMW);
+        LOAD_NAME_BOOLEAN(node2, NAME_DEMAND_PAGING, demandPaging);
 
         if (strcmp(name2, "warmup") == 0 && isSection(node)) {
           for (auto node3 = node2.first_child(); node3;
@@ -103,6 +106,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
   STORE_NAME_BOOLEAN(node, NAME_MERGE_RMW, mergeRMW);
+  STORE_NAME_BOOLEAN(node, NAME_DEMAND_PAGING, demandPaging);
 
   STORE_SECTION(node, "warmup", node2);
   STORE_NAME_UINT(node2, NAME_FILLING_MODE, fillingMode);
@@ -189,6 +193,9 @@ bool Config::readBoolean(uint32_t idx) {
     case MergeReadModifyWrite:
       return mergeRMW;
       break;
+    case DemandPaging:
+      return demandPaging;
+      break;
   }
 
   return false;
@@ -251,6 +258,9 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   switch (idx) {
     case MergeReadModifyWrite:
       mergeRMW = value;
+      break;
+    case DemandPaging:
+      demandPaging = value;
       break;
     default:
       ret = false;

@@ -542,6 +542,13 @@
         is false, BasicFTL will not perform merge operation.
        -->
       <config name="MergeReadModifyWrite">true</config>
+      <!--
+        <bool> Enable demand paging
+
+        If demand paging is diabled and memory is too small for mapping table,
+        simulation will be terminated with out-of-memory.
+       -->
+      <config name="DemandPaging">true</config>
       <!-- Filling/Warm-up configuration -->
       <section name="warmup">
         <!--

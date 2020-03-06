@@ -34,6 +34,7 @@ class Config : public BaseConfig {
     OverProvisioningRatio,
     SuperpageAllocation,
     MergeReadModifyWrite,
+    DemandPaging,
   };
 
   enum class MappingType : uint8_t {
@@ -62,6 +63,7 @@ class Config : public BaseConfig {
   MappingType mappingMode;
   FillingType fillingMode;
   bool mergeRMW;
+  bool demandPaging;
 
   uint64_t dChoiceParam;
   VictimSelectionMode gcBlockSelection;
