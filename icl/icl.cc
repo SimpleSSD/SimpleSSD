@@ -17,6 +17,7 @@
 namespace SimpleSSD::ICL {
 
 ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
+  pFTL = new FTL::FTL(object);
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
@@ -55,6 +56,9 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   // Initialize
   pManager->initialize(pCache);
+
+  // Must be called later -- because of memory allocation
+  pFTL->initialize();
 }
 
 ICL::~ICL() {
