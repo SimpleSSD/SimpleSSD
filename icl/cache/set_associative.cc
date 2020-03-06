@@ -97,11 +97,31 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
       evictFunction = [this](uint32_t s, uint32_t &w) -> CPU::Function {
         return fifoEviction(s, w);
       };
+      compareFunction = [this](uint64_t a, uint64_t b) -> uint64_t {
+        auto &ca = cacheline.at(a);
+        auto &cb = cacheline.at(b);
+
+        if (ca.insertedAt < cb.insertedAt) {
+          return a;
+        }
+
+        return b;
+      };
 
       break;
     case Config::EvictPolicyType::LRU:
       evictFunction = [this](uint32_t s, uint32_t &w) -> CPU::Function {
         return lruEviction(s, w);
+      };
+      compareFunction = [this](uint64_t a, uint64_t b) -> uint64_t {
+        auto &ca = cacheline.at(a);
+        auto &cb = cacheline.at(b);
+
+        if (ca.accessedAt < cb.accessedAt) {
+          return a;
+        }
+
+        return b;
       };
 
       break;
@@ -239,6 +259,68 @@ void SetAssociative::tryAllocate(LPN lpn) {
     allocateList.erase(iter);
 
     allocate(req);
+  }
+}
+
+void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
+  uint64_t size = cacheline.size();
+  std::vector<uint64_t> collected(pagesToEvict, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    auto &iter = cacheline.at(i);
+
+    if (iter.valid && !iter.dmaPending && !iter.nvmPending) {
+      uint32_t offset = iter.tag % pagesToEvict;
+
+      auto &line = collected.at(offset);
+
+      if (line < size) {
+        line = compareFunction(line, i);
+      }
+      else {
+        line = i;
+      }
+    }
+  }
+
+  // Check curSet exists
+  bool found = false;
+
+  for (auto &i : collected) {
+    if (i < size) {
+      uint32_t set = i / waySize;
+
+      if (set == curSet) {
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // Make curSet always exists
+  if (!found) {
+    uint32_t way;
+
+    evictFunction(curSet, way);
+
+    if (way != waySize) {
+      uint64_t i = curSet * waySize + way;
+      auto &line = cacheline.at(i);
+      uint32_t offset = line.tag % pagesToEvict;
+
+      collected.at(offset) = i;
+    }
+  }
+
+  // Prepare list
+  for (auto &i : collected) {
+    if (i < size) {
+      auto &line = cacheline.at(i);
+      uint32_t set = i / waySize;
+      uint32_t way = i % waySize;
+
+      list.emplace_back(FlushContext(line.tag, makeDataAddress(set, way)));
+    }
   }
 }
 

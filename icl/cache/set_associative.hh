@@ -32,6 +32,7 @@ class SetAssociative : public AbstractCache {
 
   std::vector<CacheLine> cacheline;
   std::function<CPU::Function(uint32_t, uint32_t &)> evictFunction;
+  std::function<uint64_t(uint64_t, uint64_t)> compareFunction;
 
   struct LineInfo {
     uint32_t set;
