@@ -13,6 +13,7 @@
 #include <random>
 
 #include "icl/cache/abstract_cache.hh"
+#include "icl/manager/abstract_manager.hh"
 #include "util/bitset.hh"
 
 namespace SimpleSSD::ICL {

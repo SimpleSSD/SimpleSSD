@@ -51,7 +51,7 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
       createEvent([this](uint64_t, uint64_t d) { rmw_writeDone(d); },
                   "FTL::BasicFTL::eventPartialWriteDone");
   eventMergedWriteDone =
-      createEvent([this](uint64_t, uint64_t d) { rmw_mergeDone(); },
+      createEvent([this](uint64_t, uint64_t) { rmw_mergeDone(); },
                   "FTL::BasicFTL::eventMergedWriteDone");
 
   eventInvalidateSubmit =
@@ -143,7 +143,7 @@ void BasicFTL::write(Request *cmd) {
       }
 
       if (!merged) {
-        auto ret = rmwList.emplace_back(pendingLPN, ReadModifyWriteContext());
+        auto ret = rmwList.emplace_back(ReadModifyWriteContext());
 
         ret.list = std::move(pendingList);
         ret.alignedBegin = alignedBegin;
