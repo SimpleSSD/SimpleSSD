@@ -37,6 +37,9 @@ namespace SimpleSSD {
 #define BACKUP_BLOB(os, data, length)                                          \
   { write_checkpoint(os, (uint32_t)(length), (void *)data); }
 
+#define BACKUP_BLOB64(os, data, length)                                        \
+  { write_checkpoint64(os, (uint64_t)(length), (void *)data); }
+
 #define BACKUP_EVENT(os, eid) BACKUP_SCALAR(os, eid)
 
 #define BACKUP_DMATAG(os, tag) BACKUP_SCALAR(os, tag)
@@ -58,6 +61,18 @@ namespace SimpleSSD {
     uint32_t _length = (uint32_t)(length);                                     \
                                                                                \
     if (!read_checkpoint(is, _length, (void *)data)) {                         \
+      std::cerr << __FILENAME__ << ":" << __LINE__ << ": "                     \
+                << __PRETTY_FUNCTION__ << std::endl;                           \
+                                                                               \
+      abort();                                                                 \
+    }                                                                          \
+  }
+
+#define RESTORE_BLOB64(is, data, length)                                       \
+  {                                                                            \
+    uint64_t _length = (uint64_t)(length);                                     \
+                                                                               \
+    if (!read_checkpoint64(is, _length, (void *)data)) {                       \
       std::cerr << __FILENAME__ << ":" << __LINE__ << ": "                     \
                 << __PRETTY_FUNCTION__ << std::endl;                           \
                                                                                \
@@ -92,6 +107,22 @@ inline bool write_checkpoint(std::ostream &os, uint32_t length, void *ptr) {
   return true;
 }
 
+inline bool write_checkpoint64(std::ostream &os, uint64_t length, void *ptr) {
+  uint64_t header =
+      (uint64_t)(0xFE00000000000000ull | (length & 0xFFFFFFFFFFFFFFull));
+
+  if (UNLIKELY(length > (uint64_t)0xFFFFFFFFFFFFFFull)) {
+    std::cerr << "Data too long to store." << std::endl;
+
+    return false;
+  }
+
+  os.write((char *)&header, 8);
+  os.write((char *)ptr, length);
+
+  return true;
+}
+
 inline bool read_checkpoint(std::istream &is, uint32_t &length,
                             void *ptr = nullptr) {
   uint32_t header;
@@ -106,6 +137,40 @@ inline bool read_checkpoint(std::istream &is, uint32_t &length,
   }
 
   header &= 0xFFFFFF;
+
+  if (UNLIKELY(length > 0 && header != length)) {
+    std::cerr << "Length does not match (expected " << length << ", got "
+              << header << ")" << std::endl;
+
+    return false;
+  }
+
+  if (length > 0) {
+    // We know the data size before read
+    is.read((char *)ptr, length);
+  }
+  else {
+    // Return only length and not read data
+    length = header;
+  }
+
+  return true;
+}
+
+inline bool read_checkpoint64(std::istream &is, uint64_t &length,
+                              void *ptr = nullptr) {
+  uint64_t header;
+
+  is.read((char *)&header, 8);
+
+  if (UNLIKELY((header & 0xFF00000000000000ull) != 0xFE00000000000000ull)) {
+    std::cerr << "Invalid header encountered at offset " << is.tellg()
+              << std::endl;
+
+    return false;
+  }
+
+  header &= (uint64_t)0xFFFFFFFFFFFFFFull;
 
   if (UNLIKELY(length > 0 && header != length)) {
     std::cerr << "Length does not match (expected " << length << ", got "
