@@ -42,6 +42,7 @@ class FTL : public Object {
   FTL(ObjectData &);
   ~FTL();
 
+  void initialize();
   Parameter *getInfo();
 
   LPN getPageUsage(LPN, LPN);

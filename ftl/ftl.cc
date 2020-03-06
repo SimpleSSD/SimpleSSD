@@ -51,12 +51,6 @@ FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
 
       break;
   }
-
-  // Initialize all
-  pAllocator->initialize(pMapper->getInfo());
-  pMapper->initialize(pFTL, pAllocator);
-
-  pFTL->initialize();
 }
 
 FTL::~FTL() {
@@ -74,6 +68,14 @@ Request *FTL::insertRequest(Request &&req) {
   ret.first->second.tag = ret.first->first;
 
   return &ret.first->second;
+}
+
+void FTL::initialize() {
+  // Initialize all
+  pAllocator->initialize(pMapper->getInfo());
+  pMapper->initialize(pFTL, pAllocator);
+
+  pFTL->initialize();
 }
 
 Parameter *FTL::getInfo() {
