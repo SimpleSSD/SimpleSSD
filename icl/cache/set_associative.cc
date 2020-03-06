@@ -15,7 +15,7 @@ namespace SimpleSSD::ICL {
 SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
                                FTL::Parameter *p)
     : AbstractCache(o, m, p) {
-  evictMode = (Config::Granularity)readConfigUint(
+  auto evictMode = (Config::Granularity)readConfigUint(
       Section::InternalCache, Config::Key::EvictGranularity);
 
   auto policy = (Config::EvictPolicyType)readConfigUint(
@@ -347,25 +347,20 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   LPN lpn = sreq->getLPN();
   uint32_t set = getSetIdx(lpn);
   uint32_t way;
-  bool miss = false;
 
   // Try allocate
   fstat += getEmptyWay(lpn, way);
 
   if (way == waySize) {
-    miss = true;
-  }
-  else {
-    auto &line = cacheline.at(set * waySize + way);
-
-    if (line.dmaPending || line.nvmPending) {
-      miss = true;
-    }
-  }
-
-  if (miss) {
     // Insert into pending queue
     allocateList.emplace(set, sreq->getTag());
+
+    // Perform eviction
+    std::vector<FlushContext> list;
+
+    collect(set, list);
+
+    manager->drain(list);
 
     // TODO: This is not a solution
     return;

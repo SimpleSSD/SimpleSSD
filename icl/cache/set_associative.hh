@@ -23,7 +23,6 @@ class SetAssociative : public AbstractCache {
   uint32_t setSize;
   uint32_t waySize;
 
-  Config::Granularity evictMode;
   uint32_t pagesToEvict;
 
   uint32_t cacheTagSize;
@@ -110,6 +109,8 @@ class SetAssociative : public AbstractCache {
 
   void tryLookup(LPN, bool = false);
   void tryAllocate(LPN);
+
+  void collect(uint32_t, std::vector<FlushContext> &);
 
   Event eventLookupMemory;
   Event eventLookupDone;
