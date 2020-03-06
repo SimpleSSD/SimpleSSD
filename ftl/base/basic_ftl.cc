@@ -20,7 +20,6 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   pMapper->getMappingSize(&minMappingSize);
 
   pendingList = std::vector<Request *>(minMappingSize, nullptr);
-  pendingLPN = InvalidLPN;
 
   pendingListBaseAddress = object.memory->allocate(
       minMappingSize * pageSize, Memory::MemoryType::DRAM,
@@ -161,7 +160,6 @@ void BasicFTL::write(Request *cmd) {
     }
   }
   else {
-    pendingLPN = alignedBegin;
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
   }
 
@@ -378,8 +376,6 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
 
   backup(out, pendingList);
 
-  BACKUP_SCALAR(out, pendingLPN);
-
   size = rmwList.size();
   BACKUP_SCALAR(out, size);
 
@@ -438,8 +434,6 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
 
   restore(in, pendingList);
-
-  RESTORE_SCALAR(in, pendingLPN);
 
   RESTORE_SCALAR(in, size);
 

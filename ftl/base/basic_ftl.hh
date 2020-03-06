@@ -25,7 +25,6 @@ class BasicFTL : public AbstractFTL {
   // Pending request
   uint64_t pendingListBaseAddress;
   std::vector<Request *> pendingList;
-  LPN pendingLPN;
 
   struct ReadModifyWriteContext {
     LPN alignedBegin;
