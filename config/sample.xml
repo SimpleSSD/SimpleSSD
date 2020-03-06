@@ -429,11 +429,10 @@
         <int:u8> Cache eviction policy
 
         Possible values:
-          0: RANDOM: Evict random entry
-          1: FIFO: Evict least recently added entry
-          2: LRU: Evict least recently used entry
+          0: FIFO: Evict least recently added entry
+          1: LRU: Evict least recently used entry
        -->
-      <config name="EvictPolicy">2</config>
+      <config name="EvictPolicy">1</config>
       <!--
         <int:u8> Eviction granularity
 

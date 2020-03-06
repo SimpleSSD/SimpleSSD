@@ -35,7 +35,6 @@ class Config : public BaseConfig {
   };
 
   enum class EvictPolicyType : uint8_t {
-    Random,
     FIFO,
     LRU,
   };

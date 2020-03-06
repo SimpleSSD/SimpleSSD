@@ -14,7 +14,7 @@ namespace SimpleSSD::ICL {
 
 SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
                                FTL::Parameter *p)
-    : AbstractCache(o, m, p), gen(rd()) {
+    : AbstractCache(o, m, p) {
   evictMode = (Config::Granularity)readConfigUint(
       Section::InternalCache, Config::Key::EvictGranularity);
 
@@ -93,14 +93,6 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
   // Create victim cacheline selecttion
   switch (policy) {
-    case Config::EvictPolicyType::Random:
-      dist = std::uniform_int_distribution<uint32_t>(0, waySize - 1);
-
-      evictFunction = [this](uint32_t s, uint32_t &w) -> CPU::Function {
-        return randomEviction(s, w);
-      };
-
-      break;
     case Config::EvictPolicyType::FIFO:
       evictFunction = [this](uint32_t s, uint32_t &w) -> CPU::Function {
         return fifoEviction(s, w);
@@ -135,38 +127,6 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 }
 
 SetAssociative::~SetAssociative() {}
-
-CPU::Function SetAssociative::randomEviction(uint32_t set, uint32_t &way) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  // Check all lines are pending
-  bool skip = true;
-
-  for (way = 0; way < waySize; way++) {
-    auto &line = cacheline[set * waySize + way];
-
-    if (!line.dmaPending && !line.nvmPending) {
-      skip = false;
-
-      break;
-    }
-  }
-
-  if (!skip) {
-    do {
-      way = dist(gen);
-
-      auto &line = cacheline[set * waySize + way];
-
-      if (line.valid) {
-        break;
-      }
-    } while (true);
-  }
-
-  return fstat;
-}
 
 CPU::Function SetAssociative::fifoEviction(uint32_t set, uint32_t &way) {
   CPU::Function fstat;

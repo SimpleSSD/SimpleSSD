@@ -64,11 +64,6 @@ class SetAssociative : public AbstractCache {
   std::unordered_map<uint32_t, uint64_t> allocateList;
 
   // Victim selection
-  std::random_device rd;
-  std::mt19937 gen;
-  std::uniform_int_distribution<uint32_t> dist;
-
-  CPU::Function randomEviction(uint32_t, uint32_t &);
   CPU::Function fifoEviction(uint32_t, uint32_t &);
   CPU::Function lruEviction(uint32_t, uint32_t &);
 
