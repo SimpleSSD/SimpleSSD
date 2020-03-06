@@ -22,6 +22,10 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   pendingList = std::vector<Request *>(minMappingSize, nullptr);
   pendingLPN = InvalidLPN;
 
+  pendingListBaseAddress = object.memory->allocate(
+      minMappingSize * pageSize, Memory::MemoryType::DRAM,
+      "FTL::BasicFTL::PendingRMWData");
+
   // Create events
   eventReadSubmit =
       createEvent([this](uint64_t, uint64_t d) { read_submit(d); },
@@ -188,14 +192,19 @@ void BasicFTL::rmw_readSubmit(uint64_t tag) {
 
   // Convert SPPN to PPN
   PPN ppnBegin = cmd->getPPN() * minMappingSize;
+  uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
     if (cmd) {
       pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, cmd->getTag()));
+      object.memory->write(pendingListBaseAddress + offset * pageSize, pageSize,
+                           InvalidEventID);
+
       ctx->counter++;
     }
 
     ppnBegin++;
+    offset++;
   }
 }
 
@@ -223,12 +232,23 @@ void BasicFTL::rmw_writeSubmit(uint64_t tag) {
 
   // Convert SPPN to PPN
   PPN ppnBegin = cmd->getPPN() * minMappingSize;
+  uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
     pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, cmd->getTag()));
+
+    if (cmd) {
+      object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID);
+    }
+    else {
+      object.memory->read(pendingListBaseAddress + offset * pageSize, pageSize,
+                          InvalidEventID);
+    }
+
     ctx->counter++;
 
     ppnBegin++;
+    offset++;
   }
 }
 

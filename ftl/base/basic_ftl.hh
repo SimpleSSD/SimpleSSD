@@ -23,6 +23,7 @@ class BasicFTL : public AbstractFTL {
   uint64_t minMappingSize;
 
   // Pending request
+  uint64_t pendingListBaseAddress;
   std::vector<Request *> pendingList;
   LPN pendingLPN;
 
