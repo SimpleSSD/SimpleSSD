@@ -165,6 +165,7 @@ set(SRC_ICL_MANAGER
   icl/manager/basic.cc
 )
 set(SRC_FTL
+  ftl/def.cc
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
