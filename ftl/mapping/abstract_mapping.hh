@@ -30,12 +30,12 @@ struct BlockMetadata {
   PPN blockID;
 
   uint32_t nextPageToWrite;
-  uint16_t clock;  // For cost benefit
+  uint64_t insertedAt;
   Bitset validPages;
 
-  BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0), clock(0) {}
+  BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0), insertedAt(0) {}
   BlockMetadata(PPN id, uint32_t s)
-      : blockID(id), nextPageToWrite(0), clock(0), validPages(s) {}
+      : blockID(id), nextPageToWrite(0), insertedAt(0), validPages(s) {}
 };
 
 class AbstractMapping : public Object {
@@ -99,7 +99,7 @@ class AbstractMapping : public Object {
 
   // Allocator
   virtual uint32_t getValidPages(PPN) = 0;
-  virtual uint16_t getAge(PPN) = 0;
+  virtual uint64_t getAge(PPN) = 0;
 
   // I/O interfaces
   virtual void readMapping(Request *, Event) = 0;
