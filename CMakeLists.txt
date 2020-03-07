@@ -177,6 +177,7 @@ set(SRC_FTL_BASE
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
+  ftl/mapping/page_level.cc
 )
 set(SRC_FIL
   fil/fil.cc
