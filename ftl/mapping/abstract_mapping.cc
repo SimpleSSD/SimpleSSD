@@ -104,4 +104,35 @@ Parameter *AbstractMapping::getInfo() {
   return &param;
 };
 
+void AbstractMapping::getStatList(std::vector<Stat> &list,
+                                  std::string prefix) noexcept {
+  list.emplace_back(prefix + "count.read", "Total read translation requests");
+  list.emplace_back(prefix + "count.write", "Total write translation requests");
+  list.emplace_back(prefix + "count.invalidate", "Total invalidate requests");
+  list.emplace_back(prefix + "count.page.read",
+                    "Total read translation requests");
+  list.emplace_back(prefix + "count.page.write",
+                    "Total write translation requests");
+  list.emplace_back(prefix + "count.page.invalidate",
+                    "Total invalidate requests");
+}
+
+void AbstractMapping::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)requestedReadCount);
+  values.push_back((double)requestedWriteCount);
+  values.push_back((double)requestedInvalidateCount);
+  values.push_back((double)readLPNCount);
+  values.push_back((double)writeLPNCount);
+  values.push_back((double)invalidateLPNCount);
+}
+
+void AbstractMapping::resetStatValues() noexcept {
+  requestedReadCount = 0;
+  requestedWriteCount = 0;
+  requestedInvalidateCount = 0;
+  readLPNCount = 0;
+  writeLPNCount = 0;
+  invalidateLPNCount = 0;
+}
+
 }  // namespace SimpleSSD::FTL::Mapping

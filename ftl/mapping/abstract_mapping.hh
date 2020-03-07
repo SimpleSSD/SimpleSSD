@@ -55,6 +55,14 @@ class AbstractMapping : public Object {
   AbstractFTL *pFTL;
   BlockAllocator::AbstractAllocator *allocator;
 
+  // Stat
+  uint64_t requestedReadCount;
+  uint64_t requestedWriteCount;
+  uint64_t requestedInvalidateCount;
+  uint64_t readLPNCount;
+  uint64_t writeLPNCount;
+  uint64_t invalidateLPNCount;
+
   virtual void makeSpare(LPN, std::vector<uint8_t> &);
   virtual LPN readSpare(std::vector<uint8_t> &);
 
@@ -90,6 +98,10 @@ class AbstractMapping : public Object {
   // GC interfaces
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
+
+  void getStatList(std::vector<Stat> &, std::string) noexcept override;
+  void getStatValues(std::vector<double> &) noexcept override;
+  void resetStatValues() noexcept override;
 };
 
 }  // namespace Mapping
