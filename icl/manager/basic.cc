@@ -182,8 +182,11 @@ void BasicCache::cacheDone(uint64_t tag) {
   auto req = getSubRequest(tag);
   auto opcode = req->getOpcode();
 
-  if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
-    // Submit to FIL
+  // Submit to FIL
+  if (opcode == HIL::Operation::Read) {
+    pFTL->read(FTL::Request(eventICLCompletion, req));
+  }
+  else if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
     pFTL->invalidate(FTL::Request(eventICLCompletion, req));
   }
   else {
@@ -228,6 +231,8 @@ void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
                             iter->length, begin->lpn, nlp, eventDrainDone, tag);
 
     req.setDRAMAddress(iter->address);
+
+    pFTL->write(std::move(req));
   }
 
   drained += nlp;
