@@ -74,6 +74,12 @@ AbstractMapping::AbstractMapping(ObjectData &o)
   debugprint(Log::DebugID::FTL, "Total logical pages %" PRIu64,
              param.totalLogicalPages);
   debugprint(Log::DebugID::FTL, "Logical page size %u", param.pageSize);
+
+  resetStatValues();
+
+  eventMemoryDone =
+      createEvent([this](uint64_t, uint64_t d) { handleMemoryCommand(d); },
+                  "FTL::Mapping::AbstractMapping::eventMemoryDone");
 }
 
 void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
@@ -92,6 +98,41 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
   memcpy(&lpn, spare.data(), sizeof(LPN));
 
   return lpn;
+}
+
+void AbstractMapping::handleMemoryCommand(uint64_t tag) {
+  auto iter = memoryPending.find(tag);
+
+  panic_if(iter == memoryPending.end(), "Unexpected memory command.");
+
+  // Issue dram
+  if (iter->second.cmdList.size() > 0) {
+    auto &cmd = iter->second.cmdList.front();
+
+    if (cmd.read) {
+      object.memory->read(cmd.address, cmd.size, eventMemoryDone, tag);
+    }
+    else {
+      object.memory->write(cmd.address, cmd.size, eventMemoryDone, tag);
+    }
+
+    iter->second.cmdList.pop_front();
+  }
+  else {
+    // Handle completion
+    if (iter->second.eid != InvalidEventID) {
+      scheduleNow(iter->second.eid, iter->second.data);
+    }
+
+    memoryPending.erase(iter);
+  }
+}
+
+void AbstractMapping::insertMemoryAddress(bool read, uint64_t address,
+                                          uint32_t size, bool en) {
+  if (en) {
+    memoryCmdList.emplace_back(read, address, size);
+  }
 }
 
 void AbstractMapping::initialize(AbstractFTL *f,

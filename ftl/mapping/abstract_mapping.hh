@@ -40,15 +40,6 @@ struct BlockMetadata {
 
 class AbstractMapping : public Object {
  protected:
-  struct MemoryEntry {
-    uint64_t address;
-    uint32_t size;
-    bool read;
-
-    MemoryEntry(bool r, uint64_t a, uint32_t s)
-        : address(a), size(s), read(r) {}
-  };
-
   Parameter param;
   FIL::Config::NANDStructure *filparam;
 
@@ -65,6 +56,37 @@ class AbstractMapping : public Object {
 
   virtual void makeSpare(LPN, std::vector<uint8_t> &);
   virtual LPN readSpare(std::vector<uint8_t> &);
+
+  struct MemoryCommand {
+    bool read;
+    uint64_t address;
+    uint32_t size;
+
+    MemoryCommand(bool b, uint64_t a, uint32_t s)
+        : read(b), address(a), size(s) {}
+  };
+
+  struct DemandPagingContext {
+    uint64_t tag;
+    LPN aligned;
+    Event eid;
+    uint64_t data;
+    std::deque<MemoryCommand> cmdList;
+
+    DemandPagingContext(uint64_t t, LPN l)
+        : tag(t), aligned(l), eid(InvalidEventID), data(0) {}
+  };
+
+  std::deque<MemoryCommand> memoryCmdList;
+  std::unordered_map<uint64_t, DemandPagingContext> memoryPending;
+
+  uint64_t memoryTag;
+
+  Event eventMemoryDone;
+  void handleMemoryCommand(uint64_t);
+
+  void insertMemoryAddress(bool, uint64_t, uint32_t, bool = true);
+  inline uint64_t makeMemoryTag() { return ++memoryTag; }
 
  public:
   AbstractMapping(ObjectData &);
