@@ -718,7 +718,7 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevel::getCopyList(CopyList &copy, Event eid) {
+void PageLevel::getCopyList(CopyList & /* copy */, Event eid) {
   // TODO: implement GC
   panic("GC not implemented");
 
@@ -759,7 +759,6 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalSuperPages);
   BACKUP_SCALAR(out, entrySize);
   BACKUP_BLOB64(out, table, totalLogicalSuperPages * entrySize);
-  BACKUP_SCALAR(out, clock);
 
   validEntry.createCheckpoint(out);
 
@@ -790,7 +789,6 @@ void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != entrySize, "Invalid FTL configuration while restore.");
 
   RESTORE_BLOB64(in, table, totalLogicalSuperPages * entrySize);
-  RESTORE_SCALAR(in, clock);
 
   validEntry.restoreCheckpoint(in);
 
