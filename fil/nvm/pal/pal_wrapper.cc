@@ -58,28 +58,8 @@ PALOLD::PALOLD(ObjectData &o, Event e)
   // channelMultiplier = stats->package * wayMultiplier;
 
   // Create spare data file (platform specific - temp code)
-  param->spareSize = 8;
-  spareSize = (uint64_t)stats->channel * (uint64_t)stats->package *
-              (uint64_t)param->die * (uint64_t)param->plane *
-              (uint64_t)param->block * (uint64_t)param->page *
-              (uint64_t)param->spareSize;
-
-  auto filename = Path::makeOutputFilename(object, "nandspare.bin");
-  uint64_t resultSize = spareSize;
-
-  spareArea = (uint8_t *)Path::openFileMapping(filename.c_str(), &resultSize);
-
-  if (spareArea == nullptr) {
-    // Try to create
-    spareArea = (uint8_t *)Path::openFileMapping(filename.c_str(), &resultSize,
-                                                 true, false);
-
-    panic_if(spareArea == nullptr, "Failed to open filemapping.");
-  }
-
-  panic_if(resultSize != spareSize,
-           "Expected file size: %" PRIu64 ", got %" PRIu64 ".", spareSize,
-           resultSize);
+  spareList.reserve(stats->channel * stats->package * param->die *
+                    param->plane * param->block * param->die);
 
   // We will periodically flush timeslot for saving memory
   flushEvent = createEvent(
@@ -94,8 +74,6 @@ PALOLD::PALOLD(ObjectData &o, Event e)
 }
 
 PALOLD::~PALOLD() {
-  Path::closeFileMapping(spareArea, spareSize);
-
   delete pal;
   delete stats;
   delete lat;
@@ -121,7 +99,7 @@ void PALOLD::submit(Request *req) {
 
       // req->setData(backingFile.read(blockID, cplt.addr.Page));
       // readSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
-      readSpare(cplt.addr, (uint8_t *)&cplt.ppn, sizeof(PPN));
+      readSpare(cplt.ppn, (uint8_t *)&cplt.ppn, sizeof(PPN));
 
       stat.readCount++;
       break;
@@ -130,7 +108,7 @@ void PALOLD::submit(Request *req) {
 
       // backingFile.write(blockID, cplt.addr.Page, req->getData());
       // writeSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
-      writeSpare(cplt.addr, (uint8_t *)&cplt.ppn, sizeof(PPN));
+      writeSpare(cplt.ppn, (uint8_t *)&cplt.ppn, sizeof(PPN));
 
       stat.writeCount++;
       break;
@@ -138,7 +116,7 @@ void PALOLD::submit(Request *req) {
       cplt.oper = OPER_ERASE;
 
       // backingFile.erase(blockID);
-      eraseSpare(cplt.addr);
+      eraseSpare(cplt.ppn);
 
       stat.eraseCount++;
       break;
@@ -205,49 +183,44 @@ void PALOLD::completion(uint64_t) {
   }
 }
 
-void PALOLD::readSpare(::CPDPBP &addr, uint8_t *buffer, uint64_t size) {
-  panic_if(size > param->spareSize, "Unexpected size of spare data.");
+void PALOLD::readSpare(PPN ppn, uint8_t *data, uint64_t len) {
+  panic_if(len > param->spareSize, "Unexpected size of spare data.");
 
-  uint64_t offset =
-      ((uint64_t)addr.Channel * stats->package * param->die * param->plane *
-       param->block * param->page) +
-      ((uint64_t)addr.Package * param->die * param->plane * param->block *
-       param->page) +
-      ((uint64_t)addr.Die * param->plane * param->block * param->page) +
-      ((uint64_t)addr.Plane * param->block * param->page) +
-      ((uint64_t)addr.Block * param->page) + (uint64_t)addr.Page;
+  // Find PPN
+  auto iter = spareList.find(ppn);
 
-  memcpy(buffer, spareArea + offset * param->spareSize, size);
+  panic_if(iter == spareList.end(),
+           "PPN %" PRIx64 "h does not written and no spare data.", ppn);
+
+  memcpy(data, iter->second.data(), len);
 }
 
-void PALOLD::writeSpare(::CPDPBP &addr, uint8_t *buffer, uint64_t size) {
-  panic_if(size > param->spareSize, "Unexpected size of spare data.");
+void PALOLD::writeSpare(PPN ppn, uint8_t *data, uint64_t len) {
+  panic_if(len > param->spareSize, "Unexpected size of spare data.");
 
-  uint64_t offset =
-      ((uint64_t)addr.Channel * stats->package * param->die * param->plane *
-       param->block * param->page) +
-      ((uint64_t)addr.Package * param->die * param->plane * param->block *
-       param->page) +
-      ((uint64_t)addr.Die * param->plane * param->block * param->page) +
-      ((uint64_t)addr.Plane * param->block * param->page) +
-      ((uint64_t)addr.Block * param->page) + (uint64_t)addr.Page;
+  // Find PPN
+  auto iter = spareList.find(ppn);
 
-  panic_if(offset * param->spareSize >= spareSize,
-           "??? %" PRIu64 " %" PRIu64 "  %" PRIu64, offset, param->spareSize,
-           spareSize);
+  if (iter == spareList.end()) {
+    iter = spareList.emplace(ppn, std::vector<uint8_t>(len, 0)).first;
+  }
 
-  memcpy(spareArea + offset * param->spareSize, buffer, size);
+  memcpy(iter->second.data(), data, len);
 }
 
-void PALOLD::writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {
-  ::CPDPBP addr;
+void PALOLD::eraseSpare(PPN ppn) {
+  convertObject.getBlockAlignedPPN(ppn);
 
-  convertCPDPBP(ppn, addr);
+  for (uint32_t i = 0; i < param->page; i++) {
+    auto iter = spareList.find(ppn);
 
-  writeSpare(addr, buffer, size);
+    if (iter != spareList.end()) {
+      spareList.erase(iter);
+    }
+
+    convertObject.increasePage(ppn);
+  }
 }
-
-void PALOLD::eraseSpare(::CPDPBP &) {}
 
 void PALOLD::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   list.emplace_back(prefix + "energy.read",

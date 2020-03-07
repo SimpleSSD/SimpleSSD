@@ -63,12 +63,10 @@ class PALOLD : public AbstractNVM {
 
   // NANDBackingFile backingFile;
   // TODO: REVISE THIS WITH BACKING FILE
-  uint8_t *spareArea;
-  uint64_t spareSize;
+  std::unordered_map<PPN, std::vector<uint8_t>> spareList;
 
-  void readSpare(::CPDPBP &, uint8_t *, uint64_t);
-  void writeSpare(::CPDPBP &, uint8_t *, uint64_t);
-  void eraseSpare(::CPDPBP &);
+  void readSpare(PPN, uint8_t *, uint64_t);
+  void eraseSpare(PPN);
 
   uint64_t channelMultiplier;
   uint64_t wayMultiplier;
