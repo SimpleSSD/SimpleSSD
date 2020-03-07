@@ -50,20 +50,16 @@ class AbstractFTL : public Object {
   }
 
   // Demand paging
-  uint64_t writeLastPage(PPN sppn, PPN superpage, Event eid) {
+  void writeLastPage(PPN sppn, PPN superpage) {
     panic_if(superpage != 1, "Demand paging only works when using pure-page.");
 
-    pFIL->program(FIL::Request(sppn, eid, tag));
-
-    return tag;
+    pFIL->program(FIL::Request(sppn, InvalidEventID, 0));
   }
 
-  uint64_t readLastPage(PPN sppn, PPN superpage, Event eid) {
+  void readLastPage(PPN sppn, PPN superpage, Event eid, uint64_t tag) {
     panic_if(superpage != 1, "Demand paging only works when using pure-page.");
 
     pFIL->read(FIL::Request(sppn, eid, tag));
-
-    return tag;
   }
 };
 

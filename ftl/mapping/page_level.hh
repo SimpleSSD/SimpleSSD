@@ -92,8 +92,9 @@ class PageLevel : public AbstractMapping {
   std::function<void(LPN, PPN)> writeEntry;
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
-  CPU::Function readMappingInternal(LPN, PPN &, bool &);
-  CPU::Function writeMappingInternal(LPN, PPN &, bool &, bool = false);
+  CPU::Function readMappingInternal(LPN, PPN &, bool &, uint64_t);
+  CPU::Function writeMappingInternal(LPN, PPN &, bool &, uint64_t,
+                                     bool = false);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   inline uint64_t makeTableAddress(LPN lpn) {
@@ -120,7 +121,7 @@ class PageLevel : public AbstractMapping {
   Event eventReadMappingDone2;
   void readMappingDone2(uint64_t);
 
-  bool requestMapping(LPN, PPN);
+  bool requestMapping(LPN, PPN, uint64_t);
 
  public:
   PageLevel(ObjectData &);

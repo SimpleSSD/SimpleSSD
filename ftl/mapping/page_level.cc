@@ -171,7 +171,7 @@ void PageLevel::readMappingDone2(uint64_t aligned) {
   }
 }
 
-bool PageLevel::requestMapping(LPN lpn, PPN ppn) {
+bool PageLevel::requestMapping(LPN lpn, PPN ppn, uint64_t tag) {
   if (!demandPaging) {
     return true;
   }
@@ -193,8 +193,8 @@ bool PageLevel::requestMapping(LPN lpn, PPN ppn) {
 
     if (!found) {
       // Send PAL request
-      auto tag = pFTL->readLastPage(makeSPPN(ppn, 0), param.superpage,
-                                    eventReadMappingDone);
+      pFTL->readLastPage(makeSPPN(ppn, 0), param.superpage,
+                         eventReadMappingDone, tag);
 
       readPending.emplace_back(tag, aligned);
 
@@ -234,7 +234,8 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok) {
+CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok,
+                                             uint64_t tag) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -249,7 +250,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok) {
     PPN block = getSBFromSPPN(pspn);
     blockMetadata[block].insertedAt = getTick();
 
-    ok = requestMapping(lspn, pspn);
+    ok = requestMapping(lspn, pspn, tag);
 
     // Memory timing after demand paging
     insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
@@ -263,7 +264,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok) {
 }
 
 CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
-                                              bool init) {
+                                              uint64_t tag, bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -285,7 +286,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
     }
 
     // Check address is in DRAM
-    ok = requestMapping(lspn, block);
+    ok = requestMapping(lspn, block, tag);
 
     // Memory timing after demand paging
     insertMemoryAddress(true, makeTableAddress(lspn), entrySize, !init);
@@ -326,7 +327,7 @@ RETRY:
       // Issue I/O request to current block
       if (!init) {
         pFTL->writeLastPage(makeSPPN(block->blockID, block->nextPageToWrite),
-                            param.superpage, InvalidEventID);
+                            param.superpage);
         demandWrite++;
 
         // Apply DRAM latency (DRAM->NAND)
@@ -461,7 +462,7 @@ void PageLevel::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, ppn, ok, true);
+      writeMappingInternal(i, ppn, ok, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -480,7 +481,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, true);
+      writeMappingInternal(lpn, ppn, ok, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -495,7 +496,7 @@ void PageLevel::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, ppn, ok, true);
+      writeMappingInternal(i, ppn, ok, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -516,7 +517,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, true);
+      writeMappingInternal(lpn, ppn, ok, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -535,7 +536,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, true);
+      writeMappingInternal(lpn, ppn, ok, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -603,7 +604,7 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
   requestedReadCount++;
   readLPNCount += param.superpage;
 
-  fstat += readMappingInternal(lspn, pspn, mappingHit);
+  fstat += readMappingInternal(lspn, pspn, mappingHit, cmd->getTag());
 
   cmd->setPPN(pspn * param.superpage + superpageIndex);
 
@@ -668,7 +669,7 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
-  fstat += writeMappingInternal(lspn, pspn, mappingHit);
+  fstat += writeMappingInternal(lspn, pspn, mappingHit, cmd->getTag());
 
   // makeSpare(scmd.lpn, scmd.spare);
 
