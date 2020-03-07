@@ -59,6 +59,11 @@ class FIL : public Object {
    */
   void erase(Request &&req);
 
+  /**
+   * \brief Write spare data without timing calculation
+   */
+  void writeSpare(PPN, uint8_t *, uint64_t);
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

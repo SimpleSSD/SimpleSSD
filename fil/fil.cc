@@ -25,9 +25,9 @@ FIL::FIL(ObjectData &o) : Object(o), requestCounter(0) {
              param->spareSize);
 
   // Create event first
-  eventCompletion = createEvent([this](uint64_t t, uint64_t d) {
-    completion(t, d);
-  }, "FIL::FIL::eventCompletion");
+  eventCompletion =
+      createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
+                  "FIL::FIL::eventCompletion");
 
   switch ((Config::NVMType)readConfigUint(Section::FlashInterface,
                                           Config::Key::Model)) {
@@ -101,6 +101,10 @@ void FIL::program(Request &&req) {
 
 void FIL::erase(Request &&req) {
   submit(Operation::Erase, std::move(req));
+}
+
+void FIL::writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {
+  pNVM->writeSpare(ppn, buffer, size);
 }
 
 void FIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

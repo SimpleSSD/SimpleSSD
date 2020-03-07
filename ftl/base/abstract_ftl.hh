@@ -43,6 +43,28 @@ class AbstractFTL : public Object {
   virtual void read(Request *) = 0;
   virtual void write(Request *) = 0;
   virtual void invalidate(Request *) = 0;
+
+  // In initialize phase of mapping, they may want to write spare area
+  void writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {
+    pFIL->writeSpare(ppn, buffer, size);
+  }
+
+  // Demand paging
+  uint64_t writeLastPage(PPN sppn, PPN superpage, Event eid) {
+    panic_if(superpage != 1, "Demand paging only works when using pure-page.");
+
+    pFIL->program(FIL::Request(sppn, eid, tag));
+
+    return tag;
+  }
+
+  uint64_t readLastPage(PPN sppn, PPN superpage, Event eid) {
+    panic_if(superpage != 1, "Demand paging only works when using pure-page.");
+
+    pFIL->read(FIL::Request(sppn, eid, tag));
+
+    return tag;
+  }
 };
 
 }  // namespace SimpleSSD::FTL

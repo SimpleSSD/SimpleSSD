@@ -32,6 +32,14 @@ class AbstractNVM : public Object {
    * \param[in] req Request object
    */
   virtual void submit(Request *req) = 0;
+
+  /**
+   * \brief Write spare data without timing calculation
+   *
+   * This function should only be used in FTL initialization (warm-up)
+   * procedure.
+   */
+  virtual void writeSpare(PPN, uint8_t *, uint64_t) = 0;
 };
 
 }  // namespace SimpleSSD::FIL::NVM
