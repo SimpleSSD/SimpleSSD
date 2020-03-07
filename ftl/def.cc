@@ -24,7 +24,7 @@ Request::Request(Event e, uint64_t d)
       counter(0) {}
 
 Request::Request(Event e, HIL::SubRequest *r)
-    : result(Response::Success), ppn(InvalidPPN), event(e), counter(0) {
+    : ppn(InvalidPPN), result(Response::Success), event(e), counter(0) {
   // Opcode
   switch (r->getOpcode()) {
     case HIL::Operation::Read:
