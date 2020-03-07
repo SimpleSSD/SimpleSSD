@@ -8,10 +8,8 @@
 #include "icl/icl.hh"
 
 #include "hil/hil.hh"
-#include "icl/cache/abstract_cache.hh"
-// #include "icl/manager/basic.hh"
-// #include "icl/manager/none.hh"
-#include "icl/manager/abstract_manager.hh"
+#include "icl/cache/set_associative.hh"
+#include "icl/manager/basic.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
@@ -30,10 +28,11 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   switch (mode) {
     case Config::Mode::None:
       // pManager = new NoCache(object, this, pFTL);
+      panic("NoCache not implemented.");
 
       break;
     case Config::Mode::SetAssociative:
-      // pManager = new BasicCache(object, this, pFTL);
+      pManager = new BasicCache(object, this, pFTL);
 
       break;
     default:
@@ -45,7 +44,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   // Create cache structure
   switch (mode) {
     case Config::Mode::SetAssociative:
-      // pCache = new RingBuffer(object, commandManager, pFTL);
+      pCache = new SetAssociative(object, pManager, param);
 
       break;
     default:
