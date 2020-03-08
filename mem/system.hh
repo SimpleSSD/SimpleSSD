@@ -34,6 +34,8 @@ class AbstractDRAM;
 
 }
 
+static const uint64_t MemoryPacketSize = 64;  // 64bytes request size
+
 enum class MemoryType : uint8_t {
   SRAM,
   DRAM,
@@ -65,30 +67,52 @@ class System {
   std::vector<MemoryMap> allocatedAddressMap;
 
   struct MemoryRequest {
+    uint64_t start;
+    uint32_t npkt;
+
     bool read;
-    uint64_t address;
+    bool sram;
+
+    uint32_t submit;
+    uint32_t complete;
+
     Event eid;
     uint64_t data;
 
-    MemoryRequest() : read(false), address(0), eid(InvalidEventID), data(0) {}
-    MemoryRequest(bool r, uint64_t a)
-        : read(r), address(a), eid(InvalidEventID), data(0) {}
+    MemoryRequest()
+        : start(0),
+          npkt(0),
+          read(false),
+          sram(false),
+          submit(0),
+          complete(0),
+          eid(InvalidEventID),
+          data(0) {}
+    MemoryRequest(bool r, bool s, uint64_t b, uint64_t e, Event ei, uint64_t d)
+        : start(b), read(r), sram(s), submit(0), complete(0), eid(ei), data(d) {
+      npkt = (e - b) / MemoryPacketSize;
+    }
   };
 
-  std::deque<MemoryRequest> requestSRAM;
-  std::deque<MemoryRequest> requestDRAM;
+  uint64_t memoryTag;
 
-  void breakRequest(bool, uint64_t, uint32_t, std::deque<MemoryRequest> &);
+  std::deque<MemoryRequest> pendingQueue;
+  std::map<uint64_t, MemoryRequest> waitingQueue;
 
-  Event eventDispatch;
+  void breakRequest(bool, bool, uint64_t, uint32_t, Event, uint64_t);
+
   uint64_t dispatchPeriod;
 
+  bool pending;
+
   void updateDispatch();
+
+  Event eventDispatch;
   void dispatch();
 
   Event eventSRAMDone;
   Event eventDRAMDone;
-  void completion(uint64_t, bool);
+  void completion(uint64_t, uint64_t);
 
   inline void warn_log(const char *format, ...) noexcept;
   inline void panic_log(const char *format, ...) noexcept;

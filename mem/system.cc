@@ -14,7 +14,7 @@
 
 namespace SimpleSSD::Memory {
 
-System::System(ObjectData *po) : pobject(po) {
+System::System(ObjectData *po) : pobject(po), memoryTag(0), pending(false) {
   // Create memories
   switch ((Config::Model)pobject->config->readUint(Section::Memory,
                                                    Config::Key::DRAMModel)) {
@@ -47,10 +47,10 @@ System::System(ObjectData *po) : pobject(po) {
       pobject->cpu->createEvent([this](uint64_t, uint64_t) { dispatch(); },
                                 "Memory::System::eventDispatch");
   eventSRAMDone = pobject->cpu->createEvent(
-      [this](uint64_t t, uint64_t) { completion(t, false); },
+      [this](uint64_t t, uint64_t d) { completion(t, d); },
       "Memory::System::eventSRAMDone");
   eventDRAMDone = pobject->cpu->createEvent(
-      [this](uint64_t t, uint64_t) { completion(t, true); },
+      [this](uint64_t t, uint64_t d) { completion(t, d); },
       "Memory::System::eventDRAMDone");
 }
 
@@ -88,67 +88,91 @@ inline MemoryType System::validate(uint64_t offset, uint32_t size) {
   return MemoryType::Invalid;
 }
 
-void System::breakRequest(bool read, uint64_t address, uint32_t length,
-                          std::deque<MemoryRequest> &queue) {
+void System::breakRequest(bool read, bool sram, uint64_t address,
+                          uint32_t length, Event eid, uint64_t data) {
   uint64_t alignedBegin = (address / MemoryPacketSize) * MemoryPacketSize;
   uint64_t alignedEnd =
       DIVCEIL(address + length, MemoryPacketSize) * MemoryPacketSize;
 
-  for (; alignedBegin < alignedEnd; alignedBegin += MemoryPacketSize) {
-    queue.emplace_back(read, alignedBegin);
-  }
+  pendingQueue.emplace_back(read, sram, alignedBegin, alignedEnd, eid, data);
 }
 
 void System::updateDispatch() {
-  if (!pobject->cpu->isScheduled(eventDispatch)) {
-    pobject->cpu->schedule(eventDispatch, 0, dispatchPeriod);
+  if (!pending) {
+    pobject->cpu->schedule(eventDispatch);
   }
 }
 
 void System::dispatch() {
-  if (!requestSRAM.empty()) {
-    auto &req = requestSRAM.front();
+  if (waitingQueue.empty()) {
+    if (pendingQueue.empty()) {
+      // Dispatch done
+      pending = false;
 
-    if (req.read) {
-      sram->read(req.address, eventSRAMDone);
+      return;
     }
-    else {
-      sram->write(req.address, eventSRAMDone);
+
+    // Get first request
+    uint64_t tag = ++memoryTag;
+
+    waitingQueue.emplace(tag, pendingQueue.front());
+    pendingQueue.pop_front();
+  }
+
+  bool submit = false;
+
+  for (auto &iter : waitingQueue) {
+    if (iter.second.submit < iter.second.npkt) {
+      submit = true;
+
+      // Submit next request
+      uint64_t addr =
+          iter.second.start + MemoryPacketSize * iter.second.submit++;
+
+      if (iter.second.sram) {
+        if (iter.second.read) {
+          sram->read(addr, eventSRAMDone, iter.first);
+        }
+        else {
+          sram->write(addr, eventSRAMDone, iter.first);
+        }
+      }
+      else {
+        if (iter.second.read) {
+          dram->read(addr, eventDRAMDone, iter.first);
+        }
+        else {
+          dram->write(addr, eventDRAMDone, iter.first);
+        }
+      }
+
+      break;
     }
   }
-  if (!requestDRAM.empty()) {
-    auto &req = requestDRAM.front();
 
-    if (req.read) {
-      dram->read(req.address, eventDRAMDone);
-    }
-    else {
-      dram->write(req.address, eventDRAMDone);
-    }
+  if (submit) {
+    pending = true;
+
+    pobject->cpu->schedule(eventDispatch, 0, dispatchPeriod);
+  }
+  else {
+    pending = false;
   }
 }
 
-void System::completion(uint64_t now, bool dram) {
-  std::deque<MemoryRequest> *queue = nullptr;
+void System::completion(uint64_t now, uint64_t tag) {
+  auto iter = waitingQueue.find(tag);
 
-  if (dram) {
-    queue = &requestDRAM;
+  panic_if(iter == waitingQueue.end(), "Unexpected completion.");
+
+  iter->second.complete++;
+
+  if (iter->second.complete == iter->second.npkt) {
+    // Completed
+    pobject->cpu->scheduleAbs(iter->second.eid, iter->second.data, now);
+
+    waitingQueue.erase(iter);
   }
-  else {
-    queue = &requestSRAM;
-  }
-
-  panic_if(queue->empty(), "Unexpected completion.");
-
-  auto &req = queue->front();
-
-  if (req.eid != InvalidEventID) {
-    pobject->cpu->scheduleAbs(req.eid, req.data, now);
-  }
-
-  queue->pop_front();
-
-  dispatch();
 }
 
 void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
@@ -162,19 +186,16 @@ void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
   if (type == MemoryType::SRAM) {
     address -= SRAMbaseAddress;
 
-    breakRequest(true, address, length, requestSRAM);
-
-    requestSRAM.back().eid = eid;
-    requestSRAM.back().data = data;
+    breakRequest(true, true, address, length, eid, data);
   }
   else {
     address -= DRAMbaseAddress;
 
-    breakRequest(true, address, length, requestDRAM);
-
-    requestDRAM.back().eid = eid;
-    requestDRAM.back().data = data;
+    breakRequest(true, false, address, length, eid, data);
   }
+
+  pendingQueue.back().eid = eid;
+  pendingQueue.back().data = data;
 
   updateDispatch();
 }
@@ -190,19 +211,16 @@ void System::write(uint64_t address, uint32_t length, Event eid, uint64_t data,
   if (type == MemoryType::SRAM) {
     address -= SRAMbaseAddress;
 
-    breakRequest(false, address, length, requestSRAM);
-
-    requestSRAM.back().eid = eid;
-    requestSRAM.back().data = data;
+    breakRequest(false, true, address, length, eid, data);
   }
   else {
     address -= DRAMbaseAddress;
 
-    breakRequest(false, address, length, requestDRAM);
-
-    requestDRAM.back().eid = eid;
-    requestDRAM.back().data = data;
+    breakRequest(false, false, address, length, eid, data);
   }
+
+  pendingQueue.back().eid = eid;
+  pendingQueue.back().data = data;
 
   updateDispatch();
 }
@@ -285,27 +303,40 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.size);
   }
 
-  size = requestSRAM.size();
+  BACKUP_SCALAR(out, memoryTag);
+
+  size = pendingQueue.size();
 
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : requestSRAM) {
+  for (auto &iter : pendingQueue) {
+    BACKUP_SCALAR(out, iter.start);
+    BACKUP_SCALAR(out, iter.npkt);
     BACKUP_SCALAR(out, iter.read);
-    BACKUP_SCALAR(out, iter.address);
+    BACKUP_SCALAR(out, iter.sram);
+    BACKUP_SCALAR(out, iter.submit);
+    BACKUP_SCALAR(out, iter.complete);
     BACKUP_EVENT(out, iter.eid);
     BACKUP_SCALAR(out, iter.data);
   }
 
-  size = requestDRAM.size();
+  size = waitingQueue.size();
 
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : requestDRAM) {
-    BACKUP_SCALAR(out, iter.read);
-    BACKUP_SCALAR(out, iter.address);
-    BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.data);
+  for (auto &iter : waitingQueue) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.start);
+    BACKUP_SCALAR(out, iter.second.npkt);
+    BACKUP_SCALAR(out, iter.second.read);
+    BACKUP_SCALAR(out, iter.second.sram);
+    BACKUP_SCALAR(out, iter.second.submit);
+    BACKUP_SCALAR(out, iter.second.complete);
+    BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.data);
   }
+
+  BACKUP_SCALAR(out, pending);
 
   BACKUP_EVENT(out, eventDispatch);
   BACKUP_EVENT(out, eventSRAMDone);
@@ -345,31 +376,45 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
     allocatedAddressMap.emplace_back(std::move(name), a, s);
   }
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    MemoryRequest req;
-
-    RESTORE_SCALAR(in, req.read);
-    RESTORE_SCALAR(in, req.address);
-    RESTORE_EVENT(in, req.eid);
-    RESTORE_SCALAR(in, req.data);
-
-    requestSRAM.emplace_back(req);
-  }
+  RESTORE_SCALAR(in, memoryTag);
 
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
     MemoryRequest req;
 
+    RESTORE_SCALAR(in, req.start);
+    RESTORE_SCALAR(in, req.npkt);
     RESTORE_SCALAR(in, req.read);
-    RESTORE_SCALAR(in, req.address);
+    RESTORE_SCALAR(in, req.sram);
+    RESTORE_SCALAR(in, req.submit);
+    RESTORE_SCALAR(in, req.complete);
     RESTORE_EVENT(in, req.eid);
     RESTORE_SCALAR(in, req.data);
 
-    requestDRAM.emplace_back(req);
+    pendingQueue.emplace_back(req);
   }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+    MemoryRequest req;
+
+    RESTORE_SCALAR(in, tag);
+    RESTORE_SCALAR(in, req.start);
+    RESTORE_SCALAR(in, req.npkt);
+    RESTORE_SCALAR(in, req.read);
+    RESTORE_SCALAR(in, req.sram);
+    RESTORE_SCALAR(in, req.submit);
+    RESTORE_SCALAR(in, req.complete);
+    RESTORE_EVENT(in, req.eid);
+    RESTORE_SCALAR(in, req.data);
+
+    waitingQueue.emplace(tag, req);
+  }
+
+  RESTORE_SCALAR(in, pending);
 
   RESTORE_EVENT(in, eventDispatch);
   RESTORE_EVENT(in, eventSRAMDone);
