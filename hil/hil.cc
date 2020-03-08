@@ -60,14 +60,21 @@ void HIL::submit(Operation opcode, Request *req) {
 
   panic_if(nlp == 0, "Unexpected length of request.");
 
-  {
+  if (LIKELY(req->eid != InvalidEventID)) {
     uint64_t _uid = req->hostTag;
 
     debugprint(Log::DebugID::HIL,
                "%s | %3u:%u:%-5u -> %7" PRIu64 " | LPN %" PRIu64 " + %" PRIu64
                " | BYTE %" PRIu64 " + %" PRIu64,
                getOperationName(req->opcode), HIGH32(_uid), HIGH16(_uid),
-               LOW16(_uid), tag, slpn, nlp, req->offset - slpn * lpnSize,
+               LOW16(_uid), tag, slpn, nlp, skipFront, req->length);
+  }
+  else {
+    // Prefetch/readahead
+    debugprint(Log::DebugID::HIL,
+               "%s | REQ %7" PRIu64 " | LPN %" PRIu64 " + %" PRIu64
+               " | BYTE %" PRIu64 " + %" PRIu64,
+               getOperationName(req->opcode), tag, slpn, nlp, skipFront,
                req->length);
   }
 
@@ -207,11 +214,13 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         remove = true;
 
         // Remove request
-        auto iter = requestQueue.find(req.requestTag);
+        if (req.nvmCounter == req.nlp) {
+          auto iter = requestQueue.find(req.requestTag);
 
-        requestQueue.erase(iter);
+          requestQueue.erase(iter);
 
-        delete &req;
+          delete &req;
+        }
       }
       else {
         // Submit DMA (current chunk)
