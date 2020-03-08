@@ -368,9 +368,20 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
 
     sreq->setDRAMAddress(makeDataAddress(set, way));
 
-    // Check NAND/DMA is pending when request is write
+    // Check NAND/DMA is pending
     auto &line = cacheline.at(set * waySize + way);
     auto opcode = sreq->getOpcode();
+
+    if (line.dmaPending || line.nvmPending) {
+      debugprint(Log::DebugID::ICL_SetAssociative,
+                 "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+
+      // We need to stall this lookup
+      lookupList.emplace(line.tag, sreq->getTag());
+
+      // TODO: This is not a solution
+      return;
+    }
 
     // Update
     line.accessedAt = getTick();
@@ -378,17 +389,6 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     if (opcode == HIL::Operation::Write ||
         opcode == HIL::Operation::WriteZeroes) {
       line.dirty = true;
-
-      if (line.dmaPending || line.nvmPending) {
-        debugprint(Log::DebugID::ICL_SetAssociative,
-                   "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
-
-        // We need to stall this lookup
-        lookupList.emplace(line.tag, sreq->getTag());
-
-        // TODO: This is not a solution
-        return;
-      }
     }
   }
 
@@ -502,6 +502,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     auto &line = cacheline.at(set * waySize + way);
 
     line.valid = true;
+    line.tag = lpn;
     line.insertedAt = getTick();
     line.accessedAt = getTick();
 
@@ -513,6 +514,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
       updateSkip(line.validbits, sreq);
     }
     else {
+      line.nvmPending = true;  // Read is triggered immediately
       line.validbits.set();
     }
   }
@@ -573,13 +575,28 @@ void SetAssociative::nvmDone(LPN lpn) {
   if (!found) {
     auto iter = evictList.find(lpn);
 
-    panic_if(iter == evictList.end(), "Unexpected completion.");
+    if (iter != evictList.end()) {
+      auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
 
-    auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
+      line.nvmPending = false;
 
-    line.nvmPending = false;
+      evictList.erase(iter);
+    }
+  }
 
-    evictList.erase(iter);
+  // Read
+  if (!found) {
+    uint32_t set = getSetIdx(lpn);
+
+    for (uint32_t way = 0; way < waySize; way++) {
+      auto &line = cacheline.at(set * waySize + way);
+
+      if (line.tag == lpn) {
+        line.nvmPending = false;
+
+        break;
+      }
+    }
   }
 
   // Lookup

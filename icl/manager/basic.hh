@@ -62,6 +62,9 @@ class BasicCache : public AbstractManager {
   Event eventDrainDone;
   void drainDone(uint64_t, uint64_t);
 
+  Event eventReadDone;
+  void readDone(uint64_t);
+
   // Statistics
   uint64_t prefetched;
   uint64_t drained;

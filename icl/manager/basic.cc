@@ -100,6 +100,8 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
   eventDrainDone =
       createEvent([this](uint64_t t, uint64_t d) { drainDone(t, d); },
                   "ICL::BasicCache::eventDrainDone");
+  eventReadDone = createEvent([this](uint64_t, uint64_t d) { readDone(d); },
+                              "ICL::BasicCache::eventReadDone");
 }
 
 BasicCache::~BasicCache() {
@@ -187,7 +189,7 @@ void BasicCache::cacheDone(uint64_t tag) {
 
   // Submit to FIL
   if (opcode == HIL::Operation::Read) {
-    pFTL->read(FTL::Request(eventICLCompletion, req));
+    pFTL->read(FTL::Request(eventReadDone, req));
   }
   else if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
     pFTL->invalidate(FTL::Request(eventICLCompletion, req));
@@ -267,6 +269,14 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
   cache->nvmDone(iter->second.lpn);
 
   drainQueue.erase(iter);
+}
+
+void BasicCache::readDone(uint64_t tag) {
+  auto req = getSubRequest(tag);
+
+  cache->nvmDone(req->getLPN());
+
+  scheduleNow(eventICLCompletion, tag);
 }
 
 void BasicCache::getStatList(std::vector<Stat> &list,
