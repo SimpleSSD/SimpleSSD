@@ -77,6 +77,14 @@ class PALOLD : public AbstractNVM {
   void reschedule(Complete &&);
   void completion(uint64_t);
 
+  static void print(Log *log, const char *format, ...) {
+    va_list args;
+
+    va_start(args, format);
+    log->debugprint(Log::DebugID::FIL_PALOLD, format, args);
+    va_end(args);
+  }
+
  public:
   PALOLD(ObjectData &, Event);
   ~PALOLD();

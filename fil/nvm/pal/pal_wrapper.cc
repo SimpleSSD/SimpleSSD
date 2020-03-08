@@ -43,6 +43,8 @@ PALOLD::PALOLD(ObjectData &o, Event e)
       break;
   }
 
+  lat->printTiming(object.log, print);
+
   convertCPDPBP = convertObject.getConvertion();
 
   stats = new PALStatistics(object.config, lat);

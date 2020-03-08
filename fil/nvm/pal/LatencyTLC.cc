@@ -23,6 +23,26 @@ LatencyTLC::LatencyTLC(ConfigReader *config) : Latency(config) {
 
 LatencyTLC::~LatencyTLC() {}
 
+void LatencyTLC::printTiming(SimpleSSD::Log *log,
+                             void (*print)(SimpleSSD::Log *, const char *,
+                                           ...)) {
+  print(log, "TLC NAND timing:");
+  print(log, "Operation |     LSB    |     CSB    |     MSB    |    DMA 0   |  "
+             "  DMA 1");
+  print(log,
+        "   READ   | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+        " | %10" PRIu64,
+        read[0], read[1], read[2], readdma0, readdma1);
+  print(log,
+        "   WRITE  | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+        " | %10" PRIu64,
+        write[0], write[1], write[2], writedma0, writedma1);
+  print(log,
+        "   ERASE  |                           %10" PRIu64 " | %10" PRIu64
+        " | %10" PRIu64,
+        erase, erasedma0, erasedma1);
+}
+
 inline uint8_t LatencyTLC::GetPageType(uint32_t AddrPage) {
   return (AddrPage <= 5) ? (uint8_t)PAGE_LSB
                          : ((AddrPage <= 7) ? (uint8_t)PAGE_CSB

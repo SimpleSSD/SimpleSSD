@@ -53,6 +53,9 @@ class Latency {
   Latency(SimpleSSD::ConfigReader *);
   virtual ~Latency();
 
+  virtual void printTiming(SimpleSSD::Log *,
+                           void (*)(SimpleSSD::Log *, const char *, ...)) = 0;
+
   // Get Latency for PageAddress(L/C/MSBpage), Operation(RWE),
   // BusyFor(Ch.DMA/Mem.Work)
   virtual uint64_t GetLatency(uint32_t, uint8_t, uint8_t) { return 0; };

@@ -21,6 +21,24 @@ LatencyMLC::LatencyMLC(ConfigReader *config) : Latency(config) {
 
 LatencyMLC::~LatencyMLC() {}
 
+void LatencyMLC::printTiming(SimpleSSD::Log *log,
+                             void (*print)(SimpleSSD::Log *, const char *,
+                                           ...)) {
+  print(log, "MLC NAND timing:");
+  print(log, "Operation |     LSB    |     MSB    |    DMA 0   |    DMA 1");
+  print(log,
+        "   READ   | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+        " | %10" PRIu64,
+        read[0], read[1], readdma0, readdma1);
+  print(log,
+        "   WRITE  | %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64
+        " | %10" PRIu64,
+        write[0], write[1], writedma0, writedma1);
+  print(log,
+        "   ERASE  |              %10" PRIu64 " | %10" PRIu64 " | %10" PRIu64,
+        erase, erasedma0, erasedma1);
+}
+
 inline uint8_t LatencyMLC::GetPageType(uint32_t AddrPage) {
   return AddrPage % 2;
 }
