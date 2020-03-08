@@ -42,6 +42,10 @@ System::System(ObjectData *po) : pobject(po) {
   dispatchPeriod = 1000000000000ull / clock;
 
   panic_if(dispatchPeriod == 0, "System bus is too fast (period == 0).");
+
+  eventDispatch =
+      pobject->cpu->createEvent([this](uint64_t, uint64_t) { dispatch(); },
+                                "Memory::System::eventDispatch");
 }
 
 System::~System() {
@@ -95,7 +99,7 @@ void System::updateDispatch() {
   }
 }
 
-void System::dispatch(uint64_t) {
+void System::dispatch() {
   if (!requestSRAM.empty()) {
     auto &req = requestSRAM.front();
 

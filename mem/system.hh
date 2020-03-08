@@ -84,7 +84,7 @@ class System {
   uint64_t dispatchPeriod;
 
   void updateDispatch();
-  void dispatch(uint64_t);
+  void dispatch();
 
   inline void warn_log(const char *format, ...) noexcept;
   inline void panic_log(const char *format, ...) noexcept;
