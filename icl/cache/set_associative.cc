@@ -515,6 +515,8 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
     if (opcode == HIL::Operation::Write ||
         opcode == HIL::Operation::WriteZeroes) {
+      line.dirty = true;
+
       updateSkip(line.validbits, sreq);
     }
     else {
