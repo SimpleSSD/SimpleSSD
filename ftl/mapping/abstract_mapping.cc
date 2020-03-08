@@ -176,4 +176,107 @@ void AbstractMapping::resetStatValues() noexcept {
   invalidateLPNCount = 0;
 }
 
+void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, requestedReadCount);
+  BACKUP_SCALAR(out, requestedWriteCount);
+  BACKUP_SCALAR(out, requestedInvalidateCount);
+  BACKUP_SCALAR(out, readLPNCount);
+  BACKUP_SCALAR(out, writeLPNCount);
+  BACKUP_SCALAR(out, invalidateLPNCount);
+
+  uint64_t size = memoryCmdList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : memoryCmdList) {
+    BACKUP_SCALAR(out, iter.read);
+    BACKUP_SCALAR(out, iter.address);
+    BACKUP_SCALAR(out, iter.size);
+  }
+
+  size = memoryPending.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : memoryPending) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second.tag);
+    BACKUP_SCALAR(out, iter.second.aligned);
+    BACKUP_EVENT(out, iter.second.eid);
+    BACKUP_SCALAR(out, iter.second.data);
+
+    size = iter.second.cmdList.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iiter : iter.second.cmdList) {
+      BACKUP_SCALAR(out, iiter.read);
+      BACKUP_SCALAR(out, iiter.address);
+      BACKUP_SCALAR(out, iiter.size);
+    }
+  }
+
+  BACKUP_SCALAR(out, memoryTag);
+
+  BACKUP_EVENT(out, eventMemoryDone);
+}
+
+void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, requestedReadCount);
+  RESTORE_SCALAR(in, requestedWriteCount);
+  RESTORE_SCALAR(in, requestedInvalidateCount);
+  RESTORE_SCALAR(in, readLPNCount);
+  RESTORE_SCALAR(in, writeLPNCount);
+  RESTORE_SCALAR(in, invalidateLPNCount);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    bool r;
+    uint64_t a;
+    uint32_t s;
+
+    RESTORE_SCALAR(in, r);
+    RESTORE_SCALAR(in, a);
+    RESTORE_SCALAR(in, s);
+
+    memoryCmdList.emplace_back(r, a, s);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t f, t;
+    LPN l;
+
+    RESTORE_SCALAR(in, f);
+    RESTORE_SCALAR(in, t);
+    RESTORE_SCALAR(in, l);
+
+    DemandPagingContext ctx(t, l);
+
+    RESTORE_EVENT(in, ctx.eid);
+    RESTORE_SCALAR(in, ctx.data);
+
+    uint64_t ssize;
+    RESTORE_SCALAR(in, ssize);
+
+    for (uint64_t j = 0; j < ssize; j++) {
+      bool r;
+      uint64_t a;
+      uint32_t s;
+
+      RESTORE_SCALAR(in, r);
+      RESTORE_SCALAR(in, a);
+      RESTORE_SCALAR(in, s);
+
+      ctx.cmdList.emplace_back(r, a, s);
+    }
+
+    memoryPending.emplace(f, ctx);
+  }
+
+  RESTORE_SCALAR(in, memoryTag);
+
+  RESTORE_EVENT(in, eventMemoryDone);
+}
+
 }  // namespace SimpleSSD::FTL::Mapping

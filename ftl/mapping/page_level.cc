@@ -756,6 +756,8 @@ void PageLevel::resetStatValues() noexcept {
 }
 
 void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractMapping::createCheckpoint(out);
+
   BACKUP_SCALAR(out, totalPhysicalSuperPages);
   BACKUP_SCALAR(out, totalPhysicalSuperBlocks);
   BACKUP_SCALAR(out, totalLogicalSuperPages);
@@ -774,6 +776,8 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
 
 void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t tmp64;
+
+  AbstractMapping::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != totalPhysicalSuperPages,
