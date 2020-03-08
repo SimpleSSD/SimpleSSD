@@ -22,7 +22,8 @@ class PageLevel : public AbstractMapping {
 
   uint64_t entrySize;
 
-  bool demandPaging;
+  bool demandPaging;     // True when demand paging is enabled in config file
+  bool useMappingCache;  // True when demand paging is currently in use
 
   uint64_t tableBaseAddress;
   uint8_t *table;

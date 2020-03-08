@@ -19,6 +19,7 @@ PageLevel::PageLevel(ObjectData &o)
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
+      useMappingCache(false),
       table(nullptr),
       validEntry(totalLogicalSuperPages),
       blockMetadata(nullptr) {
@@ -56,6 +57,8 @@ PageLevel::PageLevel(ObjectData &o)
       readConfigBoolean(Section::FlashTranslation, Config::Key::DemandPaging);
 
   if (demandPaging && tableBaseAddress != 0) {
+    useMappingCache = true;
+
     // We need to simulate -- not actually implemented -- demand paging
     maxDirtyEntries = tableBaseAddress / entrySize;
 
@@ -172,7 +175,7 @@ void PageLevel::readMappingDone2(uint64_t aligned) {
 }
 
 bool PageLevel::requestMapping(LPN lpn, PPN ppn, uint64_t tag) {
-  if (!demandPaging) {
+  if (!useMappingCache) {
     return true;
   }
 
@@ -280,8 +283,9 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
     PPN page = getPageIndexFromSPPN(old);
 
     blockMetadata[block].validPages.reset(page);
+
     // We made dirty mapping entry (valid -> invalid)
-    if (!init) {
+    if (!init && useMappingCache) {
       currentDirtyEntries++;
     }
 
@@ -312,7 +316,7 @@ RETRY:
   }
 
   // If current free block has last page, write mapping to NAND
-  if (!init && demandPaging &&
+  if (!init && useMappingCache &&
       (currentDirtyEntries + entriesInPhysicalPage >= maxDirtyEntries ||
        (inDRAMEntryGroup.size() + 1) * entriesInPhysicalPage >=
            maxDirtyEntries)) {
@@ -362,13 +366,11 @@ RETRY:
   writeEntry(lspn, pspn);
   insertMemoryAddress(false, makeTableAddress(lspn), entrySize, !init);
 
-  // We made dirty mapping entry (?? -> new valid entry)
-  if (!init) {
+  if (!init && useMappingCache) {
+    // We made dirty mapping entry (?? -> new valid entry)
     currentDirtyEntries++;
-  }
 
-  // Add to LPN group
-  if (!init && demandPaging) {
+    // Add to LPN group
     LPN aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
     auto iter = inDRAMEntryGroup.find(aligned);
 
