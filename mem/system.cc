@@ -46,6 +46,12 @@ System::System(ObjectData *po) : pobject(po) {
   eventDispatch =
       pobject->cpu->createEvent([this](uint64_t, uint64_t) { dispatch(); },
                                 "Memory::System::eventDispatch");
+  eventSRAMDone = pobject->cpu->createEvent(
+      [this](uint64_t t, uint64_t) { completion(t, false); },
+      "Memory::System::eventSRAMDone");
+  eventDRAMDone = pobject->cpu->createEvent(
+      [this](uint64_t t, uint64_t) { completion(t, true); },
+      "Memory::System::eventDRAMDone");
 }
 
 System::~System() {
@@ -104,26 +110,45 @@ void System::dispatch() {
     auto &req = requestSRAM.front();
 
     if (req.read) {
-      sram->read(req.address, req.eid, req.data);
+      sram->read(req.address, eventSRAMDone);
     }
     else {
-      sram->write(req.address, req.eid, req.data);
+      sram->write(req.address, eventSRAMDone);
     }
-
-    requestSRAM.pop_front();
   }
   if (!requestDRAM.empty()) {
     auto &req = requestDRAM.front();
 
     if (req.read) {
-      dram->read(req.address, req.eid, req.data);
+      dram->read(req.address, eventDRAMDone);
     }
     else {
-      dram->write(req.address, req.eid, req.data);
+      dram->write(req.address, eventDRAMDone);
     }
-
-    requestDRAM.pop_front();
   }
+}
+
+void System::completion(uint64_t now, bool dram) {
+  std::deque<MemoryRequest> *queue = nullptr;
+
+  if (dram) {
+    queue = &requestDRAM;
+  }
+  else {
+    queue = &requestSRAM;
+  }
+
+  panic_if(queue->empty(), "Unexpected completion.");
+
+  auto &req = queue->front();
+
+  if (req.eid != InvalidEventID) {
+    pobject->cpu->scheduleAbs(req.eid, req.data, now);
+  }
+
+  queue->pop_front();
+
+  dispatch();
 }
 
 void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
@@ -283,6 +308,8 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventDispatch);
+  BACKUP_EVENT(out, eventSRAMDone);
+  BACKUP_EVENT(out, eventDRAMDone);
 
   sram->createCheckpoint(out);
   dram->createCheckpoint(out);
@@ -345,6 +372,8 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_EVENT(in, eventDispatch);
+  RESTORE_EVENT(in, eventSRAMDone);
+  RESTORE_EVENT(in, eventDRAMDone);
 
   sram->restoreCheckpoint(in);
   dram->restoreCheckpoint(in);

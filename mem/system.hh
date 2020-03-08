@@ -86,6 +86,10 @@ class System {
   void updateDispatch();
   void dispatch();
 
+  Event eventSRAMDone;
+  Event eventDRAMDone;
+  void completion(uint64_t, bool);
+
   inline void warn_log(const char *format, ...) noexcept;
   inline void panic_log(const char *format, ...) noexcept;
 
