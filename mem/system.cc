@@ -124,10 +124,6 @@ void System::dispatch() {
 
     requestDRAM.pop_front();
   }
-
-  if (!requestSRAM.empty() || !requestDRAM.empty()) {
-    updateDispatch();
-  }
 }
 
 void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
