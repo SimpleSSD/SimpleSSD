@@ -20,6 +20,8 @@ PAL2::PAL2(PALStatistics *statistics, ConfigReader *c, Latency *l)
   uint32_t PGDIV = 16384 / pParam->pageSize;
 
   if (SPDIV == 0 || PGDIV == 0) {
+    std::cerr << "PAL only supports NAND page <= 16KB." << std::endl;
+
     abort();
   }
 
