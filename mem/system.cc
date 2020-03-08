@@ -89,7 +89,7 @@ void System::breakRequest(bool read, uint64_t address, uint32_t length,
       DIVCEIL(address + length, MemoryPacketSize) * MemoryPacketSize;
 
   for (; alignedBegin < alignedEnd; alignedBegin += MemoryPacketSize) {
-    queue.emplace_back(read, alignedBegin, eventDispatch);
+    queue.emplace_back(read, alignedBegin);
   }
 }
 

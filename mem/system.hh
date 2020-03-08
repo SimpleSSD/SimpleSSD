@@ -71,8 +71,8 @@ class System {
     uint64_t data;
 
     MemoryRequest() : read(false), address(0), eid(InvalidEventID), data(0) {}
-    MemoryRequest(bool r, uint64_t a, Event e)
-        : read(r), address(a), eid(e), data(0) {}
+    MemoryRequest(bool r, uint64_t a)
+        : read(r), address(a), eid(InvalidEventID), data(0) {}
   };
 
   std::deque<MemoryRequest> requestSRAM;
