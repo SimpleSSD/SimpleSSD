@@ -239,7 +239,7 @@ void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
   debugprint(Log::DebugID::ICL_BasicCache, "DRAIN | LPN %" PRIu64 " + %u",
              begin->lpn, nlp);
 
-  for (auto iter = begin; iter < end; begin++) {
+  for (auto iter = begin; iter < end; iter++) {
     uint64_t tag = ++drainCounter;
 
     drainQueue.emplace(tag, *iter);
