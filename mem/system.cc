@@ -103,6 +103,8 @@ void System::breakRequest(bool read, bool sram, uint64_t address,
 
 void System::updateDispatch() {
   if (!pending) {
+    pending = true;
+
     pobject->cpu->schedule(eventDispatch);
   }
 }
@@ -110,8 +112,6 @@ void System::updateDispatch() {
 void System::dispatch() {
   if (!requestQueue.empty()) {
     // We have request
-    pending = true;
-
     auto last = requestQueue.find(lastTag);
 
     panic_if(last == requestQueue.end(), "");
