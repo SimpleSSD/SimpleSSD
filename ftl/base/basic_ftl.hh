@@ -23,14 +23,20 @@ class BasicFTL : public AbstractFTL {
   uint64_t minMappingSize;
 
   // Pending request
+  using SuperRequest = std::vector<Request *>;
+
   uint64_t pendingListBaseAddress;
-  std::vector<Request *> pendingList;
+  SuperRequest pendingList;
+
+  std::list<SuperRequest> writeList;
+
+  std::list<SuperRequest>::iterator getWriteContext(uint64_t);
 
   struct ReadModifyWriteContext {
     LPN alignedBegin;
     LPN chunkBegin;
 
-    std::vector<Request *> list;
+    SuperRequest list;
 
     ReadModifyWriteContext *next;
     ReadModifyWriteContext *last;
@@ -69,6 +75,7 @@ class BasicFTL : public AbstractFTL {
   };
 
   std::list<ReadModifyWriteContext> rmwList;
+  std::list<std::vector<Request *>> list;
 
   ReadModifyWriteContext *getRMWContext(uint64_t, Request ** = nullptr);
 
@@ -125,8 +132,8 @@ class BasicFTL : public AbstractFTL {
   Event eventGCTrigger;
   void gc_trigger(uint64_t);
 
-  void backup(std::ostream &, const std::vector<Request *> &) const noexcept;
-  void restore(std::istream &, std::vector<Request *> &) noexcept;
+  void backup(std::ostream &, const SuperRequest &) const noexcept;
+  void restore(std::istream &, SuperRequest &) noexcept;
 
  public:
   BasicFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,

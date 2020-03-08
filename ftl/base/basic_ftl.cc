@@ -66,6 +66,21 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 
 BasicFTL::~BasicFTL() {}
 
+std::list<BasicFTL::SuperRequest>::iterator BasicFTL::getWriteContext(
+    uint64_t tag) {
+  auto iter = writeList.begin();
+
+  for (; iter != writeList.end(); iter++) {
+    if (iter->front()->getTag() == tag) {
+      break;
+    }
+  }
+
+  panic_if(iter == writeList.end(), "Unexpected write context.");
+
+  return iter;
+}
+
 BasicFTL::ReadModifyWriteContext *BasicFTL::getRMWContext(uint64_t tag,
                                                           Request **ppcmd) {
   for (auto &iter : rmwList) {
@@ -154,7 +169,7 @@ void BasicFTL::write(Request *cmd) {
         ret.chunkBegin = chunkBegin;
 
         // Do read translation - no need for loop
-        pMapper->readMapping(pendingList.at(chunkBegin - alignedBegin),
+        pMapper->readMapping(ret.list.at(chunkBegin - alignedBegin),
                              eventPartialReadSubmit);
       }
       else {
@@ -162,9 +177,10 @@ void BasicFTL::write(Request *cmd) {
       }
     }
     else {
+      auto ret = writeList.emplace_back(std::move(pendingList));
+
       // No need for loop
-      pMapper->writeMapping(pendingList.at(chunkBegin - alignedBegin),
-                            eventWriteSubmit);
+      pMapper->writeMapping(ret.front(), eventWriteSubmit);
     }
 
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
@@ -174,11 +190,20 @@ void BasicFTL::write(Request *cmd) {
 }
 
 void BasicFTL::write_submit(uint64_t tag) {
-  auto req = getRequest(tag);
+  auto list = getWriteContext(tag);
 
-  pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
+  PPN ppn = list->front()->getPPN();
+  PPN offset = 0;
 
-  object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID, false);
+  for (auto &req : *list) {
+    pFIL->program(FIL::Request(ppn + offset, eventWriteDone, req->getTag()));
+
+    object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID, false);
+
+    offset++;
+  }
+
+  writeList.erase(list);
 
   triggerGC();
 }
@@ -341,8 +366,8 @@ void BasicFTL::gc_trigger(uint64_t) {
   panic("GC not implemented.")
 }
 
-void BasicFTL::backup(std::ostream &out,
-                      const std::vector<Request *> &list) const noexcept {
+void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const
+    noexcept {
   bool exist;
   uint64_t size = list.size();
   BACKUP_SCALAR(out, size);
@@ -360,8 +385,7 @@ void BasicFTL::backup(std::ostream &out,
   }
 }
 
-void BasicFTL::restore(std::istream &in,
-                       std::vector<Request *> &list) noexcept {
+void BasicFTL::restore(std::istream &in, SuperRequest &list) noexcept {
   bool exist;
   uint64_t size;
 
@@ -406,6 +430,13 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   uint64_t size;
 
   backup(out, pendingList);
+
+  size = writeList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : writeList) {
+    backup(out, iter);
+  }
 
   size = rmwList.size();
   BACKUP_SCALAR(out, size);
@@ -465,6 +496,16 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
 
   restore(in, pendingList);
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    SuperRequest list;
+
+    restore(in, list);
+
+    writeList.emplace_back(std::move(list));
+  }
 
   RESTORE_SCALAR(in, size);
 
