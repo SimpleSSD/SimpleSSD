@@ -71,6 +71,7 @@ class SetAssociative : public AbstractCache {
   inline uint32_t getSetIdx(LPN addr) { return addr % setSize; }
   CPU::Function getEmptyWay(uint32_t, uint32_t &);
   CPU::Function getValidWay(LPN, uint32_t &);
+  void getCleanWay(uint32_t, uint32_t &);
 
   inline uint64_t makeTagAddress(uint32_t set) {
     return cacheTagBaseAddress + cacheTagSize * waySize * set;

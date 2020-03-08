@@ -222,6 +222,23 @@ CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
   return fstat;
 }
 
+void SetAssociative::getCleanWay(uint32_t set, uint32_t &way) {
+  way = waySize;
+
+  for (uint32_t i = 0; i < waySize; i++) {
+    auto &line = cacheline.at(set * waySize + i);
+
+    if (line.valid && !line.dirty) {
+      if (way == waySize) {
+        way = i;
+      }
+      else {
+        way = compareFunction(i, way);
+      }
+    }
+  }
+}
+
 void SetAssociative::readAll(uint64_t tag, Event eid) {
   object.memory->read(cacheTagBaseAddress, cacheTagSize * setSize * waySize,
                       eid, tag);
@@ -451,6 +468,11 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
   // Try allocate
   fstat += getEmptyWay(set, way);
+
+  if (way == waySize) {
+    // Double-check with clean line
+    getCleanWay(set, way);
+  }
 
   if (way == waySize) {
     debugprint(Log::DebugID::ICL_SetAssociative,
