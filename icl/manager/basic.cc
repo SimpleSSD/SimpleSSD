@@ -188,7 +188,7 @@ void BasicCache::cacheDone(uint64_t tag) {
   auto opcode = req->getOpcode();
 
   // Submit to FIL
-  if (opcode == HIL::Operation::Read) {
+  if (opcode == HIL::Operation::Read && req->getAllocate()) {
     pFTL->read(FTL::Request(eventReadDone, req));
   }
   else if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
