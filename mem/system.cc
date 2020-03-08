@@ -194,9 +194,6 @@ void System::read(uint64_t address, uint32_t length, Event eid, uint64_t data,
     breakRequest(true, false, address, length, eid, data);
   }
 
-  pendingQueue.back().eid = eid;
-  pendingQueue.back().data = data;
-
   updateDispatch();
 }
 
@@ -218,9 +215,6 @@ void System::write(uint64_t address, uint32_t length, Event eid, uint64_t data,
 
     breakRequest(false, false, address, length, eid, data);
   }
-
-  pendingQueue.back().eid = eid;
-  pendingQueue.back().data = data;
 
   updateDispatch();
 }
