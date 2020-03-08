@@ -313,6 +313,8 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
   }
 
   // Prepare list
+  list.reserve(collected.size());
+
   for (auto &i : collected) {
     if (i < size) {
       auto &line = cacheline.at(i);
