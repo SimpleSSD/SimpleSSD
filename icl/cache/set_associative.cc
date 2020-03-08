@@ -157,7 +157,7 @@ CPU::Function SetAssociative::fifoEviction(uint32_t set, uint32_t &way) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
 
   for (uint32_t i = 0; i < waySize; i++) {
-    auto &line = cacheline[set * waySize + i];
+    auto &line = cacheline.at(set * waySize + i);
 
     if (line.insertedAt < min && !line.dmaPending && !line.nvmPending) {
       min = line.insertedAt;
@@ -177,7 +177,7 @@ CPU::Function SetAssociative::lruEviction(uint32_t set, uint32_t &way) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
 
   for (uint32_t i = 0; i < waySize; i++) {
-    auto &line = cacheline[set * waySize + i];
+    auto &line = cacheline.at(set * waySize + i);
 
     if (line.accessedAt < min && !line.dmaPending && !line.nvmPending) {
       min = line.accessedAt;
@@ -193,7 +193,7 @@ CPU::Function SetAssociative::getEmptyWay(uint32_t set, uint32_t &way) {
   CPU::markFunction(fstat);
 
   for (way = 0; way < waySize; way++) {
-    auto &line = cacheline[set * setSize + way];
+    auto &line = cacheline.at(set * waySize + way);
 
     if (!line.valid) {
       break;
@@ -210,7 +210,7 @@ CPU::Function SetAssociative::getValidWay(LPN lpn, uint32_t &way) {
   uint32_t set = getSetIdx(lpn);
 
   for (way = 0; way < waySize; way++) {
-    auto &line = cacheline[set * setSize + way];
+    auto &line = cacheline.at(set * waySize + way);
 
     if (line.valid && line.tag == lpn) {
       break;
