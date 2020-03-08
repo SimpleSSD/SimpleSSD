@@ -72,7 +72,7 @@ void HIL::submit(Operation opcode, Request *req) {
   else {
     // Prefetch/readahead
     debugprint(Log::DebugID::HIL,
-               "%s | REQ %7" PRIu64 " | LPN %" PRIu64 " + %" PRIu64
+               "%s | FROM ICL | REQ %7" PRIu64 " | LPN %" PRIu64 " + %" PRIu64
                " | BYTE %" PRIu64 " + %" PRIu64,
                getOperationName(req->opcode), tag, slpn, nlp, skipFront,
                req->length);
