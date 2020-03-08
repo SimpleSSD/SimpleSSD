@@ -166,7 +166,6 @@ class CPU {
 
   std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
 
-  void calculatePower(Power &);
   Core *getIdleCoreInRange(uint16_t, uint16_t);
 
   void dispatch(uint64_t);
