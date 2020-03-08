@@ -124,6 +124,9 @@ class SubRequest {
   bool allocate;  //!< Used in ICL, true when cacheline allocation is required
   bool clear;     //!< Flag for buffer management
 
+  uint32_t skipFront;
+  uint32_t skipEnd;
+
   // Device-side DMA address
   uint8_t *buffer;   //!< Buffer for DMA (real data)
   uint64_t address;  //!< Physical address of internal DRAM

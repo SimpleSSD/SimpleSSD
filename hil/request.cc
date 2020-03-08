@@ -98,10 +98,30 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
 }
 
 SubRequest::SubRequest()
-    : requestTag(0), request(nullptr), clear(false), buffer(nullptr) {}
+    : requestTag(0),
+      request(nullptr),
+      lpn(InvalidLPN),
+      offset(0),
+      length(0),
+      allocate(false),
+      clear(false),
+      skipFront(0),
+      skipEnd(0),
+      buffer(nullptr),
+      address(0) {}
 
 SubRequest::SubRequest(uint64_t t, Request *r)
-    : requestTag(t), request(r), clear(false), buffer(nullptr) {}
+    : requestTag(t),
+      request(r),
+      lpn(InvalidLPN),
+      offset(0),
+      length(0),
+      allocate(false),
+      clear(false),
+      skipFront(0),
+      skipEnd(0),
+      buffer(nullptr),
+      address(0) {}
 
 SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
     : requestTag(t),
@@ -111,6 +131,8 @@ SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
       length(s),
       allocate(false),
       clear(false),
+      skipFront(0),
+      skipEnd(0),
       buffer(nullptr),
       address(0) {}
 
@@ -125,6 +147,8 @@ void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, length);
   BACKUP_SCALAR(out, allocate);
   BACKUP_SCALAR(out, clear);
+  BACKUP_SCALAR(out, skipFront);
+  BACKUP_SCALAR(out, skipEnd);
 
   if (clear) {
     BACKUP_BLOB(out, buffer, length);
@@ -149,6 +173,8 @@ void SubRequest::restoreCheckpoint(std::istream &in, HIL *pHIL) noexcept {
   RESTORE_SCALAR(in, length);
   RESTORE_SCALAR(in, allocate);
   RESTORE_SCALAR(in, clear);
+  RESTORE_SCALAR(in, skipFront);
+  RESTORE_SCALAR(in, skipEnd);
 
   if (clear) {
     buffer = (uint8_t *)calloc(length, 1);

@@ -76,13 +76,17 @@ void HIL::submit(Operation opcode, Request *req) {
     for (uint32_t i = 0; i < nlp; i++) {
       uint64_t offset = lpnSize * i - skipFront;
       uint32_t length = lpnSize;
+      uint32_t sf = 0;
+      uint32_t se = 0;
 
       if (i == 0) {
         offset = 0;
         length -= skipFront;
+        sf = skipFront;
       }
       if (i + 1 == nlp) {
         length -= skipEnd;
+        se = skipEnd;
       }
 
       // Insert
@@ -93,6 +97,9 @@ void HIL::submit(Operation opcode, Request *req) {
           SubRequest(subrequestCounter, req, slpn + i, offset, length));
 
       panic_if(!sreq.second, "SubRequest ID conflict.");
+
+      sreq.first->second.skipFront = sf;
+      sreq.first->second.skipEnd = se;
 
       subrequestList.emplace_back(&sreq.first->second);
     }
@@ -215,8 +222,8 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
                              eventDMACompletion, sreq.requestTag);
 
-        object.memory->read(sreq.address + sreq.offset - sreq.lpn * lpnSize,
-                            sreq.length, InvalidEventID);
+        object.memory->read(sreq.address + sreq.skipFront, sreq.length,
+                            InvalidEventID);
       }
 
       break;
@@ -229,8 +236,8 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
       req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
                           eventDMACompletion, sreq.requestTag);
 
-      object.memory->write(sreq.address + sreq.offset - sreq.lpn * lpnSize,
-                           sreq.length, InvalidEventID);
+      object.memory->write(sreq.address + sreq.skipFront, sreq.length,
+                           InvalidEventID);
 
       break;
     case Operation::WriteZeroes:
