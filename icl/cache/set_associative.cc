@@ -311,6 +311,7 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
 
       if (set == curSet) {
         found = true;
+
         break;
       }
     }
@@ -340,6 +341,9 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
       uint32_t set = i / waySize;
       uint32_t way = i % waySize;
 
+      line.nvmPending = true;
+
+      evictList.emplace(line.tag, LineInfo(set, way));
       list.emplace_back(FlushContext(line.tag, makeDataAddress(set, way)));
     }
   }
@@ -578,6 +582,7 @@ void SetAssociative::nvmDone(LPN lpn) {
     if (iter != evictList.end()) {
       auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
 
+      line.dirty = false;
       line.nvmPending = false;
 
       evictList.erase(iter);
