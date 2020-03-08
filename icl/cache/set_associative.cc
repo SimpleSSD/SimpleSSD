@@ -14,7 +14,7 @@ namespace SimpleSSD::ICL {
 
 SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
                                FTL::Parameter *p)
-    : AbstractCache(o, m, p) {
+    : AbstractCache(o, m, p), dirtyLines(0) {
   auto evictMode = (Config::Granularity)readConfigUint(
       Section::InternalCache, Config::Key::EvictGranularity);
 
@@ -70,6 +70,11 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
       break;
   }
+
+  // Dirty pages threshold
+  evictThreshold =
+      readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold) *
+      (setSize * waySize);
 
   // Allocate memory
   cacheDataBaseAddress = object.memory->allocate(
@@ -303,44 +308,46 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
   }
 
   // Check curSet exists
-  bool found = false;
+  if (curSet < setSize) {
+    bool found = false;
 
-  for (auto &i : collected) {
-    if (i < size) {
-      uint32_t set = i / waySize;
+    for (auto &i : collected) {
+      if (i < size) {
+        uint32_t set = i / waySize;
 
-      if (set == curSet) {
-        found = true;
+        if (set == curSet) {
+          found = true;
 
-        break;
-      }
-    }
-  }
-
-  // Make curSet always exists
-  if (!found) {
-    uint32_t way;
-
-    // Maybe some cachelines are in eviction
-    for (way = 0; way < waySize; way++) {
-      auto &line = cacheline.at(curSet * waySize + way);
-
-      if (line.nvmPending) {
-        found = true;
-
-        break;
+          break;
+        }
       }
     }
 
+    // Make curSet always exists
     if (!found) {
-      evictFunction(curSet, way);
+      uint32_t way;
 
-      if (way != waySize) {
-        uint64_t i = curSet * waySize + way;
-        auto &line = cacheline.at(i);
-        uint32_t offset = line.tag % pagesToEvict;
+      // Maybe some cachelines are in eviction
+      for (way = 0; way < waySize; way++) {
+        auto &line = cacheline.at(curSet * waySize + way);
 
-        collected.at(offset) = i;
+        if (line.nvmPending) {
+          found = true;
+
+          break;
+        }
+      }
+
+      if (!found) {
+        evictFunction(curSet, way);
+
+        if (way != waySize) {
+          uint64_t i = curSet * waySize + way;
+          auto &line = cacheline.at(i);
+          uint32_t offset = line.tag % pagesToEvict;
+
+          collected.at(offset) = i;
+        }
       }
     }
   }
@@ -417,6 +424,8 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
 
       if (opcode == HIL::Operation::Write ||
           opcode == HIL::Operation::WriteZeroes) {
+        dirtyLines++;
+
         line.dirty = true;
       }
     }
@@ -495,6 +504,8 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   LPN lpn = sreq->getLPN();
   uint32_t set = getSetIdx(lpn);
   uint32_t way;
+  bool evict = false;
+  Event eid = eventCacheDone;
 
   // Try allocate
   fstat += getEmptyWay(set, way);
@@ -511,15 +522,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     // Insert into pending queue
     allocateList.emplace(set, sreq->getTag());
 
-    // Perform eviction
-    std::vector<FlushContext> list;
-
-    collect(set, list);
-
-    manager->drain(list);
-
-    // TODO: This is not a solution
-    return;
+    evict = true;
   }
   else {
     debugprint(Log::DebugID::ICL_SetAssociative,
@@ -541,6 +544,8 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
     if (opcode == HIL::Operation::Write ||
         opcode == HIL::Operation::WriteZeroes) {
+      dirtyLines++;
+
       line.dirty = true;
 
       updateSkip(line.validbits, sreq);
@@ -549,11 +554,26 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
       line.nvmPending = true;  // Read is triggered immediately
       line.validbits.set();
     }
+
+    if (dirtyLines >= evictThreshold) {
+      evict = true;
+      set = setSize;
+    }
+  }
+
+  if (evict) {
+    // Perform eviction
+    std::vector<FlushContext> list;
+
+    collect(set, list);
+
+    manager->drain(list);
+
+    eid = InvalidEventID;
   }
 
   // No memory access because we already do that in lookup phase
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventCacheDone, sreq->getTag(),
-                   fstat);
+  scheduleFunction(CPU::CPUGroup::InternalCache, eid, sreq->getTag(), fstat);
 }
 
 void SetAssociative::dmaDone(LPN lpn) {
@@ -586,6 +606,8 @@ void SetAssociative::nvmDone(LPN lpn) {
       auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
 
       // Not dirty now
+      dirtyLines--;
+
       line.dirty = false;
 
       // Erase
@@ -609,6 +631,8 @@ void SetAssociative::nvmDone(LPN lpn) {
 
     if (iter != evictList.end()) {
       auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
+
+      dirtyLines--;
 
       line.dirty = false;
       line.nvmPending = false;
@@ -651,6 +675,7 @@ void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, sectorsInCacheLine);
   BACKUP_SCALAR(out, setSize);
   BACKUP_SCALAR(out, waySize);
+  BACKUP_SCALAR(out, dirtyLines);
 
   uint64_t size = cacheline.size();
   BACKUP_SCALAR(out, size);
@@ -715,6 +740,8 @@ void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, tmp32);
   panic_if(tmp32 != waySize, "Way size mismatch.");
+
+  RESTORE_SCALAR(in, dirtyLines);
 
   uint64_t size;
   CacheLine line(sectorsInCacheLine);

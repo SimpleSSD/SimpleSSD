@@ -31,6 +31,9 @@ class SetAssociative : public AbstractCache {
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 
+  uint64_t evictThreshold;
+  uint64_t dirtyLines;
+
   std::vector<CacheLine> cacheline;
   std::function<CPU::Function(uint32_t, uint32_t &)> evictFunction;
   std::function<uint64_t(uint64_t, uint64_t)> compareFunction;
