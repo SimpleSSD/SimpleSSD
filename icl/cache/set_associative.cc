@@ -159,7 +159,8 @@ CPU::Function SetAssociative::fifoEviction(uint32_t set, uint32_t &way) {
   for (uint32_t i = 0; i < waySize; i++) {
     auto &line = cacheline.at(set * waySize + i);
 
-    if (line.insertedAt < min && !line.dmaPending && !line.nvmPending) {
+    if (line.valid && line.insertedAt < min && !line.dmaPending &&
+        !line.nvmPending) {
       min = line.insertedAt;
       way = i;
     }
@@ -179,7 +180,8 @@ CPU::Function SetAssociative::lruEviction(uint32_t set, uint32_t &way) {
   for (uint32_t i = 0; i < waySize; i++) {
     auto &line = cacheline.at(set * waySize + i);
 
-    if (line.accessedAt < min && !line.dmaPending && !line.nvmPending) {
+    if (line.valid && line.accessedAt < min && !line.dmaPending &&
+        !line.nvmPending) {
       min = line.accessedAt;
       way = i;
     }
