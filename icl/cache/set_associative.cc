@@ -321,14 +321,27 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
   if (!found) {
     uint32_t way;
 
-    evictFunction(curSet, way);
+    // Maybe some cachelines are in eviction
+    for (way = 0; way < waySize; way++) {
+      auto &line = cacheline.at(curSet * waySize + way);
 
-    if (way != waySize) {
-      uint64_t i = curSet * waySize + way;
-      auto &line = cacheline.at(i);
-      uint32_t offset = line.tag % pagesToEvict;
+      if (line.nvmPending) {
+        found = true;
 
-      collected.at(offset) = i;
+        break;
+      }
+    }
+
+    if (!found) {
+      evictFunction(curSet, way);
+
+      if (way != waySize) {
+        uint64_t i = curSet * waySize + way;
+        auto &line = cacheline.at(i);
+        uint32_t offset = line.tag % pagesToEvict;
+
+        collected.at(offset) = i;
+      }
     }
   }
 
