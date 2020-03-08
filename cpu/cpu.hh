@@ -189,6 +189,11 @@ class CPU {
   uint64_t getTick() noexcept;
 
   /**
+   * \brief Get CPU power/energy statistics
+   */
+  void calculatePower(Power &);
+
+  /**
    * \brief Create event
    *
    * Create event. You must create all events in the constructor of object.
