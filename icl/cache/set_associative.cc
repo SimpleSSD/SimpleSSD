@@ -367,32 +367,45 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     sreq->setAllocate();
   }
   else {
-    debugprint(Log::DebugID::ICL_SetAssociative,
-               "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
-
-    sreq->setDRAMAddress(makeDataAddress(set, way));
-
-    // Check NAND/DMA is pending
+    // Check valid bits
+    Bitset test(sectorsInCacheLine);
     auto &line = cacheline.at(set * waySize + way);
-    auto opcode = sreq->getOpcode();
 
-    if (line.dmaPending || line.nvmPending) {
-      debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+    updateSkip(test, sreq);
 
-      // We need to stall this lookup
-      lookupList.emplace(line.tag, sreq->getTag());
+    test &= line.validbits;
 
-      // TODO: This is not a solution
-      return;
+    if (test != line.validbits) {
+      // Treat as miss
+      sreq->setAllocate();
     }
+    else {
+      debugprint(Log::DebugID::ICL_SetAssociative,
+                 "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
 
-    // Update
-    line.accessedAt = getTick();
+      sreq->setDRAMAddress(makeDataAddress(set, way));
 
-    if (opcode == HIL::Operation::Write ||
-        opcode == HIL::Operation::WriteZeroes) {
-      line.dirty = true;
+      // Check NAND/DMA is pending
+      auto opcode = sreq->getOpcode();
+
+      if (line.dmaPending || line.nvmPending) {
+        debugprint(Log::DebugID::ICL_SetAssociative,
+                   "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+
+        // We need to stall this lookup
+        lookupList.emplace(line.tag, sreq->getTag());
+
+        // TODO: This is not a solution
+        return;
+      }
+
+      // Update
+      line.accessedAt = getTick();
+
+      if (opcode == HIL::Operation::Write ||
+          opcode == HIL::Operation::WriteZeroes) {
+        line.dirty = true;
+      }
     }
   }
 
