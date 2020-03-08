@@ -339,7 +339,7 @@ void HIL::read(Request *req) {
 }
 
 void HIL::write(Request *req, bool zerofill) {
-  submit(zerofill ? Operation::WriteZeroes : Operation::WriteZeroes, req);
+  submit(zerofill ? Operation::WriteZeroes : Operation::Write, req);
 }
 
 void HIL::flush(Request *req) {
