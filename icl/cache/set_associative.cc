@@ -601,6 +601,8 @@ void SetAssociative::nvmDone(LPN lpn) {
       line.nvmPending = false;
 
       evictList.erase(iter);
+
+      found = true;
     }
   }
 
