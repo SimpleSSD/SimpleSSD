@@ -448,7 +448,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   uint32_t way;
 
   // Try allocate
-  fstat += getEmptyWay(lpn, way);
+  fstat += getEmptyWay(set, way);
 
   if (way == waySize) {
     debugprint(Log::DebugID::ICL_SetAssociative,
