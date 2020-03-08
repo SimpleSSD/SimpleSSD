@@ -84,6 +84,7 @@ PALOLD::~PALOLD() {
 void PALOLD::submit(Request *req) {
   Complete cplt;
 
+  LPN lpn = InvalidLPN;
   cplt.id = req->getTag();
   cplt.ppn = req->getPPN();
   cplt.beginAt = getTick();
@@ -101,7 +102,7 @@ void PALOLD::submit(Request *req) {
 
       // req->setData(backingFile.read(blockID, cplt.addr.Page));
       // readSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
-      readSpare(cplt.ppn, (uint8_t *)&cplt.ppn, sizeof(PPN));
+      readSpare(cplt.ppn, (uint8_t *)&lpn, sizeof(PPN));
 
       stat.readCount++;
       break;
@@ -110,7 +111,7 @@ void PALOLD::submit(Request *req) {
 
       // backingFile.write(blockID, cplt.addr.Page, req->getData());
       // writeSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
-      writeSpare(cplt.ppn, (uint8_t *)&cplt.ppn, sizeof(PPN));
+      writeSpare(cplt.ppn, (uint8_t *)&lpn, sizeof(PPN));
 
       stat.writeCount++;
       break;
@@ -126,6 +127,8 @@ void PALOLD::submit(Request *req) {
       panic("Operation not supported in PAL.");
       break;
   }
+
+  req->setLPN(lpn);
 
   ::Command pcmd(getTick(), 0, cplt.oper, param->pageSize);
 
