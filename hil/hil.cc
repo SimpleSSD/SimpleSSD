@@ -232,7 +232,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
                              eventDMACompletion, sreq.requestTag);
 
         object.memory->read(sreq.address + sreq.skipFront, sreq.length,
-                            InvalidEventID);
+                            InvalidEventID, false);
       }
 
       break;
@@ -246,7 +246,7 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
                           eventDMACompletion, sreq.requestTag);
 
       object.memory->write(sreq.address + sreq.skipFront, sreq.length,
-                           InvalidEventID);
+                           InvalidEventID, false);
 
       break;
     case Operation::WriteZeroes:

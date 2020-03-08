@@ -94,7 +94,7 @@ void BasicFTL::read_submit(uint64_t tag) {
 
   pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
 
-  object.memory->write(req->getDRAMAddress(), pageSize, InvalidEventID);
+  object.memory->write(req->getDRAMAddress(), pageSize, InvalidEventID, false);
 }
 
 void BasicFTL::read_done(uint64_t tag) {
@@ -179,7 +179,7 @@ void BasicFTL::write_submit(uint64_t tag) {
 
   pFIL->program(FIL::Request(req->getPPN(), eventWriteDone, tag));
 
-  object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID);
+  object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID, false);
 
   triggerGC();
 }
@@ -210,7 +210,7 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
     if (cmd) {
       pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, cmd->getTag()));
       object.memory->write(pendingListBaseAddress + offset * pageSize, pageSize,
-                           InvalidEventID);
+                           InvalidEventID, false);
 
       ctx->counter++;
     }
@@ -261,11 +261,12 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
     pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, cmd->getTag()));
 
     if (cmd) {
-      object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID);
+      object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID,
+                          false);
     }
     else {
       object.memory->read(pendingListBaseAddress + offset * pageSize, pageSize,
-                          InvalidEventID);
+                          InvalidEventID, false);
     }
 
     ctx->counter++;
