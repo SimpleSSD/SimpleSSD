@@ -81,23 +81,25 @@ std::list<BasicFTL::SuperRequest>::iterator BasicFTL::getWriteContext(
   return iter;
 }
 
-BasicFTL::ReadModifyWriteContext *BasicFTL::getRMWContext(uint64_t tag,
-                                                          Request **ppcmd) {
-  for (auto &iter : rmwList) {
-    for (auto &cmd : iter.list) {
+std::list<BasicFTL::ReadModifyWriteContext>::iterator BasicFTL::getRMWContext(
+    uint64_t tag, Request **ppcmd) {
+  auto iter = rmwList.begin();
+
+  for (; iter != rmwList.end(); iter++) {
+    for (auto &cmd : iter->list) {
       if (cmd && cmd->getTag() == tag) {
         if (ppcmd) {
           *ppcmd = cmd;
         }
 
-        return &iter;
+        break;
       }
     }
   }
 
-  panic("Unexpected tag in read-modify-write.");
+  panic_if(iter == rmwList.end(), "Unexpected tag in read-modify-write.");
 
-  return nullptr;
+  return iter;
 }
 
 void BasicFTL::read(Request *cmd) {
@@ -329,6 +331,8 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
 
       call = true;
     }
+
+    rmwList.erase(ctx);
 
     if (call && !isScheduled(eventMergedWriteDone)) {
       scheduleNow(eventMergedWriteDone);

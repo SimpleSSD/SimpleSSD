@@ -77,7 +77,8 @@ class BasicFTL : public AbstractFTL {
   std::list<ReadModifyWriteContext> rmwList;
   std::list<std::vector<Request *>> list;
 
-  ReadModifyWriteContext *getRMWContext(uint64_t, Request ** = nullptr);
+  std::list<ReadModifyWriteContext>::iterator getRMWContext(
+      uint64_t, Request ** = nullptr);
 
   std::deque<std::pair<Event, uint64_t>> mergeList;
 
