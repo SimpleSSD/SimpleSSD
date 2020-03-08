@@ -166,8 +166,7 @@ void BasicFTL::write(Request *cmd) {
       pMapper->writeMapping(pendingList.at(chunkBegin - alignedBegin),
                             eventWriteSubmit);
     }
-  }
-  else {
+
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
   }
 
