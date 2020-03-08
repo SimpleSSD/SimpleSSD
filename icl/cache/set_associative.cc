@@ -337,10 +337,16 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
   fstat += getValidWay(lpn, way);
 
   if (way == waySize) {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "LOOKUP | LPN %" PRIu64 " | Not found", lpn);
+
     // Miss, we need allocation
     sreq->setAllocate();
   }
   else {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+
     sreq->setDRAMAddress(makeDataAddress(set, way));
 
     // Check NAND/DMA is pending when request is write
@@ -355,6 +361,9 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
       line.dirty = true;
 
       if (line.dmaPending || line.nvmPending) {
+        debugprint(Log::DebugID::ICL_SetAssociative,
+                   "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+
         // We need to stall this lookup
         lookupList.emplace(line.tag, sreq->getTag());
 
@@ -378,6 +387,9 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
   LPN slpn = sreq->getOffset();
   uint32_t nlp = sreq->getLength();
   uint64_t i = 0;
+
+  debugprint(Log::DebugID::ICL_SetAssociative, "FLUSH  | LPN %" PRIu64 " + %u",
+             slpn, nlp);
 
   for (auto &iter : cacheline) {
     if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
@@ -413,6 +425,9 @@ void SetAssociative::erase(HIL::SubRequest *sreq) {
   LPN slpn = sreq->getOffset();
   uint32_t nlp = sreq->getLength();
 
+  debugprint(Log::DebugID::ICL_SetAssociative, "ERASE  | LPN %" PRIu64 " + %u",
+             slpn, nlp);
+
   for (auto &iter : cacheline) {
     if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
       iter.data = 0;
@@ -436,6 +451,9 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   fstat += getEmptyWay(lpn, way);
 
   if (way == waySize) {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "ALLOC  | LPN %" PRIu64 " | Pending", lpn);
+
     // Insert into pending queue
     allocateList.emplace(set, sreq->getTag());
 
@@ -450,6 +468,9 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     return;
   }
   else {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "ALLOC  | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+
     // Set DRAM address
     sreq->setDRAMAddress(makeDataAddress(set, way));
 
