@@ -107,17 +107,23 @@ void FTL::completeRequest(Request *req) {
 void FTL::read(Request &&req) {
   auto preq = insertRequest(std::move(req));
 
+  debugprint(Log::DebugID::FTL, "READ  | LPN %" PRIu64, req.lpn);
+
   pFTL->read(preq);
 }
 
 void FTL::write(Request &&req) {
   auto preq = insertRequest(std::move(req));
 
+  debugprint(Log::DebugID::FTL, "WRITE | LPN %" PRIu64, req.lpn);
+
   pFTL->write(preq);
 }
 
 void FTL::invalidate(Request &&req) {
   auto preq = insertRequest(std::move(req));
+
+  debugprint(Log::DebugID::FTL, "INVAL | LPN %" PRIu64, req.lpn);
 
   pFTL->invalidate(preq);
 }

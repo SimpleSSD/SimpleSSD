@@ -38,6 +38,8 @@ class BasicFTL : public AbstractFTL {
     bool writePending;
     uint64_t counter;
 
+    uint64_t beginAt;
+
     ReadModifyWriteContext()
         : alignedBegin(InvalidLPN),
           chunkBegin(InvalidLPN),
@@ -103,16 +105,16 @@ class BasicFTL : public AbstractFTL {
   void write_done(uint64_t);
 
   Event eventPartialReadSubmit;
-  void rmw_readSubmit(uint64_t);
+  void rmw_readSubmit(uint64_t, uint64_t);
 
   Event eventPartialReadDone;
-  void rmw_readDone(uint64_t);
+  void rmw_readDone(uint64_t, uint64_t);
 
   Event eventPartialWriteSubmit;
-  void rmw_writeSubmit(uint64_t);
+  void rmw_writeSubmit(uint64_t, uint64_t);
 
   Event eventPartialWriteDone;
-  void rmw_writeDone(uint64_t);
+  void rmw_writeDone(uint64_t, uint64_t);
 
   Event eventMergedWriteDone;
   void rmw_mergeDone();

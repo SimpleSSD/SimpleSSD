@@ -38,16 +38,16 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   eventWriteDone = createEvent([this](uint64_t, uint64_t d) { write_done(d); },
                                "FTL::BasicFTL::eventWriteDone");
   eventPartialReadSubmit =
-      createEvent([this](uint64_t, uint64_t d) { rmw_readSubmit(d); },
+      createEvent([this](uint64_t t, uint64_t d) { rmw_readSubmit(t, d); },
                   "FTL::BasicFTL::eventPartialReadSubmit");
   eventPartialReadDone =
-      createEvent([this](uint64_t, uint64_t d) { rmw_readDone(d); },
+      createEvent([this](uint64_t t, uint64_t d) { rmw_readDone(t, d); },
                   "FTL::BasicFTL::eventPartialReadDone");
   eventPartialWriteSubmit =
-      createEvent([this](uint64_t, uint64_t d) { rmw_writeSubmit(d); },
+      createEvent([this](uint64_t t, uint64_t d) { rmw_writeSubmit(t, d); },
                   "FTL::BasicFTL::eventPartialWriteSubmit");
   eventPartialWriteDone =
-      createEvent([this](uint64_t, uint64_t d) { rmw_writeDone(d); },
+      createEvent([this](uint64_t t, uint64_t d) { rmw_writeDone(t, d); },
                   "FTL::BasicFTL::eventPartialWriteDone");
   eventMergedWriteDone =
       createEvent([this](uint64_t, uint64_t) { rmw_mergeDone(); },
@@ -124,6 +124,11 @@ void BasicFTL::write(Request *cmd) {
   if (lpn == chunkEnd) {
     // Not aligned to minMappingSize
     if (alignedBegin != chunkBegin || alignedEnd != chunkEnd) {
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "RMW | INSERT | REQUEST %" PRIu64 " - %" PRIu64
+                 " | ALIGN %" PRIu64 " - %" PRIu64,
+                 chunkBegin, chunkEnd, alignedBegin, alignedEnd);
+
       bool merged = false;
 
       if (mergeReadModifyWrite) {
@@ -151,6 +156,9 @@ void BasicFTL::write(Request *cmd) {
         // Do read translation - no need for loop
         pMapper->readMapping(pendingList.at(chunkBegin - alignedBegin),
                              eventPartialReadSubmit);
+      }
+      else {
+        debugprint(Log::DebugID::FTL_PageLevel, "RMW | MERGED");
       }
     }
     else {
@@ -182,8 +190,14 @@ void BasicFTL::write_done(uint64_t tag) {
   completeRequest(req);
 }
 
-void BasicFTL::rmw_readSubmit(uint64_t tag) {
+void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
   auto ctx = getRMWContext(tag);
+
+  ctx->beginAt = now;
+
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "RMW | READ   | ALIGN %" PRIu64 " - %" PRIu64, ctx->alignedBegin,
+             ctx->alignedBegin + minMappingSize);
 
   // Get first command
   auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
@@ -206,12 +220,18 @@ void BasicFTL::rmw_readSubmit(uint64_t tag) {
   }
 }
 
-void BasicFTL::rmw_readDone(uint64_t tag) {
+void BasicFTL::rmw_readDone(uint64_t now, uint64_t tag) {
   auto ctx = getRMWContext(tag);
 
   ctx->counter--;
 
   if (ctx->counter == 0) {
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "RMW | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               ctx->alignedBegin, ctx->alignedBegin + minMappingSize,
+               ctx->beginAt, now, now - ctx->beginAt);
+
     // Get first command
     auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
 
@@ -220,10 +240,15 @@ void BasicFTL::rmw_readDone(uint64_t tag) {
   }
 }
 
-void BasicFTL::rmw_writeSubmit(uint64_t tag) {
+void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
   auto ctx = getRMWContext(tag);
 
+  ctx->beginAt = now;
   ctx->writePending = true;
+
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "RMW | WRITE  | ALIGN %" PRIu64 " - %" PRIu64, ctx->alignedBegin,
+             ctx->alignedBegin + minMappingSize);
 
   // Get first command
   auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
@@ -250,7 +275,7 @@ void BasicFTL::rmw_writeSubmit(uint64_t tag) {
   }
 }
 
-void BasicFTL::rmw_writeDone(uint64_t tag) {
+void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
   Request *cmd = nullptr;
   auto ctx = getRMWContext(tag, &cmd);
 
@@ -261,6 +286,12 @@ void BasicFTL::rmw_writeDone(uint64_t tag) {
   if (ctx->counter == 0) {
     bool call = false;
     auto next = ctx->next;
+
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "RMW | WRITE  | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               ctx->alignedBegin, ctx->alignedBegin + minMappingSize,
+               ctx->beginAt, now, now - ctx->beginAt);
 
     while (next) {
       // Completion of all requests
