@@ -60,6 +60,17 @@ void HIL::submit(Operation opcode, Request *req) {
 
   panic_if(nlp == 0, "Unexpected length of request.");
 
+  {
+    uint64_t _uid = req->hostTag;
+
+    debugprint(Log::DebugID::HIL,
+               "%s | %3u:%u:%-5u -> %7" PRIu64 " | LPN %" PRIu64 " + %" PRIu64
+               " | BYTE %" PRIu64 " + %" PRIu64,
+               getOperationName(req->opcode), HIGH32(_uid), HIGH16(_uid),
+               LOW16(_uid), tag, slpn, nlp, req->offset - slpn * lpnSize,
+               req->length);
+  }
+
   if (opcode < Operation::Flush) {
     // Make subrequests
     for (uint32_t i = 0; i < nlp; i++) {

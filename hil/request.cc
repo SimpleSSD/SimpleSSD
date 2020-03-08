@@ -11,6 +11,22 @@
 
 namespace SimpleSSD::HIL {
 
+static const char *OperationName[] = {
+    "NOP    ",  // None
+    "READ   ",  // Read
+    "WRITE  ",  // Write
+    "WRZERO ",  // WriteZeroes
+    "COMPARE",  // Compare
+    "CMP+WR ",  // CompareAndWrite
+    "FLUSH  ",  // Flush
+    "TRIM   ",  // Trim
+    "FORMAT ",  // Format
+};
+
+const char *getOperationName(Operation op) {
+  return OperationName[(uint16_t)op];
+}
+
 Request::Request()
     : opcode(Operation::None),
       result(Response::Success),

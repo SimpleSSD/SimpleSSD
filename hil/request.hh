@@ -40,6 +40,8 @@ enum class Response : uint16_t {
   CompareFail,       //!< Compare failed (Compare / Fused write only)
 };
 
+const char *getOperationName(Operation);
+
 class Request {
  private:
   friend HIL;
@@ -75,9 +77,7 @@ class Request {
   Request();
   Request(Event, uint64_t);
 
-  inline void setHostTag(uint64_t tag) {
-    hostTag = tag;
-  }
+  inline void setHostTag(uint64_t tag) { hostTag = tag; }
 
   inline void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
     lbaSize = lbs;
