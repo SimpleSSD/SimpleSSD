@@ -269,7 +269,7 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
   for (uint64_t i = 0; i < size; i++) {
     auto &iter = cacheline.at(i);
 
-    if (iter.valid && !iter.dmaPending && !iter.nvmPending) {
+    if (iter.valid && iter.dirty && !iter.dmaPending && !iter.nvmPending) {
       uint32_t offset = iter.tag % pagesToEvict;
 
       auto &line = collected.at(offset);
