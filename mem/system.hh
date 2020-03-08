@@ -95,9 +95,9 @@ class System {
   };
 
   uint64_t memoryTag;
+  uint64_t lastTag;
 
-  std::deque<MemoryRequest> pendingQueue;
-  std::map<uint64_t, MemoryRequest> waitingQueue;
+  std::map<uint64_t, MemoryRequest> requestQueue;
 
   void breakRequest(bool, bool, uint64_t, uint32_t, Event, uint64_t);
 

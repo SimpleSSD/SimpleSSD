@@ -14,7 +14,8 @@
 
 namespace SimpleSSD::Memory {
 
-System::System(ObjectData *po) : pobject(po), memoryTag(0), pending(false) {
+System::System(ObjectData *po)
+    : pobject(po), memoryTag(0), lastTag(0), pending(false) {
   // Create memories
   switch ((Config::Model)pobject->config->readUint(Section::Memory,
                                                    Config::Key::DRAMModel)) {
@@ -90,11 +91,14 @@ inline MemoryType System::validate(uint64_t offset, uint32_t size) {
 
 void System::breakRequest(bool read, bool sram, uint64_t address,
                           uint32_t length, Event eid, uint64_t data) {
+  uint64_t tag = memoryTag++;
+
   uint64_t alignedBegin = (address / MemoryPacketSize) * MemoryPacketSize;
   uint64_t alignedEnd =
       DIVCEIL(address + length, MemoryPacketSize) * MemoryPacketSize;
 
-  pendingQueue.emplace_back(read, sram, alignedBegin, alignedEnd, eid, data);
+  requestQueue.emplace(
+      tag, MemoryRequest(read, sram, alignedBegin, alignedEnd, eid, data));
 }
 
 void System::updateDispatch() {
@@ -104,66 +108,57 @@ void System::updateDispatch() {
 }
 
 void System::dispatch() {
-  if (waitingQueue.empty()) {
-    if (pendingQueue.empty()) {
-      // Dispatch done
-      pending = false;
+  if (!requestQueue.empty()) {
+    // We have request
+    pending = true;
+
+    auto last = requestQueue.find(lastTag);
+
+    panic_if(last == requestQueue.end(), "");
+
+    // Submit last
+    auto &iter = last->second;
+    uint64_t addr = iter.start + MemoryPacketSize * iter.submit++;
+
+    if (iter.sram) {
+      if (iter.read) {
+        sram->read(addr, eventSRAMDone, lastTag);
+      }
+      else {
+        sram->write(addr, eventSRAMDone, lastTag);
+      }
+    }
+    else {
+      if (iter.read) {
+        dram->read(addr, eventDRAMDone, lastTag);
+      }
+      else {
+        dram->write(addr, eventDRAMDone, lastTag);
+      }
+    }
+
+    if (iter.submit == iter.npkt) {
+      lastTag++;
+      last++;
+    }
+
+    if (last != requestQueue.end()) {
+      pobject->cpu->schedule(eventDispatch, 0, dispatchPeriod);
 
       return;
     }
-
-    // Get first request
-    uint64_t tag = ++memoryTag;
-
-    waitingQueue.emplace(tag, pendingQueue.front());
-    pendingQueue.pop_front();
   }
 
-  bool submit = false;
+  // Dispatch done
+  pending = false;
 
-  for (auto &iter : waitingQueue) {
-    if (iter.second.submit < iter.second.npkt) {
-      submit = true;
-
-      // Submit next request
-      uint64_t addr =
-          iter.second.start + MemoryPacketSize * iter.second.submit++;
-
-      if (iter.second.sram) {
-        if (iter.second.read) {
-          sram->read(addr, eventSRAMDone, iter.first);
-        }
-        else {
-          sram->write(addr, eventSRAMDone, iter.first);
-        }
-      }
-      else {
-        if (iter.second.read) {
-          dram->read(addr, eventDRAMDone, iter.first);
-        }
-        else {
-          dram->write(addr, eventDRAMDone, iter.first);
-        }
-      }
-
-      break;
-    }
-  }
-
-  if (submit) {
-    pending = true;
-
-    pobject->cpu->schedule(eventDispatch, 0, dispatchPeriod);
-  }
-  else {
-    pending = false;
-  }
+  return;
 }
 
 void System::completion(uint64_t now, uint64_t tag) {
-  auto iter = waitingQueue.find(tag);
+  auto iter = requestQueue.find(tag);
 
-  panic_if(iter == waitingQueue.end(), "Unexpected completion.");
+  panic_if(iter == requestQueue.end(), "Unexpected completion.");
 
   iter->second.complete++;
 
@@ -171,7 +166,7 @@ void System::completion(uint64_t now, uint64_t tag) {
     // Completed
     pobject->cpu->scheduleAbs(iter->second.eid, iter->second.data, now);
 
-    waitingQueue.erase(iter);
+    requestQueue.erase(iter);
   }
 }
 
@@ -299,26 +294,11 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, memoryTag);
 
-  size = pendingQueue.size();
+  size = requestQueue.size();
 
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : pendingQueue) {
-    BACKUP_SCALAR(out, iter.start);
-    BACKUP_SCALAR(out, iter.npkt);
-    BACKUP_SCALAR(out, iter.read);
-    BACKUP_SCALAR(out, iter.sram);
-    BACKUP_SCALAR(out, iter.submit);
-    BACKUP_SCALAR(out, iter.complete);
-    BACKUP_EVENT(out, iter.eid);
-    BACKUP_SCALAR(out, iter.data);
-  }
-
-  size = waitingQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : waitingQueue) {
+  for (auto &iter : requestQueue) {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second.start);
     BACKUP_SCALAR(out, iter.second.npkt);
@@ -375,23 +355,6 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    MemoryRequest req;
-
-    RESTORE_SCALAR(in, req.start);
-    RESTORE_SCALAR(in, req.npkt);
-    RESTORE_SCALAR(in, req.read);
-    RESTORE_SCALAR(in, req.sram);
-    RESTORE_SCALAR(in, req.submit);
-    RESTORE_SCALAR(in, req.complete);
-    RESTORE_EVENT(in, req.eid);
-    RESTORE_SCALAR(in, req.data);
-
-    pendingQueue.emplace_back(req);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
     uint64_t tag;
     MemoryRequest req;
 
@@ -405,7 +368,7 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_EVENT(in, req.eid);
     RESTORE_SCALAR(in, req.data);
 
-    waitingQueue.emplace(tag, req);
+    requestQueue.emplace(tag, req);
   }
 
   RESTORE_SCALAR(in, pending);
