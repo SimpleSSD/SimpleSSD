@@ -523,6 +523,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     allocateList.emplace(set, sreq->getTag());
 
     evict = true;
+    eid = InvalidEventID;
   }
   else {
     debugprint(Log::DebugID::ICL_SetAssociative,
@@ -568,8 +569,6 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     collect(set, list);
 
     manager->drain(list);
-
-    eid = InvalidEventID;
   }
 
   // No memory access because we already do that in lookup phase
