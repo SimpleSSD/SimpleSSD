@@ -111,7 +111,7 @@ BasicCache::~BasicCache() {
 void BasicCache::read(HIL::SubRequest *req) {
   cache->lookup(req);
 
-  if (detector) {
+  if (detector && !req->isICLRequest()) {
     bool old = detector->isEnabled();
 
     detector->submitSubRequest(req);
