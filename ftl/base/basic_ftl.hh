@@ -75,7 +75,7 @@ class BasicFTL : public AbstractFTL {
   std::deque<std::pair<Event, uint64_t>> mergeList;
 
   inline LPN getAlignedLPN(LPN lpn) {
-    return lpn / mergeReadModifyWrite * mergeReadModifyWrite;
+    return lpn / minMappingSize * minMappingSize;
   }
 
   // Statistics
