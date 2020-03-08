@@ -16,6 +16,14 @@
 
 namespace SimpleSSD::ICL {
 
+#define debugprint_basic(req, format, ...)                                     \
+  {                                                                            \
+    debugprint(Log::DebugID::ICL_BasicCache,                                   \
+               "%s | REQ %7" PRIu64 ":%-3u | " format,                         \
+               HIL::getOperationName(req->getOpcode()), req->getParentTag(),   \
+               req->getTagForLog(), ##__VA_ARGS__);                            \
+  }
+
 class BasicDetector : public SequentialDetector {
  private:
   uint64_t lastRequestTag;
@@ -53,7 +61,7 @@ class BasicCache : public AbstractManager {
                   std::vector<FlushContext>::iterator);
 
   Event eventDrainDone;
-  void drainDone(uint64_t);
+  void drainDone(uint64_t, uint64_t);
 
   // Statistics
   uint64_t prefetched;

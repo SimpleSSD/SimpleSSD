@@ -73,6 +73,8 @@ class Request {
 
   LPN slpn;  //!< Starting logical page number
 
+  uint64_t firstSubRequestTag;
+
  public:
   Request();
   Request(Event, uint64_t);
@@ -176,6 +178,10 @@ class SubRequest {
   inline uint64_t getParentTag() { return request->requestTag; }
   inline LPN getSLPN() { return request->slpn; }
   inline uint32_t getNLP() { return request->nlp; }
+
+  inline uint64_t getTagForLog() {
+    return requestTag - request->firstSubRequestTag;
+  }
 
   /* Only for Flush, Trim and Format */
   inline uint64_t getOffset() { return offset; }

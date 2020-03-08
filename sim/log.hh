@@ -38,6 +38,7 @@ class Log {
     HIL_NVMe,
     HIL_NVMe_Command,
     ICL,
+    ICL_BasicCache,
     ICL_SetAssociative,
     FTL,
     FTL_PageLevel,

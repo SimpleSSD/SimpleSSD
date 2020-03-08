@@ -24,7 +24,8 @@ struct FlushContext {
   uint32_t offset;  // Offset in page
   uint32_t length;  // Length in page
 
-  uint8_t *buffer;  // Data (for simulation)
+  uint8_t *buffer;     // Data (for simulation)
+  uint64_t flushedAt;  // For logging
 
   FlushContext(LPN l, uint64_t a)
       : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}

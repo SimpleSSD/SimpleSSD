@@ -117,6 +117,7 @@ void HIL::submit(Operation opcode, Request *req) {
   }
 
   req->nvmBeginAt = getTick();
+  req->firstSubRequestTag = subrequestCounter - nlp + 1;
 
   switch (opcode) {
     case Operation::Compare:

@@ -102,8 +102,9 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
   prefetched = 0;
   drained = 0;
 
-  eventDrainDone = createEvent([this](uint64_t, uint64_t d) { drainDone(d); },
-                               "ICL::BasicCache::eventDrainDone");
+  eventDrainDone =
+      createEvent([this](uint64_t t, uint64_t d) { drainDone(t, d); },
+                  "ICL::BasicCache::eventDrainDone");
 }
 
 BasicCache::~BasicCache() {
@@ -131,9 +132,12 @@ void BasicCache::read(HIL::SubRequest *req) {
         }
 
         nextlpn = lastPrefetched;
+
+        debugprint_basic(req, "PREFETCH");
       }
       else {
         // First - read-ahead
+        debugprint_basic(req, "READ-AHEAD");
       }
 
       // Make prefetch request
@@ -170,10 +174,14 @@ void BasicCache::lookupDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   if (req->getAllocate()) {
+    debugprint_basic(req, "CACHE MISS");
+
     // We need allocation
     cache->allocate(req);
   }
   else {
+    debugprint_basic(req, "CACHE HIT");
+
     cacheDone(tag);
   }
 }
@@ -195,7 +203,12 @@ void BasicCache::cacheDone(uint64_t tag) {
 }
 
 void BasicCache::drain(std::vector<FlushContext> &list) {
-  panic_if(list.size() == 0, "Empty flush list.");
+  uint64_t now = getTick();
+  uint64_t size = list.size();
+
+  panic_if(size == 0, "Empty flush list.");
+
+  debugprint(Log::DebugID::ICL_BasicCache, "DRAIN | %" PRIu64 " PAGES", size);
 
   // Sort
   std::sort(list.begin(), list.end(), FlushContext::compare);
@@ -205,7 +218,11 @@ void BasicCache::drain(std::vector<FlushContext> &list) {
   auto prev = begin;
   auto iter = std::next(begin);
 
+  begin->flushedAt = now;
+
   for (; iter < list.end(); iter++) {
+    iter->flushedAt = now;
+
     if (prev->lpn + 1 != iter->lpn) {
       drainRange(begin, iter);
 
@@ -221,6 +238,9 @@ void BasicCache::drain(std::vector<FlushContext> &list) {
 void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
                             std::vector<FlushContext>::iterator end) {
   uint32_t nlp = std::distance(begin, end);
+
+  debugprint(Log::DebugID::ICL_BasicCache, "DRAIN | LPN %" PRIu64 " + %u",
+             begin->lpn, nlp);
 
   for (auto iter = begin; iter < end; begin++) {
     uint64_t tag = ++drainCounter;
@@ -238,10 +258,16 @@ void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
   drained += nlp;
 }
 
-void BasicCache::drainDone(uint64_t tag) {
+void BasicCache::drainDone(uint64_t now, uint64_t tag) {
   auto iter = drainQueue.find(tag);
 
   panic_if(iter == drainQueue.end(), "Unexpected drain ID %" PRIu64 ".", tag);
+
+  debugprint(Log::DebugID::ICL_BasicCache,
+             "DRAIN | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+             ")",
+             iter->second.lpn, iter->second.flushedAt, now,
+             now - iter->second.flushedAt);
 
   cache->nvmDone(iter->second.lpn);
 
