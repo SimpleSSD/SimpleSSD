@@ -121,7 +121,7 @@ void BasicFTL::write(Request *cmd) {
   pendingList.at(lpn - alignedBegin) = cmd;
 
   // Check cmd is final of current chunk
-  if (lpn == chunkEnd) {
+  if (lpn + 1 == chunkEnd) {
     // Not aligned to minMappingSize
     if (alignedBegin != chunkBegin || alignedEnd != chunkEnd) {
       debugprint(Log::DebugID::FTL_PageLevel,
