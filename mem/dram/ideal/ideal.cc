@@ -16,8 +16,6 @@ IdealDRAM::IdealDRAM(ObjectData &o)
       scheduler(
           o, "Memory::IdealDRAM::scheduler",
           [this](Request *r) -> uint64_t { return preSubmit(r); },
-          [this](Request *r) -> uint64_t { return preSubmit(r); },
-          [this](Request *r) { postDone(r); },
           [this](Request *r) { postDone(r); }, Request::backup,
           Request::restore) {
   // Latency of transfer (MemoryPacketSize)
@@ -41,25 +39,25 @@ void IdealDRAM::postDone(Request *req) {
 }
 
 void IdealDRAM::read(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(address, eid, data);
+  auto req = new Request(true, address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
 
   readStat.add(MemoryPacketSize);
 
-  scheduler.read(req);
+  scheduler.enqueue(req);
 }
 
 void IdealDRAM::write(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(address, eid, data);
+  auto req = new Request(false, address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
 
   writeStat.add(MemoryPacketSize);
 
-  scheduler.write(req);
+  scheduler.enqueue(req);
 }
 
 void IdealDRAM::createCheckpoint(std::ostream &out) const noexcept {

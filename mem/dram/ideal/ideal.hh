@@ -23,7 +23,7 @@ namespace SimpleSSD::Memory::DRAM::Ideal {
  */
 class IdealDRAM : public AbstractDRAM {
  private:
-  Scheduler<Request *> scheduler;
+  SingleScheduler<Request *> scheduler;
 
   double packetLatency;
 

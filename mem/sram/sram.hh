@@ -18,7 +18,7 @@ namespace SimpleSSD::Memory::SRAM {
 
 class SRAM : public AbstractSRAM {
  protected:
-  Scheduler<Request *> scheduler;
+  SingleScheduler<Request *> scheduler;
 
   /* For power calculation */
   uint64_t lastResetAt;
@@ -28,8 +28,7 @@ class SRAM : public AbstractSRAM {
   // Stat
   BusyStat busy;
 
-  uint64_t preSubmitRead(Request *);
-  uint64_t preSubmitWrite(Request *);
+  uint64_t preSubmit(Request *);
   void postDone(Request *);
 
  public:

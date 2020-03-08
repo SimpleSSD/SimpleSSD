@@ -13,9 +13,7 @@ SRAM::SRAM(ObjectData &o)
     : AbstractSRAM(o),
       scheduler(
           o, "Memory::SRAM::scheduler",
-          [this](Request *r) -> uint64_t { return preSubmitRead(r); },
-          [this](Request *r) -> uint64_t { return preSubmitWrite(r); },
-          [this](Request *r) { postDone(r); },
+          [this](Request *r) -> uint64_t { return preSubmit(r); },
           [this](Request *r) { postDone(r); }, Request::backup,
           Request::restore),
       lastResetAt(0) {
@@ -32,12 +30,13 @@ SRAM::SRAM(ObjectData &o)
 
 SRAM::~SRAM() {}
 
-uint64_t SRAM::preSubmitRead(Request *) {
-  return pStructure->readCycles;
-}
-
-uint64_t SRAM::preSubmitWrite(Request *) {
-  return pStructure->writeCycles;
+uint64_t SRAM::preSubmit(Request *req) {
+  if (req->read) {
+    return pStructure->readCycles;
+  }
+  else {
+    return pStructure->writeCycles;
+  }
 }
 
 void SRAM::postDone(Request *req) {
@@ -50,7 +49,7 @@ void SRAM::postDone(Request *req) {
 }
 
 void SRAM::read(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(address, eid, data);
+  auto req = new Request(true, address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
@@ -58,11 +57,11 @@ void SRAM::read(uint64_t address, Event eid, uint64_t data) {
   busy.busyBegin(req->beginAt);
   readStat.add(MemoryPacketSize);
 
-  scheduler.read(req);
+  scheduler.enqueue(req);
 }
 
 void SRAM::write(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(address, eid, data);
+  auto req = new Request(false, address, eid, data);
 
   // Enqueue request
   req->beginAt = getTick();
@@ -70,7 +69,7 @@ void SRAM::write(uint64_t address, Event eid, uint64_t data) {
   busy.busyBegin(req->beginAt);
   writeStat.add(MemoryPacketSize);
 
-  scheduler.write(req);
+  scheduler.enqueue(req);
 }
 
 void SRAM::getStatValues(std::vector<double> &values) noexcept {
