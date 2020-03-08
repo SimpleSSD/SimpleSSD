@@ -27,8 +27,7 @@ namespace SimpleSSD::ICL {
 class BasicDetector : public SequentialDetector {
  private:
   uint64_t lastRequestTag;
-  LPN lpn;
-  uint32_t offset;
+  uint64_t offset;
   uint32_t length;
 
   uint32_t hitCounter;

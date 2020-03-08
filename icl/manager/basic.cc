@@ -14,8 +14,7 @@ namespace SimpleSSD::ICL {
 BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
     : SequentialDetector(p),
       lastRequestTag(1),
-      lpn(std::numeric_limits<LPN>::max()),
-      offset(0),
+      offset(std::numeric_limits<uint64_t>::max()),
       length(0),
       hitCounter(0),
       accessCounter(0),
@@ -24,7 +23,7 @@ BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
 
 void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   if (lastRequestTag != req->getParentTag()) {
-    if (lpn * pageSize + offset + length == req->getLPN() * pageSize + offset) {
+    if (offset + length == req->getLPN() * pageSize + req->getSkipFront()) {
       if (!enabled) {
         hitCounter++;
         accessCounter += length;
@@ -40,21 +39,18 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
       hitCounter = 0;
       accessCounter = 0;
     }
+
+    length = 0;
   }
 
-  lpn = req->getLPN();
-
-  LPN diff = (lpn - req->getSLPN()) * pageSize;
-
-  offset = req->getOffset() - diff;
-  length = req->getLength();
+  offset = req->getLPN() * pageSize + req->getSkipFront();
+  length += req->getLength();
 }
 
 void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
   SequentialDetector::createCheckpoint(out);
 
   BACKUP_SCALAR(out, lastRequestTag);
-  BACKUP_SCALAR(out, lpn);
   BACKUP_SCALAR(out, offset);
   BACKUP_SCALAR(out, length);
   BACKUP_SCALAR(out, hitCounter);
@@ -66,7 +62,6 @@ void BasicDetector::restoreCheckpoint(std::istream &in,
   SequentialDetector::restoreCheckpoint(in, object);
 
   RESTORE_SCALAR(in, lastRequestTag);
-  RESTORE_SCALAR(in, lpn);
   RESTORE_SCALAR(in, offset);
   RESTORE_SCALAR(in, length);
   RESTORE_SCALAR(in, hitCounter);

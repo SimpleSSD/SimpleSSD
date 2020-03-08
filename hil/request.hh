@@ -186,6 +186,9 @@ class SubRequest {
     return requestTag - request->firstSubRequestTag;
   }
 
+  inline uint32_t getSkipFront() { return skipFront; }
+  inline uint32_t getSkipEnd() { return skipEnd; }
+
   /* Only for Flush, Trim and Format */
   inline uint64_t getOffset() { return offset; }
   inline uint32_t getLength() { return length; }
