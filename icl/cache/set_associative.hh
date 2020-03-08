@@ -62,7 +62,7 @@ class SetAssociative : public AbstractCache {
   std::unordered_map<LPN, LineInfo> evictList;
 
   // Allocation pending
-  std::unordered_map<uint32_t, uint64_t> allocateList;
+  std::unordered_multimap<uint32_t, uint64_t> allocateList;
 
   // Victim selection
   CPU::Function fifoEviction(uint32_t, uint32_t &);
