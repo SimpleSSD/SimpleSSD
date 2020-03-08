@@ -74,6 +74,7 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(offset, length, pHIL->getLPNSize());
+  tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
 
   pHIL->flush(&tag->request);

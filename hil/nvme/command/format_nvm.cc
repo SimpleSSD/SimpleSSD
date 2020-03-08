@@ -80,6 +80,7 @@ void FormatNVM::setRequest(ControllerData *cdata, SQContext *req) {
       tag->initRequest(eventCompletion);
       tag->request.setAddress(info->namespaceRange.first,
                               info->namespaceRange.second, pHIL->getLPNSize());
+      tag->request.setHostTag(tag->getGCID());
       tag->beginAt = getTick();
 
       pHIL->format(&tag->request, (FormatOption)ses);

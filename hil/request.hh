@@ -67,12 +67,17 @@ class Request {
   uint64_t nvmBeginAt;
 
   uint64_t requestTag;  //!< Unique ID for HIL
+  uint64_t hostTag;     //!< Host tag info <u32:ctrl><u16:queue><u16:entry>
 
   LPN slpn;  //!< Starting logical page number
 
  public:
   Request();
   Request(Event, uint64_t);
+
+  inline void setHostTag(uint64_t tag) {
+    hostTag = tag;
+  }
 
   inline void setAddress(uint64_t slba, uint32_t nlb, uint32_t lbs) {
     lbaSize = lbs;

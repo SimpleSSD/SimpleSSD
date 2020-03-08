@@ -119,6 +119,7 @@ void DatasetManagement::setRequest(ControllerData *cdata, SQContext *req) {
 
   // Make buffer
   tag->buffer.resize((uint64_t)nr << 4);
+  tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
 
   tag->createDMAEngine((uint32_t)tag->buffer.size(), dmaInitEvent);

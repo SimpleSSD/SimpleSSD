@@ -87,6 +87,7 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(slba, nlb, lbaSize);
+  tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
   tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
 }
