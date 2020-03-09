@@ -568,7 +568,9 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
     collect(set, list);
 
-    manager->drain(list);
+    if (!list.empty()) {
+      manager->drain(list);
+    }
   }
 
   // No memory access because we already do that in lookup phase
