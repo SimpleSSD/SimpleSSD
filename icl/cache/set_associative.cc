@@ -556,7 +556,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
       line.validbits.set();
     }
 
-    if (dirtyLines >= evictThreshold) {
+    if (dirtyLines >= evictThreshold + evictList.size()) {
       evict = true;
       set = setSize;
     }
