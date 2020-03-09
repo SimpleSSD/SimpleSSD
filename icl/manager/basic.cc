@@ -350,6 +350,8 @@ void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventDrainDone);
+  BACKUP_EVENT(out, eventReadDone);
+  BACKUP_EVENT(out, eventCompletion);
 }
 
 void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
@@ -388,6 +390,10 @@ void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
 
     completionQueue.emplace_back(tag);
   }
+
+  RESTORE_EVENT(in, eventDrainDone);
+  RESTORE_EVENT(in, eventReadDone);
+  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::ICL
