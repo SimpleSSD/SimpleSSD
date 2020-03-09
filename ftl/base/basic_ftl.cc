@@ -310,10 +310,7 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
 
   ctx->counter--;
 
-  scheduleNow(cmd->getEvent(), cmd->getEventData());
-
   if (ctx->counter == 0) {
-    bool call = false;
     auto next = ctx->next;
 
     debugprint(Log::DebugID::FTL_PageLevel,
@@ -322,21 +319,27 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
                ctx->alignedBegin, ctx->alignedBegin + minMappingSize,
                ctx->beginAt, now, now - ctx->beginAt);
 
+    for (auto cmd : ctx->list) {
+      if (cmd) {
+        mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+      }
+    }
+
     while (next) {
       // Completion of all requests
       for (auto cmd : next->list) {
-        mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+        if (cmd) {
+          mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+        }
       }
 
       next = next->next;
       delete ctx->next;
-
-      call = true;
     }
 
     rmwList.erase(ctx);
 
-    if (call && !isScheduled(eventMergedWriteDone)) {
+    if (!isScheduled(eventMergedWriteDone)) {
       scheduleNow(eventMergedWriteDone);
     }
   }
