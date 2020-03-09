@@ -286,7 +286,7 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
   uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
-    pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, cmd->getTag()));
+    pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, tag));
 
     if (cmd) {
       object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID,
