@@ -52,7 +52,8 @@ class BasicFTL : public AbstractFTL {
           next(nullptr),
           last(nullptr),
           writePending(false),
-          counter(0) {}
+          counter(0),
+          beginAt(0) {}
     ReadModifyWriteContext(uint64_t size)
         : alignedBegin(InvalidLPN),
           chunkBegin(InvalidLPN),
@@ -60,7 +61,8 @@ class BasicFTL : public AbstractFTL {
           next(nullptr),
           last(nullptr),
           writePending(false),
-          counter(0) {}
+          counter(0),
+          beginAt(0) {}
 
     void push_back(ReadModifyWriteContext *val) {
       if (last == nullptr) {
