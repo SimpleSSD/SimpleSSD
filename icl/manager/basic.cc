@@ -102,6 +102,8 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
                   "ICL::BasicCache::eventDrainDone");
   eventReadDone = createEvent([this](uint64_t, uint64_t d) { readDone(d); },
                               "ICL::BasicCache::eventReadDone");
+  eventCompletion = createEvent([this](uint64_t, uint64_t) { completion(); },
+                                "ICL::BasicCache::eventCompletion");
 }
 
 BasicCache::~BasicCache() {
@@ -276,7 +278,25 @@ void BasicCache::readDone(uint64_t tag) {
 
   cache->nvmDone(req->getLPN());
 
-  scheduleNow(eventICLCompletion, tag);
+  completionQueue.emplace_back(tag);
+
+  if (!isScheduled(eventCompletion)) {
+    scheduleNow(eventCompletion);
+  }
+}
+
+void BasicCache::completion() {
+  panic_if(completionQueue.empty(), "Unexpected completion request.");
+
+  auto &req = completionQueue.front();
+
+  scheduleNow(eventICLCompletion, req);
+
+  completionQueue.pop_front();
+
+  if (!completionQueue.empty()) {
+    scheduleNow(eventCompletion);
+  }
 }
 
 void BasicCache::getStatList(std::vector<Stat> &list,
@@ -321,6 +341,14 @@ void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second.length);
   }
 
+  size = completionQueue.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : completionQueue) {
+    BACKUP_SCALAR(out, iter);
+  }
+
   BACKUP_EVENT(out, eventDrainDone);
 }
 
@@ -351,6 +379,14 @@ void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, ctx.length);
 
     drainQueue.emplace(tag, ctx);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, tag);
+
+    completionQueue.emplace_back(tag);
   }
 }
 
