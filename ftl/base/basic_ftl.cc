@@ -164,7 +164,7 @@ void BasicFTL::write(Request *cmd) {
       }
 
       if (!merged) {
-        auto ret = rmwList.emplace_back(ReadModifyWriteContext());
+        auto &ret = rmwList.emplace_back(ReadModifyWriteContext());
 
         ret.list = std::move(pendingList);
         ret.alignedBegin = alignedBegin;
@@ -179,7 +179,7 @@ void BasicFTL::write(Request *cmd) {
       }
     }
     else {
-      auto ret = writeList.emplace_back(std::move(pendingList));
+      auto &ret = writeList.emplace_back(std::move(pendingList));
 
       // No need for loop
       pMapper->writeMapping(ret.front(), eventWriteSubmit);
