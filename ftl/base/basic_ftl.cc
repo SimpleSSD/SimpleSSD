@@ -92,14 +92,14 @@ std::list<BasicFTL::ReadModifyWriteContext>::iterator BasicFTL::getRMWContext(
           *ppcmd = cmd;
         }
 
-        break;
+        return iter;
       }
     }
   }
 
-  panic_if(iter == rmwList.end(), "Unexpected tag in read-modify-write.");
+  panic("Unexpected tag in read-modify-write.");
 
-  return iter;
+  return rmwList.end();
 }
 
 void BasicFTL::read(Request *cmd) {
