@@ -234,8 +234,8 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
   uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
-    if (cmd) {
-      pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, cmd->getTag()));
+    if (!cmd) {
+      pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, tag));
       object.memory->write(pendingListBaseAddress + offset * pageSize, pageSize,
                            InvalidEventID, false);
 
