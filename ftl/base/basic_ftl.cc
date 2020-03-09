@@ -226,10 +226,11 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
              ctx->alignedBegin + minMappingSize);
 
   // Get first command
-  auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+  uint64_t diff = ctx->chunkBegin - ctx->alignedBegin;
+  auto cmd = ctx->list.at(diff);
 
-  // Convert SPPN to PPN
-  PPN ppnBegin = cmd->getPPN() * minMappingSize;
+  // Convert PPN to aligned
+  PPN ppnBegin = cmd->getPPN() - diff;
   uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
@@ -277,10 +278,11 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
              ctx->alignedBegin + minMappingSize);
 
   // Get first command
-  auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+  uint64_t diff = ctx->chunkBegin - ctx->alignedBegin;
+  auto cmd = ctx->list.at(diff);
 
-  // Convert SPPN to PPN
-  PPN ppnBegin = cmd->getPPN() * minMappingSize;
+  // Convert PPN to aligned
+  PPN ppnBegin = cmd->getPPN() - diff;
   uint64_t offset = 0;
 
   for (auto &cmd : ctx->list) {
