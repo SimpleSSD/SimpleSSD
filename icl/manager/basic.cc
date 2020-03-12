@@ -197,7 +197,7 @@ void BasicCache::cacheDone(uint64_t tag) {
     pFTL->invalidate(FTL::Request(eventICLCompletion, req));
   }
   else {
-    scheduleNow(eventICLCompletion, tag);
+    readDone(tag, false);
   }
 }
 
@@ -273,10 +273,12 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void BasicCache::readDone(uint64_t tag) {
-  auto req = getSubRequest(tag);
+void BasicCache::readDone(uint64_t tag, bool senddone) {
+  if (senddone) {
+    auto req = getSubRequest(tag);
 
-  cache->nvmDone(req->getLPN());
+    cache->nvmDone(req->getLPN());
+  }
 
   completionQueue.emplace_back(tag);
 

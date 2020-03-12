@@ -65,7 +65,7 @@ class BasicCache : public AbstractManager {
   void drainDone(uint64_t, uint64_t);
 
   Event eventReadDone;
-  void readDone(uint64_t);
+  void readDone(uint64_t, bool = true);
 
   Event eventCompletion;
   void completion();
