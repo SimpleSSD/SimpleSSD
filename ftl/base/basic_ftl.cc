@@ -326,15 +326,18 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
     }
 
     while (next) {
+      auto cur = next;
+
       // Completion of all requests
-      for (auto cmd : next->list) {
+      for (auto cmd : cur->list) {
         if (cmd) {
           mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
         }
       }
 
-      next = next->next;
-      delete ctx->next;
+      next = cur->next;
+
+      delete cur;
     }
 
     rmwList.erase(ctx);
