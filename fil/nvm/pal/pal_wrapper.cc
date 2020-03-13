@@ -194,10 +194,12 @@ void PALOLD::readSpare(PPN ppn, uint8_t *data, uint64_t len) {
   // Find PPN
   auto iter = spareList.find(ppn);
 
-  panic_if(iter == spareList.end(),
-           "PPN %" PRIx64 "h does not written and no spare data.", ppn);
-
-  memcpy(data, iter->second.data(), len);
+  if (iter == spareList.end()) {
+    memset(data, 0, len);
+  }
+  else {
+    memcpy(data, iter->second.data(), len);
+  }
 }
 
 void PALOLD::writeSpare(PPN ppn, uint8_t *data, uint64_t len) {
