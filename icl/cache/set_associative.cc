@@ -265,6 +265,7 @@ void SetAssociative::tryLookup(LPN lpn, bool flush) {
       auto req = getSubRequest(iter->second);
 
       req->setAllocate();
+      req->setMiss();
     }
 
     manager->lookupDone(iter->second);
@@ -385,48 +386,46 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
 
     // Miss, we need allocation
     sreq->setAllocate();
+    sreq->setMiss();
   }
   else {
+    debugprint(Log::DebugID::ICL_SetAssociative,
+               "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+
+    sreq->setDRAMAddress(makeDataAddress(set, way));
+
+    // Check NAND/DMA is pending
+    auto &line = cacheline.at(set * waySize + way);
+    auto opcode = sreq->getOpcode();
+
+    if (line.dmaPending || line.nvmPending) {
+      debugprint(Log::DebugID::ICL_SetAssociative,
+                 "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+
+      // We need to stall this lookup
+      lookupList.emplace(line.tag, sreq->getTag());
+
+      // TODO: This is not a solution
+      return;
+    }
+
     // Check valid bits
     Bitset test(sectorsInCacheLine);
-    auto &line = cacheline.at(set * waySize + way);
 
     updateSkip(test, sreq);
 
-    test &= line.validbits;
+    // Update
+    line.accessedAt = getTick();
 
-    if (test != line.validbits) {
-      // Treat as miss
-      sreq->setAllocate();
+    if (opcode == HIL::Operation::Write ||
+        opcode == HIL::Operation::WriteZeroes) {
+      line.validbits |= test;
     }
     else {
-      debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+      test &= line.validbits;
 
-      sreq->setDRAMAddress(makeDataAddress(set, way));
-
-      // Check NAND/DMA is pending
-      auto opcode = sreq->getOpcode();
-
-      if (line.dmaPending || line.nvmPending) {
-        debugprint(Log::DebugID::ICL_SetAssociative,
-                   "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
-
-        // We need to stall this lookup
-        lookupList.emplace(line.tag, sreq->getTag());
-
-        // TODO: This is not a solution
-        return;
-      }
-
-      // Update
-      line.accessedAt = getTick();
-
-      if (opcode == HIL::Operation::Write ||
-          opcode == HIL::Operation::WriteZeroes) {
-        dirtyLines++;
-
-        line.dirty = true;
+      if (test.none()) {
+        sreq->setMiss();
       }
     }
   }
@@ -653,6 +652,7 @@ void SetAssociative::nvmDone(LPN lpn) {
 
       if (line.tag == lpn) {
         line.nvmPending = false;
+        line.validbits.set();
 
         break;
       }

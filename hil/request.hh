@@ -122,6 +122,7 @@ class SubRequest {
   uint32_t length;  //!< Length in DMA Tag
 
   bool allocate;  //!< Used in ICL, true when cacheline allocation is required
+  bool miss;      //!< Used in ICL, true when miss
   bool clear;     //!< Flag for buffer management
 
   uint32_t skipFront;
@@ -164,6 +165,7 @@ class SubRequest {
 
   inline void setDRAMAddress(uint64_t addr) { address = addr; }
   inline void setAllocate() { allocate = true; }
+  inline void setMiss() { miss = true; }
   void setBuffer(uint8_t *data) { buffer = data; }
   void createBuffer() {
     clear = true;
@@ -175,6 +177,7 @@ class SubRequest {
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
   inline bool getAllocate() { return allocate; }
+  inline bool getMiss() { return miss; }
   inline const uint8_t *getBuffer() { return buffer; }
 
   inline Operation getOpcode() { return request->opcode; }

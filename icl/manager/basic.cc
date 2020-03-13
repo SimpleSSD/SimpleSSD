@@ -172,15 +172,18 @@ void BasicCache::dmaDone(HIL::SubRequest *req) {
 void BasicCache::lookupDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
-  if (req->getAllocate()) {
+  if (req->getMiss()) {
     debugprint_basic(req, "CACHE MISS");
+  }
+  else {
+    debugprint_basic(req, "CACHE HIT");
+  }
 
+  if (req->getAllocate()) {
     // We need allocation
     cache->allocate(req);
   }
   else {
-    debugprint_basic(req, "CACHE HIT");
-
     cacheDone(tag);
   }
 }
@@ -190,7 +193,7 @@ void BasicCache::cacheDone(uint64_t tag) {
   auto opcode = req->getOpcode();
 
   // Submit to FIL
-  if (opcode == HIL::Operation::Read && req->getAllocate()) {
+  if (opcode == HIL::Operation::Read && req->getMiss()) {
     pFTL->read(FTL::Request(eventReadDone, req));
   }
   else if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
