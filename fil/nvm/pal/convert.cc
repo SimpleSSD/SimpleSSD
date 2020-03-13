@@ -81,28 +81,28 @@ ConvertFunction Convert::getConvertion() {
   }
   else {
     uint64_t level[4] = {0, 0, 0, 0};
-    uint8_t ppn[4] = {0, 0, 0, 0};
+    uint8_t ppnIndex[4] = {0, 0, 0, 0};
 
     for (uint8_t i = 0; i < 4; i++) {
       switch (nand->pageAllocation[i]) {
         case PageAllocation::Channel:
           level[i] = channel;
-          ppn[i] = 0;
+          ppnIndex[i] = 0;
 
           break;
         case PageAllocation::Way:
           level[i] = way;
-          ppn[i] = 1;
+          ppnIndex[i] = 1;
 
           break;
         case PageAllocation::Die:
           level[i] = die;
-          ppn[i] = 2;
+          ppnIndex[i] = 2;
 
           break;
         case PageAllocation::Plane:
           level[i] = plane;
-          ppn[i] = 3;
+          ppnIndex[i] = 3;
 
           break;
         default:
@@ -110,7 +110,7 @@ ConvertFunction Convert::getConvertion() {
       }
     }
 
-    return [level, ppnIndex = ppn, block = this->block, page = this->page](
+    return [level, ppnIndex, block = this->block, page = this->page](
                PPN ppn, ::CPDPBP &addr) {
       uint32_t *values = (uint32_t *)&addr;
 
