@@ -78,25 +78,13 @@ std::list<BasicFTL::SuperRequest>::iterator BasicFTL::getWriteContext(
   return iter;
 }
 
-std::list<BasicFTL::ReadModifyWriteContext>::iterator BasicFTL::getRMWContext(
-    uint64_t tag, Request **ppcmd) {
-  auto iter = rmwList.begin();
+std::unordered_map<uint64_t, BasicFTL::ReadModifyWriteContext>::iterator
+BasicFTL::getRMWContext(uint64_t tag) {
+  auto iter = rmwList.find(tag);
 
-  for (; iter != rmwList.end(); iter++) {
-    for (auto &cmd : iter->list) {
-      if (cmd && cmd->getTag() == tag) {
-        if (ppcmd) {
-          *ppcmd = cmd;
-        }
+  panic_if(iter == rmwList.end(), "Unexpected tag in read-modify-write.");
 
-        return iter;
-      }
-    }
-  }
-
-  panic("Unexpected tag in read-modify-write.");
-
-  return rmwList.end();
+  return iter;
 }
 
 void BasicFTL::read(Request *cmd) {
@@ -147,13 +135,14 @@ void BasicFTL::write(Request *cmd) {
 
       if (mergeReadModifyWrite) {
         for (auto &iter : rmwList) {
-          if (iter.alignedBegin == alignedBegin && !iter.writePending) {
+          if (iter.second.alignedBegin == alignedBegin &&
+              !iter.second.writePending) {
             auto pctx = new ReadModifyWriteContext();
 
             pctx->alignedBegin = alignedBegin;
             pctx->chunkBegin = chunkBegin;
             pctx->list = std::move(pendingList);
-            iter.push_back(pctx);
+            iter.second.push_back(pctx);
 
             merged = true;
           }
@@ -161,15 +150,18 @@ void BasicFTL::write(Request *cmd) {
       }
 
       if (!merged) {
-        auto &ret = rmwList.emplace_back(ReadModifyWriteContext());
+        auto firstreq = pendingList.at(chunkBegin - alignedBegin);
+        uint64_t tag = firstreq->getTag();
+        auto ret = rmwList.emplace(tag, ReadModifyWriteContext());
 
-        ret.list = std::move(pendingList);
-        ret.alignedBegin = alignedBegin;
-        ret.chunkBegin = chunkBegin;
+        panic_if(!ret.second, "Duplicated FTL write ID.");
+
+        ret.first->second.list = std::move(pendingList);
+        ret.first->second.alignedBegin = alignedBegin;
+        ret.first->second.chunkBegin = chunkBegin;
 
         // Do read translation - no need for loop
-        pMapper->readMapping(ret.list.at(chunkBegin - alignedBegin),
-                             eventPartialReadSubmit);
+        pMapper->readMapping(firstreq, eventPartialReadSubmit);
       }
       else {
         debugprint(Log::DebugID::FTL_PageLevel, "RMW | MERGED");
@@ -214,29 +206,30 @@ void BasicFTL::write_done(uint64_t tag) {
 }
 
 void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
-  auto ctx = getRMWContext(tag);
+  auto iter = getRMWContext(tag);
+  auto &ctx = iter->second;
 
-  ctx->beginAt = now;
+  ctx.beginAt = now;
 
   debugprint(Log::DebugID::FTL_PageLevel,
-             "RMW | READ   | ALIGN %" PRIu64 " - %" PRIu64, ctx->alignedBegin,
-             ctx->alignedBegin + minMappingSize);
+             "RMW | READ   | ALIGN %" PRIu64 " - %" PRIu64, ctx.alignedBegin,
+             ctx.alignedBegin + minMappingSize);
 
   // Get first command
-  uint64_t diff = ctx->chunkBegin - ctx->alignedBegin;
-  auto cmd = ctx->list.at(diff);
+  uint64_t diff = ctx.chunkBegin - ctx.alignedBegin;
+  auto cmd = ctx.list.at(diff);
 
   // Convert PPN to aligned
   PPN ppnBegin = cmd->getPPN() - diff;
   uint64_t offset = 0;
 
-  for (auto &cmd : ctx->list) {
+  for (auto &cmd : ctx.list) {
     if (!cmd) {
       pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, tag));
       object.memory->write(pendingListBaseAddress + offset * pageSize, pageSize,
                            InvalidEventID, false);
 
-      ctx->counter++;
+      ctx.counter++;
     }
 
     ppnBegin++;
@@ -245,19 +238,20 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
 }
 
 void BasicFTL::rmw_readDone(uint64_t now, uint64_t tag) {
-  auto ctx = getRMWContext(tag);
+  auto iter = getRMWContext(tag);
+  auto &ctx = iter->second;
 
-  ctx->counter--;
+  ctx.counter--;
 
-  if (ctx->counter == 0) {
+  if (ctx.counter == 0) {
     debugprint(Log::DebugID::FTL_PageLevel,
                "RMW | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               ctx->alignedBegin, ctx->alignedBegin + minMappingSize,
-               ctx->beginAt, now, now - ctx->beginAt);
+               ctx.alignedBegin, ctx.alignedBegin + minMappingSize, ctx.beginAt,
+               now, now - ctx.beginAt);
 
     // Get first command
-    auto cmd = ctx->list.at(ctx->chunkBegin - ctx->alignedBegin);
+    auto cmd = ctx.list.at(ctx.chunkBegin - ctx.alignedBegin);
 
     // Write translation
     pMapper->writeMapping(cmd, eventPartialWriteSubmit);
@@ -265,24 +259,25 @@ void BasicFTL::rmw_readDone(uint64_t now, uint64_t tag) {
 }
 
 void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
-  auto ctx = getRMWContext(tag);
+  auto iter = getRMWContext(tag);
+  auto &ctx = iter->second;
 
-  ctx->beginAt = now;
-  ctx->writePending = true;
+  ctx.beginAt = now;
+  ctx.writePending = true;
 
   debugprint(Log::DebugID::FTL_PageLevel,
-             "RMW | WRITE  | ALIGN %" PRIu64 " - %" PRIu64, ctx->alignedBegin,
-             ctx->alignedBegin + minMappingSize);
+             "RMW | WRITE  | ALIGN %" PRIu64 " - %" PRIu64, ctx.alignedBegin,
+             ctx.alignedBegin + minMappingSize);
 
   // Get first command
-  uint64_t diff = ctx->chunkBegin - ctx->alignedBegin;
-  auto cmd = ctx->list.at(diff);
+  uint64_t diff = ctx.chunkBegin - ctx.alignedBegin;
+  auto cmd = ctx.list.at(diff);
 
   // Convert PPN to aligned
   PPN ppnBegin = cmd->getPPN() - diff;
   uint64_t offset = 0;
 
-  for (auto &cmd : ctx->list) {
+  for (auto &cmd : ctx.list) {
     pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, tag));
 
     if (cmd) {
@@ -294,7 +289,7 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
                           InvalidEventID, false);
     }
 
-    ctx->counter++;
+    ctx.counter++;
 
     ppnBegin++;
     offset++;
@@ -302,21 +297,21 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 }
 
 void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
-  Request *cmd = nullptr;
-  auto ctx = getRMWContext(tag, &cmd);
+  auto iter = getRMWContext(tag);
+  auto &ctx = iter->second;
 
-  ctx->counter--;
+  ctx.counter--;
 
-  if (ctx->counter == 0) {
-    auto next = ctx->next;
+  if (ctx.counter == 0) {
+    auto next = ctx.next;
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "RMW | WRITE  | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               ctx->alignedBegin, ctx->alignedBegin + minMappingSize,
-               ctx->beginAt, now, now - ctx->beginAt);
+               ctx.alignedBegin, ctx.alignedBegin + minMappingSize, ctx.beginAt,
+               now, now - ctx.beginAt);
 
-    for (auto cmd : ctx->list) {
+    for (auto cmd : ctx.list) {
       if (cmd) {
         scheduleAbs(cmd->getEvent(), cmd->getEventData(), now);
       }
@@ -337,7 +332,7 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
       delete cur;
     }
 
-    rmwList.erase(ctx);
+    rmwList.erase(iter);
   }
 }
 
@@ -433,16 +428,18 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : rmwList) {
-    BACKUP_SCALAR(out, iter.alignedBegin);
-    BACKUP_SCALAR(out, iter.chunkBegin);
+    BACKUP_SCALAR(out, iter.first);
 
-    backup(out, iter.list);
+    BACKUP_SCALAR(out, iter.second.alignedBegin);
+    BACKUP_SCALAR(out, iter.second.chunkBegin);
 
-    BACKUP_SCALAR(out, iter.writePending);
-    BACKUP_SCALAR(out, iter.counter);
+    backup(out, iter.second.list);
 
-    exist = iter.next != nullptr;
-    auto next = iter.next;
+    BACKUP_SCALAR(out, iter.second.writePending);
+    BACKUP_SCALAR(out, iter.second.counter);
+
+    exist = iter.second.next != nullptr;
+    auto next = iter.second.next;
 
     while (true) {
       BACKUP_SCALAR(out, exist);
@@ -495,6 +492,10 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
   ReadModifyWriteContext cur;
 
   for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+
     RESTORE_SCALAR(in, cur.alignedBegin);
     RESTORE_SCALAR(in, cur.chunkBegin);
 
@@ -523,6 +524,8 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
         break;
       }
     }
+
+    rmwList.emplace(tag, cur);
   }
 
   RESTORE_SCALAR(in, stat);

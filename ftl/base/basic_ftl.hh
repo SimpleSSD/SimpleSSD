@@ -76,11 +76,11 @@ class BasicFTL : public AbstractFTL {
     }
   };
 
-  std::list<ReadModifyWriteContext> rmwList;
+  std::unordered_map<uint64_t, ReadModifyWriteContext> rmwList;
   std::list<std::vector<Request *>> list;
 
-  std::list<ReadModifyWriteContext>::iterator getRMWContext(
-      uint64_t, Request ** = nullptr);
+  std::unordered_map<uint64_t, ReadModifyWriteContext>::iterator getRMWContext(
+      uint64_t);
 
   inline LPN getAlignedLPN(LPN lpn) {
     return lpn / minMappingSize * minMappingSize;
