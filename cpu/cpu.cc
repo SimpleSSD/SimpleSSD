@@ -666,16 +666,6 @@ void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
     panic_log("Invalid tick %" PRIu64, tick);
   }
 
-  if (UNLIKELY(eid->isScheduled())) {
-#ifdef SIMPLESSD_DEBUG
-    panic_log("Event %" PRIx64 "h (%s) already scheduled at %" PRIu64, eid,
-              eid->name.c_str(), eid->scheduledAt);
-#else
-    panic_log("Event %" PRIx64 "h already scheduled at %" PRIu64, eid,
-              eid->scheduledAt);
-#endif
-  }
-
   eid->scheduledAt.push(tick);
 
   jobQueue.emplace(tick, Job(eid, data));
