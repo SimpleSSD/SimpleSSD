@@ -154,7 +154,7 @@ void PALOLD::reschedule(Complete &&cplt) {
 
   panic_if(!iter.second, "Duplicated request ID.");
 
-  scheduleAbs(completeEvent, iter.first->second.id, iter.first->first);
+  scheduleAbs(completeEvent, iter.first->first, iter.first->second.finishedAt);
 }
 
 void PALOLD::completion(uint64_t id) {
