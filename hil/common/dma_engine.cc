@@ -113,11 +113,14 @@ DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
 }
 
 DMAEngine::~DMAEngine() {
-  warn_if(sessionList.size() > 0, "Not all DMA Session destroyed.");
+  warn_if(sessionList.size() > 0,
+          "Not all DMA Session destroyed (%" PRIu64 " left).",
+          sessionList.size());
 
   sessionList.clear();
 
-  warn_if(tagList.size() > 0, "Not all DMA Tag destroyed.");
+  warn_if(tagList.size() > 0, "Not all DMA Tag destroyed (%" PRIu64 " left).",
+          tagList.size());
 
   for (auto &iter : tagList) {
     delete iter;

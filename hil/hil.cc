@@ -34,8 +34,12 @@ HIL::HIL(ObjectData &o, AbstractSubsystem *p)
 }
 
 HIL::~HIL() {
-  warn_if(requestQueue.size() != 0, "Not all requests are handled.");
-  warn_if(subrequestQueue.size() != 0, "Not all subrequests are handled.");
+  warn_if(requestQueue.size() != 0,
+          "Not all requests are handled (%" PRIu64 " left).",
+          requestQueue.size());
+  warn_if(subrequestQueue.size() != 0,
+          "Not all subrequests are handled (%" PRIu64 " left).",
+          subrequestQueue.size());
 }
 
 void HIL::submit(Operation opcode, Request *req) {
