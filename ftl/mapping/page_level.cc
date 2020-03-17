@@ -102,7 +102,10 @@ PageLevel::PageLevel(ObjectData &o)
                   "FTL::Mapping::PageLevel::eventReadMappingDone2");
 }
 
-PageLevel::~PageLevel() {}
+PageLevel::~PageLevel() {
+  free(table);
+  delete[] blockMetadata;
+}
 
 void PageLevel::readMappingDone(uint64_t tag) {
   auto iter = readPending.begin();

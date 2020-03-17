@@ -155,6 +155,7 @@ class SubRequest {
       this->offset = std::exchange(rhs.offset, 0);
       this->length = std::exchange(rhs.length, 0);
       this->allocate = std::exchange(rhs.allocate, false);
+      this->allocate = std::exchange(rhs.miss, false);
       this->clear = std::exchange(rhs.clear, false);
       this->buffer = std::exchange(rhs.buffer, nullptr);
       this->address = std::exchange(rhs.address, 0);
