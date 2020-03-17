@@ -12,6 +12,7 @@
 
 #include <cstdarg>
 #include <deque>
+#include <queue>
 #include <unordered_map>
 
 #include "lib/mcpat/mcpat.h"
@@ -162,7 +163,7 @@ class CPU {
 
   std::vector<Core> coreList;
   std::vector<Event> eventList;
-  std::list<Job> jobQueue;
+  std::multimap<uint64_t, Job> jobQueue;
 
   std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
 
@@ -303,25 +304,18 @@ class EventData {
   std::string name;
 #endif
 
-  uint64_t scheduledAt;
+  std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>
+      scheduledAt;
 
-  inline bool isScheduled() {
-    return scheduledAt != std::numeric_limits<uint64_t>::max();
-  }
-
-  inline void deschedule() {
-    scheduledAt = std::numeric_limits<uint64_t>::max();
-  }
+  inline bool isScheduled() { return !scheduledAt.empty(); }
+  inline void deschedule() { scheduledAt.pop(); }
 
  public:
 #ifdef SIMPLESSD_DEBUG
   EventData(EventFunction &&f, std::string &&s)
-      : func(std::move(f)),
-        name(std::move(s)),
-        scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+      : func(std::move(f)), name(std::move(s)) {}
 #else
-  EventData(EventFunction &&f)
-      : func(std::move(f)), scheduledAt(std::numeric_limits<uint64_t>::max()) {}
+  EventData(EventFunction &&f) : func(std::move(f)) {}
 #endif
   EventData(const EventData &) = delete;
   EventData(EventData &&) noexcept = delete;
