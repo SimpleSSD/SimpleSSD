@@ -102,8 +102,6 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
                   "ICL::BasicCache::eventDrainDone");
   eventReadDone = createEvent([this](uint64_t, uint64_t d) { readDone(d); },
                               "ICL::BasicCache::eventReadDone");
-  eventCompletion = createEvent([this](uint64_t, uint64_t) { completion(); },
-                                "ICL::BasicCache::eventCompletion");
 }
 
 BasicCache::~BasicCache() {
@@ -200,7 +198,7 @@ void BasicCache::cacheDone(uint64_t tag) {
     pFTL->invalidate(FTL::Request(eventICLCompletion, req));
   }
   else {
-    readDone(tag, false);
+    scheduleNow(eventICLCompletion, tag);
   }
 }
 
@@ -276,32 +274,12 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void BasicCache::readDone(uint64_t tag, bool senddone) {
-  if (senddone) {
-    auto req = getSubRequest(tag);
+void BasicCache::readDone(uint64_t tag) {
+  auto req = getSubRequest(tag);
 
-    cache->nvmDone(req->getLPN());
-  }
+  cache->nvmDone(req->getLPN());
 
-  completionQueue.emplace_back(tag);
-
-  if (!isScheduled(eventCompletion)) {
-    scheduleNow(eventCompletion);
-  }
-}
-
-void BasicCache::completion() {
-  panic_if(completionQueue.empty(), "Unexpected completion request.");
-
-  auto &req = completionQueue.front();
-
-  scheduleNow(eventICLCompletion, req);
-
-  completionQueue.pop_front();
-
-  if (!completionQueue.empty()) {
-    scheduleNow(eventCompletion);
-  }
+  scheduleNow(eventICLCompletion, tag);
 }
 
 void BasicCache::getStatList(std::vector<Stat> &list,
@@ -346,17 +324,8 @@ void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second.length);
   }
 
-  size = completionQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : completionQueue) {
-    BACKUP_SCALAR(out, iter);
-  }
-
   BACKUP_EVENT(out, eventDrainDone);
   BACKUP_EVENT(out, eventReadDone);
-  BACKUP_EVENT(out, eventCompletion);
 }
 
 void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
@@ -388,17 +357,8 @@ void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
     drainQueue.emplace(tag, ctx);
   }
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    RESTORE_SCALAR(in, tag);
-
-    completionQueue.emplace_back(tag);
-  }
-
   RESTORE_EVENT(in, eventDrainDone);
   RESTORE_EVENT(in, eventReadDone);
-  RESTORE_EVENT(in, eventCompletion);
 }
 
 }  // namespace SimpleSSD::ICL

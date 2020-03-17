@@ -56,8 +56,6 @@ class BasicCache : public AbstractManager {
   uint64_t drainCounter;
   std::unordered_map<uint64_t, FlushContext> drainQueue;
 
-  std::deque<uint64_t> completionQueue;
-
   void drainRange(std::vector<FlushContext>::iterator,
                   std::vector<FlushContext>::iterator);
 
@@ -65,10 +63,7 @@ class BasicCache : public AbstractManager {
   void drainDone(uint64_t, uint64_t);
 
   Event eventReadDone;
-  void readDone(uint64_t, bool = true);
-
-  Event eventCompletion;
-  void completion();
+  void readDone(uint64_t);
 
   // Statistics
   uint64_t prefetched;

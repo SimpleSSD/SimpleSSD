@@ -56,7 +56,7 @@ class PALOLD : public AbstractNVM {
   };
 
   Event completeEvent;
-  std::multimap<uint64_t, Complete> completionQueue;
+  std::unordered_map<uint64_t, Complete> completionQueue;
 
   Convert convertObject;
   ConvertFunction convertCPDPBP;

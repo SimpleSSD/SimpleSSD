@@ -82,8 +82,6 @@ class BasicFTL : public AbstractFTL {
   std::list<ReadModifyWriteContext>::iterator getRMWContext(
       uint64_t, Request ** = nullptr);
 
-  std::deque<std::pair<Event, uint64_t>> mergeList;
-
   inline LPN getAlignedLPN(LPN lpn) {
     return lpn / minMappingSize * minMappingSize;
   }
@@ -125,9 +123,6 @@ class BasicFTL : public AbstractFTL {
 
   Event eventPartialWriteDone;
   void rmw_writeDone(uint64_t, uint64_t);
-
-  Event eventMergedWriteDone;
-  void rmw_mergeDone();
 
   Event eventInvalidateSubmit;
   void invalidate_submit(uint64_t, uint64_t);

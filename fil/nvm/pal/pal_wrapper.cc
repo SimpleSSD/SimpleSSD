@@ -50,7 +50,7 @@ PALOLD::PALOLD(ObjectData &o, Event e)
   stats = new PALStatistics(object.config, lat);
   pal = new PAL2(stats, object.config, lat);
 
-  completeEvent = createEvent([this](uint64_t t, uint64_t) { completion(t); },
+  completeEvent = createEvent([this](uint64_t, uint64_t d) { completion(d); },
                               "FIL::PALOLD::completeEvent");
 
   // For backingFile
@@ -150,27 +150,18 @@ void PALOLD::printCPDPBP(::CPDPBP &addr, const char *prefix) {
 }
 
 void PALOLD::reschedule(Complete &&cplt) {
-  bool schedule = false;
-  uint64_t tick = object.cpu->when(completeEvent);
+  auto iter = completionQueue.emplace(cplt.id, std::move(cplt));
 
-  // Find insertion slot
-  completionQueue.emplace(cplt.finishedAt, cplt);
+  panic_if(!iter.second, "Duplicated request ID.");
 
-  if (tick > completionQueue.begin()->first) {
-    schedule = true;
-
-    if (tick != std::numeric_limits<uint64_t>::max()) {
-      deschedule(completeEvent);
-    }
-  }
-
-  if (schedule) {
-    scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
-  }
+  scheduleAbs(completeEvent, iter.first->second.id, iter.first->first);
 }
 
-void PALOLD::completion(uint64_t) {
-  auto iter = completionQueue.begin();
+void PALOLD::completion(uint64_t id) {
+  auto iter = completionQueue.find(id);
+
+  panic_if(iter == completionQueue.end(), "Unexpected completion.");
+
   Complete cplt = std::move(iter->second);
   completionQueue.erase(iter);
 
@@ -182,10 +173,6 @@ void PALOLD::completion(uint64_t) {
   printCPDPBP(cplt.addr, OPER_STRINFO2[cplt.oper]);
 
   scheduleNow(eventRequestCompletion, cplt.id);
-
-  if (completionQueue.size() > 0) {
-    scheduleAbs(completeEvent, 0ull, completionQueue.begin()->first);
-  }
 }
 
 void PALOLD::readSpare(PPN ppn, uint8_t *data, uint64_t len) {

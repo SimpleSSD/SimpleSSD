@@ -49,9 +49,6 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   eventPartialWriteDone =
       createEvent([this](uint64_t t, uint64_t d) { rmw_writeDone(t, d); },
                   "FTL::BasicFTL::eventPartialWriteDone");
-  eventMergedWriteDone =
-      createEvent([this](uint64_t, uint64_t) { rmw_mergeDone(); },
-                  "FTL::BasicFTL::eventMergedWriteDone");
 
   eventInvalidateSubmit =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_submit(t, d); },
@@ -321,7 +318,7 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
 
     for (auto cmd : ctx->list) {
       if (cmd) {
-        mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+        scheduleAbs(cmd->getEvent(), cmd->getEventData(), now);
       }
     }
 
@@ -331,7 +328,7 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
       // Completion of all requests
       for (auto cmd : cur->list) {
         if (cmd) {
-          mergeList.emplace_back(cmd->getEvent(), cmd->getEventData());
+          scheduleAbs(cmd->getEvent(), cmd->getEventData(), now);
         }
       }
 
@@ -341,24 +338,6 @@ void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
     }
 
     rmwList.erase(ctx);
-
-    if (!isScheduled(eventMergedWriteDone)) {
-      scheduleNow(eventMergedWriteDone);
-    }
-  }
-}
-
-void BasicFTL::rmw_mergeDone() {
-  if (mergeList.size() > 0) {
-    auto iter = mergeList.front();
-
-    scheduleNow(iter.first, iter.second);
-
-    mergeList.pop_front();
-
-    if (mergeList.size() > 0) {
-      scheduleNow(eventMergedWriteDone);
-    }
   }
 }
 
@@ -486,14 +465,6 @@ void BasicFTL::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  size = mergeList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : mergeList) {
-    BACKUP_EVENT(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
   BACKUP_SCALAR(out, stat);
   BACKUP_EVENT(out, eventReadSubmit);
   BACKUP_EVENT(out, eventReadDone);
@@ -552,18 +523,6 @@ void BasicFTL::restoreCheckpoint(std::istream &in) noexcept {
         break;
       }
     }
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    Event eid;
-    uint64_t tag;
-
-    RESTORE_EVENT(in, eid);
-    RESTORE_SCALAR(in, tag);
-
-    mergeList.emplace_back(eid, tag);
   }
 
   RESTORE_SCALAR(in, stat);
