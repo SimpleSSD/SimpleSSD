@@ -24,11 +24,11 @@ Config::Config() {
   readPrefetch = false;
   prefetchCount = 1;
   prefetchRatio = 4;
-  prefetchMode = Granularity::AllLevel;
+  prefetchMode = Granularity::SecondLevel;
   mode = Mode::SetAssociative;
   cacheSize = 33554432;
   evictPolicy = EvictPolicyType::LRU;
-  evictMode = Granularity::AllLevel;
+  evictMode = Granularity::SecondLevel;
   evictThreshold = 0.7f;
   waySize = 8;
 }

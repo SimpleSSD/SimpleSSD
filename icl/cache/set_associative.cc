@@ -57,8 +57,19 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
   // # pages to evict once
   switch (evictMode) {
-    case Config::Granularity::SuperpageLevel:
+    case Config::Granularity::FirstLevel:
       pagesToEvict = parameter->parallelismLevel[0];
+
+      break;
+    case Config::Granularity::SecondLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+      pagesToEvict *= parameter->parallelismLevel[1];
+
+      break;
+    case Config::Granularity::ThirdLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+      pagesToEvict *= parameter->parallelismLevel[1];
+      pagesToEvict *= parameter->parallelismLevel[2];
 
       break;
     case Config::Granularity::AllLevel:
