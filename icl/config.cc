@@ -92,7 +92,6 @@ void Config::storeTo(pugi::xml_node &section) {
 void Config::update() {
   panic_if(prefetchCount == 0, "Invalid PrefetchCount.");
   panic_if(prefetchRatio == 0, "Invalid PrefetchRatio.");
-  panic_if((uint8_t)prefetchMode > 1, "Invalid PrefetchMode.");
   panic_if(evictThreshold < 0.f || evictThreshold >= 1.f,
            "Invalid EvictThreshold.");
 }
