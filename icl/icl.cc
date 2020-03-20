@@ -90,10 +90,10 @@ void ICL::done(HIL::SubRequest *req) {
   pManager->dmaDone(req);
 }
 
-void ICL::makeRequest(LPN slpn, LPN elpn) {
+void ICL::makeRequest(LPN slpn, uint32_t length) {
   auto *req = new HIL::Request(InvalidEventID, 0);
 
-  req->setAddress(slpn, elpn - slpn, logicalPageSize);
+  req->setAddress(slpn, length, logicalPageSize);
 
   pHIL->read(req);
 }

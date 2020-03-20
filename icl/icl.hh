@@ -72,7 +72,7 @@ class ICL : public Object {
    * This function can generate arbitrary request without making completion to
    * host.
    */
-  void makeRequest(LPN slpn, LPN elpn);
+  void makeRequest(LPN, uint32_t);
 
   /**
    * \brief Get logical pages contains data
@@ -80,7 +80,7 @@ class ICL : public Object {
    * To implement per-namespace bases utilization, this function requires offset
    * and length.
    */
-  LPN getPageUsage(LPN offset, LPN length);
+  LPN getPageUsage(LPN, LPN);
 
   //! Get total logical pages in current HIL object
   LPN getTotalPages();

@@ -139,14 +139,13 @@ void BasicCache::read(HIL::SubRequest *req) {
 
       // Make prefetch request
       LPN begin = nextlpn;
-      LPN end = begin + prefetchCount;
 
-      prefetchTrigger = (begin + end) / 2;
-      lastPrefetched = end;
+      prefetchTrigger = begin + prefetchCount / 2;
+      lastPrefetched = begin + prefetchCount;
 
       prefetched += prefetchCount;
 
-      pICL->makeRequest(begin, end);
+      pICL->makeRequest(begin, prefetchCount);
     }
   }
 }
