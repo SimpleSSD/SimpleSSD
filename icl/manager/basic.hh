@@ -29,6 +29,7 @@ class BasicDetector : public SequentialDetector {
   uint64_t lastRequestTag;
   uint64_t offset;
   uint32_t length;
+  uint32_t reqLength;
 
   uint32_t hitCounter;
   uint32_t accessCounter;

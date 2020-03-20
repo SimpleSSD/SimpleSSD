@@ -16,6 +16,7 @@ BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
       lastRequestTag(1),
       offset(std::numeric_limits<uint64_t>::max()),
       length(0),
+      reqLength(0),
       hitCounter(0),
       accessCounter(0),
       triggerCount(c),
@@ -28,7 +29,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
     if (offset + length == req->getLPN() * pageSize + req->getSkipFront()) {
       if (!enabled) {
         hitCounter++;
-        accessCounter += offset + length;
+        accessCounter += reqLength;
 
         if (hitCounter >= triggerCount &&
             accessCounter / pageSize >= triggerRatio) {
@@ -42,12 +43,13 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
       accessCounter = 0;
     }
 
-    length = 0;
+    reqLength = 0;
     lastRequestTag = tag;
   }
 
   offset = req->getLPN() * pageSize + req->getSkipFront();
   length = req->getLength();
+  reqLength += length;
 }
 
 void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
