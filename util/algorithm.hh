@@ -77,7 +77,7 @@ inline uint64_t ctz64(uint64_t val) {
 #define LIKELY
 #define UNLIKELY
 
-#else
+#else  // _MSC_VER
 
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
@@ -93,7 +93,6 @@ inline uint64_t ctz64(uint64_t val) {
 #define ctz8(x) __builtin_ctz((uint32_t)(x))
 #define ctz16(x) __builtin_ctz((uint32_t)(x))
 #define ctz32(x) __builtin_ctz((uint32_t)(x))
-#endif
 
 #if __WORDSIZE == 64
 #define popcount64(x) __builtin_popcountl((uint64_t)(x))
@@ -105,7 +104,9 @@ inline uint64_t ctz64(uint64_t val) {
 #define ctz64(x) __builtin_ctzll((uint64_t)(x))
 #endif
 
-#endif
+#endif  // SIMPLESSD_GEM5_EXCLUDE
+
+#endif  // _MSC_VER
 
 #ifndef MIN
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
