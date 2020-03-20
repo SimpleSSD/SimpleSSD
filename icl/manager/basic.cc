@@ -22,7 +22,9 @@ BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
       triggerRatio(r) {}
 
 void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
-  if (lastRequestTag != req->getParentTag()) {
+  uint64_t tag = req->getParentTag();
+
+  if (lastRequestTag != tag) {
     if (offset + length == req->getLPN() * pageSize + req->getSkipFront()) {
       if (!enabled) {
         hitCounter++;
@@ -41,6 +43,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
     }
 
     length = 0;
+    lastRequestTag = tag;
   }
 
   offset = req->getLPN() * pageSize + req->getSkipFront();
