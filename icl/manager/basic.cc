@@ -28,7 +28,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
     if (offset + length == req->getLPN() * pageSize + req->getSkipFront()) {
       if (!enabled) {
         hitCounter++;
-        accessCounter += length;
+        accessCounter += offset + length;
 
         if (hitCounter >= triggerCount &&
             accessCounter / pageSize >= triggerRatio) {
@@ -47,7 +47,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   }
 
   offset = req->getLPN() * pageSize + req->getSkipFront();
-  length += req->getLength();
+  length = req->getLength();
 }
 
 void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
