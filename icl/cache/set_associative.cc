@@ -267,6 +267,11 @@ void SetAssociative::readSet(uint64_t tag, Event eid) {
   object.memory->read(makeTagAddress(set), cacheTagSize * waySize, eid, tag);
 }
 
+void SetAssociative::writeLine(uint64_t tag, uint32_t set, uint32_t way,
+                               Event eid) {
+  object.memory->read(makeTagAddress(set, way), cacheTagSize, eid, tag);
+}
+
 void SetAssociative::tryLookup(LPN lpn, bool flush) {
   auto iter = lookupList.find(lpn);
 
@@ -565,6 +570,9 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
       line.nvmPending = true;  // Read is triggered immediately
       line.validbits.set();
     }
+
+    // TODO: Fix me
+    writeLine(sreq->getTag(), set, way, InvalidEventID);
 
     if (dirtyLines >= evictThreshold + evictList.size()) {
       evict = true;

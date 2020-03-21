@@ -112,6 +112,7 @@ class SetAssociative : public AbstractCache {
 
   void readAll(uint64_t, Event);
   void readSet(uint64_t, Event);
+  void writeLine(uint64_t, uint32_t, uint32_t, Event);
 
   void tryLookup(LPN, bool = false);
   void tryAllocate(LPN);
