@@ -677,11 +677,20 @@ void SetAssociative::nvmDone(LPN lpn) {
   tryAllocate(lpn);
 }
 
-void SetAssociative::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void SetAssociative::getStatList(std::vector<Stat> &list,
+                                 std::string prefix) noexcept {
+  list.emplace_back(prefix + "dirty.count", "Total dirty cachelines");
+  list.emplace_back(prefix + "dirty.ratio", "Total dirty cacheline ratio");
+}
 
-void SetAssociative::getStatValues(std::vector<double> &) noexcept {}
+void SetAssociative::getStatValues(std::vector<double> &values) noexcept {
+  values.emplace_back((double)dirtyLines);
+  values.emplace_back((double)dirtyLines / setSize / waySize);
+}
 
-void SetAssociative::resetStatValues() noexcept {}
+void SetAssociative::resetStatValues() noexcept {
+  // MUST NOT RESET dirtyLines
+}
 
 void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, sectorsInCacheLine);

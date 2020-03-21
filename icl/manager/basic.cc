@@ -288,8 +288,8 @@ void BasicCache::readDone(uint64_t tag) {
 
 void BasicCache::getStatList(std::vector<Stat> &list,
                              std::string prefix) noexcept {
-  list.emplace_back(prefix + "prefetched", "Prefetched pages.");
-  list.emplace_back(prefix + "drained", "Written pages.");
+  list.emplace_back(prefix + "prefetched", "Prefetched pages");
+  list.emplace_back(prefix + "drained", "Written pages");
 }
 
 void BasicCache::getStatValues(std::vector<double> &values) noexcept {
