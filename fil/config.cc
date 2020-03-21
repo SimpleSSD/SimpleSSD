@@ -133,34 +133,34 @@ void Config::loadNANDStructure(pugi::xml_node &section) {
 
 void Config::loadNANDTiming(pugi::xml_node &section) {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    LOAD_NAME_UINT_TYPE(node, NAME_TADL, uint32_t, nandTiming.tADL);
-    LOAD_NAME_UINT_TYPE(node, NAME_TCS, uint32_t, nandTiming.tCS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TDH, uint32_t, nandTiming.tDH);
-    LOAD_NAME_UINT_TYPE(node, NAME_TDS, uint32_t, nandTiming.tDS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRC, uint32_t, nandTiming.tRC);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRR, uint32_t, nandTiming.tRR);
-    LOAD_NAME_UINT_TYPE(node, NAME_TWB, uint32_t, nandTiming.tWB);
-    LOAD_NAME_UINT_TYPE(node, NAME_TWC, uint32_t, nandTiming.tWC);
-    LOAD_NAME_UINT_TYPE(node, NAME_TWP, uint32_t, nandTiming.tWP);
-    LOAD_NAME_UINT_TYPE(node, NAME_TBERS, uint32_t, nandTiming.tBERS);
-    LOAD_NAME_UINT_TYPE(node, NAME_TCBSY, uint32_t, nandTiming.tCBSY);
-    LOAD_NAME_UINT_TYPE(node, NAME_TDBSY, uint32_t, nandTiming.tDBSY);
-    LOAD_NAME_UINT_TYPE(node, NAME_TRCBSY, uint32_t, nandTiming.tRCBSY);
+    LOAD_NAME_TIME_TYPE(node, NAME_TADL, uint32_t, nandTiming.tADL);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCS, uint32_t, nandTiming.tCS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TDH, uint32_t, nandTiming.tDH);
+    LOAD_NAME_TIME_TYPE(node, NAME_TDS, uint32_t, nandTiming.tDS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRC, uint32_t, nandTiming.tRC);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRR, uint32_t, nandTiming.tRR);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWB, uint32_t, nandTiming.tWB);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWC, uint32_t, nandTiming.tWC);
+    LOAD_NAME_TIME_TYPE(node, NAME_TWP, uint32_t, nandTiming.tWP);
+    LOAD_NAME_TIME_TYPE(node, NAME_TBERS, uint32_t, nandTiming.tBERS);
+    LOAD_NAME_TIME_TYPE(node, NAME_TCBSY, uint32_t, nandTiming.tCBSY);
+    LOAD_NAME_TIME_TYPE(node, NAME_TDBSY, uint32_t, nandTiming.tDBSY);
+    LOAD_NAME_TIME_TYPE(node, NAME_TRCBSY, uint32_t, nandTiming.tRCBSY);
 
     switch (strtoul(node.attribute("level").value(), nullptr, 10)) {
       case Level1:
-        LOAD_NAME_UINT(node, NAME_TPROG, nandTiming.tPROG[Level1]);
-        LOAD_NAME_UINT(node, NAME_TR, nandTiming.tR[Level1]);
+        LOAD_NAME_TIME(node, NAME_TPROG, nandTiming.tPROG[Level1]);
+        LOAD_NAME_TIME(node, NAME_TR, nandTiming.tR[Level1]);
 
         break;
       case Level2:
-        LOAD_NAME_UINT(node, NAME_TPROG, nandTiming.tPROG[Level2]);
-        LOAD_NAME_UINT(node, NAME_TR, nandTiming.tR[Level2]);
+        LOAD_NAME_TIME(node, NAME_TPROG, nandTiming.tPROG[Level2]);
+        LOAD_NAME_TIME(node, NAME_TR, nandTiming.tR[Level2]);
 
         break;
       case Level3:
-        LOAD_NAME_UINT(node, NAME_TPROG, nandTiming.tPROG[Level3]);
-        LOAD_NAME_UINT(node, NAME_TR, nandTiming.tR[Level3]);
+        LOAD_NAME_TIME(node, NAME_TPROG, nandTiming.tPROG[Level3]);
+        LOAD_NAME_TIME(node, NAME_TR, nandTiming.tR[Level3]);
 
         break;
     }
