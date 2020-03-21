@@ -114,6 +114,7 @@ class System {
   Event eventDRAMDone;
   void completion(uint64_t, uint64_t);
 
+  inline void debugprint(const char *format, ...) noexcept;
   inline void warn_log(const char *format, ...) noexcept;
   inline void panic_log(const char *format, ...) noexcept;
 
@@ -168,6 +169,8 @@ class System {
    */
   uint64_t allocate(uint64_t size, MemoryType type, std::string &&name,
                     bool dry = false);
+
+  void printMemoryLayout();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept;
   void getStatValues(std::vector<double> &) noexcept;

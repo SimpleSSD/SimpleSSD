@@ -131,6 +131,9 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
   // Initialize Subsystem
   subsystem->init();
 
+  // Print memory layout
+  object.memory->printMemoryLayout();
+
   inited = true;
 
   return inited;

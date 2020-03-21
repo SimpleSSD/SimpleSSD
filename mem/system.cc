@@ -60,6 +60,14 @@ System::~System() {
   delete dram;
 }
 
+inline void System::debugprint(const char *format, ...) noexcept {
+  va_list args;
+
+  va_start(args, format);
+  pobject->log->debugprint(Log::DebugID::Memory, format, args);
+  va_end(args);
+}
+
 inline void System::warn_log(const char *format, ...) noexcept {
   va_list args;
 
@@ -256,6 +264,37 @@ uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
   allocatedAddressMap.emplace_back(std::move(name), lastBase, size);
 
   return lastBase;
+}
+
+void System::printMemoryLayout() {
+  uint64_t sramInUse = 0;
+  uint64_t dramInUse = 0;
+
+  debugprint("Memory map information:");
+  debugprint(" Type |     Base     |     Size     | Name");
+
+  for (auto &iter : allocatedAddressMap) {
+    auto ret = validate(iter.base, iter.size);
+
+    if (ret == MemoryType::SRAM) {
+      sramInUse += iter.size;
+
+      debugprint(" SRAM | %12" PRIX64 " | %12" PRIX64 " | %s", iter.base,
+                 iter.size, iter.name.c_str());
+    }
+    else if (ret == MemoryType::DRAM) {
+      dramInUse += iter.size;
+
+      debugprint(" DRAM | %12" PRIX64 " | %12" PRIX64 " | %s", iter.base,
+                 iter.size, iter.name.c_str());
+    }
+  }
+
+  debugprint("Memory utilization:");
+  debugprint(" SRAM: %" PRIX64 "h / %" PRIX64 "h", sramInUse,
+             totalSRAMCapacity);
+  debugprint(" DRAM: %" PRIX64 "h / %" PRIX64 "h", dramInUse,
+             totalDRAMCapacity);
 }
 
 void System::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
