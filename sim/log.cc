@@ -18,9 +18,9 @@ namespace SimpleSSD {
 const std::string idPrefix[] = {
     "global",  //!< DebugID::Common
     "CPU",
-    "DRAM",
-    "DRAM::TimingDRAM",
-    "SRAM",
+    "Memory",
+    "Memory::DRAM",
+    "Memory::SRAM",
     "HIL",
     "HIL::Common",
     "HIL::NVMe",

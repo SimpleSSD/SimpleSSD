@@ -30,9 +30,9 @@ class Log {
   enum class DebugID : uint32_t {
     Common,
     CPU,
-    DRAM,
-    DRAM_Timing,
-    SRAM,
+    Memory,
+    Memory_DRAM,
+    Memory_SRAM,
     HIL,
     HIL_Common,
     HIL_NVMe,
