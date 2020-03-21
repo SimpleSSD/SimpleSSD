@@ -162,9 +162,13 @@ void BasicFTL::write(Request *cmd) {
 
         // Do read translation - no need for loop
         pMapper->readMapping(firstreq, eventPartialReadSubmit);
+
+        stat.rmwCount++;
       }
       else {
         debugprint(Log::DebugID::FTL_PageLevel, "RMW | MERGED");
+
+        stat.rmwMerged++;
       }
     }
     else {
@@ -235,6 +239,8 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
     ppnBegin++;
     offset++;
   }
+
+  stat.rmwReadPages += ctx.counter;
 }
 
 void BasicFTL::rmw_readDone(uint64_t now, uint64_t tag) {
@@ -294,6 +300,8 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
     ppnBegin++;
     offset++;
   }
+
+  stat.rmwWrittenPages += ctx.counter;
 }
 
 void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
@@ -392,19 +400,28 @@ void BasicFTL::restore(std::istream &in, SuperRequest &list) noexcept {
 
 void BasicFTL::getStatList(std::vector<Stat> &list,
                            std::string prefix) noexcept {
+  list.emplace_back(prefix + "ftl.rmw.count",
+                    "Total read-modify-write operations");
+  list.emplace_back(prefix + "ftl.rmw.merge_count",
+                    "Total merged read-modify-write operations");
+  list.emplace_back(prefix + "ftl.rmw.read_pages",
+                    "Total read pages in read-modify-write");
+  list.emplace_back(prefix + "ftl.rmw.written_pages",
+                    "Total written pages in read-modify-write");
   list.emplace_back(prefix + "ftl.gc.count", "Total GC count");
   list.emplace_back(prefix + "ftl.gc.reclaimed_blocks",
                     "Total reclaimed blocks in GC");
-  list.emplace_back(prefix + "ftl.gc.superpage_copies",
-                    "Total valid superpage copy");
   list.emplace_back(prefix + "ftl.gc.page_copies", "Total valid page copy");
 }
 
 void BasicFTL::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back((double)stat.count);
-  values.push_back((double)stat.blocks);
-  values.push_back((double)stat.superpages);
-  values.push_back((double)stat.pages);
+  values.push_back((double)stat.rmwCount);
+  values.push_back((double)stat.rmwMerged);
+  values.push_back((double)stat.rmwReadPages);
+  values.push_back((double)stat.rmwWrittenPages);
+  values.push_back((double)stat.gcCount);
+  values.push_back((double)stat.gcErasedBlocks);
+  values.push_back((double)stat.gcCopiedPages);
 }
 
 void BasicFTL::resetStatValues() noexcept {

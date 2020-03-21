@@ -88,10 +88,13 @@ class BasicFTL : public AbstractFTL {
 
   // Statistics
   struct {
-    uint64_t count;
-    uint64_t blocks;
-    uint64_t superpages;
-    uint64_t pages;
+    uint64_t rmwCount;         // Total number of RMW operation
+    uint64_t rmwMerged;        // Total number of merged RMW operation
+    uint64_t rmwReadPages;     // Read pages in RMW
+    uint64_t rmwWrittenPages;  // Written pages in RMW
+    uint64_t gcCount;          // GC invoked count
+    uint64_t gcErasedBlocks;   // Erased blocks
+    uint64_t gcCopiedPages;    // Copied pages
   } stat;
 
   virtual inline void triggerGC() {
