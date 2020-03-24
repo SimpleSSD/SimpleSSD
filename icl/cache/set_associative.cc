@@ -580,7 +580,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     }
   }
 
-  if (evict) {
+  if (evict && evictList.size() < pagesToEvict) {
     // Perform eviction
     std::vector<FlushContext> list;
 
