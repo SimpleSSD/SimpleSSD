@@ -113,7 +113,7 @@
 
         Possible values:
          0: Ideal DRAM model with only DDR bus latency
-         1: LPDDR4 DRAM model
+         1: Simple DRAM model
        -->
       <config name="Model">1</config>
       <!-- DRAM structural configuration -->

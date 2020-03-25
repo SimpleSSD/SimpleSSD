@@ -112,9 +112,9 @@ Config::Config() {
   sram.pISB1 = 320.f;
   sram.pVCC = 1.8f;
 
-  /* MT53B512M32 LPDDR4-3200 512Mb x32 */
-  dramModel = Model::LPDDR4;
+  dramModel = Model::Simple;
 
+  /* MT53B512M32 LPDDR4-3200 512Mb x32 */
   dram.channel = 2;
   dram.rank = 2;
   dram.bank = 8;
@@ -444,15 +444,7 @@ void Config::storeTo(pugi::xml_node &section) {
   storeTimingDRAM(node2);
 }
 
-void Config::update() {
-  if (dramModel == Model::LPDDR4) {
-    panic_if(dram.channel % 2 != 0, "LPDDR4 has 2n channels.");
-
-    // Fix for controller
-    dram.channel /= 2;
-    dram.width *= 2;
-  }
-}
+void Config::update() {}
 
 uint64_t Config::readUint(uint32_t idx) {
   switch (idx) {

@@ -28,7 +28,7 @@ class Config : public BaseConfig {
 
   enum Model : uint8_t {
     Ideal,
-    LPDDR4,
+    Simple,
   };
 
   enum class MemoryScheduling : uint8_t {
