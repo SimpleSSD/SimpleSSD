@@ -10,7 +10,9 @@
 #ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 #define __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 
+#include "mem/def.hh"
 #include "mem/dram/abstract_dram.hh"
+#include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM::Simple {
 
@@ -22,6 +24,46 @@ namespace SimpleSSD::Memory::DRAM::Simple {
  */
 class SimpleDRAM : public AbstractDRAM {
  private:
+  union Address {
+    uint64_t data;
+    struct {
+      uint32_t row;
+      uint8_t bank;
+      uint8_t channel;
+      uint16_t rank;
+    };
+
+    Address() : data(0) {}
+    Address(uint64_t a) : data(a) {}
+    Address(uint8_t c, uint16_t r, uint8_t b, uint32_t ro)
+        : row(ro), bank(b), channel(c), rank(r) {}
+  };
+
+  Address addressLimit;
+  std::function<Address(uint64_t)> decodeAddress;
+
+  SingleScheduler<Request *> scheduler;
+
+  uint64_t activateLatency;
+  uint64_t ioReadLatency;
+  uint64_t ioWriteLatency;
+  uint64_t burstLatency;
+  uint64_t burstSize;
+  uint64_t burstInRow;
+
+  uint64_t preSubmit(Request *);
+  void postDone(Request *);
+
+  std::vector<std::vector<std::vector<uint32_t>>> rowOpened;
+
+  bool checkRow(uint64_t);
+
+  CountStat readHit;
+  CountStat writeHit;
+  BusyStat readBusy;
+  BusyStat writeBusy;
+  BusyStat totalBusy;
+
  public:
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
