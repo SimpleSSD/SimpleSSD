@@ -22,6 +22,7 @@ class CountStat {
   CountStat();
 
   void add() noexcept;
+  void add(uint64_t) noexcept;
 
   uint64_t getCount() noexcept;
 
