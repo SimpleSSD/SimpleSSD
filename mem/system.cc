@@ -262,7 +262,8 @@ uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
     }
 
     // Panic
-    panic_log("%" PRIu64 " bytes requested, but %" PRIu64 "bytes left in DRAM.",
+    panic_log("%" PRIu64 " bytes requested, but %" PRIu64
+              " bytes left in DRAM.",
               size, unallocated);
   }
 
