@@ -111,6 +111,7 @@ set(SRC_MEM
   mem/system.cc
   mem/dram/abstract_dram.cc
   mem/dram/ideal/ideal.cc
+  mem/dram/simple/simple.cc
   mem/sram/abstract_sram.cc
   mem/sram/sram.cc
 )

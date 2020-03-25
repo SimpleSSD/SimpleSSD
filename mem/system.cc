@@ -8,6 +8,7 @@
 #include "mem/system.hh"
 
 #include "mem/dram/ideal/ideal.hh"
+#include "mem/dram/simple/simple.hh"
 #include "mem/sram/sram.hh"
 #include "sim/object.hh"
 #include "util/algorithm.hh"
@@ -21,6 +22,10 @@ System::System(ObjectData *po)
                                                    Config::Key::DRAMModel)) {
     case Config::Model::Ideal:
       dram = new DRAM::Ideal::IdealDRAM(*pobject);
+
+      break;
+    case Config::Model::Simple:
+      dram = new DRAM::Simple::SimpleDRAM(*pobject);
 
       break;
     default:
