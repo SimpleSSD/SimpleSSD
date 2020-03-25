@@ -9,13 +9,7 @@
 
 namespace SimpleSSD::Memory::DRAM::Simple {
 
-SimpleDRAM::SimpleDRAM(ObjectData &o)
-    : AbstractDRAM(o),
-      scheduler(
-          o, "Memory::DRAM::scheduler",
-          [this](Request *r) -> uint64_t { return preSubmit(r); },
-          [this](Request *r) { postDone(r); }, Request::backup,
-          Request::restore) {
+SimpleDRAM::SimpleDRAM(ObjectData &o) : AbstractDRAM(o) {
   activateLatency = pTiming->tRP + pTiming->tRCD;
   ioReadLatency = pTiming->tRL;
   ioWriteLatency = pTiming->tWL + pTiming->tWR;
@@ -47,35 +41,48 @@ SimpleDRAM::SimpleDRAM(ObjectData &o)
     return ret;
   };
 
-  rowOpened.resize(pStructure->channel);
+  uint32_t totalBanks =
+      pStructure->channel * pStructure->rank * pStructure->bank;
 
-  for (auto &channel : rowOpened) {
-    channel.resize(pStructure->rank);
+  rowOpened =
+      std::vector<uint32_t>(totalBanks, std::numeric_limits<uint32_t>::max());
 
-    for (auto &rank : channel) {
-      rank.resize(pStructure->bank);
+  scheduler.reserve(totalBanks);
 
-      for (auto &bank : rank) {
-        bank = std::numeric_limits<uint32_t>::max();
-      }
-    }
+  for (uint32_t i = 0; i < totalBanks; i++) {
+    std::string name = "Memory::DRAM::scheduler<";
+
+    name += std::to_string(i / (pStructure->bank * pStructure->rank));
+    name += ":";
+    name += std::to_string((i / pStructure->bank) % pStructure->rank);
+    name += ":";
+    name += std::to_string(i % pStructure->bank);
+    name += ">";
+
+    scheduler.emplace_back(new RequestScheduler(
+        object, name, [this](Request *r) -> uint64_t { return preSubmit(r); },
+        [this](Request *r) { postDone(r); }, Request::backup,
+        Request::restore));
   }
 
   readHit.clear();
   writeHit.clear();
 }
 
-SimpleDRAM::~SimpleDRAM() {}
+SimpleDRAM::~SimpleDRAM() {
+  for (auto &iter : scheduler) {
+    delete iter;
+  }
+}
 
-bool SimpleDRAM::checkRow(uint64_t addr) {
-  auto dram = decodeAddress(addr);
-  auto &row = rowOpened[dram.channel][dram.rank][dram.bank];
+bool SimpleDRAM::checkRow(Request *req) {
+  auto &row = rowOpened.at(getOffset(req->address));
 
-  if (row == dram.row) {
+  if (row == req->address.row) {
     return true;
   }
   else {
-    row = dram.row;
+    row = req->address.row;
   }
 
   return false;
@@ -86,7 +93,7 @@ uint64_t SimpleDRAM::preSubmit(Request *req) {
   uint64_t burstCount = DIVCEIL(MemoryPacketSize, burstSize);
   uint64_t latency = burstCount * burstLatency;
 
-  if (checkRow(req->offset)) {
+  if (checkRow(req)) {
     if (req->read) {
       readHit.add(burstCount);
     }
@@ -127,8 +134,9 @@ void SimpleDRAM::postDone(Request *req) {
 }
 
 void SimpleDRAM::read(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(true, address, eid, data);
+  auto req = new Request(true, eid, data);
 
+  req->address = decodeAddress(address);
   req->beginAt = getTick();
 
   // Stat Update
@@ -137,12 +145,13 @@ void SimpleDRAM::read(uint64_t address, Event eid, uint64_t data) {
   totalBusy.busyBegin(req->beginAt);
 
   // Schedule callback
-  scheduler.enqueue(req);
+  scheduler.at(getOffset(req->address))->enqueue(req);
 }
 
 void SimpleDRAM::write(uint64_t address, Event eid, uint64_t data) {
-  auto req = new Request(false, address, eid, data);
+  auto req = new Request(false, eid, data);
 
+  req->address = decodeAddress(address);
   req->beginAt = getTick();
 
   // Stat Update
@@ -151,7 +160,7 @@ void SimpleDRAM::write(uint64_t address, Event eid, uint64_t data) {
   totalBusy.busyBegin(req->beginAt);
 
   // Schedule callback
-  scheduler.enqueue(req);
+  scheduler.at(getOffset(req->address))->enqueue(req);
 }
 
 void SimpleDRAM::getStatList(std::vector<Stat> &list,
@@ -199,7 +208,15 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, burstSize);
   BACKUP_SCALAR(out, burstInRow);
 
-  scheduler.createCheckpoint(out);
+  uint32_t size = (uint32_t)scheduler.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : scheduler) {
+    iter->createCheckpoint(out);
+  }
+
+  BACKUP_BLOB(out, rowOpened.data(), size * sizeof(uint32_t));
 }
 
 void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
@@ -212,7 +229,17 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, burstSize);
   RESTORE_SCALAR(in, burstInRow);
 
-  scheduler.restoreCheckpoint(in);
+  uint32_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  panic_if(size != scheduler.size(), "DRAM structure mismatch.");
+
+  for (auto &iter : scheduler) {
+    iter->restoreCheckpoint(in);
+  }
+
+  RESTORE_BLOB(in, rowOpened.data(), size * sizeof(uint32_t));
 }
 
 }  // namespace SimpleSSD::Memory::DRAM::Simple

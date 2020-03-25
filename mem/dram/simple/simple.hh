@@ -10,11 +10,68 @@
 #ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 #define __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 
-#include "mem/def.hh"
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM::Simple {
+
+union Address {
+  uint64_t data;
+  struct {
+    uint32_t row;
+    uint8_t bank;
+    uint8_t channel;
+    uint16_t rank;
+  };
+
+  Address() : data(0) {}
+  Address(uint64_t a) : data(a) {}
+  Address(uint8_t c, uint16_t r, uint8_t b, uint32_t ro)
+      : row(ro), bank(b), channel(c), rank(r) {}
+};
+
+class Request {
+ public:
+  bool read;
+  Address address;
+
+  Event eid;
+  uint64_t data;
+
+  uint64_t beginAt;
+
+  Request() : read(true), eid(InvalidEventID), data(0), beginAt(0) {}
+  Request(bool r, Event e, uint64_t d) : read(r), eid(e), data(d), beginAt(0) {}
+  Request(const Request &) = delete;
+  Request(Request &&) noexcept = default;
+
+  Request &operator=(const Request &) = delete;
+  Request &operator=(Request &&) = default;
+
+  static void backup(std::ostream &out, Request *item) {
+    BACKUP_SCALAR(out, item->read);
+    BACKUP_SCALAR(out, item->address.data);
+
+    BACKUP_EVENT(out, item->eid);
+    BACKUP_SCALAR(out, item->data);
+
+    BACKUP_SCALAR(out, item->beginAt);
+  }
+
+  static Request *restore(std::istream &in, ObjectData &object) {
+    auto item = new Request();
+
+    RESTORE_SCALAR(in, item->read);
+    RESTORE_SCALAR(in, item->address.data);
+
+    RESTORE_EVENT(in, item->eid);
+    RESTORE_SCALAR(in, item->data);
+
+    RESTORE_SCALAR(in, item->beginAt);
+
+    return item;
+  }
+};
 
 /**
  * \brief Simple DRAM model
@@ -24,25 +81,10 @@ namespace SimpleSSD::Memory::DRAM::Simple {
  */
 class SimpleDRAM : public AbstractDRAM {
  private:
-  union Address {
-    uint64_t data;
-    struct {
-      uint32_t row;
-      uint8_t bank;
-      uint8_t channel;
-      uint16_t rank;
-    };
-
-    Address() : data(0) {}
-    Address(uint64_t a) : data(a) {}
-    Address(uint8_t c, uint16_t r, uint8_t b, uint32_t ro)
-        : row(ro), bank(b), channel(c), rank(r) {}
-  };
+  using RequestScheduler = SingleScheduler<Request *>;
 
   Address addressLimit;
   std::function<Address(uint64_t)> decodeAddress;
-
-  SingleScheduler<Request *> scheduler;
 
   uint64_t activateLatency;
   uint64_t ioReadLatency;
@@ -54,9 +96,15 @@ class SimpleDRAM : public AbstractDRAM {
   uint64_t preSubmit(Request *);
   void postDone(Request *);
 
-  std::vector<std::vector<std::vector<uint32_t>>> rowOpened;
+  bool checkRow(Request *);
 
-  bool checkRow(uint64_t);
+  inline uint32_t getOffset(Address &addr) {
+    return addr.bank + (uint32_t)addr.rank * pStructure->bank +
+           (uint32_t)addr.channel * pStructure->bank * pStructure->rank;
+  }
+
+  std::vector<RequestScheduler *> scheduler;
+  std::vector<uint32_t> rowOpened;
 
   CountStat readHit;
   CountStat writeHit;
