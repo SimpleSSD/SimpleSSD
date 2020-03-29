@@ -611,7 +611,13 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
 
   fstat += readMappingInternal(lspn, pspn, mappingHit, cmd->getTag());
 
-  cmd->setPPN(pspn * param.superpage + superpageIndex);
+  if (UNLIKELY(pspn == InvalidPPN)) {
+    cmd->setResponse(Response::Unwritten);
+    cmd->setPPN(InvalidPPN);
+  }
+  else {
+    cmd->setPPN(pspn * param.superpage + superpageIndex);
+  }
 
   debugprint(Log::DebugID::FTL_PageLevel,
              "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
