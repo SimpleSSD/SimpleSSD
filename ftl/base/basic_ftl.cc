@@ -94,9 +94,16 @@ void BasicFTL::read(Request *cmd) {
 void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
-  pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
+  if (LIKELY(req->getResponse() == Response::Success)) {
+    pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
 
-  object.memory->write(req->getDRAMAddress(), pageSize, InvalidEventID, false);
+    object.memory->write(req->getDRAMAddress(), pageSize, InvalidEventID,
+                         false);
+  }
+  else {
+    // Error while translation
+    completeRequest(req);
+  }
 }
 
 void BasicFTL::read_done(uint64_t tag) {
@@ -191,9 +198,15 @@ void BasicFTL::write_submit(uint64_t tag) {
   PPN offset = 0;
 
   for (auto &req : *list) {
-    pFIL->program(FIL::Request(ppn + offset, eventWriteDone, req->getTag()));
+    if (LIKELY(req->getResponse() == Response::Success)) {
+      pFIL->program(FIL::Request(ppn + offset, eventWriteDone, req->getTag()));
 
-    object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID, false);
+      object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID,
+                          false);
+    }
+    else {
+      completeRequest(req);
+    }
 
     offset++;
   }
@@ -223,24 +236,31 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
   uint64_t diff = ctx.chunkBegin - ctx.alignedBegin;
   auto cmd = ctx.list.at(diff);
 
-  // Convert PPN to aligned
-  PPN ppnBegin = cmd->getPPN() - diff;
-  uint64_t offset = 0;
+  if (LIKELY(cmd->getResponse() == Response::Success)) {
+    // Convert PPN to aligned
+    PPN ppnBegin = cmd->getPPN() - diff;
+    uint64_t offset = 0;
 
-  for (auto &cmd : ctx.list) {
-    if (!cmd) {
-      pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, tag));
-      object.memory->write(pendingListBaseAddress + offset * pageSize, pageSize,
-                           InvalidEventID, false);
+    for (auto &cmd : ctx.list) {
+      if (!cmd) {
+        pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, tag));
+        object.memory->write(pendingListBaseAddress + offset * pageSize,
+                             pageSize, InvalidEventID, false);
 
-      ctx.counter++;
+        ctx.counter++;
+      }
+
+      ppnBegin++;
+      offset++;
     }
 
-    ppnBegin++;
-    offset++;
+    stat.rmwReadPages += ctx.counter;
   }
+  else {
+    ctx.counter = 1;
 
-  stat.rmwReadPages += ctx.counter;
+    rmw_readDone(now, tag);
+  }
 }
 
 void BasicFTL::rmw_readDone(uint64_t now, uint64_t tag) {
@@ -279,29 +299,36 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
   uint64_t diff = ctx.chunkBegin - ctx.alignedBegin;
   auto cmd = ctx.list.at(diff);
 
-  // Convert PPN to aligned
-  PPN ppnBegin = cmd->getPPN() - diff;
-  uint64_t offset = 0;
+  if (LIKELY(cmd->getResponse() == Response::Success)) {
+    // Convert PPN to aligned
+    PPN ppnBegin = cmd->getPPN() - diff;
+    uint64_t offset = 0;
 
-  for (auto &cmd : ctx.list) {
-    pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, tag));
+    for (auto &cmd : ctx.list) {
+      pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, tag));
 
-    if (cmd) {
-      object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID,
-                          false);
+      if (cmd) {
+        object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID,
+                            false);
+      }
+      else {
+        object.memory->read(pendingListBaseAddress + offset * pageSize,
+                            pageSize, InvalidEventID, false);
+      }
+
+      ctx.counter++;
+
+      ppnBegin++;
+      offset++;
     }
-    else {
-      object.memory->read(pendingListBaseAddress + offset * pageSize, pageSize,
-                          InvalidEventID, false);
-    }
 
-    ctx.counter++;
-
-    ppnBegin++;
-    offset++;
+    stat.rmwWrittenPages += ctx.counter;
   }
+  else {
+    ctx.counter = 1;
 
-  stat.rmwWrittenPages += ctx.counter;
+    rmw_writeDone(now, tag);
+  }
 }
 
 void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
