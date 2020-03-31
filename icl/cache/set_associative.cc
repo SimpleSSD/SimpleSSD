@@ -566,7 +566,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
       updateSkip(line.validbits, sreq);
     }
-    else {
+    else if (opcode == HIL::Operation::Read) {
       line.nvmPending = true;  // Read is triggered immediately
       line.validbits.set();
     }
