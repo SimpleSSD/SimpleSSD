@@ -420,11 +420,9 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   }
 
   if (immediate) {
-    CPU::Function f;
-
     session.parent->inited = true;
 
-    scheduleFunction(CPU::CPUGroup::HostInterface, eid, data, f);
+    scheduleNow(eid, data);
 
     destroySession(siter.first);
   }
@@ -449,11 +447,9 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
   if (desc.getType() == SGLDescriptorType::DataBlock ||
       desc.getType() == SGLDescriptorType::KeyedDataBlock) {
     // This is entire buffer
-    CPU::Function f;
-
     session.parent->inited = true;
 
-    scheduleFunction(CPU::CPUGroup::HostInterface, eid, data, f);
+    scheduleNow(eid, data);
 
     destroySession(siter.first);
   }
