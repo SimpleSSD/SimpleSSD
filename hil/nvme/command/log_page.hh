@@ -40,11 +40,26 @@ class ChangedNamespaceList : public Object {
 
 class LogPage : public Object {
  public:
-  // See NVMe 1.4 Section 5.14 Figure 191/192
-  // Log ID Description -> Supported by SimpleSSD?
-  // 02h SMART/Health Information -> data.subsystem
-  // 04h Changed Namespace List
+  // See NVMe 1.4 Section 7.1 Figure 420/421
+  // Log ID Mandatory Description -> Supported by SimpleSSD?
+  // 01h M Error Information -> Return empty log
+  // 02h M SMART/Health Information -> data.subsystem
+  // 03h M Firmware Slot Information -> Return (1 slot, active)
+  // 04h O Changed Namespace List -> Handles namespace attachment/management
   ChangedNamespaceList cnl;
+  // 05h O Commands Supported and Effects -> Return supported commands
+  // 06h O Device Self-test
+  // 07h O Telemetry Host-Initiated
+  // 08h O Telemetry Controller-Initiated
+  // 09h O Endurance Group Information
+  // 0Ah O Predictable Latency Per NVM Set
+  // 0Bh O Predictable Latency Event Aggregate
+  // 0Ch O Asymmetric Namespace Access
+  // 0Dh O Persistent Event
+  // 0Eh O LBA Status Information
+  // 0Fh O Endurance Group Event Aggregate
+  // 80h O Reservation Notification
+  // 81h O Sanitize Status
 
   LogPage(ObjectData &);
 
