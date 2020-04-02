@@ -88,7 +88,61 @@ void ChangedNamespaceList::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
-LogPage::LogPage(ObjectData &o) : Object(o), cnl(o) {}
+LogPage::LogPage(ObjectData &o) : Object(o), cnl(o) {
+  // Fill firmware slot information
+  memset(fsi.data, 0, 64);
+
+  // Fill commands supported and effects
+
+  // [Bits ] Name  : Description
+  // [31:20] Reserved
+  // [19:19] USS   : UUID Selection Supported
+  // [18:16] CSE   : Command Submission and Execution
+  // [15:05] Reserved
+  // [04:04] CCC   : Controller Capability Change
+  // [03:03] NIC   : Namespace Inventory Change
+  // [02:02] NCC   : Namespace Capability Change
+  // [01:01] LBCC  : Logical Block Content Change
+  // [00:00] CSUPP : Command Supported
+  //             109876543210 9 876 54321098765 4 3 2 1 0
+
+  // 00h Delete I/O Submission Queue
+  csae[0x00] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 01h Create I/O Submission Queue
+  csae[0x01] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 02h Get Log Page
+  csae[0x02] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 04h Delete I/O Completion Queue
+  csae[0x04] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 05h Create I/O Completion Queue
+  csae[0x05] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 06h Identify
+  csae[0x06] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 08h Abort
+  csae[0x08] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 09h Set Features
+  csae[0x09] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 0Ah Get Features
+  csae[0x0A] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 0Ch Asynchronous Event Request
+  csae[0x0C] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 0Dh Namespace Management
+  csae[0x0D] = 0b000000000000'0'010'00000000000'0'0'1'0'1;
+  // 15h Namespace Attachment
+  csae[0x15] = 0b000000000000'0'000'00000000000'0'1'0'0'1;
+  // 80h Format NVM
+  csae[0x80] = 0b000000000000'0'010'00000000000'0'0'0'1'1;
+  // 00h Flush
+  csae[0x100] = 0b000000000000'0'001'00000000000'0'0'0'1'1;
+  // 01h Write
+  csae[0x101] = 0b000000000000'0'000'00000000000'0'0'0'1'1;
+  // 02h Read
+  csae[0x102] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 05h Compare
+  csae[0x105] = 0b000000000000'0'000'00000000000'0'0'0'0'1;
+  // 09h Dataset Management
+  csae[0x109] = 0b000000000000'0'001'00000000000'0'0'0'1'1;
+}
 
 void LogPage::getStatList(std::vector<Stat> &, std::string) noexcept {}
 

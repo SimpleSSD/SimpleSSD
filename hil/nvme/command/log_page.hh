@@ -45,9 +45,20 @@ class LogPage : public Object {
   // 01h M Error Information -> Return empty log
   // 02h M SMART/Health Information -> data.subsystem
   // 03h M Firmware Slot Information -> Return (1 slot, active)
+  union FirmwareSlotInfomation {
+    uint64_t data[8];
+    struct {
+      uint64_t afi;
+      uint64_t frs[7];
+    };
+  } fsi;
+
   // 04h O Changed Namespace List -> Handles namespace attachment/management
   ChangedNamespaceList cnl;
+
   // 05h O Commands Supported and Effects -> Return supported commands
+  uint32_t csae[1024];
+
   // 06h O Device Self-test
   // 07h O Telemetry Host-Initiated
   // 08h O Telemetry Controller-Initiated
