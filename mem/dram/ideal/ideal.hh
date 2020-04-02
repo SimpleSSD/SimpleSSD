@@ -14,7 +14,7 @@
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
-namespace SimpleSSD::Memory::DRAM::Ideal {
+namespace SimpleSSD::Memory::DRAM {
 
 /**
  * \brief Ideal DRAM model
@@ -41,6 +41,6 @@ class IdealDRAM : public AbstractDRAM {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::Memory::DRAM::Ideal
+}  // namespace SimpleSSD::Memory::DRAM
 
 #endif

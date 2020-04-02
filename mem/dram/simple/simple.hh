@@ -13,7 +13,7 @@
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
-namespace SimpleSSD::Memory::DRAM::Simple {
+namespace SimpleSSD::Memory::DRAM {
 
 union Address {
   uint64_t data;
@@ -127,6 +127,6 @@ class SimpleDRAM : public AbstractDRAM {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::Memory::DRAM::Simple
+}  // namespace SimpleSSD::Memory::DRAM
 
 #endif

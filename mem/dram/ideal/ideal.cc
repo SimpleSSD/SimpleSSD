@@ -9,7 +9,7 @@
 
 #include "util/algorithm.hh"
 
-namespace SimpleSSD::Memory::DRAM::Ideal {
+namespace SimpleSSD::Memory::DRAM {
 
 IdealDRAM::IdealDRAM(ObjectData &o)
     : AbstractDRAM(o),
@@ -76,4 +76,4 @@ void IdealDRAM::restoreCheckpoint(std::istream &in) noexcept {
   scheduler.restoreCheckpoint(in);
 }
 
-}  // namespace SimpleSSD::Memory::DRAM::Ideal
+}  // namespace SimpleSSD::Memory::DRAM

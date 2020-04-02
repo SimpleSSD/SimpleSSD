@@ -21,11 +21,11 @@ System::System(ObjectData *po)
   switch ((Config::Model)pobject->config->readUint(Section::Memory,
                                                    Config::Key::DRAMModel)) {
     case Config::Model::Ideal:
-      dram = new DRAM::Ideal::IdealDRAM(*pobject);
+      dram = new DRAM::IdealDRAM(*pobject);
 
       break;
     case Config::Model::Simple:
-      dram = new DRAM::Simple::SimpleDRAM(*pobject);
+      dram = new DRAM::SimpleDRAM(*pobject);
 
       break;
     default:

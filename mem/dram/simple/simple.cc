@@ -7,7 +7,7 @@
 
 #include "mem/dram/simple/simple.hh"
 
-namespace SimpleSSD::Memory::DRAM::Simple {
+namespace SimpleSSD::Memory::DRAM {
 
 SimpleDRAM::SimpleDRAM(ObjectData &o) : AbstractDRAM(o) {
   activateLatency = pTiming->tRP + pTiming->tRCD;
@@ -242,4 +242,4 @@ void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_BLOB(in, rowOpened.data(), size * sizeof(uint32_t));
 }
 
-}  // namespace SimpleSSD::Memory::DRAM::Simple
+}  // namespace SimpleSSD::Memory::DRAM
