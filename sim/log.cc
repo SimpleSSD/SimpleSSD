@@ -67,32 +67,6 @@ void Log::init(CPU::CPU *c, std::ostream *outfile, std::ostream *errfile,
                std::ostream *debugfile) noexcept {
   cpu = c;
 
-  if (UNLIKELY(outfile == nullptr || errfile == nullptr ||
-               debugfile == nullptr)) {
-    std::cerr << "panic: Got null-pointer" << std::endl;
-
-    abort();
-  }
-
-  if (UNLIKELY(!outfile->good())) {
-    // We don't have panic yet
-    std::cerr << "panic: outfile is not opened" << std::endl;
-
-    abort();
-  }
-
-  if (UNLIKELY(!errfile->good())) {
-    std::cerr << "panic: errfile is not opened" << std::endl;
-
-    abort();
-  }
-
-  if (UNLIKELY(!debugfile->good())) {
-    std::cerr << "panic: debugfile is not opened" << std::endl;
-
-    abort();
-  }
-
   out = outfile;
   err = errfile;
   debug = debugfile;
@@ -133,7 +107,11 @@ void Log::print(LogID id, const char *format, va_list args) noexcept {
       break;
   }
 
-  if (LIKELY(err->good())) {
+  if (UNLIKELY(!stream)) {
+    return;
+  }
+
+  if (LIKELY(stream->good())) {
     *stream << cpu->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
 
     print(stream, format, args);
@@ -156,6 +134,10 @@ void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
     std::cerr << "panic: Log system not initialized" << std::endl;
 
     abort();
+  }
+
+  if (UNLIKELY(!debug)) {
+    return;
   }
 
   if (LIKELY(debug->good())) {

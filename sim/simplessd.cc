@@ -55,7 +55,7 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
   else if (path.compare(FILE_STDERR) == 0) {
     os = &std::cerr;
   }
-  else {
+  else if (path.length() > 0) {
     std::string filepath = Path::joinPath(prefix.c_str(), path.c_str());
 
     os = new std::ofstream(filepath);
