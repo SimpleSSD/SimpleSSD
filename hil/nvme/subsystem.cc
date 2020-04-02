@@ -575,8 +575,8 @@ HealthInfo *Subsystem::getHealth(uint32_t nsid) {
   return nullptr;
 }
 
-void Subsystem::getCommandEffects(uint8_t *buffer, uint32_t offset,
-                                  uint32_t length) {
+void Subsystem::getFirmwareInfo(uint8_t *buffer, uint32_t offset,
+                                uint32_t length) {
   uint8_t *src = (uint8_t *)fsi.data;
 
   if (offset < 64) {
@@ -589,8 +589,8 @@ void Subsystem::getCommandEffects(uint8_t *buffer, uint32_t offset,
   }
 }
 
-void Subsystem::getFirmwareInfo(uint8_t *buffer, uint32_t offset,
-                                uint32_t length) {
+void Subsystem::getCommandEffects(uint8_t *buffer, uint32_t offset,
+                                  uint32_t length) {
   uint8_t *src = (uint8_t *)csae;
 
   if (offset < 2048) {
