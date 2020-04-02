@@ -329,6 +329,8 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 
     rmw_writeDone(now, tag);
   }
+
+  triggerGC();
 }
 
 void BasicFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
