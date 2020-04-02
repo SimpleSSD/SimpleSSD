@@ -35,7 +35,16 @@ class Subsystem : public AbstractSubsystem {
   std::map<uint32_t, Namespace *> namespaceList;
   std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
+  // Log Pages
   HealthInfo health;
+  union FirmwareSlotInfomation {
+    uint64_t data[8];
+    struct {
+      uint64_t afi;
+      uint64_t frs[7];
+    };
+  } fsi;
+  uint32_t csae[1024];
 
   uint32_t logicalPageSize;
   uint64_t totalLogicalPages;
@@ -141,6 +150,8 @@ class Subsystem : public AbstractSubsystem {
   uint64_t getTotalPages() const;
   uint64_t getAllocatedPages() const;
   HealthInfo *getHealth(uint32_t);
+  void getFirmwareInfo(uint8_t *, uint32_t, uint32_t);
+  void getCommandEffects(uint8_t *, uint32_t, uint32_t);
 
   uint8_t attachNamespace(ControllerID, uint32_t, bool = true);
   uint8_t detachNamespace(ControllerID, uint32_t, bool = true);
