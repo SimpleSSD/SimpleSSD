@@ -66,7 +66,7 @@ Request *FTL::insertRequest(Request &&req) {
 
   panic_if(!ret.second, "Duplicated request ID.");
 
-  ret.first->second.tag = ret.first->first;
+  ret.first->second.tag = requestCounter;
 
   return &ret.first->second;
 }
