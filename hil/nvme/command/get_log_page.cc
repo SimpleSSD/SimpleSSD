@@ -66,6 +66,10 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
   tag->buffer.resize(size);
 
   switch ((LogPageID)lid) {
+    case LogPageID::ErrorInformation:
+      memset(tag->buffer.data(), 0, size);
+
+      break;
     case LogPageID::SMARTInformation: {
       auto health = subsystem->getHealth(nsid);
 
@@ -82,9 +86,17 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
                              GenericCommandStatusCode::Invalid_Field);
       }
     } break;
+    case LogPageID::FirmwareSlotInformation:
+      subsystem->getFirmwareInfo(tag->buffer.data(), offset, size);
+
+      break;
     case LogPageID::ChangedNamespaceList:
       tag->controller->getLogPage()->cnl.makeResponse(offset, size,
                                                       tag->buffer.data());
+
+      break;
+    case LogPageID::CommandsSupportedAndEffects:
+      subsystem->getCommandEffects(tag->buffer.data(), offset, size);
 
       break;
     default:
