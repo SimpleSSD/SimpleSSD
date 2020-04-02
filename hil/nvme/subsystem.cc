@@ -47,6 +47,7 @@ Subsystem::Subsystem(ObjectData &o)
   memset(fsi.data, 0, 64);
 
   // Fill commands supported and effects
+  memset(csae, 0, 4096);
 
   // [Bits ] Name  : Description
   // [31:20] Reserved

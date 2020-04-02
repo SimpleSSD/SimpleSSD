@@ -64,10 +64,11 @@ void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
 
   // Make buffer
   tag->buffer.resize(size);
+  memset(tag->buffer.data(), 0, size);
 
   switch ((LogPageID)lid) {
     case LogPageID::ErrorInformation:
-      memset(tag->buffer.data(), 0, size);
+      // Do Nothing
 
       break;
     case LogPageID::SMARTInformation: {
