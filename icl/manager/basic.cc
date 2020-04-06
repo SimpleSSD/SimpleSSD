@@ -95,9 +95,20 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
   prefetchTrigger = std::numeric_limits<LPN>::max();
   lastPrefetched = 0;
 
-  prefetchCount = prefetchMode == Config::Granularity::AllLevel
-                      ? ftlparam->parallelism
-                      : ftlparam->parallelismLevel[0];
+  prefetchCount = 1;
+
+  if (prefetchMode >= Config::Granularity::FirstLevel) {
+    prefetchCount *= ftlparam->parallelismLevel[0];
+  }
+  if (prefetchMode >= Config::Granularity::SecondLevel) {
+    prefetchCount *= ftlparam->parallelismLevel[1];
+  }
+  if (prefetchMode >= Config::Granularity::ThirdLevel) {
+    prefetchCount *= ftlparam->parallelismLevel[2];
+  }
+  if (prefetchMode >= Config::Granularity::AllLevel) {
+    prefetchCount *= ftlparam->parallelismLevel[3];
+  }
 
   prefetched = 0;
   drained = 0;
