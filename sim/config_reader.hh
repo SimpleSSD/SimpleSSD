@@ -60,8 +60,8 @@ class ConfigReader {
   ConfigReader &operator=(const ConfigReader &) = delete;
   ConfigReader &operator=(ConfigReader &&) = default;
 
-  void load(const char *) noexcept;
-  void load(std::string &) noexcept;
+  void load(const char *, bool = false) noexcept;
+  void load(std::string &, bool = false) noexcept;
 
   void save(const char *) noexcept;
   void save(std::string &) noexcept;

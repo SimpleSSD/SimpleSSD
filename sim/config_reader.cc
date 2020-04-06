@@ -25,7 +25,7 @@ ConfigReader::~ConfigReader() {}
  *
  * \param[in] path Input file path
  */
-void ConfigReader::load(const char *path) noexcept {
+void ConfigReader::load(const char *path, bool test) noexcept {
   auto result = file.load_file(
       path, pugi::parse_default | pugi::parse_trim_pcdata, pugi::encoding_utf8);
 
@@ -82,13 +82,15 @@ void ConfigReader::load(const char *path) noexcept {
     }
 
     // Update config objects
-    simConfig.update();
-    cpuConfig.update();
-    memConfig.update();
-    hilConfig.update();
-    iclConfig.update();
-    ftlConfig.update();
-    filConfig.update();
+    if (!test) {
+      simConfig.update();
+      cpuConfig.update();
+      memConfig.update();
+      hilConfig.update();
+      iclConfig.update();
+      ftlConfig.update();
+      filConfig.update();
+    }
   }
 
   // Close
@@ -96,8 +98,8 @@ void ConfigReader::load(const char *path) noexcept {
 }
 
 //! Load configuration from file
-void ConfigReader::load(std::string &path) noexcept {
-  load(path.c_str());
+void ConfigReader::load(std::string &path, bool test) noexcept {
+  load(path.c_str(), test);
 }
 
 /**
