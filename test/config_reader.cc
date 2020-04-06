@@ -191,8 +191,9 @@ TEST_CASE("ConfigReader") {
       reader.writeUint(Section::InternalCache, ICL::Config::Key::CacheWaySize,
                        utest);
 
-      // Section::FlashTranslation reader.writeUint(Section::FlashTranslation,
-      // FTL::Config::Key::MappingMode, utest);
+      // Section::FlashTranslation
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::MappingMode,
+                       utest);
       reader.writeUint(Section::FlashTranslation, FTL::Config::Key::FillingMode,
                        utest);
       reader.writeFloat(Section::FlashTranslation, FTL::Config::Key::FillRatio,
@@ -227,8 +228,8 @@ TEST_CASE("ConfigReader") {
       nand->nop = utest;
       nand->pageAllocation[0] = FIL::PageAllocation::Die;
       nand->pageAllocation[1] = FIL::PageAllocation::Way;
-      nand->pageAllocation[2] = FIL::PageAllocation::Channel;
-      nand->pageAllocation[3] = FIL::PageAllocation::Plane;
+      nand->pageAllocation[2] = FIL::PageAllocation::Plane;
+      nand->pageAllocation[3] = FIL::PageAllocation::Channel;
       nand->die = utest;
       nand->plane = utest;
       nand->block = utest;
@@ -396,18 +397,21 @@ TEST_CASE("ConfigReader") {
                               HIL::Config::Key::WorkInterval) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::RequestQueueSize) == utest);
+      // utest + 1 because it handled in update()
       REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::PCIeGeneration) == utest);
+                              HIL::Config::Key::PCIeGeneration) == utest + 1);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::PCIeLane) == utest);
+      // utest + 1 because it handled in update()
       REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::SATAGeneration) == utest);
+                              HIL::Config::Key::SATAGeneration) == utest + 1);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::MPHYMode) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::MPHYLane) == utest);
+      // utest * 8 because it handled in update()
       REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::AXIWidth) == utest);
+                              HIL::Config::Key::AXIWidth) == utest * 8);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::AXIClock) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
@@ -498,8 +502,8 @@ TEST_CASE("ConfigReader") {
       REQUIRE(nand->nop == utest);
       REQUIRE(nand->pageAllocation[0] == FIL::PageAllocation::Die);
       REQUIRE(nand->pageAllocation[1] == FIL::PageAllocation::Way);
-      REQUIRE(nand->pageAllocation[2] == FIL::PageAllocation::Channel);
-      REQUIRE(nand->pageAllocation[3] == FIL::PageAllocation::Plane);
+      REQUIRE(nand->pageAllocation[2] == FIL::PageAllocation::Plane);
+      REQUIRE(nand->pageAllocation[3] == FIL::PageAllocation::Channel);
       REQUIRE(nand->die == utest);
       REQUIRE(nand->plane == utest);
       REQUIRE(nand->block == utest);
