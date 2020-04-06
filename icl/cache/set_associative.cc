@@ -580,7 +580,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     }
   }
 
-  if (evict && evictList.size() < pagesToEvict) {
+  if (evict && (evictList.size() < pagesToEvict || eid == InvalidEventID)) {
     // Perform eviction
     std::vector<FlushContext> list;
 
