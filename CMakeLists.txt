@@ -414,6 +414,7 @@ target_link_libraries(simplessd mcpat pugixml)
 set(SRC_TEST
   test/main.cc
   test/config_reader.cc
+  test/sorted_map.cc
 )
 
 add_executable(test_simplessd ${SRC_TEST})
