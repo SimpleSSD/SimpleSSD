@@ -45,9 +45,16 @@ message(FATAL_ERROR "Failed to find pugixml library. \
 Check you initialized submodules.")
 endif ()
 
+# Check cache2 is valid
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/catch2/include/catch.hpp")
+message(FATAL_ERROR "Failed to find catch2 library. \
+Check you initialized submodules.")
+endif ()
+
 # Add subproject
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/mcpat)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/pugixml)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/catch2)
 
 # Set include directories
 include_directories(
@@ -55,6 +62,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/lib/mcpat
   ${PROJECT_SOURCE_DIR}/lib/mcpat/cacti
   ${PROJECT_SOURCE_DIR}/lib/pugixml/src
+  ${PROJECT_SOURCE_DIR}/lib/catch2/single_include
   ${DRAMPOWER_SOURCE_DIR}
 )
 
@@ -401,3 +409,17 @@ endif ()
 add_dependencies(simplessd ${VERSION_TARGET})
 
 target_link_libraries(simplessd mcpat pugixml)
+
+# Configure test
+set(SRC_TEST
+  test/main.cc
+  test/config_reader.cc
+)
+
+add_executable(test_simplessd ${SRC_TEST})
+target_link_libraries(test_simplessd simplessd Catch2::Catch2)
+
+include(CTest)
+include(${PROJECT_SOURCE_DIR}/lib/catch2/contrib/Catch.cmake)
+
+catch_discover_tests(test_simplessd)
