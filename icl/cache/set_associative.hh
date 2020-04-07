@@ -47,7 +47,7 @@ class SetAssociative : public AbstractCache {
   };
 
   // Lookup pending
-  std::unordered_map<LPN, uint64_t> lookupList;
+  std::unordered_multimap<LPN, uint64_t> lookupList;
 
   // Flush
   struct FlushRequest {
