@@ -198,7 +198,6 @@ void HIL::submit(Operation opcode, Request *req) {
 void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
   bool remove = false;
   auto iter = subrequestQueue.find(tag);
-  uint8_t *buffer = nullptr;
 
   panic_if(iter == subrequestQueue.end(), "Unexpected subrequest %" PRIx64 "h.",
            tag);
@@ -211,6 +210,9 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
   req.nvmCounter++;
 
   panic_if(req.nvmCounter > req.nlp, "I/O event corrupted.");
+
+  // Make buffer pointer
+  uint8_t *buffer = req.buffer ? req.buffer + sreq.offset : nullptr;
 
   switch (req.opcode) {
     case Operation::Read:
@@ -233,12 +235,6 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
           req.dmaBeginAt = now;
         }
 
-        buffer = req.getBuffer();
-
-        if (buffer) {
-          buffer += sreq.offset;
-        }
-
         req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, buffer,
                              eventDMACompletion, sreq.requestTag);
 
@@ -251,12 +247,6 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
       // Submit DMA (current chunk)
       if (req.dmaCounter == 0) {
         req.dmaBeginAt = now;
-      }
-
-      buffer = req.getBuffer();
-
-      if (buffer) {
-        buffer += sreq.offset;
       }
 
       req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, buffer,

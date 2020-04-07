@@ -508,7 +508,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t read;
   bool submit = false;
 
-  auto &siter = createSession(tag, eid, data, size, nullptr);
+  auto &siter = createSession(tag, eid, data, size, buffer);
   auto &session = siter.second;
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
@@ -521,7 +521,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
       read = MIN(iter.size - session.handled, size);
 
       if (!iter.ignore) {
-        interface->read(iter.address + session.handled, read, buffer,
+        interface->read(iter.address + session.handled, read, session.buffer,
                         eventReadDMADone, siter.first);
 
         submit = true;
@@ -572,7 +572,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t written;
   bool submit = false;
 
-  auto &siter = createSession(tag, eid, data, size, nullptr);
+  auto &siter = createSession(tag, eid, data, size, buffer);
   auto &session = siter.second;
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
@@ -586,8 +586,8 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
       if (!iter.ignore) {
         submit = true;
 
-        interface->write(iter.address + session.handled, written, buffer,
-                         eventWriteDMADone, siter.first);
+        interface->write(iter.address + session.handled, written,
+                         session.buffer, eventWriteDMADone, siter.first);
       }
 
       session.handled = written;
