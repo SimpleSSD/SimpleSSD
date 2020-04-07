@@ -95,13 +95,13 @@ class Request {
   Request &operator=(const Request &) = delete;
   Request &operator=(Request &&rhs) {
     if (this != &rhs) {
-      this->opcode = std::exchange(rhs.opcode, 0);
-      this->result = std::exchange(rhs.result, 0);
+      this->opcode = std::exchange(rhs.opcode, Operation::None);
+      this->result = std::exchange(rhs.result, Response::Success);
       this->clear = std::exchange(rhs.clear, 0);
       this->lbaSize = std::exchange(rhs.lbaSize, 0);
       this->dmaEngine = std::exchange(rhs.dmaEngine, nullptr);
-      this->dmaTag = std::exchange(rhs.dmaTag, 0);
-      this->eid = std::exchange(rhs.eid, 0);
+      this->dmaTag = std::exchange(rhs.dmaTag, nullptr);
+      this->eid = std::exchange(rhs.eid, nullptr);
       this->data = std::exchange(rhs.data, 0);
       this->offset = std::exchange(rhs.offset, 0);
       this->length = std::exchange(rhs.length, 0);
