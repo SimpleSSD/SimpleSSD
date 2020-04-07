@@ -30,6 +30,7 @@ const char *getOperationName(Operation op) {
 Request::Request()
     : opcode(Operation::None),
       result(Response::Success),
+      clear(false),
       lbaSize(0),
       dmaEngine(nullptr),
       dmaTag(InvalidDMATag),
@@ -43,11 +44,14 @@ Request::Request()
       dmaBeginAt(0),
       nvmBeginAt(0),
       requestTag(0),
-      slpn(0) {}
+      slpn(0),
+      firstSubRequestTag(0),
+      buffer(nullptr) {}
 
 Request::Request(Event e, uint64_t c)
     : opcode(Operation::None),
       result(Response::Success),
+      clear(false),
       lbaSize(0),
       dmaEngine(nullptr),
       dmaTag(InvalidDMATag),
@@ -61,7 +65,9 @@ Request::Request(Event e, uint64_t c)
       dmaBeginAt(0),
       nvmBeginAt(0),
       requestTag(0),
-      slpn(0) {}
+      slpn(0),
+      firstSubRequestTag(0),
+      buffer(nullptr) {}
 
 void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, opcode);
@@ -78,6 +84,15 @@ void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, nvmBeginAt);
   BACKUP_SCALAR(out, requestTag);
   BACKUP_SCALAR(out, slpn);
+  BACKUP_SCALAR(out, firstSubRequestTag);
+  BACKUP_SCALAR(out, clear);
+
+  if (clear) {
+    BACKUP_BLOB(out, buffer, length);
+  }
+  else {
+    BACKUP_SCALAR(out, buffer);
+  }
 }
 
 void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
@@ -95,6 +110,17 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, nvmBeginAt);
   RESTORE_SCALAR(in, requestTag);
   RESTORE_SCALAR(in, slpn);
+  RESTORE_SCALAR(in, firstSubRequestTag);
+  RESTORE_SCALAR(in, clear);
+
+  if (clear) {
+    buffer = (uint8_t *)calloc(length, 1);
+
+    RESTORE_BLOB(in, buffer, length);
+  }
+  else {
+    RESTORE_SCALAR(in, buffer);
+  }
 }
 
 SubRequest::SubRequest()
@@ -105,10 +131,8 @@ SubRequest::SubRequest()
       length(0),
       allocate(false),
       miss(false),
-      clear(false),
       skipFront(0),
       skipEnd(0),
-      buffer(nullptr),
       address(0) {}
 
 SubRequest::SubRequest(uint64_t t, Request *r)
@@ -119,10 +143,8 @@ SubRequest::SubRequest(uint64_t t, Request *r)
       length(0),
       allocate(false),
       miss(false),
-      clear(false),
       skipFront(0),
       skipEnd(0),
-      buffer(nullptr),
       address(0) {}
 
 SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
@@ -133,10 +155,8 @@ SubRequest::SubRequest(uint64_t t, Request *r, LPN l, uint64_t o, uint32_t s)
       length(s),
       allocate(false),
       miss(false),
-      clear(false),
       skipFront(0),
       skipEnd(0),
-      buffer(nullptr),
       address(0) {}
 
 void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
@@ -149,17 +169,8 @@ void SubRequest::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, offset);
   BACKUP_SCALAR(out, length);
   BACKUP_SCALAR(out, allocate);
-  BACKUP_SCALAR(out, clear);
   BACKUP_SCALAR(out, skipFront);
   BACKUP_SCALAR(out, skipEnd);
-
-  if (clear) {
-    BACKUP_BLOB(out, buffer, length);
-  }
-  else {
-    BACKUP_SCALAR(out, buffer);
-  }
-
   BACKUP_SCALAR(out, address);
 }
 
@@ -175,19 +186,8 @@ void SubRequest::restoreCheckpoint(std::istream &in, HIL *pHIL) noexcept {
   RESTORE_SCALAR(in, offset);
   RESTORE_SCALAR(in, length);
   RESTORE_SCALAR(in, allocate);
-  RESTORE_SCALAR(in, clear);
   RESTORE_SCALAR(in, skipFront);
   RESTORE_SCALAR(in, skipEnd);
-
-  if (clear) {
-    buffer = (uint8_t *)calloc(length, 1);
-
-    RESTORE_BLOB(in, buffer, length);
-  }
-  else {
-    RESTORE_SCALAR(in, buffer);
-  }
-
   RESTORE_SCALAR(in, address);
 }
 

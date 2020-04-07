@@ -50,6 +50,8 @@ class Request {
   Operation opcode;
   Response result;  //!< Request result
 
+  bool clear;  //!< Flag for buffer management
+
   uint32_t lbaSize;  //!< Not used by HIL
 
   DMAEngine *dmaEngine;
@@ -75,9 +77,48 @@ class Request {
 
   uint64_t firstSubRequestTag;
 
+  uint8_t *buffer;  //!< Buffer for DMA (real data)
+
  public:
   Request();
   Request(Event, uint64_t);
+  Request(const Request &) = delete;
+  Request(Request &&rhs) noexcept : clear(false), buffer(nullptr) {
+    *this = std::move(rhs);
+  }
+  ~Request() {
+    if (clear) {
+      free(buffer);
+    }
+  }
+
+  Request &operator=(const Request &) = delete;
+  Request &operator=(Request &&rhs) {
+    if (this != &rhs) {
+      this->opcode = std::exchange(rhs.opcode, 0);
+      this->result = std::exchange(rhs.result, 0);
+      this->clear = std::exchange(rhs.clear, 0);
+      this->lbaSize = std::exchange(rhs.lbaSize, 0);
+      this->dmaEngine = std::exchange(rhs.dmaEngine, nullptr);
+      this->dmaTag = std::exchange(rhs.dmaTag, 0);
+      this->eid = std::exchange(rhs.eid, 0);
+      this->data = std::exchange(rhs.data, 0);
+      this->offset = std::exchange(rhs.offset, 0);
+      this->length = std::exchange(rhs.length, 0);
+      this->dmaCounter = std::exchange(rhs.dmaCounter, 0);
+      this->nvmCounter = std::exchange(rhs.nvmCounter, 0);
+      this->nlp = std::exchange(rhs.nlp, 0);
+      this->dmaBeginAt = std::exchange(rhs.dmaBeginAt, 0);
+      this->nvmBeginAt = std::exchange(rhs.nvmBeginAt, 0);
+      this->requestTag = std::exchange(rhs.requestTag, 0);
+      this->hostTag = std::exchange(rhs.hostTag, 0);
+      this->slpn = std::exchange(rhs.slpn, 0);
+      this->firstSubRequestTag = std::exchange(rhs.firstSubRequestTag, 0);
+      this->buffer = std::exchange(rhs.buffer, nullptr);
+    }
+
+    return *this;
+  }
 
   inline void setHostTag(uint64_t tag) { hostTag = tag; }
 
@@ -91,6 +132,17 @@ class Request {
     dmaEngine = engine;
     dmaTag = tag;
   }
+
+  void setBuffer(uint8_t *data) { buffer = data; }
+  void createBuffer() {
+    if (!clear) {
+      clear = true;
+
+      buffer = (uint8_t *)calloc(length, 1);
+    }
+  }
+
+  inline uint8_t *getBuffer() { return buffer; }
 
   inline void getAddress(uint64_t &slba, uint32_t &nlb) {
     slba = offset / lbaSize;
@@ -123,13 +175,11 @@ class SubRequest {
 
   bool allocate;  //!< Used in ICL, true when cacheline allocation is required
   bool miss;      //!< Used in ICL, true when miss
-  bool clear;     //!< Flag for buffer management
 
   uint32_t skipFront;
   uint32_t skipEnd;
 
   // Device-side DMA address
-  uint8_t *buffer;   //!< Buffer for DMA (real data)
   uint64_t address;  //!< Physical address of internal DRAM
 
  public:
@@ -137,14 +187,7 @@ class SubRequest {
   SubRequest(uint64_t, Request *);
   SubRequest(uint64_t, Request *, LPN, uint64_t, uint32_t);
   SubRequest(const SubRequest &) = delete;
-  SubRequest(SubRequest &&rhs) noexcept : clear(false), buffer(nullptr) {
-    *this = std::move(rhs);
-  }
-  ~SubRequest() {
-    if (clear) {
-      free(buffer);
-    }
-  }
+  SubRequest(SubRequest &&rhs) noexcept { *this = std::move(rhs); }
 
   SubRequest &operator=(const SubRequest &) = delete;
   SubRequest &operator=(SubRequest &&rhs) {
@@ -156,8 +199,6 @@ class SubRequest {
       this->length = std::exchange(rhs.length, 0);
       this->allocate = std::exchange(rhs.allocate, false);
       this->miss = std::exchange(rhs.miss, false);
-      this->clear = std::exchange(rhs.clear, false);
-      this->buffer = std::exchange(rhs.buffer, nullptr);
       this->address = std::exchange(rhs.address, 0);
     }
 
@@ -167,19 +208,12 @@ class SubRequest {
   inline void setDRAMAddress(uint64_t addr) { address = addr; }
   inline void setAllocate() { allocate = true; }
   inline void setMiss() { miss = true; }
-  void setBuffer(uint8_t *data) { buffer = data; }
-  void createBuffer() {
-    clear = true;
-
-    buffer = (uint8_t *)calloc(length, 1);
-  }
 
   inline uint64_t getDRAMAddress() { return address; }
   inline uint64_t getTag() { return requestTag; }
   inline LPN getLPN() { return lpn; }
   inline bool getAllocate() { return allocate; }
   inline bool getMiss() { return miss; }
-  inline const uint8_t *getBuffer() { return buffer; }
 
   inline Operation getOpcode() { return request->opcode; }
   inline uint64_t getParentTag() { return request->requestTag; }
