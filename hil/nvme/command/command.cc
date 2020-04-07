@@ -139,6 +139,13 @@ void CommandData::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_DMATAG(out, tag);
   BACKUP_SCALAR(out, beginAt);
+
+  uint64_t size = buffer.size();
+  BACKUP_SCALAR(out, size);
+
+  if (size > 0) {
+    BACKUP_BLOB(out, buffer.data(), size);
+  }
 }
 
 void CommandData::restoreCheckpoint(std::istream &in) noexcept {
@@ -174,6 +181,14 @@ void CommandData::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, beginAt);
 
   request.setDMA(dmaEngine, tag);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  if (size > 0) {
+    buffer.resize(size);
+    RESTORE_BLOB64(in, buffer.data(), size);
+  }
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
