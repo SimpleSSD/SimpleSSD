@@ -86,6 +86,7 @@ class ConfigReader {
   Memory::Config::DRAMController *getDRAMController();
 
   // Interface for HIL::Config
+  std::vector<HIL::Config::Disk> &getDiskList();
   std::vector<HIL::Config::Namespace> &getNamespaceList();
 
   // Interface for FIL::Config

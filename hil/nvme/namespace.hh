@@ -94,7 +94,7 @@ class Namespace : public Object {
   bool isAttached(ControllerID);
 
   NamespaceInformation *getInfo();
-  void setInfo(uint32_t, NamespaceInformation *);
+  void setInfo(uint32_t, NamespaceInformation *, Config::Disk *);
 
   HealthInfo *getHealth();
 

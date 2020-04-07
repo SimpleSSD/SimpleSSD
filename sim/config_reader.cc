@@ -440,6 +440,10 @@ Memory::Config::DRAMController *ConfigReader::getDRAMController() {
   return memConfig.getDRAMController();
 }
 
+std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
+  return hilConfig.getDiskList();
+}
+
 std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() {
   return hilConfig.getNamespaceList();
 }
@@ -447,11 +451,9 @@ std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() {
 FIL::Config::NANDStructure *ConfigReader::getNANDStructure() {
   return filConfig.getNANDStructure();
 }
-
 FIL::Config::NANDTiming *ConfigReader::getNANDTiming() {
   return filConfig.getNANDTiming();
 }
-
 FIL::Config::NANDPower *ConfigReader::getNANDPower() {
   return filConfig.getNANDPower();
 }

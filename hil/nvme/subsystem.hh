@@ -122,7 +122,7 @@ class Subsystem : public AbstractSubsystem {
 
   void dispatch();
 
-  bool _createNamespace(uint32_t, NamespaceInformation *);
+  bool _createNamespace(uint32_t, Config::Disk *, NamespaceInformation *);
   bool _destroyNamespace(uint32_t);
 
   bool submitCommand(ControllerData *, SQContext *);

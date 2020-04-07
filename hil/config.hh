@@ -41,10 +41,19 @@ class Config : public BaseConfig {
     NVMeAttachDefaultNamespaces,
   };
 
+  struct Disk {
+    uint32_t nsid;
+    bool enable;
+    bool strict;
+    bool useCoW;
+    std::string path;
+  };
+
   struct Namespace {
     uint32_t nsid;
     uint16_t lbaSize;
     uint64_t capacity;
+    Disk *pDisk;
   };
 
  private:
@@ -67,12 +76,15 @@ class Config : public BaseConfig {
   uint32_t defaultNamespace;
   bool attachDefaultNamespaces;
 
+  std::vector<Disk> diskList;
   std::vector<Namespace> namespaceList;
 
   void loadInterface(pugi::xml_node &);
+  void loadDisk(pugi::xml_node &, Disk *);
   void loadNVMe(pugi::xml_node &);
   void loadNamespace(pugi::xml_node &, Namespace *);
   void storeInterface(pugi::xml_node &);
+  void storeDisk(pugi::xml_node &, Disk *);
   void storeNVMe(pugi::xml_node &);
   void storeNamespace(pugi::xml_node &, Namespace *);
 
@@ -90,6 +102,7 @@ class Config : public BaseConfig {
   bool writeUint(uint32_t, uint64_t) override;
   bool writeBoolean(uint32_t, bool) override;
 
+  std::vector<Disk> &getDiskList();
   std::vector<Namespace> &getNamespaceList();
 };
 

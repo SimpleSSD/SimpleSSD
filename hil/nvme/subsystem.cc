@@ -143,7 +143,8 @@ void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
   aenTo.clear();
 }
 
-bool Subsystem::_createNamespace(uint32_t nsid, NamespaceInformation *info) {
+bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
+                                 NamespaceInformation *info) {
   std::list<LPNRange> allocated;
   std::list<LPNRange> unallocated;
 
@@ -231,7 +232,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, NamespaceInformation *info) {
 
   // Create namespace
   Namespace *pNS = new Namespace(object, this);
-  pNS->setInfo(nsid, info);
+  pNS->setInfo(nsid, info, disk);
 
   auto ret = namespaceList.emplace(nsid, pNS);
 
@@ -474,7 +475,7 @@ void Subsystem::init() {
       info.size = nsSize;
       info.capacity = info.size;
 
-      if (!_createNamespace(ns.nsid, &info)) {
+      if (!_createNamespace(ns.nsid, ns.pDisk, &info)) {
         panic("Failed to create namespace %u", ns.nsid);
       }
     }
@@ -714,7 +715,7 @@ uint8_t Subsystem::createNamespace(NamespaceInformation *info, uint32_t &nsid) {
     return 2u;  // No more identifier
   }
 
-  bool ret = _createNamespace(nsid, info);
+  bool ret = _createNamespace(nsid, nullptr, info);
 
   if (UNLIKELY(!ret)) {
     return 3u;  // Insufficient capacity
