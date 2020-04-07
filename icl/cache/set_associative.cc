@@ -398,7 +398,8 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
 
   if (way == waySize) {
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "LOOKUP | LPN %" PRIu64 " | Not found", lpn);
+               "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Not found",
+               sreq->getParentTag(), sreq->getTagForLog(), lpn);
 
     // Miss, we need allocation
     sreq->setAllocate();
@@ -406,7 +407,8 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
   }
   else {
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "LOOKUP | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+               "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | (%u, %u)",
+               sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
 
     sreq->setDRAMAddress(makeDataAddress(set, way));
 
@@ -416,7 +418,8 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
 
     if (line.dmaPending || line.nvmPending) {
       debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | LPN %" PRIu64 " | Pending", lpn, set, way);
+                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
 
       // We need to stall this lookup
       lookupList.emplace(line.tag, sreq->getTag());
@@ -461,8 +464,9 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
   uint32_t nlp = sreq->getLength();
   uint64_t i = 0;
 
-  debugprint(Log::DebugID::ICL_SetAssociative, "FLUSH  | LPN %" PRIu64 " + %u",
-             slpn, nlp);
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "FLUSH  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
+             sreq->getParentTag(), sreq->getTagForLog(), slpn, nlp);
 
   for (auto &iter : cacheline) {
     if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
@@ -498,8 +502,9 @@ void SetAssociative::erase(HIL::SubRequest *sreq) {
   LPN slpn = sreq->getOffset();
   uint32_t nlp = sreq->getLength();
 
-  debugprint(Log::DebugID::ICL_SetAssociative, "ERASE  | LPN %" PRIu64 " + %u",
-             slpn, nlp);
+  debugprint(Log::DebugID::ICL_SetAssociative,
+             "ERASE  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
+             sreq->getParentTag(), sreq->getTagForLog(), slpn, nlp);
 
   for (auto &iter : cacheline) {
     if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
@@ -532,7 +537,8 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
   if (way == waySize) {
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "ALLOC  | LPN %" PRIu64 " | Pending", lpn);
+               "ALLOC  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
+               sreq->getParentTag(), sreq->getTagForLog(), lpn);
 
     // Insert into pending queue
     allocateList.emplace(set, sreq->getTag());
@@ -542,7 +548,8 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
   }
   else {
     debugprint(Log::DebugID::ICL_SetAssociative,
-               "ALLOC  | LPN %" PRIu64 " | (%u, %u)", lpn, set, way);
+               "ALLOC  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | (%u, %u)",
+               sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
 
     // Set DRAM address
     sreq->setDRAMAddress(makeDataAddress(set, way));
