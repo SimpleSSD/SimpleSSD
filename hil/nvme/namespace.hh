@@ -82,6 +82,10 @@ class Namespace : public Object {
   uint32_t nsid;
   std::set<ControllerID> attachList;
 
+  Disk *disk;
+
+  ConvertFunction convert;
+
  public:
   Namespace(ObjectData &, Subsystem *);
   ~Namespace();
@@ -100,8 +104,12 @@ class Namespace : public Object {
 
   const std::set<ControllerID> &getAttachment() const;
 
+  void format();
   void read(uint64_t);
   void write(uint64_t);
+
+  ConvertFunction &getConvertFunction();
+  Disk *getDisk();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
