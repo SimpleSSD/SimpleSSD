@@ -409,7 +409,7 @@ endif ()
 # Force version checking in every build
 add_dependencies(simplessd ${VERSION_TARGET})
 
-target_link_libraries(simplessd mcpat pugixml)
+target_link_libraries(simplessd mcpat pugixml stdc++fs)
 
 # Configure test
 set(SRC_TEST
