@@ -84,8 +84,6 @@ class Namespace : public Object {
 
   Disk *disk;
 
-  ConvertFunction convert;
-
  public:
   Namespace(ObjectData &, Subsystem *);
   ~Namespace();
@@ -108,7 +106,6 @@ class Namespace : public Object {
   void read(uint64_t);
   void write(uint64_t);
 
-  ConvertFunction &getConvertFunction();
   Disk *getDisk();
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

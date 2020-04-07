@@ -85,8 +85,6 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
   nsid = _nsid;
   info = *_info;
 
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
-
   if (_disk) {
     if (_disk->path.length() == 0) {
       disk = new MemDisk(object);
@@ -124,8 +122,6 @@ void Namespace::format() {
 
     disk->open("", info.size * info.lbaSize);
   }
-
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 }
 
 void Namespace::read(uint64_t bytesize) {
@@ -148,10 +144,6 @@ void Namespace::write(uint64_t bytesize) {
 
   info.writeBytes += bytesize;
   health.writeL = info.writeBytes / 1000 / 512;
-}
-
-ConvertFunction &Namespace::getConvertFunction() {
-  return convert;
 }
 
 Disk *Namespace::getDisk() {
@@ -267,8 +259,6 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
 
     disk->restoreCheckpoint(in);
   }
-
-  convert = Convert(object, info.lpnSize, info.lbaSize).getConvertion();
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
