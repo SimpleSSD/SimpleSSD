@@ -46,6 +46,18 @@ void Write::completion(uint64_t now, uint64_t gcid) {
                      tag->sqc->getData()->namespaceID, slba, nlb, tag->beginAt,
                      now, now - tag->beginAt);
 
+  // Handle disk
+  auto nslist = subsystem->getNamespaceList();
+  auto ns = nslist.find(tag->sqc->getData()->namespaceID);
+  auto disk = ns->second->getDisk();
+  uint32_t lbaSize = ns->second->getInfo()->lbaSize;
+
+  if (disk) {
+    auto buffer = tag->request.getBuffer();
+
+    disk->write(slba * lbaSize, nlb * lbaSize, buffer);
+  }
+
   subsystem->complete(tag);
 }
 
@@ -90,6 +102,14 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
   tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
+
+  // Handle disk
+  auto disk = ns->second->getDisk();
+
+  if (disk) {
+    // Allocate buffer
+    tag->request.createBuffer();
+  }
 }
 
 void Write::getStatList(std::vector<Stat> &, std::string) noexcept {}

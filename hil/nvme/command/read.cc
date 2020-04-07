@@ -89,6 +89,18 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
   tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
+
+  // Handle disk
+  auto disk = ns->second->getDisk();
+
+  if (disk) {
+    // Allocate buffer
+    tag->request.createBuffer();
+
+    auto buffer = tag->request.getBuffer();
+
+    disk->read(slba * lbaSize, nlb * lbaSize, buffer);
+  }
 }
 
 void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}

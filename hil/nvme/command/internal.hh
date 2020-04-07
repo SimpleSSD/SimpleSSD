@@ -14,5 +14,6 @@
 #include "hil/nvme/controller.hh"
 #include "hil/nvme/queue_arbitrator.hh"
 #include "hil/nvme/subsystem.hh"
+#include "util/disk.hh"
 
 #endif
