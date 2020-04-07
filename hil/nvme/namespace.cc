@@ -101,6 +101,10 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
     panic_if(diskSize == 0, "Failed to open/create disk image");
     panic_if(diskSize != info.size * info.lbaSize && _disk->strict,
              "Disk size does not match with configuration");
+
+    debugprint(Log::DebugID::HIL_NVMe,
+               "NS %-5d | DISK | %" PRIx64 "h bytes | %s", nsid, diskSize,
+               _disk->path);
   }
 
   inited = true;
