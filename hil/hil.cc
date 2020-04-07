@@ -198,6 +198,7 @@ void HIL::submit(Operation opcode, Request *req) {
 void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
   bool remove = false;
   auto iter = subrequestQueue.find(tag);
+  uint8_t *buffer = nullptr;
 
   panic_if(iter == subrequestQueue.end(), "Unexpected subrequest %" PRIx64 "h.",
            tag);
@@ -232,7 +233,13 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
           req.dmaBeginAt = now;
         }
 
-        req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+        buffer = req.getBuffer();
+
+        if (buffer) {
+          buffer += sreq.offset;
+        }
+
+        req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, buffer,
                              eventDMACompletion, sreq.requestTag);
 
         object.memory->read(sreq.address + sreq.skipFront, sreq.length,
@@ -246,7 +253,13 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         req.dmaBeginAt = now;
       }
 
-      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, sreq.buffer,
+      buffer = req.getBuffer();
+
+      if (buffer) {
+        buffer += sreq.offset;
+      }
+
+      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, buffer,
                           eventDMACompletion, sreq.requestTag);
 
       object.memory->write(sreq.address + sreq.skipFront, sreq.length,
