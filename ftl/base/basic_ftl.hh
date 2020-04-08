@@ -18,13 +18,11 @@ class BasicFTL : public AbstractFTL {
  protected:
   uint32_t pageSize;
 
-  bool mergeReadModifyWrite;
+  bool mergeReadModifyWrite;  // if True, merge RMW requests with same PPN
 
   uint64_t minMappingSize;
 
   // Pending request
-  using SuperRequest = std::vector<Request *>;
-
   uint64_t pendingListBaseAddress;
   SuperRequest pendingList;
 

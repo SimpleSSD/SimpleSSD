@@ -498,10 +498,27 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
 }
 
 void PageLevel::getCopyList(CopyContext &copy, Event eid) {
-  // TODO: implement GC
-  panic("GC not implemented");
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
 
-  scheduleNow(eid);
+  auto block = &blockMetadata[copy.blockID];
+
+  copy.list.clear();
+  copy.list.reserve(block->validPages.count());
+
+  for (uint i = 0; i < filparam->page; i++) {
+    if (block->validPages.test(i)) {
+      // append valid page copy request
+      SuperRequest sReq = std::vector<Request *>(param.superpage, nullptr);
+      for (uint j = 0; j < param.superpage; j++) {
+        Request req(InvalidEventID, (uint64_t)0);
+        req.setPPN(makePPN(copy.blockID, i, j));
+      }
+      copy.list.emplace_back(sReq);
+    }
+  }
+
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
 void PageLevel::releaseCopyList(CopyContext &copy) {

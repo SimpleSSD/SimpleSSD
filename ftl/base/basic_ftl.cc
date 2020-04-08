@@ -67,8 +67,7 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
 
 BasicFTL::~BasicFTL() {}
 
-std::list<BasicFTL::SuperRequest>::iterator BasicFTL::getWriteContext(
-    uint64_t tag) {
+std::list<SuperRequest>::iterator BasicFTL::getWriteContext(uint64_t tag) {
   auto iter = writeList.begin();
 
   for (; iter != writeList.end(); iter++) {
@@ -145,6 +144,7 @@ void BasicFTL::write(Request *cmd) {
       bool merged = false;
 
       if (mergeReadModifyWrite) {
+        // merge request if there is other RMW request which access same PPN
         for (auto &iter : rmwList) {
           if (iter.second.alignedBegin == alignedBegin &&
               !iter.second.writePending) {

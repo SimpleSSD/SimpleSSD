@@ -111,16 +111,20 @@ class Request {
   void createCheckpoint(std::ostream &out) const noexcept;
   void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
 };
+// list of request targeting same superpage
+using SuperRequest = std::vector<Request *>;
 
 struct CopyContext {
   PPN blockID;
   uint64_t eraseTag;
 
-  std::vector<uint64_t>::iterator iter;
-  std::vector<uint64_t> list;
+  std::vector<SuperRequest>::iterator iter;
+  std::vector<SuperRequest> list;
 
   void resetIterator() { iter = list.begin(); }
   bool isEnd() { return iter == list.end(); }
+
+  CopyContext(): blockID(InvalidPPN), eraseTag(0) {}
 
   void createCheckpoint(std::ostream &out) const {
     BACKUP_SCALAR(out, blockID);
