@@ -142,8 +142,8 @@ class Controller : public AbstractController {
   Feature *getFeature();
   LogPage *getLogPage();
 
-  uint64_t read(uint64_t, uint64_t, uint8_t *) noexcept override;
-  uint64_t write(uint64_t, uint64_t, uint8_t *) noexcept override;
+  uint64_t read(uint64_t, uint32_t, uint8_t *) noexcept override;
+  uint64_t write(uint64_t, uint32_t, uint8_t *) noexcept override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

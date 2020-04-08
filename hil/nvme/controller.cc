@@ -147,7 +147,7 @@ LogPage *Controller::getLogPage() {
   return &logPage;
 }
 
-uint64_t Controller::read(uint64_t offset, uint64_t size,
+uint64_t Controller::read(uint64_t offset, uint32_t size,
                           uint8_t *buffer) noexcept {
   registers.interruptMaskSet = interruptMask;
   registers.interruptMaskClear = interruptMask;
@@ -203,7 +203,7 @@ uint64_t Controller::read(uint64_t offset, uint64_t size,
   return 0;
 }
 
-uint64_t Controller::write(uint64_t offset, uint64_t size,
+uint64_t Controller::write(uint64_t offset, uint32_t size,
                            uint8_t *buffer) noexcept {
   uint32_t uiTemp32;
   uint64_t uiTemp64;
