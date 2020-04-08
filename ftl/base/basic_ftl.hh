@@ -150,6 +150,9 @@ class BasicFTL : public AbstractFTL {
   Event eventGCTrigger;
   void gc_trigger(uint64_t);
 
+  Event eventGCSetNextVictimBlock;
+  void gc_setNextVictimBlock();
+
   void backup(std::ostream &, const SuperRequest &) const noexcept;
   void restore(std::istream &, SuperRequest &) noexcept;
 

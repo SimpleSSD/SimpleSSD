@@ -20,7 +20,7 @@ namespace SimpleSSD::FTL::BlockAllocator {
 class BasicAllocator : public AbstractAllocator {
  protected:
   using BlockSelection =
-      std::function<CPU::Function(uint64_t, std::deque<PPN> &)>;
+      std::function<CPU::Function(uint64_t, std::vector<PPN> &)>;
 
   uint64_t superpage;
   uint64_t parallelism;

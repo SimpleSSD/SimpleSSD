@@ -315,13 +315,16 @@ bool BasicAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
 }
 
-void BasicAllocator::getVictimBlocks(std::vector<PPN> &list, Event eid) {
+void BasicAllocator::getVictimBlocks(std::vector<PPN> &victimList, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   // Select victim blocks
+  victimList.clear();
+  victimList.reserve(parallelism);
+
   for (uint64_t i = 0; i < parallelism; i++) {
-    fstat += victimSelectionFunction(i, list);
+    fstat += victimSelectionFunction(i, victimList);
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);

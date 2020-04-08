@@ -57,6 +57,10 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   eventGCTrigger = createEvent([this](uint64_t t, uint64_t) { gc_trigger(t); },
                                "FTL::BasicFTL::eventGCTrigger");
 
+  eventGCSetNextVictimBlock =
+      createEvent([this](uint64_t, uint64_t) { gc_setNextVictimBlock(); },
+                  "FTL::BasicFTL::eventGCSetNextVictimBlock");
+
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
 }
@@ -391,10 +395,26 @@ void BasicFTL::gc_trigger(uint64_t now) {
   stat.gcCount++;
 
   // victim block selection
-  pAllocator->getVictimBlocks(gcctx.blockList, InvalidEventID);
+  pAllocator->getVictimBlocks(gcctx.blockList, eventGCSetNextVictimBlock);
 
   debugprint(Log::DebugID::FTL, "GC    | On-demand | %u blocks",
              gcctx.blockList.size());
+}
+
+void BasicFTL::gc_setNextVictimBlock() {
+  if (LIKELY(gcctx.blockList.size() > 0)) {
+    PPN nextVictimBlock = gcctx.blockList.back();
+
+    gcctx.blockList.pop_back();
+    gcctx.copyList.blockID = nextVictimBlock;
+
+    pMapper->getCopyList(gcctx.copyList, InvalidEventID);
+    gcctx.copyList.resetIterator();
+  }
+  else {
+    // no need to perform GC
+    scheduleNow(InvalidEventID);
+  }
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const
