@@ -90,7 +90,7 @@ class AbstractAllocator : public Object {
    *
    * fatal: Operation not defined yet.
    */
-  virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
+  virtual void getVictimBlocks(std::vector<PPN> &, Event) = 0;
 
   /**
    * \brief Mark block as erased

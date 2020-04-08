@@ -385,8 +385,16 @@ void BasicFTL::invalidate_submit(uint64_t, uint64_t tag) {
   completeRequest(req);
 }
 
-void BasicFTL::gc_trigger(uint64_t) {
-  panic("GC not implemented.")
+void BasicFTL::gc_trigger(uint64_t now) {
+  gcctx.init(now);
+
+  stat.gcCount++;
+
+  // victim block selection
+  pAllocator->getVictimBlocks(gcctx.blockList, InvalidEventID);
+
+  debugprint(Log::DebugID::FTL, "GC    | On-demand | %u blocks",
+             gcctx.blockList.size());
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const

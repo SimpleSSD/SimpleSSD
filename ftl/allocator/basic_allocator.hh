@@ -55,7 +55,7 @@ class BasicAllocator : public AbstractAllocator {
   PPN getBlockAt(PPN, uint64_t) override;
 
   bool checkGCThreshold() override;
-  void getVictimBlocks(std::deque<PPN> &, Event) override;
+  void getVictimBlocks(std::vector<PPN> &, Event) override;
   void reclaimBlocks(PPN, Event) override;
 
   inline PPN getParallelismFromSPPN(PPN sppn) { return sppn % parallelism; }

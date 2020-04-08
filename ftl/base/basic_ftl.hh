@@ -79,6 +79,23 @@ class BasicFTL : public AbstractFTL {
   std::unordered_map<uint64_t, ReadModifyWriteContext> rmwList;
   std::list<std::vector<Request *>> list;
 
+  struct GCContext {
+    bool inProgress;
+    std::vector<PPN> blockList;
+    CopyList copyList;
+
+    uint64_t beginAt;
+
+    GCContext() : inProgress(false), beginAt(0) {}
+
+    void init(uint64_t now) {
+      inProgress = true;
+      beginAt = now;
+      blockList.clear();
+    }
+  };
+  GCContext gcctx;
+
   std::unordered_map<uint64_t, ReadModifyWriteContext>::iterator getRMWContext(
       uint64_t);
 

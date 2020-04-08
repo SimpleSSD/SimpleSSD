@@ -25,7 +25,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
-      victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
         CPU::Function fstat;
         CPU::markFunction(fstat);
 
@@ -50,7 +50,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
       break;
     case Config::VictimSelectionMode::Greedy:
-      victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
         CPU::Function fstat;
         CPU::markFunction(fstat);
 
@@ -86,7 +86,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
     case Config::VictimSelectionMode::CostBenefit:
       victimSelectionFunction =
           [this, pageCount = object.config->getNANDStructure()->page](
-              uint64_t idx, std::deque<PPN> &list) {
+              uint64_t idx, std::vector<PPN> &list) {
             CPU::Function fstat;
             CPU::markFunction(fstat);
 
@@ -124,7 +124,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
       break;
     case Config::VictimSelectionMode::DChoice:
-      victimSelectionFunction = [this](uint64_t idx, std::deque<PPN> &list) {
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
         CPU::Function fstat;
         CPU::markFunction(fstat);
 
@@ -306,11 +306,9 @@ bool BasicAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
 }
 
-void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {
+void BasicAllocator::getVictimBlocks(std::vector<PPN> &list, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
-
-  list.clear();
 
   if (UNLIKELY(fullBlockCount <= parallelism * dchoice)) {
     // Just return least erased blocks
