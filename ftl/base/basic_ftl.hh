@@ -82,7 +82,7 @@ class BasicFTL : public AbstractFTL {
   struct GCContext {
     bool inProgress;
     std::vector<PPN> blockList;
-    CopyList copyList;
+    CopyContext copyctx;
 
     uint64_t beginAt;
 

@@ -112,28 +112,27 @@ class Request {
   void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
 };
 
-struct CopyList {
+struct CopyContext {
   PPN blockID;
   uint64_t eraseTag;
 
   std::vector<uint64_t>::iterator iter;
-  std::vector<uint64_t> commandList;
+  std::vector<uint64_t> list;
 
-  void resetIterator() { iter = commandList.begin(); }
-
-  bool isEnd() { return iter == commandList.end(); }
+  void resetIterator() { iter = list.begin(); }
+  bool isEnd() { return iter == list.end(); }
 
   void createCheckpoint(std::ostream &out) const {
     BACKUP_SCALAR(out, blockID);
 
-    uint64_t size = commandList.size();
+    uint64_t size = list.size();
     BACKUP_SCALAR(out, size);
 
-    for (auto &iter : commandList) {
+    for (auto &iter : list) {
       BACKUP_SCALAR(out, iter);
     }
 
-    size = iter - commandList.begin();
+    size = iter - list.begin();
     BACKUP_SCALAR(out, size);
   }
 
@@ -143,18 +142,18 @@ struct CopyList {
     uint64_t size;
     RESTORE_SCALAR(in, size);
 
-    commandList.reserve(size);
+    list.reserve(size);
 
     for (uint64_t i = 0; i < size; i++) {
       uint64_t tag;
 
       RESTORE_SCALAR(in, tag);
 
-      commandList.emplace_back(tag);
+      list.emplace_back(tag);
     }
 
     RESTORE_SCALAR(in, size);
-    iter = commandList.begin() + size;
+    iter = list.begin() + size;
   }
 };
 

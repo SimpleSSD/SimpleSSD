@@ -497,14 +497,14 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevel::getCopyList(CopyList & /* copy */, Event eid) {
+void PageLevel::getCopyList(CopyContext &copy, Event eid) {
   // TODO: implement GC
   panic("GC not implemented");
 
   scheduleNow(eid);
 }
 
-void PageLevel::releaseCopyList(CopyList &copy) {
+void PageLevel::releaseCopyList(CopyContext &copy) {
   // Destroy all commands
   debugprint(Log::DebugID::FTL_PageLevel, "Erase | (S)PPN %" PRIx64 "h",
              copy.blockID);

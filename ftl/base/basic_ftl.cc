@@ -404,12 +404,11 @@ void BasicFTL::gc_trigger(uint64_t now) {
 void BasicFTL::gc_setNextVictimBlock() {
   if (LIKELY(gcctx.blockList.size() > 0)) {
     PPN nextVictimBlock = gcctx.blockList.back();
-
     gcctx.blockList.pop_back();
-    gcctx.copyList.blockID = nextVictimBlock;
 
-    pMapper->getCopyList(gcctx.copyList, InvalidEventID);
-    gcctx.copyList.resetIterator();
+    gcctx.copyctx.blockID = nextVictimBlock;
+    pMapper->getCopyList(gcctx.copyctx, InvalidEventID);
+    gcctx.copyctx.resetIterator();
   }
   else {
     // no need to perform GC
