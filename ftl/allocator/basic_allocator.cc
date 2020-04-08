@@ -129,6 +129,15 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         CPU::markFunction(fstat);
 
         auto &currentList = fullBlocks[idx];
+
+        if (UNLIKELY(currentList.size() <= dchoice)) {
+          // Just return least erased blocks
+          list.emplace_back(currentList.front());
+
+          currentList.pop_front();
+          fullBlockCount--;
+        }
+
         std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
         std::vector<uint64_t> offsets;
         std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
@@ -310,20 +319,9 @@ void BasicAllocator::getVictimBlocks(std::vector<PPN> &list, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  if (UNLIKELY(fullBlockCount <= parallelism * dchoice)) {
-    // Just return least erased blocks
-    for (uint64_t i = 0; i < parallelism; i++) {
-      list.emplace_back(fullBlocks[i].front());
-
-      fullBlocks[i].pop_front();
-      fullBlockCount--;
-    }
-  }
-  else {
-    // Select victim blocks
-    for (uint64_t i = 0; i < parallelism; i++) {
-      fstat += victimSelectionFunction(i, list);
-    }
+  // Select victim blocks
+  for (uint64_t i = 0; i < parallelism; i++) {
+    fstat += victimSelectionFunction(i, list);
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
