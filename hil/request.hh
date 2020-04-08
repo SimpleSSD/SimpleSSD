@@ -236,6 +236,17 @@ class SubRequest {
   inline uint64_t getOffset() { return offset; }
   inline uint32_t getLength() { return length; }
 
+  /*
+   * Buffer pointer for this SubRequest.
+   *
+   *  If read, this buffer is already filled with disk image data.
+   *  If write, this buffer is allocated but empty -- will be overwritten by hil
+   * in HIL::HIL::nvmCompletion and valid after HIL::HIL::dmaCompletion.
+   */
+  inline uint8_t *getBuffer() {
+    return request->buffer ? request->buffer + offset : nullptr;
+  }
+
   void createCheckpoint(std::ostream &) const noexcept;
   void restoreCheckpoint(std::istream &, HIL *) noexcept;
 };
