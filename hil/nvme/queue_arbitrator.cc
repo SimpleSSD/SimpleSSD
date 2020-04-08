@@ -132,7 +132,7 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
   sqList = (SQueue **)calloc(sqSize, sizeof(SQueue *));
 
   // Create events
-  work = createEvent([this](uint64_t, uint64_t) { collect(); },
+  work = createEvent([this](uint64_t t, uint64_t) { collect(t); },
                      "HIL::NVMe::Arbitrator::work");
   eventCompDone = createEvent([this](uint64_t, uint64_t) { completion_done(); },
                               "HIL::NVMe::Arbitrator::eventCompDone");
@@ -142,6 +142,9 @@ Arbitrator::Arbitrator(ObjectData &o, ControllerData *c)
   // Not running!
   run = false;
   running = false;
+
+  lastWorkAt = 0;
+  doWorkPause = false;
 }
 
 Arbitrator::~Arbitrator() {
@@ -210,6 +213,14 @@ void Arbitrator::ringSQ(uint16_t qid, uint16_t tail) {
       "SQ %-5d| Submission Queue Tail Doorbell | Item count in queue "
       "%d -> %d | head %d | tail %d -> %d",
       qid, oldcount, sq->getItemCount(), sq->getHead(), oldtail, sq->getTail());
+
+  if (doWorkPause) {
+    doWorkPause = false;
+
+    uint64_t diff = getTick() - lastWorkAt;
+
+    scheduleAbs(work, 0, lastWorkAt + period * DIVCEIL(diff, period));
+  }
 }
 
 void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
@@ -634,7 +645,7 @@ void Arbitrator::finishShutdown() {
   shutdownReserved = false;
 }
 
-void Arbitrator::collect() {
+void Arbitrator::collect(uint64_t now) {
   bool handled = false;
 
   if (UNLIKELY(!run)) {
@@ -673,10 +684,18 @@ void Arbitrator::collect() {
   }
 
   // Schedule collect
-  scheduleRel(work, 0ull, period);
+  if (!doWorkPause) {
+    lastWorkAt = now;
+
+    scheduleAbs(work, 0ull, now + period);
+  }
 
   if (!handled) {
     running = false;
+    doWorkPause = true;
+  }
+  else {
+    doWorkPause = false;
   }
 }
 
@@ -821,6 +840,8 @@ void Arbitrator::resetStatValues() noexcept {}
 void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, period);
   BACKUP_SCALAR(out, internalQueueSize);
+  BACKUP_SCALAR(out, lastWorkAt);
+  BACKUP_SCALAR(out, doWorkPause);
   BACKUP_SCALAR(out, cqSize);
   BACKUP_SCALAR(out, sqSize);
   BACKUP_SCALAR(out, mode);
@@ -923,6 +944,8 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, period);
   RESTORE_SCALAR(in, internalQueueSize);
+  RESTORE_SCALAR(in, lastWorkAt);
+  RESTORE_SCALAR(in, doWorkPause);
   RESTORE_SCALAR(in, cqSize);
   RESTORE_SCALAR(in, sqSize);
   RESTORE_SCALAR(in, mode);

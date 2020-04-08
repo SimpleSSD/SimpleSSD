@@ -119,6 +119,10 @@ class Arbitrator : public Object {
   uint64_t period;
   uint64_t internalQueueSize;
 
+  // Work event optimization (reduce event calling)
+  uint64_t lastWorkAt;
+  bool doWorkPause;
+
   // Queue
   uint16_t cqSize;
   uint16_t sqSize;
@@ -181,7 +185,7 @@ class Arbitrator : public Object {
     complete(cqe, true);
   }
 
-  void collect();
+  void collect(uint64_t);
   bool checkShutdown();
   void finishShutdown();
 
