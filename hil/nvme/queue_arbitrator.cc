@@ -214,13 +214,7 @@ void Arbitrator::ringSQ(uint16_t qid, uint16_t tail) {
       "%d -> %d | head %d | tail %d -> %d",
       qid, oldcount, sq->getItemCount(), sq->getHead(), oldtail, sq->getTail());
 
-  if (doWorkPause) {
-    doWorkPause = false;
-
-    uint64_t diff = getTick() - lastWorkAt;
-
-    scheduleAbs(work, 0, lastWorkAt + period * DIVCEIL(diff, period));
-  }
+  restartWork();
 }
 
 void Arbitrator::ringCQ(uint16_t qid, uint16_t head) {
@@ -273,6 +267,9 @@ dispatch_again:
 
 void Arbitrator::reserveShutdown() {
   shutdownReserved = true;
+
+  // Call work here to check shutdown completion
+  restartWork();
 }
 
 void Arbitrator::createAdminCQ(uint64_t base, uint16_t size) {
@@ -643,6 +640,16 @@ void Arbitrator::finishShutdown() {
   }
 
   shutdownReserved = false;
+}
+
+void Arbitrator::restartWork() {
+  if (doWorkPause) {
+    doWorkPause = false;
+
+    uint64_t diff = getTick() - lastWorkAt;
+
+    scheduleAbs(work, 0, lastWorkAt + period * DIVCEIL(diff, period));
+  }
 }
 
 void Arbitrator::collect(uint64_t now) {

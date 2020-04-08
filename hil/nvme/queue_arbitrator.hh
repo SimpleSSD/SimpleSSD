@@ -189,6 +189,8 @@ class Arbitrator : public Object {
   bool checkShutdown();
   void finishShutdown();
 
+  void restartWork();
+
  public:
   Arbitrator(ObjectData &, ControllerData *);
   ~Arbitrator();
