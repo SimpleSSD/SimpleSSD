@@ -29,8 +29,8 @@ typedef struct {
   uint64_t totalLogicalPages;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
-  uint64_t block;          // (super)pages per block
-  uint64_t superpage;      // pages per superpage
+  uint64_t block;      // (super)pages per block
+  uint64_t superpage;  // pages per superpage
   uint32_t pageSize;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
@@ -127,10 +127,17 @@ struct CopyContext {
   void resetIterator() { iter = list.begin(); }
   bool isEnd() { return iter == list.end(); }
 
-  CopyContext(): blockID(InvalidPPN) {}
+  CopyContext() : blockID(InvalidPPN) {}
+  ~CopyContext() {
+    for (auto sReq : list) {
+      for (auto req : sReq) {
+        delete req;
+      }
+    }
+  }
+  // do we need copy & move ctor?
 
   void createCheckpoint(std::ostream &) const {}
-
   void restoreCheckpoint(std::istream &) {}
 };
 
