@@ -121,18 +121,16 @@ struct CopyContext {
   std::vector<SuperRequest>::iterator iter;
   std::vector<SuperRequest> list;
 
+  uint64_t counter;
+
   void resetIterator() { iter = list.begin(); }
   bool isEnd() { return iter == list.end(); }
 
   CopyContext(): blockID(InvalidPPN) {}
 
-  void createCheckpoint(std::ostream &out) const {
-    panic("CopyContext checkpointing not implemented");
-  }
+  void createCheckpoint(std::ostream &) const {}
 
-  void restoreCheckpoint(std::istream &in) {
-    panic("CopyContext checkpointing not implemented");
-  }
+  void restoreCheckpoint(std::istream &) {}
 };
 
 }  // namespace SimpleSSD::FTL

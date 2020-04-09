@@ -15,7 +15,9 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
     : AbstractFTL(o, p, f, m, a) {
   memset(&stat, 0, sizeof(stat));
 
-  pageSize = pMapper->getInfo()->pageSize;
+  auto param = pMapper->getInfo();
+  pageSize = param->pageSize;
+  uint64_t pagesInBlock = param->block;
 
   pMapper->getMappingSize(&minMappingSize);
 
@@ -24,6 +26,9 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   pendingListBaseAddress = object.memory->allocate(
       minMappingSize * pageSize, Memory::MemoryType::DRAM,
       "FTL::BasicFTL::PendingRMWData");
+  gcctx.bufferBaseAddress = object.memory->allocate(
+      pagesInBlock * minMappingSize * pageSize, Memory::MemoryType::DRAM,
+      "FTL::BasicFTL::GCBuffer");
 
   // Create events
   eventReadSubmit =
@@ -428,7 +433,7 @@ void BasicFTL::gc_setNextVictimBlock() {
     gcctx.blockList.pop_back();
 
     gcctx.copyctx.blockID = nextVictimBlock;
-    pMapper->getCopyList(gcctx.copyctx, InvalidEventID);
+    pMapper->getCopyList(gcctx.copyctx, eventGCReadSubmit);
     gcctx.copyctx.resetIterator();
   }
   else {
@@ -438,7 +443,29 @@ void BasicFTL::gc_setNextVictimBlock() {
 }
 
 void BasicFTL::gc_readSubmit() {
-  return;
+  // alias
+  auto &copyctx = gcctx.copyctx;
+
+  if (LIKELY(!copyctx.isEnd())) {
+    auto ppnBegin = (*copyctx.iter).front()->getPPN();
+    uint64_t spBufferBaseAddr =
+        gcctx.bufferBaseAddress +
+        (copyctx.iter - copyctx.list.begin()) * minMappingSize * pageSize;
+    copyctx.counter = 0;
+
+    // submit requests in current SuperRequest
+    for (auto req : *copyctx.iter) {
+      pFIL->read(FIL::Request(req->getPPN(), eventGCReadDone, 0));
+      object.memory->write(
+          spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
+          InvalidEventID, false);
+      copyctx.counter++;
+    }
+    copyctx.iter++;
+  }
+  else {
+    // we did all read we need
+  }
 }
 
 void BasicFTL::gc_readDone() {

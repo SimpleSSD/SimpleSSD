@@ -81,6 +81,7 @@ class BasicFTL : public AbstractFTL {
     bool inProgress;
     std::vector<PPN> blockList;
     CopyContext copyctx;
+    uint64_t bufferBaseAddress;
 
     uint64_t beginAt;
 
