@@ -73,6 +73,20 @@ Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
       address(0),
       counter(0) {}
 
+Request::Request(PPN p)
+    : lpn(InvalidLPN),
+      ppn(p),
+      offset(0),
+      length(0),
+      slpn(0),
+      nlp(0),
+      opcode(Operation::None),
+      result(Response::Success),
+      event(InvalidEventID),
+      data(0),
+      address(0),
+      counter(0) {}
+
 void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, tag);
   BACKUP_SCALAR(out, opcode);
