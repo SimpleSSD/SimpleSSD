@@ -423,7 +423,7 @@ void BasicFTL::gc_trigger(uint64_t now) {
   // victim block selection
   pAllocator->getVictimBlocks(gcctx.blockList, eventGCSetNextVictimBlock);
 
-  debugprint(Log::DebugID::FTL, "GC    | On-demand | %u blocks",
+  debugprint(Log::DebugID::FTL_PageLevel, "GC    | On-demand | %u blocks",
              gcctx.blockList.size());
 }
 
@@ -432,9 +432,10 @@ void BasicFTL::gc_setNextVictimBlock() {
     PPN nextVictimBlock = gcctx.blockList.back();
     gcctx.blockList.pop_back();
 
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
     gcctx.copyctx.blockID = nextVictimBlock;
     pMapper->getCopyList(gcctx.copyctx, eventGCReadSubmit);
-    gcctx.copyctx.resetIterator();
   }
   else {
     // no need to perform GC
@@ -455,6 +456,9 @@ void BasicFTL::gc_readSubmit() {
 
     // submit requests in current SuperRequest
     for (auto req : *copyctx.iter) {
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "GC    | Read  | PPN %" PRIx64 "h + %" PRIx64 "h",
+                 req->getPPN(), pageSize);
       pFIL->read(FIL::Request(req->getPPN(), eventGCReadDone, 0));
       object.memory->write(
           spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
