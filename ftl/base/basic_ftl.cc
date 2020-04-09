@@ -67,11 +67,12 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                   "FTL::BasicFTL::eventGCSetNextVictimBlock");
 
   eventGCReadSubmit =
-      createEvent([this](uint64_t, uint64_t) { gc_readSubmit(); },
+      createEvent([this](uint64_t t, uint64_t) { gc_readSubmit(t); },
                   "FTL::BasicFTL::eventGCReadSubmit");
 
-  eventGCReadDone = createEvent([this](uint64_t, uint64_t) { gc_readDone(); },
-                                "FTL::BasicFTL::eventGCReadDone");
+  eventGCReadDone =
+      createEvent([this](uint64_t t, uint64_t) { gc_readDone(t); },
+                  "FTL::BasicFTL::eventGCReadDone");
 
   eventGCWriteSubmit =
       createEvent([this](uint64_t, uint64_t) { gc_writeSubmit(); },
@@ -443,16 +444,17 @@ void BasicFTL::gc_setNextVictimBlock() {
   }
 }
 
-void BasicFTL::gc_readSubmit() {
+void BasicFTL::gc_readSubmit(uint64_t now) {
   // alias
   auto &copyctx = gcctx.copyctx;
 
   if (LIKELY(!copyctx.isEnd())) {
-    auto ppnBegin = (*copyctx.iter).front()->getPPN();
+    PPN ppnBegin = copyctx.iter->front()->getPPN();
     uint64_t spBufferBaseAddr =
         gcctx.bufferBaseAddress +
         (copyctx.iter - copyctx.list.begin()) * minMappingSize * pageSize;
     copyctx.counter = 0;
+    copyctx.beginAt = now;
 
     // submit requests in current SuperRequest
     for (auto req : *copyctx.iter) {
@@ -465,14 +467,35 @@ void BasicFTL::gc_readSubmit() {
           InvalidEventID, false);
       copyctx.counter++;
     }
-    copyctx.iter++;
   }
   else {
     // we did all read we need
   }
 }
 
-void BasicFTL::gc_readDone() {
+void BasicFTL::gc_readDone(uint64_t now) {
+  auto &copyctx = gcctx.copyctx;
+  copyctx.counter--;
+
+  if (copyctx.counter == 0) {
+    PPN superpageBegin = copyctx.iter->front()->getPPN();
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               superpageBegin, superpageBegin + minMappingSize, copyctx.beginAt,
+               now, now - copyctx.beginAt);
+
+    // Get first command
+    auto req = copyctx.iter->at(0);
+
+    // Write translation
+    pMapper->writeMapping(req, eventGCWriteSubmit);
+
+    // submit next read
+    // maybe the timing makes no sense
+    copyctx.iter++;
+    scheduleNow(eventGCReadSubmit);
+  }
   return;
 }
 

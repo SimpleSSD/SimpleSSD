@@ -122,6 +122,7 @@ struct CopyContext {
   std::vector<SuperRequest> list;
 
   uint64_t counter;
+  uint64_t beginAt;
 
   void resetIterator() { iter = list.begin(); }
   bool isEnd() { return iter == list.end(); }
