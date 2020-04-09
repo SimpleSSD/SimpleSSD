@@ -461,7 +461,7 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
       debugprint(Log::DebugID::FTL_PageLevel,
                  "GC    | Read  | PPN %" PRIx64 "h + %" PRIx64 "h",
                  req->getPPN(), pageSize);
-      pFIL->read(FIL::Request(req->getPPN(), eventGCReadDone, 0));
+      pFIL->read(FIL::Request(req, eventGCReadDone));
       object.memory->write(
           spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
           InvalidEventID, false);
@@ -478,11 +478,11 @@ void BasicFTL::gc_readDone(uint64_t now) {
   copyctx.counter--;
 
   if (copyctx.counter == 0) {
-    PPN superpageBegin = copyctx.iter->front()->getPPN();
+    LPN pageBegin = copyctx.iter->front()->getLPN();
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               superpageBegin, superpageBegin + minMappingSize, copyctx.beginAt,
+               pageBegin, pageBegin + minMappingSize, copyctx.beginAt,
                now, now - copyctx.beginAt);
 
     // Get first command

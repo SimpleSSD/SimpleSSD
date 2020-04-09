@@ -509,12 +509,14 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
   for (uint i = 0; i < filparam->page; i++) {
     if (block->validPages.test(i)) {
       // append valid page copy request
-      SuperRequest sReq = std::vector<Request *>(param.superpage, nullptr);
+      SuperRequest sReq;
+      sReq.reserve(param.superpage);
+      Request *req;
       for (uint j = 0; j < param.superpage; j++) {
-        Request req(InvalidEventID, (uint64_t)0);
-        req.setPPN(makePPN(copy.blockID, i, j));
+        req = new Request(makePPN(copy.blockID, j, i));
+        sReq.emplace_back(req);
       }
-      copy.list.emplace_back(sReq);
+      copy.list.emplace_back(std::move(sReq));
     }
   }
 

@@ -114,7 +114,7 @@ class BasicFTL : public AbstractFTL {
   } stat;
 
   virtual inline void triggerGC() {
-    if (pAllocator->checkGCThreshold()) {
+    if (pAllocator->checkGCThreshold() && !gcctx.inProgress) {
       scheduleNow(eventGCTrigger);
     }
   }
