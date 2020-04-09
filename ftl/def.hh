@@ -29,7 +29,8 @@ typedef struct {
   uint64_t totalLogicalPages;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
-  uint64_t superpage;
+  uint64_t block;          // (super)pages per block
+  uint64_t superpage;      // pages per superpage
   uint32_t pageSize;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
 } Parameter;
@@ -116,7 +117,6 @@ using SuperRequest = std::vector<Request *>;
 
 struct CopyContext {
   PPN blockID;
-  uint64_t eraseTag;
 
   std::vector<SuperRequest>::iterator iter;
   std::vector<SuperRequest> list;
@@ -124,40 +124,14 @@ struct CopyContext {
   void resetIterator() { iter = list.begin(); }
   bool isEnd() { return iter == list.end(); }
 
-  CopyContext(): blockID(InvalidPPN), eraseTag(0) {}
+  CopyContext(): blockID(InvalidPPN) {}
 
   void createCheckpoint(std::ostream &out) const {
-    BACKUP_SCALAR(out, blockID);
-
-    uint64_t size = list.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : list) {
-      BACKUP_SCALAR(out, iter);
-    }
-
-    size = iter - list.begin();
-    BACKUP_SCALAR(out, size);
+    panic("CopyContext checkpointing not implemented");
   }
 
   void restoreCheckpoint(std::istream &in) {
-    RESTORE_SCALAR(in, blockID);
-
-    uint64_t size;
-    RESTORE_SCALAR(in, size);
-
-    list.reserve(size);
-
-    for (uint64_t i = 0; i < size; i++) {
-      uint64_t tag;
-
-      RESTORE_SCALAR(in, tag);
-
-      list.emplace_back(tag);
-    }
-
-    RESTORE_SCALAR(in, size);
-    iter = list.begin() + size;
+    panic("CopyContext checkpointing not implemented");
   }
 };
 

@@ -25,6 +25,7 @@ AbstractMapping::AbstractMapping(ObjectData &o)
   param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
   param.totalLogicalPages = param.totalLogicalBlocks * filparam->page;
   param.pageSize = filparam->pageSize;
+  param.block = filparam->page;
   param.parallelism = channel * way * filparam->die * filparam->plane;
 
   for (uint8_t i = 0; i < 4; i++) {
