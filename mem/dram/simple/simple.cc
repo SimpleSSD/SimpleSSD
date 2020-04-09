@@ -140,8 +140,8 @@ void SimpleDRAM::read(uint64_t address, Event eid, uint64_t data) {
   req->beginAt = getTick();
 
   // Stat Update
-  writeStat.add(MemoryPacketSize);
-  writeBusy.busyBegin(req->beginAt);
+  readStat.add(MemoryPacketSize);
+  readBusy.busyBegin(req->beginAt);
   totalBusy.busyBegin(req->beginAt);
 
   // Schedule callback
