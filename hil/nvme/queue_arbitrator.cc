@@ -688,6 +688,14 @@ void Arbitrator::collect(uint64_t now) {
     else {
       panic("Invalid arbitration mode");
     }
+
+    if (!handled) {
+      running = false;
+      doWorkPause = true;
+    }
+    else {
+      doWorkPause = false;
+    }
   }
 
   // Schedule collect
@@ -695,14 +703,6 @@ void Arbitrator::collect(uint64_t now) {
     lastWorkAt = now;
 
     scheduleAbs(work, 0ull, now + period);
-  }
-
-  if (!handled) {
-    running = false;
-    doWorkPause = true;
-  }
-  else {
-    doWorkPause = false;
   }
 }
 
