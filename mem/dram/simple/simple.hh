@@ -116,8 +116,8 @@ class SimpleDRAM : public AbstractDRAM {
   SimpleDRAM(ObjectData &);
   ~SimpleDRAM();
 
-  void read(uint64_t, Event, uint64_t = 0);
-  void write(uint64_t, Event, uint64_t = 0);
+  void read(uint64_t, Event, uint64_t = 0) override;
+  void write(uint64_t, Event, uint64_t = 0) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
