@@ -90,6 +90,8 @@ void SRAM::getStatValues(std::vector<double> &values) noexcept {
 void SRAM::resetStatValues() noexcept {
   lastResetAt = getTick();
 
+  busy.clear(lastResetAt);
+
   AbstractSRAM::resetStatValues();
 }
 
