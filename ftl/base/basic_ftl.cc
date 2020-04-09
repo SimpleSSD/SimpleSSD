@@ -61,6 +61,27 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
       createEvent([this](uint64_t, uint64_t) { gc_setNextVictimBlock(); },
                   "FTL::BasicFTL::eventGCSetNextVictimBlock");
 
+  eventGCReadSubmit =
+      createEvent([this](uint64_t, uint64_t) { gc_readSubmit(); },
+                  "FTL::BasicFTL::eventGCReadSubmit");
+
+  eventGCReadDone = createEvent([this](uint64_t, uint64_t) { gc_readDone(); },
+                                "FTL::BasicFTL::eventGCReadDone");
+
+  eventGCWriteSubmit =
+      createEvent([this](uint64_t, uint64_t) { gc_writeSubmit(); },
+                  "FTL::BasicFTL::eventGCWriteSubmit");
+
+  eventGCWriteDone = createEvent([this](uint64_t, uint64_t) { gc_writeDone(); },
+                                 "FTL::BasicFTL::eventGCWriteDone");
+
+  eventGCEraseSubmit =
+      createEvent([this](uint64_t, uint64_t) { gc_eraseSubmit(); },
+                  "FTL::BasicFTL::eventGCEraseSubmit");
+
+  eventGCEraseDone = createEvent([this](uint64_t, uint64_t) { gc_eraseDone(); },
+                                 "FTL::BasicFTL::eventGCEraseDone");
+
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
 }
@@ -414,6 +435,30 @@ void BasicFTL::gc_setNextVictimBlock() {
     // no need to perform GC
     scheduleNow(InvalidEventID);
   }
+}
+
+void BasicFTL::gc_readSubmit() {
+  return;
+}
+
+void BasicFTL::gc_readDone() {
+  return;
+}
+
+void BasicFTL::gc_writeSubmit() {
+  return;
+}
+
+void BasicFTL::gc_writeDone() {
+  return;
+}
+
+void BasicFTL::gc_eraseSubmit() {
+  return;
+}
+
+void BasicFTL::gc_eraseDone() {
+  return;
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const
