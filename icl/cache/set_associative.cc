@@ -557,6 +557,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     // Fill cacheline
     auto &line = cacheline.at(set * waySize + way);
 
+    line.data = 0;  // Clear other bits
     line.valid = true;
     line.tag = lpn;
     line.insertedAt = getTick();
