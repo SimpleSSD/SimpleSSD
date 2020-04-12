@@ -119,14 +119,20 @@ using SuperRequest = std::vector<Request *>;
 struct CopyContext {
   PPN blockID;
 
-  std::vector<SuperRequest>::iterator iter;
+  std::vector<SuperRequest>::iterator readIter;
+  std::vector<SuperRequest>::iterator writeIter;
   std::vector<SuperRequest> list;
 
-  uint64_t counter;
+  uint64_t readCounter;
+  uint64_t writeCounter;
   uint64_t beginAt;
 
-  void resetIterator() { iter = list.begin(); }
-  bool isEnd() { return iter == list.end(); }
+  void resetIterator() {
+    readIter = list.begin();
+    writeIter = list.begin();
+  }
+  bool isReadEnd() { return readIter == list.end(); }
+  bool isWriteEnd() { return writeIter == list.end(); }
 
   CopyContext() : blockID(InvalidPPN) {}
   ~CopyContext() {
