@@ -439,27 +439,6 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  // Check command
-  /*   if (UNLIKELY(cmd.offset == InvalidLPN)) {
-      // This is GC write request and this request must have spare field
-      auto iter = cmd.subCommandList.begin();
-
-      iter->lpn = readSpare(iter->spare);
-      LPN slpn = getSLPNfromLPN(iter->lpn);
-
-      cmd.offset = iter->lpn;
-
-      // Read all
-      ++iter;
-
-      for (; iter != cmd.subCommandList.end(); ++iter) {
-        iter->lpn = readSpare(iter->spare);
-
-        panic_if(slpn != getSLPNfromLPN(iter->lpn),
-                 "Command has two or more superpages.");
-      }
-    } */
-
   // Perform write translation
   LPN lpn = cmd->getLPN();
   LPN lspn = lpn / param.superpage;
