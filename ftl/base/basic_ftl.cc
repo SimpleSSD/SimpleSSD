@@ -448,16 +448,16 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
   // alias
   auto &copyctx = gcctx.copyctx;
 
-  if (LIKELY(!copyctx.isEnd())) {
-    PPN ppnBegin = copyctx.iter->front()->getPPN();
+  if (LIKELY(!copyctx.isReadEnd())) {
+    PPN ppnBegin = copyctx.readIter->front()->getPPN();
     uint64_t spBufferBaseAddr =
         gcctx.bufferBaseAddress +
-        (copyctx.iter - copyctx.list.begin()) * minMappingSize * pageSize;
-    copyctx.counter = 0;
+        (copyctx.readIter - copyctx.list.begin()) * minMappingSize * pageSize;
+    copyctx.readCounter = 0;
     copyctx.beginAt = now;
 
     // submit requests in current SuperRequest
-    for (auto req : *copyctx.iter) {
+    for (auto req : *copyctx.readIter) {
       debugprint(Log::DebugID::FTL_PageLevel,
                  "GC    | Read  | PPN %" PRIx64 "h + %" PRIx64 "h",
                  req->getPPN(), pageSize);
@@ -465,7 +465,7 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
       object.memory->write(
           spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
           InvalidEventID, false);
-      copyctx.counter++;
+      copyctx.readCounter++;
     }
   }
   else {
@@ -475,32 +475,58 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
 
 void BasicFTL::gc_readDone(uint64_t now) {
   auto &copyctx = gcctx.copyctx;
-  copyctx.counter--;
+  copyctx.readCounter--;
 
-  if (copyctx.counter == 0) {
-    LPN pageBegin = copyctx.iter->front()->getLPN();
+  if (copyctx.readCounter == 0) {
+    LPN pageBegin = copyctx.readIter->front()->getLPN();
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               pageBegin, pageBegin + minMappingSize, copyctx.beginAt,
-               now, now - copyctx.beginAt);
+               pageBegin, pageBegin + minMappingSize, copyctx.beginAt, now,
+               now - copyctx.beginAt);
 
     // Get first command
-    auto req = copyctx.iter->at(0);
+    auto req = copyctx.readIter->at(0);
 
     // Write translation
     pMapper->writeMapping(req, eventGCWriteSubmit);
 
     // submit next read
     // maybe the timing makes no sense
-    copyctx.iter++;
+    copyctx.readIter++;
     scheduleNow(eventGCReadSubmit);
   }
   return;
 }
 
 void BasicFTL::gc_writeSubmit() {
-  return;
+  // alias
+  auto &copyctx = gcctx.copyctx;
+
+  if (LIKELY(!copyctx.isWriteEnd())) {
+    auto firstReq = copyctx.writeIter->front();
+    LPN lpnBegin = firstReq->getLPN();
+    PPN ppnBegin = firstReq->getPPN();
+    uint64_t spBufferBaseAddr =
+        gcctx.bufferBaseAddress +
+        (copyctx.writeIter - copyctx.list.begin()) * minMappingSize * pageSize;
+    copyctx.writeCounter = 0;
+
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC | WRITE  | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
+               lpnBegin + minMappingSize);
+
+    for (auto req : *copyctx.writeIter) {
+      object.memory->read(
+          spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
+          InvalidEventID, false);
+      pFIL->program(FIL::Request(req, eventGCWriteDone));
+      copyctx.writeCounter++;
+    }
+  }
+  else{
+      // we did all write we need
+  }
 }
 
 void BasicFTL::gc_writeDone() {
