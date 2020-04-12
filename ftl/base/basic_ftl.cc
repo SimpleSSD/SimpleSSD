@@ -456,11 +456,12 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
     copyctx.readCounter = 0;
     copyctx.beginAt = now;
 
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
+               ppnBegin + minMappingSize);
+
     // submit requests in current SuperRequest
     for (auto req : *copyctx.readIter) {
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 "GC    | Read  | PPN %" PRIx64 "h + %" PRIx64 "h",
-                 req->getPPN(), pageSize);
       pFIL->read(FIL::Request(req, eventGCReadDone));
       object.memory->write(
           spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
@@ -478,11 +479,11 @@ void BasicFTL::gc_readDone(uint64_t now) {
   copyctx.readCounter--;
 
   if (copyctx.readCounter == 0) {
-    LPN pageBegin = copyctx.readIter->front()->getLPN();
+    LPN ppnBegin = copyctx.readIter->front()->getPPN();
     debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | READ   | ALIGN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               "GC | READDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               pageBegin, pageBegin + minMappingSize, copyctx.beginAt, now,
+               ppnBegin, ppnBegin + minMappingSize, copyctx.beginAt, now,
                now - copyctx.beginAt);
 
     // Get first command
@@ -513,7 +514,7 @@ void BasicFTL::gc_writeSubmit() {
     copyctx.writeCounter = 0;
 
     debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | WRITE  | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
+               "GC | WRITE     | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
                lpnBegin + minMappingSize);
 
     for (auto req : *copyctx.writeIter) {
@@ -524,8 +525,8 @@ void BasicFTL::gc_writeSubmit() {
       copyctx.writeCounter++;
     }
   }
-  else{
-      // we did all write we need
+  else {
+    // we did all write we need
   }
 }
 
