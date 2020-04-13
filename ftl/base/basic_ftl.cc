@@ -519,17 +519,23 @@ void BasicFTL::gc_writeSubmit(uint64_t tag) {
   PPN ppnBegin = firstReq->getPPN();
   uint64_t spBufferBaseAddr =
       gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
+  uint64_t offset = 0;
 
   debugprint(Log::DebugID::FTL_PageLevel,
              "GC | WRITE     | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
              lpnBegin + minMappingSize);
 
   for (auto req : sReq) {
+    // update to new PPN
+    req->setPPN(ppnBegin+offset);
+
+    // submit
     object.memory->read(
-        spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
+        spBufferBaseAddr + offset * pageSize, pageSize,
         InvalidEventID, false);
     pFIL->program(FIL::Request(req, eventGCWriteDone));
     copyctx.writeCounter.at(pageIndex)++;
+    offset++;
   }
 }
 
