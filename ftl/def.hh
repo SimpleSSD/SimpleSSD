@@ -83,6 +83,7 @@ class Request {
   Request(PPN);
 
   inline uint64_t getTag() { return tag; }
+  inline uint64_t setTag(uint64_t t) { tag = t; }
 
   inline Operation getOperation() { return opcode; }
   inline Response getResponse() { return result; }

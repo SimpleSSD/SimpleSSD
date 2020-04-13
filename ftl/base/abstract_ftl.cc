@@ -24,4 +24,8 @@ void AbstractFTL::completeRequest(Request *req) {
   pFTL->completeRequest(req);
 }
 
+inline uint64_t AbstractFTL::generateFTLTag() {
+  return pFTL->generateFTLTag();
+}
+
 }  // namespace SimpleSSD::FTL

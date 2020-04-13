@@ -31,6 +31,7 @@ class AbstractFTL : public Object {
   BlockAllocator::AbstractAllocator *pAllocator;
 
   void completeRequest(Request *);
+  inline uint64_t generateFTLTag();
 
  public:
   AbstractFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
