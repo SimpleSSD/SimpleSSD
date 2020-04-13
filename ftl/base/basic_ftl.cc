@@ -450,24 +450,24 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
   auto &copyctx = gcctx.copyctx;
 
   if (LIKELY(!copyctx.isReadEnd())) {
-    auto firstReq = copyctx.readIter->front();
+    auto firstReq = copyctx.iter->front();
     PPN ppnBegin = firstReq->getPPN();
     uint64_t spBufferBaseAddr =
         gcctx.bufferBaseAddress +
-        (copyctx.readIter - copyctx.list.begin()) * minMappingSize * pageSize;
+        (copyctx.iter - copyctx.list.begin()) * minMappingSize * pageSize;
     copyctx.readCounter = 0;
     copyctx.beginAt = now;
 
     // generate tag per SuperRequest
     uint64_t tag = generateFTLTag();
-    copyctx.tag2PageIdx.emplace(tag, copyctx.readIter - copyctx.list.begin());
+    copyctx.tag2PageIdx.emplace(tag, copyctx.iter - copyctx.list.begin());
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
                ppnBegin + minMappingSize);
 
     // submit requests in current SuperRequest
-    for (auto req : *copyctx.readIter) {
+    for (auto req : *copyctx.iter) {
       req->setTag(tag);
       pFIL->read(FIL::Request(req, eventGCReadDone));
       object.memory->write(
@@ -486,7 +486,7 @@ void BasicFTL::gc_readDone(uint64_t now) {
   copyctx.readCounter--;
 
   if (copyctx.readCounter == 0) {
-    LPN ppnBegin = copyctx.readIter->front()->getPPN();
+    LPN ppnBegin = copyctx.iter->front()->getPPN();
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
@@ -494,14 +494,14 @@ void BasicFTL::gc_readDone(uint64_t now) {
                now - copyctx.beginAt);
 
     // Get first command
-    auto req = copyctx.readIter->at(0);
+    auto req = copyctx.iter->at(0);
 
     // Write translation
     pMapper->writeMapping(req, eventGCWriteSubmit);
 
-    // submit next read
+    // submit next copy
     // maybe the timing makes no sense
-    copyctx.readIter++;
+    copyctx.iter++;
     scheduleNow(eventGCReadSubmit);
   }
   return;
