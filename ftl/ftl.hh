@@ -36,6 +36,8 @@ class FTL : public Object {
 
   std::unordered_map<uint64_t, Request> requestQueue;
 
+  Request *insertRequest(Request &&);
+
  public:
   FTL(ObjectData &);
   ~FTL();
@@ -44,7 +46,6 @@ class FTL : public Object {
   Parameter *getInfo();
 
   LPN getPageUsage(LPN, LPN);
-  Request *insertRequest(Request &&);
   Request *getRequest(uint64_t);
   void completeRequest(Request *);
 
