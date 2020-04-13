@@ -16,6 +16,10 @@ AbstractFTL::AbstractFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                          BlockAllocator::AbstractAllocator *a)
     : Object(o), pFTL(p), pFIL(f), pMapper(m), pAllocator(a) {}
 
+Request *AbstractFTL::insertRequest(Request && req){
+  return pFTL->insertRequest(std::move(req));
+}
+
 Request *AbstractFTL::getRequest(uint64_t tag) {
   return pFTL->getRequest(tag);
 }

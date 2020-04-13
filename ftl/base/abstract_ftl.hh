@@ -30,6 +30,7 @@ class AbstractFTL : public Object {
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
 
+  Request *insertRequest(Request &&);
   void completeRequest(Request *);
 
  public:
