@@ -440,7 +440,7 @@ void BasicFTL::gc_setNextVictimBlock() {
     pMapper->getCopyList(gcctx.copyctx, eventGCReadSubmit);
   }
   else {
-    // no need to perform GC
+    // no need to perform GC or GC finished
     scheduleNow(eventGCDone);
   }
 }
@@ -566,14 +566,17 @@ void BasicFTL::gc_eraseSubmit() {
              gcctx.copyctx.blockID);
   pFIL->erase(
       FIL::Request(gcctx.copyctx.blockID, eventGCSetNextVictimBlock, 0));
+  gcctx.erasedBlocks++;
   stat.gcErasedBlocks++;
 }
 
 void BasicFTL::gc_Done(uint64_t now) {
   gcctx.inProgress = false;
   debugprint(Log::DebugID::FTL_PageLevel,
-             "GC | DONE      | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-             gcctx.beginAt, now, now - gcctx.beginAt);
+             "GC | DONE      | %" PRIu64 " BLOCKS | %" PRIu64 " - %" PRIu64
+             " (%" PRIu64 ")",
+             gcctx.beginAt, gcctx.erasedBlocks, now, gcctx.beginAt,
+             now - gcctx.beginAt);
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const

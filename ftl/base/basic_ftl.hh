@@ -84,6 +84,7 @@ class BasicFTL : public AbstractFTL {
     uint64_t bufferBaseAddress;
 
     uint64_t beginAt;
+    uint64_t erasedBlocks;
 
     GCContext() : inProgress(false), beginAt(0) {}
 
@@ -91,6 +92,7 @@ class BasicFTL : public AbstractFTL {
       inProgress = true;
       beginAt = now;
       blockList.clear();
+      erasedBlocks = 0;
     }
   };
   GCContext gcctx;
