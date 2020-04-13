@@ -500,6 +500,7 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
   }
 
   copy.writeCounter.resize(copy.list.size(), 0);
+  copy.initIter();
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }

@@ -131,14 +131,14 @@ struct CopyContext {
 
   void reset() {
     list.clear();
-    iter = list.begin();
     tag2PageIdx.clear();
     readCounter=0;
     writeCounter.clear();
     beginAt=0;
   }
-  bool isReadEnd() { return iter == list.end(); }
-  bool isLastIdx(uint64_t idx) { return idx == list.size() - 1; }
+  inline void initIter() { iter = list.begin(); }
+  inline bool isReadEnd() { return iter == list.end(); }
+  inline bool isLastIdx(uint64_t idx) { return idx == list.size() - 1; }
 
   CopyContext() : blockID(InvalidPPN) {}
   ~CopyContext() {
