@@ -129,11 +129,16 @@ struct CopyContext {
   std::vector<uint16_t> writeCounter;
   uint64_t beginAt;
 
-  void resetIterator() {
+  void reset() {
+    list.clear();
     iter = list.begin();
+    tag2PageIdx.clear();
+    readCounter=0;
+    writeCounter.clear();
+    beginAt=0;
   }
   bool isReadEnd() { return iter == list.end(); }
-  bool isLastTag(uint64_t tag) { return tag == list.size() - 1; }
+  bool isLastIdx(uint64_t idx) { return idx == list.size() - 1; }
 
   CopyContext() : blockID(InvalidPPN) {}
   ~CopyContext() {
@@ -143,7 +148,6 @@ struct CopyContext {
       }
     }
   }
-  // do we need copy & move ctor?
 
   void createCheckpoint(std::ostream &) const {}
   void restoreCheckpoint(std::istream &) {}

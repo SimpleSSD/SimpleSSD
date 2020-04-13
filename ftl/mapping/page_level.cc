@@ -482,7 +482,7 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
 
   auto block = &blockMetadata[copy.blockID];
 
-  copy.list.clear();
+  copy.reset();
   copy.list.reserve(block->validPages.count());
 
   for (uint i = 0; i < filparam->page; i++) {
@@ -499,8 +499,6 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
     }
   }
 
-  copy.resetIterator();
-  copy.writeCounter.clear();
   copy.writeCounter.resize(copy.list.size(), 0);
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
