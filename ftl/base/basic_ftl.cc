@@ -86,8 +86,8 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
       createEvent([this](uint64_t, uint64_t) { gc_eraseSubmit(); },
                   "FTL::BasicFTL::eventGCEraseSubmit");
 
-  eventGCEraseDone = createEvent([this](uint64_t, uint64_t) { gc_eraseDone(); },
-                                 "FTL::BasicFTL::eventGCEraseDone");
+  eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_Done(t); },
+                            "FTL::BasicFTL::eventGCEraseDone");
 
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
@@ -441,7 +441,7 @@ void BasicFTL::gc_setNextVictimBlock() {
   }
   else {
     // no need to perform GC
-    scheduleNow(InvalidEventID);
+    scheduleNow(eventGCDone);
   }
 }
 
@@ -552,8 +552,9 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
       scheduleNow(eventGCEraseSubmit);
       debugprint(Log::DebugID::FTL_PageLevel,
                  "GC | COPYDONE   | BLOCK % " PRIu64 " PAGES %" PRIu64
-                 " (%" PRIu64 " - %" PRIu64 ")",
-                 copyctx.blockID, copyctx.list.size(), now, copyctx.beginAt);
+                 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 copyctx.blockID, copyctx.list.size(), copyctx.beginAt, now,
+                 now - copyctx.beginAt);
     }
   }
 }
@@ -561,11 +562,18 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 void BasicFTL::gc_eraseSubmit() {
   panic_if(pMapper->getValidPages(gcctx.copyctx.blockID) > 0,
            "valid page copy not done");
-  return;
+  debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
+             gcctx.copyctx.blockID);
+  pFIL->erase(
+      FIL::Request(gcctx.copyctx.blockID, eventGCSetNextVictimBlock, 0));
+  stat.gcErasedBlocks++;
 }
 
-void BasicFTL::gc_eraseDone() {
-  return;
+void BasicFTL::gc_Done(uint64_t now) {
+  gcctx.inProgress = false;
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "GC | DONE      | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+             gcctx.beginAt, now, now - gcctx.beginAt);
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const
