@@ -104,8 +104,6 @@ void FTL::completeRequest(Request *req) {
   requestQueue.erase(iter);
 }
 
-uint64_t FTL::generateFTLTag() { return ++requestCounter; }
-
 void FTL::read(Request &&req) {
   auto preq = insertRequest(std::move(req));
 
