@@ -159,10 +159,10 @@ class BasicFTL : public AbstractFTL {
   void gc_readDone(uint64_t);
 
   Event eventGCWriteSubmit;
-  void gc_writeSubmit();
+  void gc_writeSubmit(uint64_t);
 
   Event eventGCWriteDone;
-  void gc_writeDone();
+  void gc_writeDone(uint64_t, uint64_t);
 
   Event eventGCEraseSubmit;
   void gc_eraseSubmit();

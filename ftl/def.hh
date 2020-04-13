@@ -124,8 +124,10 @@ struct CopyContext {
   std::vector<SuperRequest>::iterator writeIter;
   std::vector<SuperRequest> list;
 
+  std::unordered_map<uint64_t, uint64_t> tag2PageIdx;
+
   uint64_t readCounter;
-  uint64_t writeCounter;
+  std::vector<uint16_t> writeCounter;
   uint64_t beginAt;
 
   void resetIterator() {
@@ -134,6 +136,7 @@ struct CopyContext {
   }
   bool isReadEnd() { return readIter == list.end(); }
   bool isWriteEnd() { return writeIter == list.end(); }
+  bool isLastTag(uint64_t tag) { return tag == list.size() - 1; }
 
   CopyContext() : blockID(InvalidPPN) {}
   ~CopyContext() {

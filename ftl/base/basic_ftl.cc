@@ -75,11 +75,12 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                   "FTL::BasicFTL::eventGCReadDone");
 
   eventGCWriteSubmit =
-      createEvent([this](uint64_t, uint64_t) { gc_writeSubmit(); },
+      createEvent([this](uint64_t, uint64_t d) { gc_writeSubmit(d); },
                   "FTL::BasicFTL::eventGCWriteSubmit");
 
-  eventGCWriteDone = createEvent([this](uint64_t, uint64_t) { gc_writeDone(); },
-                                 "FTL::BasicFTL::eventGCWriteDone");
+  eventGCWriteDone =
+      createEvent([this](uint64_t t, uint64_t d) { gc_writeDone(t, d); },
+                  "FTL::BasicFTL::eventGCWriteDone");
 
   eventGCEraseSubmit =
       createEvent([this](uint64_t, uint64_t) { gc_eraseSubmit(); },
@@ -449,12 +450,17 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
   auto &copyctx = gcctx.copyctx;
 
   if (LIKELY(!copyctx.isReadEnd())) {
-    PPN ppnBegin = copyctx.readIter->front()->getPPN();
+    auto firstReq = copyctx.readIter->front();
+    PPN ppnBegin = firstReq->getPPN();
     uint64_t spBufferBaseAddr =
         gcctx.bufferBaseAddress +
         (copyctx.readIter - copyctx.list.begin()) * minMappingSize * pageSize;
     copyctx.readCounter = 0;
     copyctx.beginAt = now;
+
+    // generate tag per SuperRequest
+    uint64_t tag = generateFTLTag();
+    copyctx.tag2PageIdx.emplace(tag, copyctx.readIter - copyctx.list.begin());
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
@@ -462,6 +468,7 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
 
     // submit requests in current SuperRequest
     for (auto req : *copyctx.readIter) {
+      req->setTag(tag);
       pFIL->read(FIL::Request(req, eventGCReadDone));
       object.memory->write(
           spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
@@ -500,38 +507,51 @@ void BasicFTL::gc_readDone(uint64_t now) {
   return;
 }
 
-void BasicFTL::gc_writeSubmit() {
+void BasicFTL::gc_writeSubmit(uint64_t tag) {
   // alias
   auto &copyctx = gcctx.copyctx;
 
-  if (LIKELY(!copyctx.isWriteEnd())) {
-    auto firstReq = copyctx.writeIter->front();
-    LPN lpnBegin = firstReq->getLPN();
-    PPN ppnBegin = firstReq->getPPN();
-    uint64_t spBufferBaseAddr =
-        gcctx.bufferBaseAddress +
-        (copyctx.writeIter - copyctx.list.begin()) * minMappingSize * pageSize;
-    copyctx.writeCounter = 0;
+  const uint64_t pageIndex = copyctx.tag2PageIdx.at(tag);
+  auto sReq = copyctx.list.at(pageIndex);
 
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | WRITE     | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
-               lpnBegin + minMappingSize);
+  auto firstReq = sReq.front();
+  LPN lpnBegin = firstReq->getLPN();
+  PPN ppnBegin = firstReq->getPPN();
+  uint64_t spBufferBaseAddr =
+      gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
+  copyctx.writeCounter.at(pageIndex) = 0;
 
-    for (auto req : *copyctx.writeIter) {
-      object.memory->read(
-          spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
-          InvalidEventID, false);
-      pFIL->program(FIL::Request(req, eventGCWriteDone));
-      copyctx.writeCounter++;
-    }
-  }
-  else {
-    // we did all write we need
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "GC | WRITE     | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
+             lpnBegin + minMappingSize);
+
+  for (auto req : sReq) {
+    object.memory->read(
+        spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
+        InvalidEventID, false);
+    pFIL->program(FIL::Request(req, eventGCWriteDone));
+    copyctx.writeCounter.at(pageIndex)++;
   }
 }
 
-void BasicFTL::gc_writeDone() {
-  return;
+void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
+  auto &copyctx = gcctx.copyctx;
+  copyctx.writeCounter.at(tag)--;
+  stat.gcCopiedPages++;
+
+  if (copyctx.writeCounter.at(tag) == 0) {
+    LPN ppnBegin = copyctx.list.at(tag).front()->getPPN();
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC | WRITEDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               " - %" PRIu64 " (%" PRIu64 ")",
+               ppnBegin, ppnBegin + minMappingSize, copyctx.beginAt, now,
+               now - copyctx.beginAt);
+
+    if (copyctx.isLastTag(tag)) {
+      // valid page copy done
+      scheduleNow(eventGCEraseDone);
+    }
+  }
 }
 
 void BasicFTL::gc_eraseSubmit() {
