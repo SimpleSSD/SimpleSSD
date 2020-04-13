@@ -452,15 +452,15 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
   if (LIKELY(!copyctx.isReadEnd())) {
     auto firstReq = copyctx.iter->front();
     PPN ppnBegin = firstReq->getPPN();
+    uint64_t pageIndex = copyctx.iter - copyctx.list.begin();
     uint64_t spBufferBaseAddr =
-        gcctx.bufferBaseAddress +
-        (copyctx.iter - copyctx.list.begin()) * minMappingSize * pageSize;
+        gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
     copyctx.readCounter = 0;
     copyctx.beginAt = now;
 
     // generate tag per SuperRequest
     uint64_t tag = generateFTLTag();
-    copyctx.tag2PageIdx.emplace(tag, copyctx.iter - copyctx.list.begin());
+    copyctx.tag2PageIdx.emplace(tag, pageIndex);
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
@@ -540,21 +540,27 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
   stat.gcCopiedPages++;
 
   if (copyctx.writeCounter.at(pageIndex) == 0) {
-    LPN ppnBegin = copyctx.list.at(pageIndex).front()->getPPN();
+    LPN lpnBegin = copyctx.list.at(pageIndex).front()->getLPN();
     debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | WRITEDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               "GC | WRITEDONE  | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
-               ppnBegin, ppnBegin + minMappingSize, copyctx.beginAt, now,
+               lpnBegin, lpnBegin + minMappingSize, copyctx.beginAt, now,
                now - copyctx.beginAt);
 
     if (copyctx.isLastIdx(pageIndex)) {
       // valid page copy done
-      scheduleNow(eventGCEraseDone);
+      scheduleNow(eventGCEraseSubmit);
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 "GC | COPYDONE   | BLOCK % " PRIu64 " PAGES %" PRIu64
+                 " (%" PRIu64 " - %" PRIu64 ")",
+                 copyctx.blockID, copyctx.list.size(), now, copyctx.beginAt);
     }
   }
 }
 
 void BasicFTL::gc_eraseSubmit() {
+  panic_if(pMapper->getValidPages(gcctx.copyctx.blockID) > 0,
+           "valid page copy not done");
   return;
 }
 
