@@ -152,7 +152,7 @@ class BasicFTL : public AbstractFTL {
   void gc_trigger(uint64_t);
 
   Event eventGCSetNextVictimBlock;
-  void gc_setNextVictimBlock();
+  void gc_setNextVictimBlock(uint64_t);
 
   Event eventGCReadSubmit;
   void gc_readSubmit(uint64_t);

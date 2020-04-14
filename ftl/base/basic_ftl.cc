@@ -429,7 +429,7 @@ void BasicFTL::gc_trigger(uint64_t now) {
              gcctx.blockList.size());
 }
 
-void BasicFTL::gc_setNextVictimBlock() {
+void BasicFTL::gc_setNextVictimBlock(uint64_t now) {
   if (LIKELY(gcctx.blockList.size() > 0)) {
     PPN nextVictimBlock = gcctx.blockList.back();
     gcctx.blockList.pop_back();
@@ -437,6 +437,7 @@ void BasicFTL::gc_setNextVictimBlock() {
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
     gcctx.copyctx.blockID = nextVictimBlock;
+    gcctx.copyctx.beginAt = now;
     pMapper->getCopyList(gcctx.copyctx, eventGCReadSubmit);
   }
   else {
@@ -456,7 +457,6 @@ void BasicFTL::gc_readSubmit(uint64_t now) {
     uint64_t spBufferBaseAddr =
         gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
     copyctx.readCounter = 0;
-    copyctx.beginAt = now;
 
     // generate tag per SuperRequest
     uint64_t tag = generateFTLTag();
