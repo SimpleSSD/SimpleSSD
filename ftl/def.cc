@@ -119,9 +119,6 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, counter);
 }
 
-CopyContext::CopyContext(uint64_t pagesInBlock)
-    : blockID(InvalidPPN), copiedBits(pagesInBlock) {}
-
 CopyContext::~CopyContext() {
   for (auto sReq : list) {
     for (auto req : sReq) {
@@ -132,21 +129,22 @@ CopyContext::~CopyContext() {
 
 void CopyContext::reset() {
   list.clear();
-  copiedBits.reset();
   tag2ListIdx.clear();
   readCounter = 0;
   writeCounter.clear();
+  copyCounter = 0;
   beginAt = 0;
 }
 
 CopyContext &CopyContext::operator=(CopyContext &&rhs) {
-  for (auto sReq : list) {
-    for (auto req : sReq) {
-      delete req;
-    }
-  }
+  blockID = rhs.blockID;
+  std::swap(list, rhs.list);
+  iter = std::move(rhs.iter);
+  tag2ListIdx = std::move(rhs.tag2ListIdx);
+  readCounter = rhs.readCounter;
+  writeCounter = std::move(rhs.writeCounter);
+  beginAt = rhs.beginAt;
 
-  *this = std::move(rhs);
   return *this;
 }
 

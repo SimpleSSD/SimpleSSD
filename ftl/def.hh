@@ -122,23 +122,16 @@ struct CopyContext {
 
   std::vector<SuperRequest> list;
   std::vector<SuperRequest>::iterator iter;
-  Bitset copiedBits;
 
   std::unordered_map<uint64_t, uint64_t> tag2ListIdx;
 
   uint64_t readCounter;
   std::vector<uint16_t> writeCounter;
+  uint64_t copyCounter;
 
   uint64_t beginAt;
 
-  void reset();
-  inline void initIter() { iter = list.begin(); }
-  inline bool isReadDone() { return iter == list.end(); }
-  inline void setPageCopied(uint64_t idx) { copiedBits.set(idx); }
-  inline bool isDone() { return copiedBits.none(); }
-
   CopyContext() = default;
-  CopyContext(uint64_t);
   ~CopyContext();
   CopyContext(const CopyContext &) = delete;
   CopyContext &operator=(const CopyContext &) = delete;
@@ -146,6 +139,11 @@ struct CopyContext {
     *this = std::move(rhs);
   }
   CopyContext &operator=(CopyContext &&);
+
+  void reset();
+  inline void initIter() { iter = list.begin(); }
+  inline bool isReadDone() { return iter == list.end(); }
+  inline bool isDone() { return copyCounter == 0; }
 
   void createCheckpoint(std::ostream &) const {}
   void restoreCheckpoint(std::istream &) {}

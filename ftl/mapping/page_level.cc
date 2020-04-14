@@ -497,12 +497,10 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
       }
       copy.list.emplace_back(std::move(sReq));
     }
-    else{
-      copy.copiedBits.set(i);
-    }
   }
 
   copy.writeCounter.resize(copy.list.size(), 0);
+  copy.copyCounter = copy.list.size();
   copy.initIter();
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);

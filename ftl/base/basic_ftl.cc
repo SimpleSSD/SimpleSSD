@@ -22,7 +22,6 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   pMapper->getMappingSize(&minMappingSize);
 
   pendingList = std::vector<Request *>(minMappingSize, nullptr);
-  gcctx = GCContext(pagesInBlock);
 
   pendingListBaseAddress = object.memory->allocate(
       minMappingSize * pageSize, Memory::MemoryType::DRAM,
@@ -547,10 +546,8 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 
   if (copyctx.writeCounter.at(listIndex) == 0) {
     LPN lpnBegin = copyctx.list.at(listIndex).front()->getLPN();
-    PPN ppnBegin = copyctx.list.at(listIndex).front()->getPPN();
-    panic_if(copyctx.copiedBits.test(pMapper->getPageIndexFromPPN(ppnBegin)),
-             "invalid index");
-    copyctx.copiedBits.set(pMapper->getPageIndexFromPPN(ppnBegin));
+
+    copyctx.copyCounter--;
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | WRITEDONE  | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
