@@ -131,44 +131,21 @@ struct CopyContext {
 
   uint64_t beginAt;
 
-  void reset() {
-    list.clear();
-    copiedBits.reset();
-    tag2ListIdx.clear();
-    readCounter = 0;
-    writeCounter.clear();
-    beginAt = 0;
-  }
+  void reset();
   inline void initIter() { iter = list.begin(); }
   inline bool isReadDone() { return iter == list.end(); }
   inline void setPageCopied(uint64_t idx) { copiedBits.set(idx); }
   inline bool isDone() { return copiedBits.none(); }
 
   CopyContext() = default;
-  CopyContext(uint64_t pagesInBlock)
-      : blockID(InvalidPPN), copiedBits(pagesInBlock) {}
-  ~CopyContext() {
-    for (auto sReq : list) {
-      for (auto req : sReq) {
-        delete req;
-      }
-    }
-  }
+  CopyContext(uint64_t);
+  ~CopyContext();
   CopyContext(const CopyContext &) = delete;
   CopyContext &operator=(const CopyContext &) = delete;
   CopyContext(CopyContext &&rhs) noexcept : CopyContext() {
     *this = std::move(rhs);
   }
-  CopyContext &operator=(CopyContext &&rhs) {
-    for (auto sReq : list) {
-      for (auto req : sReq) {
-        delete req;
-      }
-    }
-
-    *this = std::move(rhs);
-    return *this;
-  };
+  CopyContext &operator=(CopyContext &&);
 
   void createCheckpoint(std::ostream &) const {}
   void restoreCheckpoint(std::istream &) {}

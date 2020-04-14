@@ -119,4 +119,35 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, counter);
 }
 
+CopyContext::CopyContext(uint64_t pagesInBlock)
+    : blockID(InvalidPPN), copiedBits(pagesInBlock) {}
+
+CopyContext::~CopyContext() {
+  for (auto sReq : list) {
+    for (auto req : sReq) {
+      delete req;
+    }
+  }
+}
+
+void CopyContext::reset() {
+  list.clear();
+  copiedBits.reset();
+  tag2ListIdx.clear();
+  readCounter = 0;
+  writeCounter.clear();
+  beginAt = 0;
+}
+
+CopyContext &CopyContext::operator=(CopyContext &&rhs) {
+  for (auto sReq : list) {
+    for (auto req : sReq) {
+      delete req;
+    }
+  }
+
+  *this = std::move(rhs);
+  return *this;
+}
+
 }  // namespace SimpleSSD::FTL
