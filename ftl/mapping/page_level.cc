@@ -476,14 +476,14 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevel::getCopyList(CopyContext &copy, Event eid) {
+void PageLevel::getCopyList(CopyContext &copyctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  auto block = &blockMetadata[copy.blockID];
+  const auto block = &blockMetadata[copyctx.blockID];
 
-  copy.reset();
-  copy.list.reserve(block->validPages.count());
+  copyctx.reset();
+  copyctx.list.reserve(block->validPages.count());
 
   for (uint i = 0; i < filparam->page; i++) {
     if (block->validPages.test(i)) {
@@ -492,16 +492,16 @@ void PageLevel::getCopyList(CopyContext &copy, Event eid) {
       sReq.reserve(param.superpage);
       Request *req;
       for (uint j = 0; j < param.superpage; j++) {
-        req = new Request(makePPN(copy.blockID, j, i));
+        req = new Request(makePPN(copyctx.blockID, j, i));
         sReq.emplace_back(req);
       }
-      copy.list.emplace_back(std::move(sReq));
+      copyctx.list.emplace_back(std::move(sReq));
     }
   }
 
-  copy.writeCounter.resize(copy.list.size(), 0);
-  copy.copyCounter = copy.list.size();
-  copy.initIter();
+  copyctx.writeCounter.resize(copyctx.list.size(), 0);
+  copyctx.copyCounter = copyctx.list.size();
+  copyctx.initIter();
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
