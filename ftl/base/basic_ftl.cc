@@ -22,6 +22,7 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   pMapper->getMappingSize(&minMappingSize);
 
   pendingList = std::vector<Request *>(minMappingSize, nullptr);
+  gcctx = GCContext(pagesInBlock);
 
   pendingListBaseAddress = object.memory->allocate(
       minMappingSize * pageSize, Memory::MemoryType::DRAM,
@@ -63,11 +64,11 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                                "FTL::BasicFTL::eventGCTrigger");
 
   eventGCSetNextVictimBlock =
-      createEvent([this](uint64_t, uint64_t) { gc_setNextVictimBlock(); },
+      createEvent([this](uint64_t t, uint64_t) { gc_setNextVictimBlock(t); },
                   "FTL::BasicFTL::eventGCSetNextVictimBlock");
 
   eventGCReadSubmit =
-      createEvent([this](uint64_t t, uint64_t) { gc_readSubmit(t); },
+      createEvent([this](uint64_t, uint64_t) { gc_readSubmit(); },
                   "FTL::BasicFTL::eventGCReadSubmit");
 
   eventGCReadDone =
@@ -446,21 +447,21 @@ void BasicFTL::gc_setNextVictimBlock(uint64_t now) {
   }
 }
 
-void BasicFTL::gc_readSubmit(uint64_t now) {
+void BasicFTL::gc_readSubmit() {
   // alias
   auto &copyctx = gcctx.copyctx;
 
-  if (LIKELY(!copyctx.isReadEnd())) {
+  if (LIKELY(!copyctx.isReadDone())) {
     auto firstReq = copyctx.iter->front();
     PPN ppnBegin = firstReq->getPPN();
-    uint64_t pageIndex = copyctx.iter - copyctx.list.begin();
+    uint64_t listIndex = copyctx.iter - copyctx.list.begin();
     uint64_t spBufferBaseAddr =
-        gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
+        gcctx.bufferBaseAddress + listIndex * minMappingSize * pageSize;
     copyctx.readCounter = 0;
 
     // generate tag per SuperRequest
     uint64_t tag = generateFTLTag();
-    copyctx.tag2PageIdx.emplace(tag, pageIndex);
+    copyctx.tag2ListIdx.emplace(tag, listIndex);
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
@@ -511,14 +512,14 @@ void BasicFTL::gc_writeSubmit(uint64_t tag) {
   // alias
   auto &copyctx = gcctx.copyctx;
 
-  const uint64_t pageIndex = copyctx.tag2PageIdx.at(tag);
-  auto sReq = copyctx.list.at(pageIndex);
+  const uint64_t listIndex = copyctx.tag2ListIdx.at(tag);
+  auto sReq = copyctx.list.at(listIndex);
 
   auto firstReq = sReq.front();
   LPN lpnBegin = firstReq->getLPN();
   PPN ppnBegin = firstReq->getPPN();
   uint64_t spBufferBaseAddr =
-      gcctx.bufferBaseAddress + pageIndex * minMappingSize * pageSize;
+      gcctx.bufferBaseAddress + listIndex * minMappingSize * pageSize;
   uint64_t offset = 0;
 
   debugprint(Log::DebugID::FTL_PageLevel,
@@ -527,33 +528,36 @@ void BasicFTL::gc_writeSubmit(uint64_t tag) {
 
   for (auto req : sReq) {
     // update to new PPN
-    req->setPPN(ppnBegin+offset);
+    req->setPPN(ppnBegin + offset);
 
     // submit
-    object.memory->read(
-        spBufferBaseAddr + offset * pageSize, pageSize,
-        InvalidEventID, false);
+    object.memory->read(spBufferBaseAddr + offset * pageSize, pageSize,
+                        InvalidEventID, false);
     pFIL->program(FIL::Request(req, eventGCWriteDone));
-    copyctx.writeCounter.at(pageIndex)++;
+    copyctx.writeCounter.at(listIndex)++;
     offset++;
   }
 }
 
 void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
   auto &copyctx = gcctx.copyctx;
-  const auto pageIndex = copyctx.tag2PageIdx.at(tag);
-  copyctx.writeCounter.at(pageIndex)--;
+  const auto listIndex = copyctx.tag2ListIdx.at(tag);
+  copyctx.writeCounter.at(listIndex)--;
   stat.gcCopiedPages++;
 
-  if (copyctx.writeCounter.at(pageIndex) == 0) {
-    LPN lpnBegin = copyctx.list.at(pageIndex).front()->getLPN();
+  if (copyctx.writeCounter.at(listIndex) == 0) {
+    LPN lpnBegin = copyctx.list.at(listIndex).front()->getLPN();
+    PPN ppnBegin = copyctx.list.at(listIndex).front()->getPPN();
+    panic_if(copyctx.copiedBits.test(pMapper->getPageIndexFromPPN(ppnBegin)),
+             "invalid index");
+    copyctx.copiedBits.set(pMapper->getPageIndexFromPPN(ppnBegin));
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | WRITEDONE  | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
                lpnBegin, lpnBegin + minMappingSize, copyctx.beginAt, now,
                now - copyctx.beginAt);
 
-    if (copyctx.isLastIdx(pageIndex)) {
+    if (copyctx.isDone()) {
       // valid page copy done
       scheduleNow(eventGCEraseSubmit);
       debugprint(Log::DebugID::FTL_PageLevel,

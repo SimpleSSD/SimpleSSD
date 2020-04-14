@@ -120,27 +120,33 @@ using SuperRequest = std::vector<Request *>;
 struct CopyContext {
   PPN blockID;
 
-  std::vector<SuperRequest>::iterator iter;
   std::vector<SuperRequest> list;
+  std::vector<SuperRequest>::iterator iter;
+  Bitset copiedBits;
 
-  std::unordered_map<uint64_t, uint64_t> tag2PageIdx;
+  std::unordered_map<uint64_t, uint64_t> tag2ListIdx;
 
   uint64_t readCounter;
   std::vector<uint16_t> writeCounter;
+
   uint64_t beginAt;
 
   void reset() {
     list.clear();
-    tag2PageIdx.clear();
-    readCounter=0;
+    copiedBits.reset();
+    tag2ListIdx.clear();
+    readCounter = 0;
     writeCounter.clear();
-    beginAt=0;
+    beginAt = 0;
   }
   inline void initIter() { iter = list.begin(); }
-  inline bool isReadEnd() { return iter == list.end(); }
-  inline bool isLastIdx(uint64_t idx) { return idx == list.size() - 1; }
+  inline bool isReadDone() { return iter == list.end(); }
+  inline void setPageCopied(uint64_t idx) { copiedBits.set(idx); }
+  inline bool isDone() { return copiedBits.none(); }
 
-  CopyContext() : blockID(InvalidPPN) {}
+  CopyContext() = default;
+  CopyContext(uint64_t pagesInBlock)
+      : blockID(InvalidPPN), copiedBits(pagesInBlock) {}
   ~CopyContext() {
     for (auto sReq : list) {
       for (auto req : sReq) {
@@ -148,6 +154,21 @@ struct CopyContext {
       }
     }
   }
+  CopyContext(const CopyContext &) = delete;
+  CopyContext &operator=(const CopyContext &) = delete;
+  CopyContext(CopyContext &&rhs) noexcept : CopyContext() {
+    *this = std::move(rhs);
+  }
+  CopyContext &operator=(CopyContext &&rhs) {
+    for (auto sReq : list) {
+      for (auto req : sReq) {
+        delete req;
+      }
+    }
+
+    *this = std::move(rhs);
+    return *this;
+  };
 
   void createCheckpoint(std::ostream &) const {}
   void restoreCheckpoint(std::istream &) {}

@@ -86,7 +86,9 @@ class BasicFTL : public AbstractFTL {
     uint64_t beginAt;
     uint64_t erasedBlocks;
 
-    GCContext() : inProgress(false), beginAt(0) {}
+    GCContext() = default;
+    GCContext(uint64_t pagesInBlock)
+        : inProgress(false), copyctx(pagesInBlock), beginAt(0) {}
 
     void init(uint64_t now) {
       inProgress = true;
@@ -155,7 +157,7 @@ class BasicFTL : public AbstractFTL {
   void gc_setNextVictimBlock(uint64_t);
 
   Event eventGCReadSubmit;
-  void gc_readSubmit(uint64_t);
+  void gc_readSubmit();
 
   Event eventGCReadDone;
   void gc_readDone(uint64_t);
