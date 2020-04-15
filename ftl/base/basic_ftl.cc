@@ -571,14 +571,15 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 }
 
 void BasicFTL::gc_eraseSubmit() {
-  panic_if(pMapper->getValidPages(gcctx.copyctx.blockID) > 0,
-           "valid page copy not done");
-  debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
-             gcctx.copyctx.blockID);
+  PPN blockId = gcctx.copyctx.blockID;
+  panic_if(pMapper->getValidPages(blockId) > 0, "valid page copy not done");
 
-  for (auto &iter : gcctx.copyctx.list) {
-    pFIL->erase(FIL::Request(pMapper->getBlockFromPPN(iter.front()->getPPN()),
-                             eventGCEraseDone, 0));
+  debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
+             blockId);
+  for (uint i = 0; i < minMappingSize; i++) {
+    pFIL->erase(
+        FIL::Request(pMapper->getBlockFromSB(blockId, i), eventGCEraseDone, 0));
+    gcctx.copyctx.eraseCounter++;
   }
 }
 
