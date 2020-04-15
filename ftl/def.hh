@@ -144,6 +144,7 @@ struct CopyContext {
   inline void initIter() { iter = list.begin(); }
   inline bool isReadDone() { return iter == list.end(); }
   inline bool isDone() { return copyCounter == 0; }
+  void releaseList();
 
   void createCheckpoint(std::ostream &) const {}
   void restoreCheckpoint(std::istream &) {}

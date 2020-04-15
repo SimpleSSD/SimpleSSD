@@ -120,20 +120,25 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
 }
 
 CopyContext::~CopyContext() {
-  for (auto sReq : list) {
-    for (auto req : sReq) {
-      delete req;
-    }
-  }
+  releaseList();
 }
 
 void CopyContext::reset() {
+  releaseList();
   list.clear();
   tag2ListIdx.clear();
   readCounter = 0;
   writeCounter.clear();
   copyCounter = 0;
   beginAt = 0;
+}
+
+void CopyContext::releaseList() {
+  for (auto sReq : list) {
+    for (auto req : sReq) {
+      delete req;
+    }
+  }
 }
 
 CopyContext &CopyContext::operator=(CopyContext &&rhs) {
