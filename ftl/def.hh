@@ -125,10 +125,11 @@ struct CopyContext {
 
   std::unordered_map<uint64_t, uint64_t> tag2ListIdx;
 
-  uint64_t readCounter;               // count page read in progress
-  std::vector<uint16_t> writeCounter; // count page write in progress
-  uint64_t copyCounter;               // count superpage copy in progress
-  uint64_t eraseCounter;              // count block copy in progress
+  uint64_t readCounter;  // count page read in progress
+  // count page write in progress (shares index with list)
+  std::vector<uint16_t> writeCounter;
+  uint64_t copyCounter;   // count superpage copy in progress
+  uint64_t eraseCounter;  // count block copy in progress
 
   uint64_t beginAt;
 
@@ -143,7 +144,12 @@ struct CopyContext {
 
   void reset();
   inline void initIter() { iter = list.begin(); }
-  inline bool isReadDone() { return iter == list.end(); }
+  inline bool isReadSubmitDone() { return iter == list.end(); }
+  inline bool isReadDone() { return readCounter == 0; }
+  inline bool iswriteDone(uint64_t listIndex) {
+    return writeCounter.at(listIndex) == 0;
+  }
+  inline bool isEraseDone() { return eraseCounter == 0; }
   inline bool isCopyDone() { return copyCounter == 0; }
   void releaseList();
 

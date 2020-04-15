@@ -454,7 +454,7 @@ void BasicFTL::gc_readSubmit() {
   // alias
   auto &copyctx = gcctx.copyctx;
 
-  if (LIKELY(!copyctx.isReadDone())) {
+  if (LIKELY(!copyctx.isReadSubmitDone())) {
     auto firstReq = copyctx.iter->front();
     PPN ppnBegin = firstReq->getPPN();
     uint64_t listIndex = copyctx.iter - copyctx.list.begin();
@@ -489,7 +489,7 @@ void BasicFTL::gc_readDone(uint64_t now) {
   auto &copyctx = gcctx.copyctx;
   copyctx.readCounter--;
 
-  if (copyctx.readCounter == 0) {
+  if (copyctx.isReadDone()) {
     LPN ppnBegin = copyctx.iter->front()->getPPN();
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
@@ -548,7 +548,7 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
   copyctx.writeCounter.at(listIndex)--;
   stat.gcCopiedPages++;
 
-  if (copyctx.writeCounter.at(listIndex) == 0) {
+  if (copyctx.iswriteDone(listIndex)) {
     LPN lpnBegin = copyctx.list.at(listIndex).front()->getLPN();
 
     copyctx.copyCounter--;
@@ -587,10 +587,9 @@ void BasicFTL::gc_eraseDone(uint64_t now) {
   stat.gcErasedBlocks++;
 
   auto &copyctx = gcctx.copyctx;
-
   copyctx.eraseCounter--;
 
-  if (copyctx.eraseCounter == 0) {
+  if (copyctx.isEraseDone()) {
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
                " (%" PRIu64 ")",
