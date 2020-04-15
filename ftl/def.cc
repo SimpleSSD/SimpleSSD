@@ -130,6 +130,7 @@ void CopyContext::reset() {
   readCounter = 0;
   writeCounter.clear();
   copyCounter = 0;
+  eraseCounter = 0;
   beginAt = 0;
 }
 

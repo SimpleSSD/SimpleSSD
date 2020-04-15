@@ -128,6 +128,7 @@ struct CopyContext {
   uint64_t readCounter;               // count page read in progress
   std::vector<uint16_t> writeCounter; // count page write in progress
   uint64_t copyCounter;               // count superpage copy in progress
+  uint64_t eraseCounter;              // count block copy in progress
 
   uint64_t beginAt;
 
@@ -143,7 +144,7 @@ struct CopyContext {
   void reset();
   inline void initIter() { iter = list.begin(); }
   inline bool isReadDone() { return iter == list.end(); }
-  inline bool isDone() { return copyCounter == 0; }
+  inline bool isCopyDone() { return copyCounter == 0; }
   void releaseList();
 
   void createCheckpoint(std::ostream &) const {}

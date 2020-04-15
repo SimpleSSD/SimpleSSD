@@ -558,7 +558,7 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
                lpnBegin, lpnBegin + minMappingSize, copyctx.beginAt, now,
                now - copyctx.beginAt);
 
-    if (copyctx.isDone()) {
+    if (copyctx.isCopyDone()) {
       // valid page copy done
       debugprint(Log::DebugID::FTL_PageLevel,
                  "GC | COPYDONE  | BLOCK % " PRIu64 " PAGES %" PRIu64
@@ -586,15 +586,19 @@ void BasicFTL::gc_eraseDone(uint64_t now) {
   gcctx.erasedBlocks++;
   stat.gcErasedBlocks++;
 
-  const auto &copyctx = gcctx.copyctx;
+  auto &copyctx = gcctx.copyctx;
 
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
-             " (%" PRIu64 ")",
-             copyctx.blockID, copyctx.beginAt, now, now - copyctx.beginAt);
+  copyctx.eraseCounter--;
 
-  pMapper->markBlockErased(copyctx.blockID);
-  pAllocator->reclaimBlocks(copyctx.blockID, eventGCSetNextVictimBlock);
+  if (copyctx.eraseCounter == 0) {
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
+               " (%" PRIu64 ")",
+               copyctx.blockID, copyctx.beginAt, now, now - copyctx.beginAt);
+
+    pMapper->markBlockErased(copyctx.blockID);
+    pAllocator->reclaimBlocks(copyctx.blockID, eventGCSetNextVictimBlock);
+  }
 }
 
 void BasicFTL::gc_done(uint64_t now) {
