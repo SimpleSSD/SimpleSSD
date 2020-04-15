@@ -77,8 +77,8 @@ class PageLevel : public AbstractMapping {
 
   void getMappingSize(uint64_t *, uint64_t * = nullptr) override;
 
-  void getCopyList(CopyContext &, Event) override;
-  void releaseCopyList(CopyContext &) override;
+  void getCopyContext(CopyContext &, Event) override;
+  void markBlockErased(PPN) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

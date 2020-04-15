@@ -86,7 +86,11 @@ BasicFTL::BasicFTL(ObjectData &o, FTL *p, FIL::FIL *f,
       createEvent([this](uint64_t, uint64_t) { gc_eraseSubmit(); },
                   "FTL::BasicFTL::eventGCEraseSubmit");
 
-  eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_Done(t); },
+  eventGCEraseDone =
+      createEvent([this](uint64_t t, uint64_t) { gc_eraseDone(t); },
+                  "FTL::BasicFTL::eventGCEraseDone");
+
+  eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
                             "FTL::BasicFTL::eventGCEraseDone");
 
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
@@ -438,7 +442,7 @@ void BasicFTL::gc_setNextVictimBlock(uint64_t now) {
                "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
     gcctx.copyctx.blockID = nextVictimBlock;
     gcctx.copyctx.beginAt = now;
-    pMapper->getCopyList(gcctx.copyctx, eventGCReadSubmit);
+    pMapper->getCopyContext(gcctx.copyctx, eventGCReadSubmit);
   }
   else {
     // no need to perform GC or GC finished
@@ -549,19 +553,19 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 
     copyctx.copyCounter--;
     debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | WRITEDONE  | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
+               "GC | WRITEDONE | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
                lpnBegin, lpnBegin + minMappingSize, copyctx.beginAt, now,
                now - copyctx.beginAt);
 
     if (copyctx.isDone()) {
       // valid page copy done
-      scheduleNow(eventGCEraseSubmit);
       debugprint(Log::DebugID::FTL_PageLevel,
-                 "GC | COPYDONE   | BLOCK % " PRIu64 " PAGES %" PRIu64
+                 "GC | COPYDONE  | BLOCK % " PRIu64 " PAGES %" PRIu64
                  " | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  copyctx.blockID, copyctx.list.size(), copyctx.beginAt, now,
                  now - copyctx.beginAt);
+      scheduleNow(eventGCEraseSubmit);
     }
   }
 }
@@ -571,13 +575,29 @@ void BasicFTL::gc_eraseSubmit() {
            "valid page copy not done");
   debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
              gcctx.copyctx.blockID);
-  pFIL->erase(
-      FIL::Request(gcctx.copyctx.blockID, eventGCSetNextVictimBlock, 0));
-  gcctx.erasedBlocks++;
-  stat.gcErasedBlocks++;
+
+  for (auto &iter : gcctx.copyctx.list) {
+    pFIL->erase(FIL::Request(pMapper->getBlockFromPPN(iter.front()->getPPN()),
+                             eventGCEraseDone, 0));
+  }
 }
 
-void BasicFTL::gc_Done(uint64_t now) {
+void BasicFTL::gc_eraseDone(uint64_t now) {
+  gcctx.erasedBlocks++;
+  stat.gcErasedBlocks++;
+
+  const auto &copyctx = gcctx.copyctx;
+
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
+             " (%" PRIu64 ")",
+             copyctx.blockID, copyctx.beginAt, now, now - copyctx.beginAt);
+
+  pMapper->markBlockErased(copyctx.blockID);
+  pAllocator->reclaimBlocks(copyctx.blockID, eventGCSetNextVictimBlock);
+}
+
+void BasicFTL::gc_done(uint64_t now) {
   gcctx.inProgress = false;
   debugprint(Log::DebugID::FTL_PageLevel,
              "GC | DONE      | %" PRIu64 " BLOCKS | %" PRIu64 " - %" PRIu64

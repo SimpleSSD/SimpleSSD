@@ -476,7 +476,7 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevel::getCopyList(CopyContext &copyctx, Event eid) {
+void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -506,10 +506,9 @@ void PageLevel::getCopyList(CopyContext &copyctx, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void PageLevel::releaseCopyList(CopyContext &copy) {
-  // Destroy all commands
-  debugprint(Log::DebugID::FTL_PageLevel, "Erase | (S)PPN %" PRIx64 "h",
-             copy.blockID);
+void PageLevel::markBlockErased(PPN blockId) {
+  blockMetadata[blockId].nextPageToWrite = 0;
+  blockMetadata[blockId].validPages.reset();
 }
 
 void PageLevel::getStatList(std::vector<Stat> &list,

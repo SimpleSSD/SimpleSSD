@@ -169,8 +169,11 @@ class BasicFTL : public AbstractFTL {
   Event eventGCEraseSubmit;
   void gc_eraseSubmit();
 
+  Event eventGCEraseDone;
+  void gc_eraseDone(uint64_t);
+
   Event eventGCDone;
-  void gc_Done(uint64_t);
+  void gc_done(uint64_t);
 
   void backup(std::ostream &, const SuperRequest &) const noexcept;
   void restore(std::istream &, SuperRequest &) noexcept;

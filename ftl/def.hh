@@ -125,9 +125,9 @@ struct CopyContext {
 
   std::unordered_map<uint64_t, uint64_t> tag2ListIdx;
 
-  uint64_t readCounter;
-  std::vector<uint16_t> writeCounter;
-  uint64_t copyCounter;
+  uint64_t readCounter;               // count page read in progress
+  std::vector<uint16_t> writeCounter; // count page write in progress
+  uint64_t copyCounter;               // count superpage copy in progress
 
   uint64_t beginAt;
 

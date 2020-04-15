@@ -334,14 +334,14 @@ class AbstractMapping : public Object {
    *
    * fatal: Operation is not defined yet.
    */
-  virtual void getCopyList(CopyContext &, Event) = 0;
+  virtual void getCopyContext(CopyContext &, Event) = 0;
 
   /**
    * \brief Free page copy list
    *
    * fatal: Operation is not defined yet.
    */
-  virtual void releaseCopyList(CopyContext &) = 0;
+  virtual void markBlockErased(PPN) = 0;
 
   //! Convert physical page address to physical block number
   inline PPN getBlockFromPPN(PPN ppn) {
