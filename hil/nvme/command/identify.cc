@@ -488,7 +488,7 @@ void Identify::makeControllerStructure(CommandData *tag) {
       // [02:02] 1 for Support Keyed SGL buffer Block descriptor
       // [01:01] Reserved
       // [00:00] 1 for Support SGLs in NVM Command Set
-      buffer[0x0218] = 0x00;  // Disable SGL for remote NVMe interface
+      buffer[0x0218] = 0x01;
       buffer[0x0219] = 0x00;
       buffer[0x021A] = 0x17;
       buffer[0x021B] = 0x00;
