@@ -84,7 +84,7 @@ PALOLD::~PALOLD() {
 void PALOLD::submit(Request *req) {
   Complete cplt;
 
-  LPN lpn = InvalidLPN;
+  LPN lpn = req->getLPN();
   cplt.id = req->getTag();
   cplt.ppn = req->getPPN();
   cplt.beginAt = getTick();
