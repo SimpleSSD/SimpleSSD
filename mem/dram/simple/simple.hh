@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 #define __SIMPLESSD_MEM_DRAM_SIMPLE_SIMPLE_HH__
 
+#include "libdrampower/LibDRAMPower.h"
 #include "mem/dram/abstract_dram.hh"
 #include "util/scheduler.hh"
 
@@ -98,19 +99,53 @@ class SimpleDRAM : public AbstractDRAM {
 
   bool checkRow(Request *);
 
-  inline uint32_t getOffset(Address &addr) {
+  inline uint32_t getBankOffset(Address &addr) {
     return addr.bank + (uint32_t)addr.rank * pStructure->bank +
            (uint32_t)addr.channel * pStructure->bank * pStructure->rank;
+  }
+
+  inline uint32_t getRankOffset(Address &addr) {
+    return addr.rank + (uint32_t)addr.channel * pStructure->rank;
   }
 
   std::vector<RequestScheduler *> scheduler;
   std::vector<uint32_t> rowOpened;
 
-  CountStat readHit;
-  CountStat writeHit;
+  std::vector<RatioStat> readHit;
+  std::vector<RatioStat> writeHit;
+
   BusyStat readBusy;
   BusyStat writeBusy;
   BusyStat totalBusy;
+
+  Data::MemorySpecification spec;
+  std::vector<libDRAMPower> dramPower;
+
+  struct PowerStat {
+    double act_energy;
+    double pre_energy;
+    double read_energy;
+    double write_energy;
+    double ref_energy;
+    double sref_energy;
+    double window_energy;
+
+    PowerStat() { clear(); }
+
+    void clear() {
+      act_energy = 0.;
+      pre_energy = 0.;
+      read_energy = 0.;
+      write_energy = 0.;
+      ref_energy = 0.;
+      sref_energy = 0.;
+      window_energy = 0.;
+    }
+  };
+
+  std::vector<PowerStat> powerStat;
+
+  uint64_t lastResetAt;
 
  public:
   SimpleDRAM(ObjectData &);
