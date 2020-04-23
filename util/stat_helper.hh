@@ -32,6 +32,31 @@ class CountStat {
   virtual void restoreCheckpoint(std::istream &) noexcept;
 };
 
+class RatioStat : public CountStat {
+ private:
+  uint64_t hit;
+
+ public:
+  RatioStat();
+
+  void add() noexcept = delete;
+  void add(uint64_t) noexcept = delete;
+
+  void addHit() noexcept;
+  void addHit(uint64_t) noexcept;
+  void addMiss() noexcept;
+  void addMiss(uint64_t) noexcept;
+
+  uint64_t getHitCount() noexcept;
+  uint64_t getTotalCount() noexcept;
+  double getRatio() noexcept;
+
+  void clear() noexcept override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
+};
+
 class IOStat : public CountStat {
  private:
   uint64_t size;
@@ -69,6 +94,25 @@ class BusyStat {
 
   void createCheckpoint(std::ostream &) const noexcept;
   void restoreCheckpoint(std::istream &) noexcept;
+};
+
+class LatencyStat : public CountStat {
+ private:
+  uint64_t time;
+
+ public:
+  LatencyStat();
+
+  void add() noexcept = delete;
+  void add(uint64_t) noexcept;
+
+  uint64_t getAverageLatency() noexcept;
+  uint64_t getTotalLatency() noexcept;
+
+  void clear() noexcept override;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD

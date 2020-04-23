@@ -35,6 +35,65 @@ void CountStat::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, count);
 }
 
+RatioStat::RatioStat() : CountStat(), hit(0) {}
+
+void RatioStat::addHit() noexcept {
+  CountStat::add();
+
+  hit++;
+}
+
+void RatioStat::addHit(uint64_t v) noexcept {
+  CountStat::add(v);
+
+  hit += v;
+}
+
+void RatioStat::addMiss() noexcept {
+  CountStat::add();
+}
+
+void RatioStat::addMiss(uint64_t v) noexcept {
+  CountStat::add(v);
+}
+
+uint64_t RatioStat::getHitCount() noexcept {
+  return hit;
+}
+
+uint64_t RatioStat::getTotalCount() noexcept {
+  return CountStat::getCount();
+}
+
+double RatioStat::getRatio() noexcept {
+  auto total = CountStat::getCount();
+
+  if (total > 0) {
+    return (double)hit / CountStat::getCount();
+  }
+  else {
+    return 0.;
+  }
+}
+
+void RatioStat::clear() noexcept {
+  CountStat::clear();
+
+  hit = 0;
+}
+
+void RatioStat::createCheckpoint(std::ostream &out) const noexcept {
+  CountStat::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, hit);
+}
+
+void RatioStat::restoreCheckpoint(std::istream &in) noexcept {
+  CountStat::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, hit);
+}
+
 IOStat::IOStat() : CountStat(), size(0) {}
 
 void IOStat::add(uint64_t reqsize) noexcept {
@@ -117,6 +176,47 @@ void BusyStat::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, depth);
   RESTORE_SCALAR(in, lastBusyAt);
   RESTORE_SCALAR(in, totalBusy);
+}
+
+LatencyStat::LatencyStat() : CountStat(), time(0) {}
+
+void LatencyStat::add(uint64_t lat) noexcept {
+  CountStat::add();
+
+  time += lat;
+}
+
+uint64_t LatencyStat::getAverageLatency() noexcept {
+  auto total = CountStat::getCount();
+
+  if (total > 0) {
+    return time / CountStat::getCount();
+  }
+  else {
+    return 0.;
+  }
+}
+
+uint64_t LatencyStat::getTotalLatency() noexcept {
+  return time;
+}
+
+void LatencyStat::clear() noexcept {
+  CountStat::clear();
+
+  time = 0;
+}
+
+void LatencyStat::createCheckpoint(std::ostream &out) const noexcept {
+  CountStat::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, time);
+}
+
+void LatencyStat::restoreCheckpoint(std::istream &in) noexcept {
+  CountStat::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, time);
 }
 
 }  // namespace SimpleSSD
