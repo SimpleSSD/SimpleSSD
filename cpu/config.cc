@@ -44,9 +44,9 @@ void Config::storeTo(pugi::xml_node &section) {
 
 void Config::update() {
   panic_if(clock == 0, "Invalid clock speed");
-  panic_if(hilCore == 0, "Invalid HIL core count");
-  panic_if(iclCore == 0, "Invalid ICL core count");
-  panic_if(ftlCore == 0, "Invalid FTL core count");
+
+  panic_if(hilCore + iclCore + ftlCore == 0,
+           "We need at-least one core for function scheduling.");
 }
 
 uint64_t Config::readUint(uint32_t idx) {

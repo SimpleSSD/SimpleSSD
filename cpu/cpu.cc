@@ -71,7 +71,7 @@ void CPU::Core::handleJob(uint64_t now) {
   auto job = std::move(jobQueue.front());
 
   // Function is completed!
-  if (job.eid != InvalidEventID) {
+  if (LIKELY(job.eid != InvalidEventID)) {
     job.eid->func(now, job.data);
   }
 
@@ -627,6 +627,10 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
   uint64_t curTick = engine->getTick();
 
   // Determine core number range
+  if (UNLIKELY(!useDedicatedCore)) {
+    group = CPUGroup::Any;
+  }
+
   switch (group) {
     case CPUGroup::HostInterface:
       break;
