@@ -269,7 +269,7 @@ void SetAssociative::readSet(uint64_t tag, Event eid) {
 
 void SetAssociative::writeLine(uint64_t tag, uint32_t set, uint32_t way,
                                Event eid) {
-  object.memory->read(makeTagAddress(set, way), cacheTagSize, eid, tag);
+  object.memory->write(makeTagAddress(set, way), cacheTagSize, eid, tag);
 }
 
 void SetAssociative::tryLookup(LPN lpn, bool flush) {
