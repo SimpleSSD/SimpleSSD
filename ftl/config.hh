@@ -66,8 +66,8 @@ class Config : public BaseConfig {
   bool demandPaging;
 
   uint64_t dChoiceParam;
-  VictimSelectionMode gcBlockSelection;
   float gcThreshold;
+  VictimSelectionMode gcBlockSelection;
   uint8_t superpageAllocation;
 
   std::string superpage;
