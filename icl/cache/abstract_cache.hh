@@ -123,9 +123,10 @@ class AbstractCache : public Object {
    *
    * Called when DMA operation (DRAM <-> NVM) has been completed.
    *
-   * \param[in] lpn LPN address than completed
+   * \param[in] lpn   LPN address than completed
+   * \param[in] drain True when drain (write)
    */
-  virtual void nvmDone(LPN lpn) = 0;
+  virtual void nvmDone(LPN lpn, bool drain) = 0;
 };
 
 }  // namespace SimpleSSD::ICL

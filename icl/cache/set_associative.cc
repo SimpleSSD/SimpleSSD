@@ -622,56 +622,59 @@ void SetAssociative::dmaDone(LPN lpn) {
   }
 }
 
-void SetAssociative::nvmDone(LPN lpn) {
+void SetAssociative::nvmDone(LPN lpn, bool drain) {
   bool found = false;
 
-  // Flush
-  for (auto iter = flushList.begin(); iter != flushList.end(); iter++) {
-    auto fr = iter->lpnList.find(lpn);
+  if (drain) {
+    // Flush
+    for (auto iter = flushList.begin(); iter != flushList.end(); iter++) {
+      auto fr = iter->lpnList.find(lpn);
 
-    if (fr != iter->lpnList.end()) {
-      auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
+      if (fr != iter->lpnList.end()) {
+        auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
 
-      // Not dirty now
-      dirtyLines--;
+        // Not dirty now
+        dirtyLines--;
 
-      line.dirty = false;
+        line.dirty = false;
+        line.nvmPending = false;
 
-      // Erase
-      iter->lpnList.erase(fr);
+        // Erase
+        iter->lpnList.erase(fr);
 
-      if (iter->lpnList.size() == 0) {
-        manager->cacheDone(iter->tag);
+        if (iter->lpnList.size() == 0) {
+          manager->cacheDone(iter->tag);
 
-        flushList.erase(iter);
+          flushList.erase(iter);
+        }
+
+        found = true;
+
+        break;
       }
+    }
 
-      found = true;
+    // Eviction
+    if (!found) {
+      auto iter = evictList.find(lpn);
 
-      break;
+      if (iter != evictList.end()) {
+        auto &line =
+            cacheline.at(iter->second.set * waySize + iter->second.way);
+
+        dirtyLines--;
+
+        line.dirty = false;
+        line.nvmPending = false;
+
+        evictList.erase(iter);
+
+        found = true;
+      }
     }
   }
-
-  // Eviction
-  if (!found) {
-    auto iter = evictList.find(lpn);
-
-    if (iter != evictList.end()) {
-      auto &line = cacheline.at(iter->second.set * waySize + iter->second.way);
-
-      dirtyLines--;
-
-      line.dirty = false;
-      line.nvmPending = false;
-
-      evictList.erase(iter);
-
-      found = true;
-    }
-  }
-
-  // Read
-  if (!found) {
+  else {
+    // Read
     uint32_t set = getSetIdx(lpn);
 
     for (uint32_t way = 0; way < waySize; way++) {

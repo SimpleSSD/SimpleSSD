@@ -133,7 +133,7 @@ class SetAssociative : public AbstractCache {
   void erase(HIL::SubRequest *) override;
   void allocate(HIL::SubRequest *) override;
   void dmaDone(LPN) override;
-  void nvmDone(LPN) override;
+  void nvmDone(LPN, bool) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

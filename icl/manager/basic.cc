@@ -284,7 +284,7 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
              iter->second.lpn, iter->second.flushedAt, now,
              now - iter->second.flushedAt);
 
-  cache->nvmDone(iter->second.lpn);
+  cache->nvmDone(iter->second.lpn, true);
 
   drainQueue.erase(iter);
 }
@@ -292,7 +292,7 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
 void BasicCache::readDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
-  cache->nvmDone(req->getLPN());
+  cache->nvmDone(req->getLPN(), false);
 
   scheduleNow(eventICLCompletion, tag);
 }
