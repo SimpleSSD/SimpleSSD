@@ -30,7 +30,6 @@ class PageLevel : public AbstractMapping {
   Bitset validEntry;
 
   uint64_t maxDirtyEntries;
-  uint64_t currentDirtyEntries;
   uint64_t entriesInPhysicalPage;
 
   BlockMetadata *blockMetadata;
@@ -114,6 +113,7 @@ class PageLevel : public AbstractMapping {
 
   /* Demanding page */
   std::unordered_set<LPN> inDRAMEntryGroup;
+  std::unordered_set<LPN> dirtyEntryGroup;
   std::list<DemandPagingContext> readPending;
 
   Event eventReadMappingDone;
@@ -121,6 +121,11 @@ class PageLevel : public AbstractMapping {
 
   Event eventReadMappingDone2;
   void readMappingDone2(uint64_t);
+
+  std::unordered_map<uint64_t, Event> writeRetryList;
+
+  Event eventWriteRetry;
+  void writeRetry(uint64_t);
 
   bool requestMapping(LPN, PPN, uint64_t);
 

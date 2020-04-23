@@ -26,70 +26,6 @@ PageLevel::PageLevel(ObjectData &o)
   // Check spare size
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
 
-  // Allocate table and block metadata
-  entrySize = makeEntrySize();
-
-  table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
-  blockMetadata = new BlockMetadata[totalPhysicalSuperBlocks]();
-
-  panic_if(!table, "Memory mapping for mapping table failed.");
-  panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
-
-  // Valid page bits (packed) + 2byte clock + 2byte page offset
-  metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
-
-  metadataBaseAddress = object.memory->allocate(
-      totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
-      "FTL::Mapping::PageLevel::BlockMeta");
-
-  tableBaseAddress = object.memory->allocate(
-      totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
-      "FTL::Mapping::PageLevel::Table", true);
-
-  // Set as maximum entry number
-  maxDirtyEntries = totalLogicalSuperPages;
-  currentDirtyEntries = 0;
-
-  // How many entries (LPN+PPN) in physical page?
-  entriesInPhysicalPage = filparam->pageSize / (entrySize * 2);
-
-  demandPaging =
-      readConfigBoolean(Section::FlashTranslation, Config::Key::DemandPaging);
-
-  if (demandPaging && tableBaseAddress != 0) {
-    useMappingCache = true;
-
-    // We need to simulate -- not actually implemented -- demand paging
-    maxDirtyEntries = tableBaseAddress / entrySize;
-
-    // Let me know the params
-    debugprint(Log::DebugID::FTL_PageLevel, "Demand paging parameters:");
-    debugprint(Log::DebugID::FTL_PageLevel,
-               " Maximum dirty entries: %" PRIu64 " (%.2f %%)", maxDirtyEntries,
-               (float)maxDirtyEntries / totalPhysicalSuperPages * 100.f);
-    debugprint(Log::DebugID::FTL_PageLevel,
-               " Entries can be written in one physical page: %" PRIu64,
-               entriesInPhysicalPage);
-  }
-
-  // Retry allocation
-  tableBaseAddress = object.memory->allocate(maxDirtyEntries * entrySize,
-                                             Memory::MemoryType::DRAM,
-                                             "FTL::Mapping::PageLevel::Table");
-
-  // Fill metadata
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    blockMetadata[i] = BlockMetadata(i, filparam->page);
-  }
-
-  // Memory usage information
-  debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
-  debugprint(Log::DebugID::FTL_PageLevel,
-             " Mapping table: %" PRIu64 ", %" PRIu64,
-             totalLogicalSuperPages * entrySize, maxDirtyEntries * entrySize);
-  debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
-             totalPhysicalSuperBlocks * metadataEntrySize);
-
   // Statistics
   demandRead = 0;
   demandWrite = 0;
@@ -100,6 +36,8 @@ PageLevel::PageLevel(ObjectData &o)
   eventReadMappingDone2 =
       createEvent([this](uint64_t, uint64_t d) { readMappingDone2(d); },
                   "FTL::Mapping::PageLevel::eventReadMappingDone2");
+  eventWriteRetry = createEvent([this](uint64_t, uint64_t d) { writeRetry(d); },
+                                "FTL::Mapping::PageLevel::eventWriteRetry");
 }
 
 PageLevel::~PageLevel() {
@@ -111,7 +49,7 @@ void PageLevel::readMappingDone(uint64_t tag) {
   auto iter = readPending.begin();
 
   for (; iter != readPending.end(); ++iter) {
-    if (iter->tag == tag) {
+    if (iter->cmdtag == tag) {
       break;
     }
   }
@@ -121,7 +59,7 @@ void PageLevel::readMappingDone(uint64_t tag) {
   inDRAMEntryGroup.emplace(iter->aligned);
 
   if (iter->cmdList.size() > 0) {
-    auto ret = memoryPending.emplace(iter->tag, std::move(*iter));
+    auto ret = memoryPending.emplace(iter->memtag, std::move(*iter));
 
     handleMemoryCommand(ret.first->first);
   }
@@ -157,7 +95,7 @@ void PageLevel::readMappingDone2(uint64_t aligned) {
   inDRAMEntryGroup.emplace(iter->aligned);
 
   if (iter->cmdList.size() > 0) {
-    auto ret = memoryPending.emplace(iter->tag, std::move(*iter));
+    auto ret = memoryPending.emplace(iter->memtag, std::move(*iter));
 
     handleMemoryCommand(ret.first->first);
   }
@@ -175,6 +113,21 @@ void PageLevel::readMappingDone2(uint64_t aligned) {
       break;
     }
   }
+}
+
+void PageLevel::writeRetry(uint64_t tag) {
+  auto cmd = pFTL->getRequest(tag);
+  auto iter = writeRetryList.find(tag);
+
+  panic_if(iter == writeRetryList.end(), "Invalid write retry.");
+
+  Event eid = iter->second;
+
+  // Remove first
+  writeRetryList.erase(iter);
+
+  // Retry write
+  writeMapping(cmd, eid);
 }
 
 bool PageLevel::requestMapping(LPN lpn, PPN ppn, uint64_t tag) {
@@ -202,17 +155,22 @@ bool PageLevel::requestMapping(LPN lpn, PPN ppn, uint64_t tag) {
       pFTL->readLastPage(makeSPPN(ppn, 0), param.superpage,
                          eventReadMappingDone, tag);
 
-      readPending.emplace_back(tag, aligned);
-
       demandRead++;
 
       // Apply DRAM latency (NAND->DRAM)
-      insertMemoryAddress(false, makeTableAddress(lpn),
-                          entrySize * entriesInPhysicalPage);
+      uint64_t addr = makeTableAddress(aligned);
+      uint64_t end = tableBaseAddress + maxDirtyEntries * entrySize;
+      uint32_t len = entriesInPhysicalPage * entrySize;
+
+      if (addr + len > end) {
+        len = end - addr;
+      }
+
+      insertMemoryAddress(false, addr, len);
     }
-    else {
-      readPending.emplace_back(makeMemoryTag(), aligned);
-    }
+
+    auto &ret = readPending.emplace_back(tag, aligned);
+    ret.memtag = makeMemoryTag();
 
     return false;
   }
@@ -289,7 +247,9 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
 
     // We made dirty mapping entry (valid -> invalid)
     if (!init && useMappingCache) {
-      currentDirtyEntries++;
+      auto aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
+
+      dirtyEntryGroup.emplace(aligned);
     }
 
     // Check address is in DRAM
@@ -299,6 +259,10 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
     insertMemoryAddress(true, makeTableAddress(lspn), entrySize, !init);
     insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1,
                         !init);
+
+    if (!ok) {
+      return fstat;
+    }
   }
   else {
     validEntry.set(lspn);
@@ -320,31 +284,41 @@ RETRY:
 
   // If current free block has last page, write mapping to NAND
   if (!init && useMappingCache &&
-      (currentDirtyEntries + entriesInPhysicalPage >= maxDirtyEntries ||
-       (inDRAMEntryGroup.size() + 1) * entriesInPhysicalPage >=
-           maxDirtyEntries)) {
-    if (inDRAMEntryGroup.size() > 0) {
-      // Select one entry group (Just front one)
-      auto entry = inDRAMEntryGroup.begin();
-      uint64_t targetLPN = *entry;
+      ((dirtyEntryGroup.size() + 1) * entriesInPhysicalPage >=
+       maxDirtyEntries)) {
+    // Select one entry group (Just front one)
+    auto entry = dirtyEntryGroup.begin();
+    uint64_t targetLPN = *entry;
 
-      // Delete fron entry group
-      inDRAMEntryGroup.erase(entry);
+    // Delete fron entry group
+    dirtyEntryGroup.erase(entry);
 
-      // Issue I/O request to current block
-      if (!init) {
-        pFTL->writeLastPage(makeSPPN(block->blockID, block->nextPageToWrite),
-                            param.superpage);
-        demandWrite++;
+    {
+      auto iter = inDRAMEntryGroup.find(targetLPN);
 
-        // Apply DRAM latency (DRAM->NAND)
-        insertMemoryAddress(true, makeTableAddress(targetLPN),
-                            entrySize * entriesInPhysicalPage);
-      }
+      panic_if(iter == inDRAMEntryGroup.end(),
+               "Dirty but not in cached mapping?");
+
+      inDRAMEntryGroup.erase(iter);
     }
 
-    // Decrease currentDirtyEntries
-    currentDirtyEntries = inDRAMEntryGroup.size() * entriesInPhysicalPage;
+    // Issue I/O request to current block
+    if (!init) {
+      pFTL->writeLastPage(makeSPPN(block->blockID, block->nextPageToWrite),
+                          param.superpage);
+      demandWrite++;
+
+      // Apply DRAM latency (DRAM->NAND)
+      uint64_t addr = makeTableAddress(targetLPN);
+      uint64_t end = tableBaseAddress + maxDirtyEntries * entrySize;
+      uint32_t len = entriesInPhysicalPage * entrySize;
+
+      if (addr + len > end) {
+        len = end - addr;
+      }
+
+      insertMemoryAddress(true, addr, len);
+    }
 
     // Update block metadata
     block->validPages.reset(block->nextPageToWrite);  // Always not valid
@@ -371,15 +345,10 @@ RETRY:
 
   if (!init && useMappingCache) {
     // We made dirty mapping entry (?? -> new valid entry)
-    currentDirtyEntries++;
+    auto aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
 
-    // Add to LPN group
-    LPN aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
-    auto iter = inDRAMEntryGroup.find(aligned);
-
-    if (iter == inDRAMEntryGroup.end()) {
-      inDRAMEntryGroup.insert(aligned);
-    }
+    dirtyEntryGroup.emplace(aligned);
+    inDRAMEntryGroup.emplace(aligned);
   }
 
   return fstat;
@@ -410,6 +379,83 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
 void PageLevel::initialize(AbstractFTL *f,
                            BlockAllocator::AbstractAllocator *a) {
   AbstractMapping::initialize(f, a);
+
+  // Initialize memory
+  {
+    // Allocate table and block metadata
+    entrySize = makeEntrySize();
+
+    table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
+    blockMetadata = new BlockMetadata[totalPhysicalSuperBlocks]();
+
+    panic_if(!table, "Memory mapping for mapping table failed.");
+    panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
+
+    // Valid page bits (packed) + 2byte clock + 2byte page offset
+    metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
+
+    metadataBaseAddress = object.memory->allocate(
+        totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
+        "FTL::Mapping::PageLevel::BlockMeta");
+
+    tableBaseAddress = object.memory->allocate(
+        totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
+        "FTL::Mapping::PageLevel::Table", true);
+
+    // Set as maximum entry number
+    maxDirtyEntries = totalLogicalSuperPages;
+
+    // How many entries (LPN+PPN) in physical page?
+    entriesInPhysicalPage = filparam->pageSize / (entrySize * 2);
+
+    demandPaging =
+        readConfigBoolean(Section::FlashTranslation, Config::Key::DemandPaging);
+
+    if (demandPaging && tableBaseAddress != 0) {
+      useMappingCache = true;
+
+      // We need to simulate -- not actually implemented -- demand paging
+      maxDirtyEntries = tableBaseAddress / entrySize;
+
+      // Let me know the params
+      debugprint(Log::DebugID::FTL_PageLevel, "Demand paging parameters:");
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 " Maximum dirty entries: %" PRIu64 " (%.2f %%)",
+                 maxDirtyEntries,
+                 (float)maxDirtyEntries / totalPhysicalSuperPages * 100.f);
+      debugprint(Log::DebugID::FTL_PageLevel,
+                 " Entries can be written in one physical page: %" PRIu64,
+                 entriesInPhysicalPage);
+
+      // Filling mapping cache
+      auto groupcount = maxDirtyEntries / entriesInPhysicalPage;
+
+      for (uint64_t i = 0; i < groupcount; i++) {
+        // Fill cache with very last of address space
+        LPN lpn = (groupcount - i - 1) * entriesInPhysicalPage;
+
+        inDRAMEntryGroup.emplace(lpn);
+      }
+    }
+
+    // Retry allocation
+    tableBaseAddress = object.memory->allocate(
+        maxDirtyEntries * entrySize, Memory::MemoryType::DRAM,
+        "FTL::Mapping::PageLevel::Table");
+
+    // Fill metadata
+    for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
+      blockMetadata[i] = BlockMetadata(i, filparam->page);
+    }
+
+    // Memory usage information
+    debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
+    debugprint(Log::DebugID::FTL_PageLevel,
+               " Mapping table: %" PRIu64 ", %" PRIu64,
+               totalLogicalSuperPages * entrySize, maxDirtyEntries * entrySize);
+    debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
+               totalPhysicalSuperBlocks * metadataEntrySize);
+  }
 
   // Make free block pool in allocator
   uint64_t parallelism = param.parallelism / param.superpage;
@@ -623,10 +669,13 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
              "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
              cmd->getPPN());
 
-  if (mappingHit) {
-    auto memtag = makeMemoryTag();
-    auto ret = memoryPending.emplace(memtag, DemandPagingContext(memtag, 0));
+  auto memtag = makeMemoryTag();
 
+  if (mappingHit) {
+    auto ret =
+        memoryPending.emplace(memtag, DemandPagingContext(cmd->getTag(), 0));
+
+    ret.first->second.memtag = memtag;
     ret.first->second.eid = eid;
     ret.first->second.data = cmd->getTag();
     ret.first->second.cmdList = std::move(memoryCmdList);
@@ -636,6 +685,7 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
   else {
     auto &iter = readPending.back();
 
+    iter.memtag = memtag;
     iter.eid = eid;
     iter.data = cmd->getTag();
     iter.cmdList = std::move(memoryCmdList);
@@ -690,10 +740,13 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
              "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
              cmd->getPPN());
 
-  if (mappingHit) {
-    auto memtag = makeMemoryTag();
-    auto ret = memoryPending.emplace(memtag, DemandPagingContext(memtag, 0));
+  auto memtag = makeMemoryTag();
 
+  if (mappingHit) {
+    auto ret =
+        memoryPending.emplace(memtag, DemandPagingContext(cmd->getTag(), 0));
+
+    ret.first->second.memtag = memtag;
     ret.first->second.eid = eid;
     ret.first->second.data = cmd->getTag();
     ret.first->second.cmdList = std::move(memoryCmdList);
@@ -701,11 +754,15 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
     handleMemoryCommand(memtag);
   }
   else {
+    // We need to wait for mapping
     auto &iter = readPending.back();
 
-    iter.eid = eid;
+    iter.memtag = memtag;
+    iter.eid = eventWriteRetry;
     iter.data = cmd->getTag();
     iter.cmdList = std::move(memoryCmdList);
+
+    writeRetryList.emplace(cmd->getTag(), eid);
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID,
