@@ -397,13 +397,31 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
   fstat += getValidWay(lpn, way);
 
   if (way == waySize) {
-    debugprint(Log::DebugID::ICL_SetAssociative,
-               "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Not found",
-               sreq->getParentTag(), sreq->getTagForLog(), lpn);
+    // Check pending miss
+    auto iter = missList.find(lpn);
 
     // Miss, we need allocation
-    sreq->setAllocate();
-    sreq->setMiss();
+    if (iter == missList.end()) {
+      debugprint(Log::DebugID::ICL_SetAssociative,
+                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Not found",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
+
+      sreq->setAllocate();
+      sreq->setMiss();
+
+      missList.emplace(lpn);
+    }
+    else {
+      // Oh, we need to wait
+      debugprint(Log::DebugID::ICL_SetAssociative,
+                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64
+                 " | Miss conflict",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
+
+      missConflictList.emplace(lpn, sreq->getTag());
+
+      return;
+    }
   }
   else {
     debugprint(Log::DebugID::ICL_SetAssociative,
@@ -585,6 +603,25 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
     if (dirtyLines >= evictThreshold + evictList.size()) {
       evict = true;
       set = setSize;
+    }
+
+    // Remove lpn from miss list
+    auto iter = missList.find(lpn);
+
+    if (iter != missList.end()) {
+      // Check miss conflict list
+      auto range = missConflictList.equal_range(lpn);
+
+      for (auto iter = range.first; iter != range.second;) {
+        auto req = getSubRequest(iter->second);
+
+        // Retry lookup (must be hit)
+        lookup(req);
+
+        iter = missConflictList.erase(iter);
+      }
+
+      missList.erase(iter);
     }
   }
 

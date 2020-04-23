@@ -49,6 +49,10 @@ class SetAssociative : public AbstractCache {
   // Lookup pending
   std::unordered_multimap<LPN, uint64_t> lookupList;
 
+  // Pending (missed, but not allocated yet) list -- simillar to MSHR
+  std::unordered_set<LPN> missList;
+  std::unordered_multimap<LPN, uint64_t> missConflictList;
+
   // Flush
   struct FlushRequest {
     uint64_t tag;
