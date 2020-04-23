@@ -67,14 +67,17 @@ class AbstractMapping : public Object {
   };
 
   struct DemandPagingContext {
-    uint64_t tag;
+    uint64_t cmdtag;
     LPN aligned;
+
     Event eid;
     uint64_t data;
+
+    uint64_t memtag;
     std::deque<MemoryCommand> cmdList;
 
     DemandPagingContext(uint64_t t, LPN l)
-        : tag(t), aligned(l), eid(InvalidEventID), data(0) {}
+        : cmdtag(t), aligned(l), eid(InvalidEventID), data(0), memtag(0) {}
   };
 
   std::deque<MemoryCommand> memoryCmdList;

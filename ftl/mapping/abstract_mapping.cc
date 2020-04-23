@@ -198,10 +198,11 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : memoryPending) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second.tag);
+    BACKUP_SCALAR(out, iter.second.cmdtag);
     BACKUP_SCALAR(out, iter.second.aligned);
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.data);
+    BACKUP_SCALAR(out, iter.second.memtag);
 
     size = iter.second.cmdList.size();
     BACKUP_SCALAR(out, size);
@@ -255,6 +256,8 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_EVENT(in, ctx.eid);
     RESTORE_SCALAR(in, ctx.data);
+
+    RESTORE_SCALAR(in, ctx.memtag);
 
     uint64_t ssize;
     RESTORE_SCALAR(in, ssize);
