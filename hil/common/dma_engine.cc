@@ -483,7 +483,7 @@ void DMAEngine::readNext(DMASession &session) noexcept {
   uint64_t read;
   bool submit = false;
 
-  auto iter = session.parent->prList.at(++session.regionIndex);
+  auto &iter = session.parent->prList.at(++session.regionIndex);
 
   read = MIN(iter.size, session.requested - session.handled);
 
@@ -515,7 +515,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
        session.regionIndex++) {
-    auto iter = tag->prList.at(session.regionIndex);
+    auto &iter = tag->prList.at(session.regionIndex);
 
     if (currentOffset + iter.size > offset) {
       session.handled = offset - currentOffset;
@@ -546,7 +546,7 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
   uint64_t written;
   bool submit = false;
 
-  auto iter = session.parent->prList.at(++session.regionIndex);
+  auto &iter = session.parent->prList.at(++session.regionIndex);
 
   written = MIN(iter.size, session.requested - session.handled);
 
@@ -579,7 +579,8 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
 
   for (session.regionIndex = 0; session.regionIndex < tag->prList.size();
        session.regionIndex++) {
-    auto iter = tag->prList.at(session.regionIndex);
+    auto &iter = tag->prList.at(session.regionIndex);
+
     if (currentOffset + iter.size > offset) {
       session.handled = offset - currentOffset;
 
