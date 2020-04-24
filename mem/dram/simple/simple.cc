@@ -258,14 +258,14 @@ void SimpleDRAM::getStatList(std::vector<Stat> &list,
       pStructure->channel * pStructure->rank * pStructure->bank;
 
   for (uint32_t i = 0; i < totalBanks; i++) {
-    std::string name = "bank<";
+    std::string name = "channel";
 
     name += std::to_string(i / (pStructure->bank * pStructure->rank));
-    name += ":";
+    name += ".rank";
     name += std::to_string((i / pStructure->bank) % pStructure->rank);
-    name += ":";
+    name += ".bank";
     name += std::to_string(i % pStructure->bank);
-    name += ">.";
+    name += ".";
 
     list.emplace_back(prefix + name + "read", "# read");
     list.emplace_back(prefix + name + "read.rowhit", "# rowhit while reading");
@@ -280,12 +280,12 @@ void SimpleDRAM::getStatList(std::vector<Stat> &list,
   uint32_t totalRanks = pStructure->channel * pStructure->rank;
 
   for (uint32_t i = 0; i < totalRanks; i++) {
-    std::string name = "rank<";
+    std::string name = "channel";
 
     name += std::to_string(i / pStructure->rank);
-    name += ":";
+    name += ".rank";
     name += std::to_string(i % pStructure->rank);
-    name += ">.";
+    name += ".";
 
     list.emplace_back(prefix + name + "energy.activate",
                       "Energy for activate commands per rank (pJ)");
