@@ -287,7 +287,7 @@ void DMAEngine::parseSGLSegment_readDone(uint64_t tag) {
   SGLDescriptor *desc;
 
   for (uint32_t i = 0; i < session.bufferSize; i += 16) {
-    desc = (SGLDescriptor *)(session.buffer + i * 16);
+    desc = (SGLDescriptor *)(session.buffer + i);
 
     switch (desc->getType()) {
       case DataBlock:
@@ -447,6 +447,8 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
   if (desc.getType() == SGLDescriptorType::DataBlock ||
       desc.getType() == SGLDescriptorType::KeyedDataBlock) {
     // This is entire buffer
+    parseSGLDescriptor(session, &desc);
+
     session.parent->inited = true;
 
     scheduleNow(eid, data);
