@@ -238,6 +238,13 @@ class AbstractMapping : public Object {
    * \param[in] nlp Number of pages in mapping granularity.
    */
   virtual uint32_t getValidPages(PPN ppn, uint64_t nlp = 1) = 0;
+
+  /**
+   * Return age (inserted time) of specific block.
+   *
+   * \param[in] ppn Physical page address.
+   * \param[in] nlp Number of pages in mapping granularity.
+   */
   virtual uint64_t getAge(PPN ppn, uint64_t nlp = 1) = 0;
 
   /* Functions for AbstractFTL */
