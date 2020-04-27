@@ -19,164 +19,16 @@ PageLevel::PageLevel(ObjectData &o)
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
-      useMappingCache(false),
       table(nullptr),
       validEntry(totalLogicalSuperPages),
       blockMetadata(nullptr) {
   // Check spare size
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
-
-  // Statistics
-  demandRead = 0;
-  demandWrite = 0;
-
-  eventReadMappingDone =
-      createEvent([this](uint64_t, uint64_t d) { readMappingDone(d); },
-                  "FTL::Mapping::PageLevel::eventReadMappingDone");
-  eventReadMappingDone2 =
-      createEvent([this](uint64_t, uint64_t d) { readMappingDone2(d); },
-                  "FTL::Mapping::PageLevel::eventReadMappingDone2");
-  eventWriteRetry = createEvent([this](uint64_t, uint64_t d) { writeRetry(d); },
-                                "FTL::Mapping::PageLevel::eventWriteRetry");
 }
 
 PageLevel::~PageLevel() {
   free(table);
   delete[] blockMetadata;
-}
-
-void PageLevel::readMappingDone(uint64_t tag) {
-  auto iter = readPending.begin();
-
-  for (; iter != readPending.end(); ++iter) {
-    if (iter->cmdtag == tag) {
-      break;
-    }
-  }
-
-  panic_if(iter == readPending.end(), "Unexpected command %" PRIx64 ".", tag);
-
-  inDRAMEntryGroup.emplace(iter->aligned);
-
-  if (iter->cmdList.size() > 0) {
-    auto ret = memoryPending.emplace(iter->memtag, std::move(*iter));
-
-    handleMemoryCommand(ret.first->first);
-  }
-  else if (iter->eid != InvalidEventID) {
-    scheduleNow(iter->eid, iter->data);
-  }
-
-  uint64_t aligned = iter->aligned;
-
-  readPending.erase(iter);
-
-  // Check conflicted
-  for (auto &iter : readPending) {
-    if (iter.aligned == aligned) {
-      scheduleNow(eventReadMappingDone2, aligned);
-
-      break;
-    }
-  }
-}
-
-void PageLevel::readMappingDone2(uint64_t aligned) {
-  auto iter = readPending.begin();
-
-  for (; iter != readPending.end(); ++iter) {
-    if (iter->aligned == aligned) {
-      break;
-    }
-  }
-
-  panic_if(iter == readPending.end(), "Unexpected LPN %" PRIx64 ".", aligned);
-
-  inDRAMEntryGroup.emplace(iter->aligned);
-
-  if (iter->cmdList.size() > 0) {
-    auto ret = memoryPending.emplace(iter->memtag, std::move(*iter));
-
-    handleMemoryCommand(ret.first->first);
-  }
-  else if (iter->eid != InvalidEventID) {
-    scheduleNow(iter->eid, iter->data);
-  }
-
-  readPending.erase(iter);
-
-  // Check conflicted
-  for (auto &iter : readPending) {
-    if (iter.aligned == aligned) {
-      scheduleNow(eventReadMappingDone2, aligned);
-
-      break;
-    }
-  }
-}
-
-void PageLevel::writeRetry(uint64_t tag) {
-  auto cmd = pFTL->getRequest(tag);
-  auto iter = writeRetryList.find(tag);
-
-  panic_if(iter == writeRetryList.end(), "Invalid write retry.");
-
-  Event eid = iter->second;
-
-  // Remove first
-  writeRetryList.erase(iter);
-
-  // Retry write
-  writeMapping(cmd, eid);
-}
-
-bool PageLevel::requestMapping(LPN lpn, PPN ppn, uint64_t tag) {
-  if (!useMappingCache) {
-    return true;
-  }
-
-  auto aligned = lpn / entriesInPhysicalPage * entriesInPhysicalPage;
-  auto iter = inDRAMEntryGroup.find(aligned);
-
-  if (iter == inDRAMEntryGroup.end()) {
-    // Check pending list
-    bool found = false;
-
-    for (auto &iter : readPending) {
-      if (iter.aligned == aligned) {
-        found = true;
-
-        break;
-      }
-    }
-
-    if (!found) {
-      // Send PAL request
-      pFTL->readLastPage(makeSPPN(ppn, 0), param.superpage,
-                         eventReadMappingDone, tag);
-
-      demandRead++;
-
-      // Apply DRAM latency (NAND->DRAM)
-      uint64_t addr = makeTableAddress(aligned);
-      uint64_t end = tableBaseAddress + maxDirtyEntries * entrySize;
-      uint32_t len = entriesInPhysicalPage * entrySize;
-
-      if (addr + len > end) {
-        len = end - addr;
-      }
-
-      insertMemoryAddress(false, addr, len);
-    }
-
-    auto &ret = readPending.emplace_back(tag, aligned);
-    ret.memtag = makeMemoryTag();
-
-    return false;
-  }
-  else {
-    return true;
-  }
 }
 
 void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
@@ -198,14 +50,12 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok,
+CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn,
                                              uint64_t tag) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   panic_if(lspn >= totalLogicalSuperPages, "LPN out of range.");
-
-  ok = true;
 
   if (validEntry.test(lspn)) {
     pspn = readEntry(lspn);
@@ -227,14 +77,12 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn, bool &ok,
   return fstat;
 }
 
-CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
-                                              uint64_t tag, bool init) {
+CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, uint64_t tag,
+                                              bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   panic_if(lspn >= totalLogicalSuperPages, "LPN out of range.");
-
-  ok = true;
 
   if (validEntry.test(lspn)) {
     // This is valid entry, invalidate block
@@ -252,23 +100,15 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool &ok,
       dirtyEntryGroup.emplace(aligned);
     }
 
-    // Check address is in DRAM
-    ok = requestMapping(lspn, block, tag);
-
     // Memory timing after demand paging
     insertMemoryAddress(true, makeTableAddress(lspn), entrySize, !init);
     insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1,
                         !init);
-
-    if (!ok) {
-      return fstat;
-    }
   }
   else {
     validEntry.set(lspn);
   }
 
-RETRY:
   // Get block from allocated block pool
   PPN idx = allocator->getBlockAt(InvalidPPN);
 
@@ -280,51 +120,6 @@ RETRY:
     fstat += allocator->allocateBlock(idx);
 
     block = &blockMetadata[idx];
-  }
-
-  // If current free block has last page, write mapping to NAND
-  if (!init && useMappingCache &&
-      ((dirtyEntryGroup.size() + 1) * entriesInPhysicalPage >=
-       maxDirtyEntries)) {
-    // Select one entry group (Just front one)
-    auto entry = dirtyEntryGroup.begin();
-    uint64_t targetLPN = *entry;
-
-    // Delete fron entry group
-    dirtyEntryGroup.erase(entry);
-
-    {
-      auto iter = inDRAMEntryGroup.find(targetLPN);
-
-      panic_if(iter == inDRAMEntryGroup.end(),
-               "Dirty but not in cached mapping?");
-
-      inDRAMEntryGroup.erase(iter);
-    }
-
-    // Issue I/O request to current block
-    if (!init) {
-      pFTL->writeLastPage(makeSPPN(block->blockID, block->nextPageToWrite),
-                          param.superpage);
-      demandWrite++;
-
-      // Apply DRAM latency (DRAM->NAND)
-      uint64_t addr = makeTableAddress(targetLPN);
-      uint64_t end = tableBaseAddress + maxDirtyEntries * entrySize;
-      uint32_t len = entriesInPhysicalPage * entrySize;
-
-      if (addr + len > end) {
-        len = end - addr;
-      }
-
-      insertMemoryAddress(true, addr, len);
-    }
-
-    // Update block metadata
-    block->validPages.reset(block->nextPageToWrite);  // Always not valid
-    block->nextPageToWrite++;
-
-    goto RETRY;  // Allocate new page, not writing next page
   }
 
   // Get new page
@@ -342,14 +137,6 @@ RETRY:
   // Write entry
   writeEntry(lspn, pspn);
   insertMemoryAddress(false, makeTableAddress(lspn), entrySize, !init);
-
-  if (!init && useMappingCache) {
-    // We made dirty mapping entry (?? -> new valid entry)
-    auto aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
-
-    dirtyEntryGroup.emplace(aligned);
-    inDRAMEntryGroup.emplace(aligned);
-  }
 
   return fstat;
 }
@@ -402,45 +189,9 @@ void PageLevel::initialize(AbstractFTL *f,
         totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
         "FTL::Mapping::PageLevel::Table", true);
 
-    // Set as maximum entry number
-    maxDirtyEntries = totalLogicalSuperPages;
-
-    // How many entries (LPN+PPN) in physical page?
-    entriesInPhysicalPage = filparam->pageSize / (entrySize * 2);
-
-    demandPaging =
-        readConfigBoolean(Section::FlashTranslation, Config::Key::DemandPaging);
-
-    if (demandPaging && tableBaseAddress != 0) {
-      useMappingCache = true;
-
-      // We need to simulate -- not actually implemented -- demand paging
-      maxDirtyEntries = tableBaseAddress / entrySize;
-
-      // Let me know the params
-      debugprint(Log::DebugID::FTL_PageLevel, "Demand paging parameters:");
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 " Maximum dirty entries: %" PRIu64 " (%.2f %%)",
-                 maxDirtyEntries,
-                 (float)maxDirtyEntries / totalPhysicalSuperPages * 100.f);
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 " Entries can be written in one physical page: %" PRIu64,
-                 entriesInPhysicalPage);
-
-      // Filling mapping cache
-      auto groupcount = maxDirtyEntries / entriesInPhysicalPage;
-
-      for (uint64_t i = 0; i < groupcount; i++) {
-        // Fill cache with very last of address space
-        LPN lpn = (groupcount - i - 1) * entriesInPhysicalPage;
-
-        inDRAMEntryGroup.emplace(lpn);
-      }
-    }
-
     // Retry allocation
     tableBaseAddress = object.memory->allocate(
-        maxDirtyEntries * entrySize, Memory::MemoryType::DRAM,
+        totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
         "FTL::Mapping::PageLevel::Table");
 
     // Fill metadata
@@ -450,9 +201,8 @@ void PageLevel::initialize(AbstractFTL *f,
 
     // Memory usage information
     debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
-    debugprint(Log::DebugID::FTL_PageLevel,
-               " Mapping table: %" PRIu64 ", %" PRIu64,
-               totalLogicalSuperPages * entrySize, maxDirtyEntries * entrySize);
+    debugprint(Log::DebugID::FTL_PageLevel, " Mapping table: %" PRIu64,
+               totalLogicalSuperPages * entrySize);
     debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
                totalPhysicalSuperBlocks * metadataEntrySize);
   }
@@ -476,7 +226,6 @@ void PageLevel::initialize(AbstractFTL *f,
   LPN _lpn;
   PPN ppn;
   std::vector<uint8_t> spare;
-  bool ok;
 
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization started");
 
@@ -513,7 +262,7 @@ void PageLevel::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, ppn, ok, 0, true);
+      writeMappingInternal(i, ppn, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -532,7 +281,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, 0, true);
+      writeMappingInternal(lpn, ppn, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -547,7 +296,7 @@ void PageLevel::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, ppn, ok, 0, true);
+      writeMappingInternal(i, ppn, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -568,7 +317,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, 0, true);
+      writeMappingInternal(lpn, ppn, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -587,7 +336,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, ok, 0, true);
+      writeMappingInternal(lpn, ppn, 0, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -650,12 +399,11 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
   LPN lspn = lpn / param.superpage;
   LPN superpageIndex = lpn % param.superpage;
   PPN pspn = InvalidPPN;
-  bool mappingHit = true;
 
   requestedReadCount++;
   readLPNCount += param.superpage;
 
-  fstat += readMappingInternal(lspn, pspn, mappingHit, cmd->getTag());
+  fstat += readMappingInternal(lspn, pspn, cmd->getTag());
 
   if (UNLIKELY(pspn == InvalidPPN)) {
     cmd->setResponse(Response::Unwritten);
@@ -725,12 +473,11 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
   LPN lspn = lpn / param.superpage;
   LPN superpageIndex = lpn % param.superpage;
   PPN pspn = InvalidPPN;
-  bool mappingHit = true;
 
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
-  fstat += writeMappingInternal(lspn, pspn, mappingHit, cmd->getTag());
+  fstat += writeMappingInternal(lspn, pspn, cmd->getTag());
 
   // makeSpare(scmd.lpn, scmd.spare);
 
@@ -809,16 +556,10 @@ void PageLevel::getStatList(std::vector<Stat> &list,
 
 void PageLevel::getStatValues(std::vector<double> &values) noexcept {
   AbstractMapping::getStatValues(values);
-
-  values.push_back((double)demandRead);
-  values.push_back((double)demandWrite);
 }
 
 void PageLevel::resetStatValues() noexcept {
   AbstractMapping::resetStatValues();
-
-  demandRead = 0;
-  demandWrite = 0;
 }
 
 void PageLevel::createCheckpoint(std::ostream &out) const noexcept {

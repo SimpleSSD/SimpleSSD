@@ -22,22 +22,13 @@ class PageLevel : public AbstractMapping {
 
   uint64_t entrySize;
 
-  bool demandPaging;     // True when demand paging is enabled in config file
-  bool useMappingCache;  // True when demand paging is currently in use
-
   uint64_t tableBaseAddress;
   uint8_t *table;
   Bitset validEntry;
 
-  uint64_t maxDirtyEntries;
-  uint64_t entriesInPhysicalPage;
-
   BlockMetadata *blockMetadata;
   uint64_t metadataBaseAddress;
   uint64_t metadataEntrySize;
-
-  uint64_t demandRead;
-  uint64_t demandWrite;
 
   inline uint64_t makeEntrySize() {
     uint64_t ret = 8;
@@ -92,42 +83,18 @@ class PageLevel : public AbstractMapping {
   std::function<void(LPN, PPN)> writeEntry;
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
-  CPU::Function readMappingInternal(LPN, PPN &, bool &, uint64_t);
-  CPU::Function writeMappingInternal(LPN, PPN &, bool &, uint64_t,
-                                     bool = false);
+  CPU::Function readMappingInternal(LPN, PPN &, uint64_t);
+  CPU::Function writeMappingInternal(LPN, PPN &, uint64_t, bool = false);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   inline uint64_t makeTableAddress(LPN lpn) {
-    uint64_t addr = lpn * entrySize;
-
-    // Just round address
-    addr = addr % (maxDirtyEntries * entrySize);
-
-    return tableBaseAddress + addr;
+    return tableBaseAddress + lpn * entrySize;
   }
 
   inline uint64_t makeMetadataAddress(PPN block) {
-    // We always have full-sized block metadata in DRAM
     return metadataBaseAddress + block * metadataEntrySize;
   }
 
-  /* Demanding page */
-  std::unordered_set<LPN> inDRAMEntryGroup;
-  std::unordered_set<LPN> dirtyEntryGroup;
-  std::list<DemandPagingContext> readPending;
-
-  Event eventReadMappingDone;
-  void readMappingDone(uint64_t);
-
-  Event eventReadMappingDone2;
-  void readMappingDone2(uint64_t);
-
-  std::unordered_map<uint64_t, Event> writeRetryList;
-
-  Event eventWriteRetry;
-  void writeRetry(uint64_t);
-
-  bool requestMapping(LPN, PPN, uint64_t);
 
  public:
   PageLevel(ObjectData &);
