@@ -35,24 +35,59 @@ class AbstractAllocator : public Object {
 
   virtual void initialize(Parameter *p) { param = p; };
 
-  // For AbstractMapping
-  virtual CPU::Function allocateBlock(PPN &) = 0;
-  virtual PPN getBlockAt(PPN) = 0;
+  /* Functions for AbstractMapping */
 
-  // For FTL
+  /**
+   * \brief Allocate new free block
+   *
+   * Return new freeblock at parallelism index of provided physical page
+   * address. Return next freeblock if ppn is invalid.
+   *
+   * \param[in] ppn Physical page address.
+   * \param[in] np  Number of pages in mapping granularity.
+   */
+  virtual CPU::Function allocateBlock(PPN &ppn, uint64_t np = 1) = 0;
+
+  /**
+   * \brief Get previously allocated free block
+   *
+   * Return currently allocated free block at parallelism index of provided
+   * physical page address.
+   *
+   * \param[in] ppn Physical page address.
+   * \param[in] np  Number of pages in mapping granularity.
+   */
+  virtual PPN getBlockAt(PPN ppn, uint64_t np = 1) = 0;
+
+  /* Functions for AbstractFTL */
+
+  /**
+   * Check GC trigger threshold.
+   *
+   * \return True if GC should be invoked.
+   */
   virtual bool checkGCThreshold() = 0;
-  virtual bool stallRequest() = 0;
+
+  /**
+   * \brief Select block to erase
+   *
+   * Return physical block address to erase. This function may return multiple
+   * blocks.
+   *
+   * fatal: Operation not defined yet.
+   */
   virtual void getVictimBlocks(std::deque<PPN> &, Event) = 0;
+
+  /**
+   * \brief Mark block as erased
+   *
+   * fatal: Operation not defined yet.
+   */
   virtual void reclaimBlocks(PPN, Event) = 0;
 
-  //! PPN -> parallelism
-  virtual inline PPN getParallelismFromPPN(PPN sppn) {
-    return sppn % param->parallelism;
-  }
-
-  //! SPPN -> parallelism
-  virtual inline PPN getParallelismFromSPPN(PPN sppn) {
-    return sppn % (param->parallelism / param->superpage);
+  //! Get parallelism index from physical page address.
+  virtual inline PPN getParallelismFromPPN(PPN ppn) {
+    return ppn % param->parallelism;
   }
 };
 
