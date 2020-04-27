@@ -121,7 +121,8 @@ void AbstractMapping::handleMemoryCommand(uint64_t tag) {
   else {
     // Handle completion
     if (iter->second.eid != InvalidEventID) {
-      scheduleNow(iter->second.eid, iter->second.data);
+      scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, iter->second.eid,
+                       iter->second.data, iter->second.fstat);
     }
 
     memoryCommandList.erase(iter);
@@ -133,6 +134,21 @@ void AbstractMapping::insertMemoryAddress(bool read, uint64_t address,
   if (en) {
     pendingMemoryAccess.emplace_back(read, address, size);
   }
+}
+
+void AbstractMapping::requestMemoryAccess(Event eid, uint64_t data,
+                                          CPU::Function &fstat) {
+  auto memtag = makeMemoryTag();
+  auto ret = memoryCommandList.emplace(memtag, CommandList());
+
+  panic_if(!ret.second, "Memory tag conflict.");
+
+  ret.first->second.eid = eid;
+  ret.first->second.data = data;
+  ret.first->second.fstat = std::move(fstat);
+  ret.first->second.cmdList = std::move(pendingMemoryAccess);
+
+  handleMemoryCommand(memtag);
 }
 
 void AbstractMapping::initialize(AbstractFTL *f,
@@ -199,7 +215,6 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
   for (auto &iter : memoryCommandList) {
     BACKUP_SCALAR(out, iter.first);
 
-    BACKUP_SCALAR(out, iter.second.tag);
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.data);
 
@@ -251,7 +266,6 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, f);
 
-    RESTORE_SCALAR(in, ctx.tag);
     RESTORE_EVENT(in, ctx.eid);
     RESTORE_SCALAR(in, ctx.data);
 

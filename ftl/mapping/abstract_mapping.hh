@@ -132,6 +132,7 @@ class AbstractMapping : public Object {
   }
 
   void insertMemoryAddress(bool, uint64_t, uint32_t, bool = true);
+  void requestMemoryAccess(Event, uint64_t, CPU::Function &);
 
  private:
   struct MemoryCommand {
@@ -145,7 +146,6 @@ class AbstractMapping : public Object {
 
   struct CommandList {
     // Request information
-    uint64_t tag;
     Event eid;
     uint64_t data;
 
