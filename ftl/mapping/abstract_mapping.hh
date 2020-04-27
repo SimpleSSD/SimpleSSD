@@ -40,6 +40,11 @@ struct BlockMetadata {
 
 class AbstractMapping : public Object {
  protected:
+  using ReadEntryFunction = std::function<uint64_t(uint8_t *, uint64_t)>;
+  using WriteEntryFunction = std::function<void(uint8_t *, uint64_t, uint64_t)>;
+  using ParseEntryFunction = std::function<uint64_t(uint64_t &)>;
+  using MakeEntryFunction = std::function<uint64_t(uint64_t, uint64_t)>;
+
   Parameter param;
   FIL::Config::NANDStructure *filparam;
 
@@ -57,6 +62,75 @@ class AbstractMapping : public Object {
   virtual void makeSpare(LPN, std::vector<uint8_t> &);
   virtual LPN readSpare(std::vector<uint8_t> &);
 
+  inline uint64_t makeEntrySize(uint64_t total, uint64_t shift,
+                                ReadEntryFunction &readFunc,
+                                WriteEntryFunction &writeFunc,
+                                ParseEntryFunction &parseMetaFunc,
+                                MakeEntryFunction &makeMetaFunc) {
+    uint64_t ret = 8;
+
+    total <<= shift;
+
+    // Memory consumption optimization
+    if (total <= std::numeric_limits<uint16_t>::max()) {
+      ret = 2;
+
+      readFunc = [](uint8_t *table, uint64_t offset) {
+        return *(uint16_t *)(table + (offset << 1));
+      };
+      writeFunc = [](uint8_t *table, uint64_t offset, uint64_t value) {
+        *(uint16_t *)(table + (offset << 1)) = (uint16_t)value;
+      };
+    }
+    else if (total <= std::numeric_limits<uint32_t>::max()) {
+      ret = 4;
+
+      readFunc = [](uint8_t *table, uint64_t offset) {
+        return *(uint32_t *)(table + (offset << 2));
+      };
+      writeFunc = [](uint8_t *table, uint64_t offset, uint64_t value) {
+        *(uint32_t *)(table + (offset << 2)) = (uint32_t)value;
+      };
+    }
+    else if (total <= ((uint64_t)1ull << 48)) {
+      uint64_t mask = (uint64_t)0x0000FFFFFFFFFFFF;
+      ret = 6;
+
+      readFunc = [mask](uint8_t *table, uint64_t offset) {
+        return (*(uint64_t *)(table + (offset * 6))) & mask;
+      };
+      writeFunc = [](uint8_t *table, uint64_t offset, uint64_t value) {
+        memcpy(table + offset * 6, &value, 6);
+      };
+    }
+    else {
+      ret = 8;
+
+      readFunc = [](uint8_t *table, uint64_t offset) {
+        return *(uint64_t *)(table + (offset << 3));
+      };
+      writeFunc = [](uint8_t *table, uint64_t offset, uint64_t value) {
+        *(uint64_t *)(table + (offset << 3)) = value;
+      };
+    }
+
+    shift = ret * 8 - shift;
+    uint64_t mask = ((uint64_t)1 << shift) - 1;
+
+    parseMetaFunc = [shift, mask](uint64_t &entry) {
+      uint64_t ret = entry >> shift;
+
+      entry &= mask;
+
+      return ret;
+    };
+    makeMetaFunc = [shift, mask](uint64_t entry, uint64_t meta) {
+      return (entry & mask) | (meta << shift);
+    };
+
+    return ret;
+  }
+
   struct MemoryCommand {
     bool read;
     uint64_t address;
@@ -66,22 +140,7 @@ class AbstractMapping : public Object {
         : read(b), address(a), size(s) {}
   };
 
-  struct DemandPagingContext {
-    uint64_t cmdtag;
-    LPN aligned;
-
-    Event eid;
-    uint64_t data;
-
-    uint64_t memtag;
-    std::deque<MemoryCommand> cmdList;
-
-    DemandPagingContext(uint64_t t, LPN l)
-        : cmdtag(t), aligned(l), eid(InvalidEventID), data(0), memtag(0) {}
-  };
-
   std::deque<MemoryCommand> memoryCmdList;
-  std::unordered_map<uint64_t, DemandPagingContext> memoryPending;
 
   uint64_t memoryTag;
 
@@ -124,43 +183,19 @@ class AbstractMapping : public Object {
   virtual void getCopyList(CopyList &, Event) = 0;
   virtual void releaseCopyList(CopyList &) = 0;
 
-  //! PPN -> SPIndex (Page index in superpage)
-  virtual inline PPN getSPIndexFromPPN(PPN ppn) {
-    return ppn % param.superpage;
-  }
-
-  //! LPN -> SLPN / PPN -> SPPN
-  virtual inline LPN getSLPNfromLPN(LPN slpn) { return slpn / param.superpage; }
-
-  //! SPPN -> SBLK
-  virtual inline PPN getSBFromSPPN(PPN sppn) {
-    return sppn % (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! PPN -> BLK
-  virtual inline PPN getBlockFromPPN(PPN ppn) {
+  //! PPN -> Blk
+  inline PPN getBlockFromPPN(PPN ppn) {
     return ppn % param.totalPhysicalBlocks;
   }
 
-  //! SBLK/SPIndex -> BLK
-  virtual inline PPN getBlockFromSB(PPN sblk, PPN sp) {
-    return sblk * param.superpage + sp;
+  //! PPN -> Page
+  inline PPN getPageFromPPN(PPN ppn) {
+    return ppn / param.totalPhysicalBlocks;
   }
 
-  //! SPPN -> Page (Page index in (super)block)
-  virtual inline PPN getPageIndexFromSPPN(PPN sppn) {
-    return sppn / (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! SBLK/Page -> SPPN
-  virtual inline PPN makeSPPN(PPN superblock, PPN page) {
-    return superblock + page * (param.totalPhysicalBlocks / param.superpage);
-  }
-
-  //! SBLK/SPIndex/Page -> PPN
-  virtual inline PPN makePPN(PPN superblock, PPN superpage, PPN page) {
-    return superblock * param.superpage + superpage +
-           page * param.totalPhysicalBlocks;
+  //! Blk/Page -> PPN
+  inline PPN makePPN(PPN block, PPN page) {
+    return block + page * param.totalPhysicalBlocks;
   }
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
