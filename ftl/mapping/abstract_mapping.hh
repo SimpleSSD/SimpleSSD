@@ -131,24 +131,39 @@ class AbstractMapping : public Object {
     return ret;
   }
 
+  void insertMemoryAddress(bool, uint64_t, uint32_t, bool = true);
+
+ private:
   struct MemoryCommand {
-    bool read;
     uint64_t address;
+    bool read;
     uint32_t size;
 
     MemoryCommand(bool b, uint64_t a, uint32_t s)
-        : read(b), address(a), size(s) {}
+        : address(a), read(b), size(s) {}
   };
 
-  std::deque<MemoryCommand> memoryCmdList;
+  struct CommandList {
+    // Request information
+    uint64_t tag;
+    Event eid;
+    uint64_t data;
+
+    // Firmware information
+    CPU::Function fstat;
+
+    // Pending memory access list
+    std::deque<MemoryCommand> cmdList;
+  };
+
+  std::deque<MemoryCommand> pendingMemoryAccess;
+  std::unordered_map<uint64_t, CommandList> memoryCommandList;
 
   uint64_t memoryTag;
+  inline uint64_t makeMemoryTag() { return ++memoryTag; }
 
   Event eventMemoryDone;
   void handleMemoryCommand(uint64_t);
-
-  void insertMemoryAddress(bool, uint64_t, uint32_t, bool = true);
-  inline uint64_t makeMemoryTag() { return ++memoryTag; }
 
  public:
   AbstractMapping(ObjectData &);
@@ -189,9 +204,7 @@ class AbstractMapping : public Object {
   }
 
   //! PPN -> Page
-  inline PPN getPageFromPPN(PPN ppn) {
-    return ppn / param.totalPhysicalBlocks;
-  }
+  inline PPN getPageFromPPN(PPN ppn) { return ppn / param.totalPhysicalBlocks; }
 
   //! Blk/Page -> PPN
   inline PPN makePPN(PPN block, PPN page) {

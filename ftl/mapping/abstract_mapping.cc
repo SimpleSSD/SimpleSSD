@@ -101,9 +101,9 @@ LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
 }
 
 void AbstractMapping::handleMemoryCommand(uint64_t tag) {
-  auto iter = memoryPending.find(tag);
+  auto iter = memoryCommandList.find(tag);
 
-  panic_if(iter == memoryPending.end(), "Unexpected memory command.");
+  panic_if(iter == memoryCommandList.end(), "Unexpected memory command.");
 
   // Issue dram
   if (iter->second.cmdList.size() > 0) {
@@ -124,14 +124,14 @@ void AbstractMapping::handleMemoryCommand(uint64_t tag) {
       scheduleNow(iter->second.eid, iter->second.data);
     }
 
-    memoryPending.erase(iter);
+    memoryCommandList.erase(iter);
   }
 }
 
 void AbstractMapping::insertMemoryAddress(bool read, uint64_t address,
                                           uint32_t size, bool en) {
   if (en) {
-    memoryCmdList.emplace_back(read, address, size);
+    pendingMemoryAccess.emplace_back(read, address, size);
   }
 }
 
@@ -184,25 +184,26 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, writeLPNCount);
   BACKUP_SCALAR(out, invalidateLPNCount);
 
-  uint64_t size = memoryCmdList.size();
+  uint64_t size = pendingMemoryAccess.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : memoryCmdList) {
+  for (auto &iter : pendingMemoryAccess) {
     BACKUP_SCALAR(out, iter.read);
     BACKUP_SCALAR(out, iter.address);
     BACKUP_SCALAR(out, iter.size);
   }
 
-  size = memoryPending.size();
+  size = memoryCommandList.size();
   BACKUP_SCALAR(out, size);
 
-  for (auto &iter : memoryPending) {
+  for (auto &iter : memoryCommandList) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second.cmdtag);
-    BACKUP_SCALAR(out, iter.second.aligned);
+
+    BACKUP_SCALAR(out, iter.second.tag);
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.data);
-    BACKUP_SCALAR(out, iter.second.memtag);
+
+    BACKUP_SCALAR(out, iter.second.fstat);
 
     size = iter.second.cmdList.size();
     BACKUP_SCALAR(out, size);
@@ -239,25 +240,22 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, a);
     RESTORE_SCALAR(in, s);
 
-    memoryCmdList.emplace_back(r, a, s);
+    pendingMemoryAccess.emplace_back(r, a, s);
   }
 
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    uint64_t f, t;
-    LPN l;
+    uint64_t f;
+    CommandList ctx;
 
     RESTORE_SCALAR(in, f);
-    RESTORE_SCALAR(in, t);
-    RESTORE_SCALAR(in, l);
 
-    DemandPagingContext ctx(t, l);
-
+    RESTORE_SCALAR(in, ctx.tag);
     RESTORE_EVENT(in, ctx.eid);
     RESTORE_SCALAR(in, ctx.data);
 
-    RESTORE_SCALAR(in, ctx.memtag);
+    RESTORE_SCALAR(in, ctx.fstat);
 
     uint64_t ssize;
     RESTORE_SCALAR(in, ssize);
@@ -274,7 +272,7 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
       ctx.cmdList.emplace_back(r, a, s);
     }
 
-    memoryPending.emplace(f, ctx);
+    memoryCommandList.emplace(f, ctx);
   }
 
   RESTORE_SCALAR(in, memoryTag);
