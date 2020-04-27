@@ -229,23 +229,23 @@ class AbstractMapping : public Object {
   AbstractMapping(ObjectData &);
   virtual ~AbstractMapping() {}
 
-  /* Functions for BlockAllocator */
+  /* Functions for AbstractAllocator */
 
   /**
    * Return valid page count of specific block.
    *
    * \param[in] ppn Physical page address.
-   * \param[in] nlp Number of pages in mapping granularity.
+   * \param[in] np  Number of pages in mapping granularity.
    */
-  virtual uint32_t getValidPages(PPN ppn, uint64_t nlp = 1) = 0;
+  virtual uint32_t getValidPages(PPN ppn, uint64_t np = 1) = 0;
 
   /**
    * Return age (inserted time) of specific block.
    *
    * \param[in] ppn Physical page address.
-   * \param[in] nlp Number of pages in mapping granularity.
+   * \param[in] np  Number of pages in mapping granularity.
    */
-  virtual uint64_t getAge(PPN ppn, uint64_t nlp = 1) = 0;
+  virtual uint64_t getAge(PPN ppn, uint64_t np = 1) = 0;
 
   /* Functions for AbstractFTL */
 
