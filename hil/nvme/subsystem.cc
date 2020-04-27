@@ -1018,101 +1018,37 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   }
 }
 
+#define RESTORE_REQUEST(cmd, tag, ret)                                         \
+  {                                                                            \
+    (ret) = (cmd)->restoreRequest(tag);                                        \
+                                                                               \
+    if (ret) {                                                                 \
+      return (ret);                                                            \
+    }                                                                          \
+  }
+
 Request *Subsystem::restoreRequest(uint64_t tag) noexcept {
   Request *ret = nullptr;
 
-  ret = commandDeleteSQ->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
+  RESTORE_REQUEST(commandDeleteSQ, tag, ret);
+  RESTORE_REQUEST(commandCreateSQ, tag, ret);
+  RESTORE_REQUEST(commandGetLogPage, tag, ret);
+  RESTORE_REQUEST(commandDeleteCQ, tag, ret);
+  RESTORE_REQUEST(commandCreateCQ, tag, ret);
+  RESTORE_REQUEST(commandIdentify, tag, ret);
+  RESTORE_REQUEST(commandAbort, tag, ret);
+  RESTORE_REQUEST(commandSetFeature, tag, ret);
+  RESTORE_REQUEST(commandGetFeature, tag, ret);
+  RESTORE_REQUEST(commandAsyncEventRequest, tag, ret);
+  RESTORE_REQUEST(commandNamespaceManagement, tag, ret);
+  RESTORE_REQUEST(commandNamespaceAttachment, tag, ret);
+  RESTORE_REQUEST(commandFormatNVM, tag, ret);
 
-  ret = commandCreateSQ->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandGetLogPage->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandDeleteCQ->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandCreateCQ->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandIdentify->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandAbort->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandSetFeature->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandGetFeature->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandAsyncEventRequest->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandNamespaceManagement->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandNamespaceAttachment->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandFormatNVM->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandFlush->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandWrite->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandRead->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandCompare->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-  ret = commandDatasetManagement->restoreRequest(tag);
-  if (ret) {
-    goto RESTORE_END;
-  }
-
-RESTORE_END:
-  return ret;
+  RESTORE_REQUEST(commandFlush, tag, ret);
+  RESTORE_REQUEST(commandWrite, tag, ret);
+  RESTORE_REQUEST(commandRead, tag, ret);
+  RESTORE_REQUEST(commandCompare, tag, ret);
+  RESTORE_REQUEST(commandDatasetManagement, tag, ret);
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
