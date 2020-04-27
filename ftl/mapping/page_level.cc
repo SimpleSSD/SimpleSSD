@@ -426,30 +426,7 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
              "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
              cmd->getPPN());
 
-  auto memtag = makeMemoryTag();
-
-  if (mappingHit) {
-    auto ret =
-        memoryPending.emplace(memtag, DemandPagingContext(cmd->getTag(), 0));
-
-    ret.first->second.memtag = memtag;
-    ret.first->second.eid = eid;
-    ret.first->second.data = cmd->getTag();
-    ret.first->second.cmdList = std::move(memoryCmdList);
-
-    handleMemoryCommand(memtag);
-  }
-  else {
-    auto &iter = readPending.back();
-
-    iter.memtag = memtag;
-    iter.eid = eid;
-    iter.data = cmd->getTag();
-    iter.cmdList = std::move(memoryCmdList);
-  }
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID,
-                   cmd->getTag(), fstat);
+  requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
 void PageLevel::writeMapping(Request *cmd, Event eid) {
@@ -488,41 +465,13 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
 
   fstat += writeMappingInternal(lspn, pspn, cmd->getTag());
 
-  // makeSpare(scmd.lpn, scmd.spare);
-
   cmd->setPPN(pspn * param.superpage + superpageIndex);
 
   debugprint(Log::DebugID::FTL_PageLevel,
              "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
              cmd->getPPN());
 
-  auto memtag = makeMemoryTag();
-
-  if (mappingHit) {
-    auto ret =
-        memoryPending.emplace(memtag, DemandPagingContext(cmd->getTag(), 0));
-
-    ret.first->second.memtag = memtag;
-    ret.first->second.eid = eid;
-    ret.first->second.data = cmd->getTag();
-    ret.first->second.cmdList = std::move(memoryCmdList);
-
-    handleMemoryCommand(memtag);
-  }
-  else {
-    // We need to wait for mapping
-    auto &iter = readPending.back();
-
-    iter.memtag = memtag;
-    iter.eid = eventWriteRetry;
-    iter.data = cmd->getTag();
-    iter.cmdList = std::move(memoryCmdList);
-
-    writeRetryList.emplace(cmd->getTag(), eid);
-  }
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID,
-                   cmd->getTag(), fstat);
+  requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
 void PageLevel::invalidateMapping(Request *cmd, Event eid) {
