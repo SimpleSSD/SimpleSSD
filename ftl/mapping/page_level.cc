@@ -49,8 +49,7 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn,
-                                             uint64_t tag) {
+CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -78,8 +77,7 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn,
   return fstat;
 }
 
-CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, uint64_t tag,
-                                              bool init) {
+CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -268,7 +266,7 @@ void PageLevel::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, ppn, 0, true);
+      writeMappingInternal(i, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -287,7 +285,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, 0, true);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -302,7 +300,7 @@ void PageLevel::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, ppn, 0, true);
+      writeMappingInternal(i, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = i * param.superpage + j;
@@ -323,7 +321,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, 0, true);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -342,7 +340,7 @@ void PageLevel::initialize(AbstractFTL *f,
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LPN lpn = dist(gen);
 
-      writeMappingInternal(lpn, ppn, 0, true);
+      writeMappingInternal(lpn, ppn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
         _lpn = lpn * param.superpage + j;
@@ -412,7 +410,7 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
   requestedReadCount++;
   readLPNCount += param.superpage;
 
-  fstat += readMappingInternal(lspn, pspn, cmd->getTag());
+  fstat += readMappingInternal(lspn, pspn);
 
   if (UNLIKELY(pspn == InvalidPPN)) {
     cmd->setResponse(Response::Unwritten);
@@ -463,7 +461,7 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
-  fstat += writeMappingInternal(lspn, pspn, cmd->getTag());
+  fstat += writeMappingInternal(lspn, pspn);
 
   cmd->setPPN(pspn * param.superpage + superpageIndex);
 

@@ -35,8 +35,8 @@ class PageLevel : public AbstractMapping {
   MakeEntryFunction makeTableEntry;
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
-  CPU::Function readMappingInternal(LPN, PPN &, uint64_t);
-  CPU::Function writeMappingInternal(LPN, PPN &, uint64_t, bool = false);
+  CPU::Function readMappingInternal(LPN, PPN &);
+  CPU::Function writeMappingInternal(LPN, PPN &, bool = false);
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   inline uint64_t makeTableAddress(LPN lpn) {
