@@ -239,10 +239,11 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
 
   panic_if(np != superpage, "Invalid access from mapping.");
 
-  blockUsed /= np;
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
+    blockUsed /= np;
+
     idx = getParallelismFromSPPN(blockUsed);
 
     panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
@@ -284,8 +285,6 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
 PPN BasicAllocator::getBlockAt(PPN idx, uint64_t np) {
   panic_if(np != superpage, "Invalid access from mapping.");
 
-  idx /= np;
-
   if (idx == InvalidPPN) {
     PPN ppn = inUseBlockMap[lastAllocated++];
 
@@ -295,6 +294,8 @@ PPN BasicAllocator::getBlockAt(PPN idx, uint64_t np) {
 
     return ppn * np;
   }
+
+  idx /= np;
 
   panic_if(idx >= parallelism, "Invalid parallelism index.");
 
