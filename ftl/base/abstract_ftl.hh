@@ -49,19 +49,6 @@ class AbstractFTL : public Object {
   void writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {
     pFIL->writeSpare(ppn, buffer, size);
   }
-
-  // Demand paging
-  void writeLastPage(PPN sppn, PPN superpage) {
-    panic_if(superpage != 1, "Demand paging only works when using pure-page.");
-
-    pFIL->program(FIL::Request(sppn, InvalidEventID, 0));
-  }
-
-  void readLastPage(PPN sppn, PPN superpage, Event eid, uint64_t tag) {
-    panic_if(superpage != 1, "Demand paging only works when using pure-page.");
-
-    pFIL->read(FIL::Request(sppn, eid, tag));
-  }
 };
 
 }  // namespace SimpleSSD::FTL
