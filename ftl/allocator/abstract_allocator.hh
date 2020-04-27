@@ -33,8 +33,6 @@ class AbstractAllocator : public Object {
       : Object(o), pMapper(m) {}
   virtual ~AbstractAllocator() {}
 
-  virtual void initialize(Parameter *p) { param = p; };
-
   /* Functions for AbstractMapping */
 
   /**
@@ -45,6 +43,7 @@ class AbstractAllocator : public Object {
    *
    * \param[in] ppn Physical page address.
    * \param[in] np  Number of pages in mapping granularity.
+   * \return Return CPU firmware execution information.
    */
   virtual CPU::Function allocateBlock(PPN &ppn, uint64_t np = 1) = 0;
 
@@ -60,6 +59,21 @@ class AbstractAllocator : public Object {
   virtual PPN getBlockAt(PPN ppn, uint64_t np = 1) = 0;
 
   /* Functions for AbstractFTL */
+
+  /**
+   * \brief Block allocator initialization function
+   *
+   * Immediately call AbstractAllocator::initialize() when you override this
+   * function.
+   * \code{.cc}
+   * void YOUR_ALLOCATOR_CLASS::initialize(Parameter *p) {
+   *   AbstractAllocator::initialize(p);
+   *
+   *   // Your initialization code here.
+   * }
+   * \endcode
+   */
+  virtual void initialize(Parameter *p) { param = p; };
 
   /**
    * Check GC trigger threshold.
@@ -86,7 +100,7 @@ class AbstractAllocator : public Object {
   virtual void reclaimBlocks(PPN, Event) = 0;
 
   //! Get parallelism index from physical page address.
-  virtual inline PPN getParallelismFromPPN(PPN ppn) {
+  inline PPN getParallelismFromPPN(PPN ppn) {
     return ppn % param->parallelism;
   }
 };
