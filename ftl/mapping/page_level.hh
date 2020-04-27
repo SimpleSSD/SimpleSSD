@@ -24,63 +24,15 @@ class PageLevel : public AbstractMapping {
 
   uint64_t tableBaseAddress;
   uint8_t *table;
-  Bitset validEntry;
 
   BlockMetadata *blockMetadata;
   uint64_t metadataBaseAddress;
   uint64_t metadataEntrySize;
 
-  inline uint64_t makeEntrySize() {
-    uint64_t ret = 8;
-
-    // Memory consumption optimization
-    if (totalPhysicalSuperPages <= std::numeric_limits<uint16_t>::max()) {
-      ret = 2;
-
-      readEntry = [this](LPN lpn) {
-        return (PPN)(*(uint16_t *)(table + (lpn << 1)));
-      };
-      writeEntry = [this](LPN lpn, PPN ppn) {
-        *(uint16_t *)(table + (lpn << 1)) = (uint16_t)ppn;
-      };
-    }
-    else if (totalPhysicalSuperPages <= std::numeric_limits<uint32_t>::max()) {
-      ret = 4;
-
-      readEntry = [this](LPN lpn) {
-        return (PPN)(*(uint32_t *)(table + (lpn << 2)));
-      };
-      writeEntry = [this](LPN lpn, PPN ppn) {
-        *(uint32_t *)(table + (lpn << 2)) = (uint32_t)ppn;
-      };
-    }
-    else if (totalPhysicalSuperPages <= ((uint64_t)1ull << 48)) {
-      uint64_t mask = (uint64_t)0x0000FFFFFFFFFFFF;
-      ret = 6;
-
-      readEntry = [this, mask](LPN lpn) {
-        return ((PPN)(*(uint64_t *)(table + (lpn * 6)))) & mask;
-      };
-      writeEntry = [this](LPN lpn, PPN ppn) {
-        memcpy(table + lpn * 6, &ppn, 6);
-      };
-    }
-    else {
-      ret = 8;
-
-      readEntry = [this](LPN lpn) {
-        return (PPN)(*(uint64_t *)(table + (lpn << 3)));
-      };
-      writeEntry = [this](LPN lpn, PPN ppn) {
-        *(uint64_t *)(table + (lpn << 3)) = (uint64_t)ppn;
-      };
-    }
-
-    return ret;
-  }
-
-  std::function<PPN(LPN)> readEntry;
-  std::function<void(LPN, PPN)> writeEntry;
+  ReadEntryFunction readTableEntry;
+  WriteEntryFunction writeTableEntry;
+  ParseEntryFunction parseTableEntry;
+  MakeEntryFunction makeTableEntry;
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
   CPU::Function readMappingInternal(LPN, PPN &, uint64_t);
@@ -95,6 +47,18 @@ class PageLevel : public AbstractMapping {
     return metadataBaseAddress + block * metadataEntrySize;
   }
 
+  /* Superpage/block related helper APIs */
+  inline PPN getSuperblockFromSPPN(PPN sppn) {
+    return sppn % totalPhysicalSuperBlocks;
+  }
+
+  inline PPN getSuperpageFromSPPN(PPN sppn) {
+    return sppn / totalPhysicalSuperBlocks;
+  }
+
+  inline PPN makeSPPN(PPN sblk, PPN sp) {
+    return sblk + sp * totalPhysicalSuperBlocks;
+  }
 
  public:
   PageLevel(ObjectData &);

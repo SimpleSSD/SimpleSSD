@@ -20,7 +20,6 @@ PageLevel::PageLevel(ObjectData &o)
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
       table(nullptr),
-      validEntry(totalLogicalSuperPages),
       blockMetadata(nullptr) {
   // Check spare size
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
@@ -57,17 +56,19 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn,
 
   panic_if(lspn >= totalLogicalSuperPages, "LPN out of range.");
 
-  if (validEntry.test(lspn)) {
-    pspn = readEntry(lspn);
+  // Read entry
+  auto entry = readTableEntry(table, lspn);
+  auto valid = parseTableEntry(entry);
+
+  insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
+
+  if (valid) {
+    pspn = entry;
 
     // Update accessed time
-    PPN block = getSBFromSPPN(pspn);
+    PPN block = getSuperblockFromSPPN(pspn);
     blockMetadata[block].insertedAt = getTick();
 
-    ok = requestMapping(lspn, pspn, tag);
-
-    // Memory timing after demand paging
-    insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
     insertMemoryAddress(false, makeMetadataAddress(block), 2);
   }
   else {
@@ -84,29 +85,23 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, uint64_t tag,
 
   panic_if(lspn >= totalLogicalSuperPages, "LPN out of range.");
 
-  if (validEntry.test(lspn)) {
-    // This is valid entry, invalidate block
-    PPN old = readEntry(lspn);
+  auto entry = readTableEntry(table, lspn);
+  auto valid = parseTableEntry(entry);
 
-    PPN block = getSBFromSPPN(old);
-    PPN page = getPageIndexFromSPPN(old);
+  insertMemoryAddress(true, makeTableAddress(lspn), entrySize, !init);
+
+  if (valid) {
+    // This is valid entry, invalidate block
+    PPN old = entry;
+
+    PPN block = getSuperblockFromSPPN(old);
+    PPN page = getSuperpageFromSPPN(old);
 
     blockMetadata[block].validPages.reset(page);
 
-    // We made dirty mapping entry (valid -> invalid)
-    if (!init && useMappingCache) {
-      auto aligned = lspn / entriesInPhysicalPage * entriesInPhysicalPage;
-
-      dirtyEntryGroup.emplace(aligned);
-    }
-
     // Memory timing after demand paging
-    insertMemoryAddress(true, makeTableAddress(lspn), entrySize, !init);
     insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1,
                         !init);
-  }
-  else {
-    validEntry.set(lspn);
   }
 
   // Get block from allocated block pool
@@ -135,29 +130,39 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, uint64_t tag,
   insertMemoryAddress(false, makeMetadataAddress(block->blockID), 4, !init);
 
   // Write entry
-  writeEntry(lspn, pspn);
+  entry = makeTableEntry(pspn, 1);
+  writeTableEntry(table, lspn, entry);
+
   insertMemoryAddress(false, makeTableAddress(lspn), entrySize, !init);
 
   return fstat;
 }
 
-CPU::Function PageLevel::invalidateMappingInternal(LPN lpn, PPN &old) {
+CPU::Function PageLevel::invalidateMappingInternal(LPN lspn, PPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  panic_if(lpn >= totalLogicalSuperPages, "LPN out of range.");
+  panic_if(lspn >= totalLogicalSuperPages, "LPN out of range.");
 
-  if (validEntry.test(lpn)) {
+  auto entry = readTableEntry(table, lspn);
+  auto valid = parseTableEntry(entry);
+
+  insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
+
+  if (valid) {
     // Invalidate entry
-    validEntry.reset(lpn);
+    pspn = entry;
+
+    writeTableEntry(table, lspn, 0);
 
     // Invalidate block
-    old = readEntry(lpn);
-    PPN index = getPageIndexFromSPPN(old);
-    PPN block = getSBFromSPPN(old);
+    PPN block = getSuperblockFromSPPN(pspn);
+    PPN page = getSuperpageFromSPPN(pspn);
 
-    blockMetadata[block].validPages.reset(index);
-    insertMemoryAddress(false, makeMetadataAddress(block) + 4 + index / 8, 1);
+    blockMetadata[block].validPages.reset(page);
+    insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1);
+
+    insertMemoryAddress(false, makeTableAddress(lspn), entrySize);
   }
 
   return fstat;
@@ -170,7 +175,8 @@ void PageLevel::initialize(AbstractFTL *f,
   // Initialize memory
   {
     // Allocate table and block metadata
-    entrySize = makeEntrySize();
+    entrySize = makeEntrySize(totalLogicalSuperPages, 1, readTableEntry,
+                              writeTableEntry, parseTableEntry, makeTableEntry);
 
     table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
     blockMetadata = new BlockMetadata[totalPhysicalSuperBlocks]();
@@ -373,7 +379,10 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
   panic_if(slpn + nlp > totalLogicalSuperPages, "LPN out of range.");
 
   for (LPN i = slpn; i < nlp; i++) {
-    if (validEntry.test(i)) {
+    auto entry = readTableEntry(table, i);
+    auto valid = parseTableEntry(entry);
+
+    if (valid) {
       count++;
     }
   }
@@ -383,11 +392,11 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
 }
 
 uint32_t PageLevel::getValidPages(PPN ppn) {
-  return (uint32_t)blockMetadata[getSBFromSPPN(ppn)].validPages.count();
+  return (uint32_t)blockMetadata[getSuperblockFromSPPN(ppn)].validPages.count();
 }
 
 uint64_t PageLevel::getAge(PPN ppn) {
-  return blockMetadata[getSBFromSPPN(ppn)].insertedAt;
+  return blockMetadata[getSuperblockFromSPPN(ppn)].insertedAt;
 }
 
 void PageLevel::readMapping(Request *cmd, Event eid) {
@@ -571,8 +580,6 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, entrySize);
   BACKUP_BLOB64(out, table, totalLogicalSuperPages * entrySize);
 
-  validEntry.createCheckpoint(out);
-
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     BACKUP_SCALAR(out, blockMetadata[i].nextPageToWrite);
     BACKUP_SCALAR(out, blockMetadata[i].insertedAt);
@@ -602,8 +609,6 @@ void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != entrySize, "Invalid FTL configuration while restore.");
 
   RESTORE_BLOB64(in, table, totalLogicalSuperPages * entrySize);
-
-  validEntry.restoreCheckpoint(in);
 
   for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
     RESTORE_SCALAR(in, blockMetadata[i].nextPageToWrite);
