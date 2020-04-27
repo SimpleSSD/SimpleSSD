@@ -1049,6 +1049,8 @@ Request *Subsystem::restoreRequest(uint64_t tag) noexcept {
   RESTORE_REQUEST(commandRead, tag, ret);
   RESTORE_REQUEST(commandCompare, tag, ret);
   RESTORE_REQUEST(commandDatasetManagement, tag, ret);
+
+  return ret;
 }
 
 }  // namespace SimpleSSD::HIL::NVMe
