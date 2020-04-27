@@ -145,9 +145,10 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lspn, PPN &pspn) {
   auto entry = readTableEntry(table, lspn);
   auto valid = parseTableEntry(entry);
 
-  insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
-
   if (valid) {
+    // Hack: Prevent multiple memory accesses when using superpage
+    insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
+
     // Invalidate entry
     pspn = entry;
 
