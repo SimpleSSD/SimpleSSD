@@ -22,6 +22,7 @@ class BasicAllocator : public AbstractAllocator {
   using BlockSelection =
       std::function<CPU::Function(uint64_t, std::deque<PPN> &)>;
 
+  uint64_t superpage;
   uint64_t parallelism;
   uint64_t totalSuperblock;
 
@@ -57,9 +58,7 @@ class BasicAllocator : public AbstractAllocator {
   void getVictimBlocks(std::deque<PPN> &, Event) override;
   void reclaimBlocks(PPN, Event) override;
 
-  inline PPN getParallelismFromSPPN(PPN sppn) override {
-    return sppn % parallelism;
-  }
+  inline PPN getParallelismFromSPPN(PPN sppn) { return sppn % parallelism; }
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

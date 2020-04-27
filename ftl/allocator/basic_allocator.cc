@@ -60,7 +60,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
         // Collect valid pages
         for (auto iter = currentList.begin(); iter != currentList.end();
              ++iter) {
-          valid.emplace_back(iter, pMapper->getValidPages(*iter));
+          valid.emplace_back(iter, pMapper->getValidPages(*iter, superpage));
         }
 
         // Find min value
@@ -96,9 +96,9 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
             // Collect valid pages
             for (auto iter = currentList.begin(); iter != currentList.end();
                  ++iter) {
-              float util = pMapper->getValidPages(*iter) / pageCount;
+              float util = pMapper->getValidPages(*iter, superpage) / pageCount;
 
-              util = util / ((1.f - util) * pMapper->getAge(*iter));
+              util = util / ((1.f - util) * pMapper->getAge(*iter, superpage));
 
               valid.emplace_back(iter, util);
             }
@@ -160,7 +160,7 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 
         for (uint64_t i = 0; i < currentList.size(); i++) {
           if (i == offsets.at(valid.size())) {
-            valid.emplace_back(iter, pMapper->getValidPages(*iter));
+            valid.emplace_back(iter, pMapper->getValidPages(*iter, superpage));
           }
 
           ++iter;
@@ -203,8 +203,9 @@ BasicAllocator::~BasicAllocator() {
 void BasicAllocator::initialize(Parameter *p) {
   AbstractAllocator::initialize(p);
 
-  parallelism = param->parallelism / param->superpage;
-  totalSuperblock = param->totalPhysicalBlocks / param->superpage;
+  superpage = param->superpage;
+  parallelism = param->parallelism / superpage;
+  totalSuperblock = param->totalPhysicalBlocks / superpage;
   freeBlockCount = totalSuperblock;
   fullBlockCount = 0;
 
@@ -232,10 +233,13 @@ void BasicAllocator::initialize(Parameter *p) {
   }
 }
 
-CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
+CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
+  panic_if(np != superpage, "Invalid access from mapping.");
+
+  blockUsed /= np;
   PPN idx = lastAllocated;
 
   if (LIKELY(blockUsed != InvalidPPN)) {
@@ -269,7 +273,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
 
   // Allocate new block
   inUseBlockMap[idx] = freeBlocks[idx].front();
-  blockUsed = inUseBlockMap[idx];
+  blockUsed = inUseBlockMap[idx] * np;
 
   freeBlocks[idx].pop_front();
   freeBlockCount--;
@@ -277,7 +281,11 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed) {
   return fstat;
 }
 
-PPN BasicAllocator::getBlockAt(PPN idx) {
+PPN BasicAllocator::getBlockAt(PPN idx, uint64_t np) {
+  panic_if(np != superpage, "Invalid access from mapping.");
+
+  idx /= np;
+
   if (idx == InvalidPPN) {
     PPN ppn = inUseBlockMap[lastAllocated++];
 
@@ -285,20 +293,16 @@ PPN BasicAllocator::getBlockAt(PPN idx) {
       lastAllocated = 0;
     }
 
-    return ppn;
+    return ppn * np;
   }
 
   panic_if(idx >= parallelism, "Invalid parallelism index.");
 
-  return inUseBlockMap[idx];
+  return inUseBlockMap[idx] * np;
 }
 
 bool BasicAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
-}
-
-bool BasicAllocator::stallRequest() {
-  return freeBlockCount <= parallelism;
 }
 
 void BasicAllocator::getVictimBlocks(std::deque<PPN> &list, Event eid) {

@@ -103,16 +103,17 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool init) {
   }
 
   // Get block from allocated block pool
-  PPN idx = allocator->getBlockAt(InvalidPPN);
+  // Caution!! idx is physical page address, not superpage address
+  PPN idx = allocator->getBlockAt(InvalidPPN, param.superpage);
 
-  auto block = &blockMetadata[idx];
+  auto block = &blockMetadata[idx / param.superpage];
 
   // Check we have to get new block
   if (block->nextPageToWrite == filparam->page) {
     // Get a new block
-    fstat += allocator->allocateBlock(idx);
+    fstat += allocator->allocateBlock(idx, param.superpage);
 
-    block = &blockMetadata[idx];
+    block = &blockMetadata[idx / param.superpage];
   }
 
   // Get new page
