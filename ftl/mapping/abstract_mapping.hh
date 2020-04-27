@@ -59,6 +59,41 @@ class AbstractMapping : public Object {
   uint64_t writeLPNCount;
   uint64_t invalidateLPNCount;
 
+  /**
+   * \brief FTL Table access function generator
+   *
+   * This function generates table access functions and returns table entry size
+   * which is one of 2, 4, 6 or 8 bytes. This function is very useful to reduce
+   * required memory size of simulation - rather than using 8 bytes for LPN/PPN,
+   * we can use much smaller table entry size by using this function.
+   *
+   * Example table read routine:
+   * \code{.cc}
+   * auto entry = readFunc(tablePointer, tableIndex);
+   * auto meta = parseMetaFunc(entry);
+   * // Now meta contains metadata, entry contains entry value
+   * \endcode
+   *
+   * Example table write routine:
+   * \code{.cc}
+   * auto entry = makeMetaFunc(entryValue, metaValue);
+   * writeFunc(tablePointer, tableIndex, entry);
+   * \endcode
+   *
+   * \param[in] total         Total number of addresses should be stored to
+   *                          table. In general, this value is total physical
+   *                          pages in SSD.
+   * \param[in] shift         Total number of bits for per-entry metadata.
+   *                          In general, this valud is 1 - we need one valid
+   *                          bit per one entry.
+   * \param[in] readFunc      Table read function. This function will return one
+   *                          table entry extended to 8 bytes.
+   * \param[in] writeFunc     Table write function. This function will write
+   *                          one table entry.
+   * \param[in] parseMetaFunc This function will split metadata and entry value.
+   * \param[in] makeMetaFunc  This function will join metadata and entry value.
+   * \return  Return entry size in bytes. One of 2, 4, 6 or 8.
+   */
   inline uint64_t makeEntrySize(uint64_t total, uint64_t shift,
                                 ReadEntryFunction &readFunc,
                                 WriteEntryFunction &writeFunc,
@@ -128,8 +163,36 @@ class AbstractMapping : public Object {
     return ret;
   }
 
-  void insertMemoryAddress(bool, uint64_t, uint32_t, bool = true);
-  void requestMemoryAccess(Event, uint64_t, CPU::Function &);
+  /**
+   * \brief Insert FTL memory access command
+   *
+   * In FTL translation procedure, we need to access memory multiple times.
+   * This helper function will collect required memory access for one
+   * translation operation (until requestMemoryAccess function called).
+   *
+   * Just add this function when memory access is required.
+   *
+   * \param[in] read    True if this memory access is read.
+   * \param[in] address Memory address to access
+   * \param[in] size    Data size to access
+   * \param[in] enable  Enable this memory access. If false, this command will
+   *                    be ignored.
+   */
+  void insertMemoryAddress(bool read, uint64_t address, uint32_t size,
+                           bool enable = true);
+
+  /**
+   * \brief Execute memory access commands + CPU firmware latency
+   *
+   * This function woll execute collected memory access commands by
+   * insertMemoryAddress function. Set valid CPU::Function class if you want to
+   * handle CPU firmware latency too.
+   *
+   * \param[in] eid   Callback event after memory/CPU access.
+   * \param[in] data  Event context.
+   * \param[in] fstat CPU firmware information.
+   */
+  void requestMemoryAccess(Event eid, uint64_t data, CPU::Function &fstat);
 
  private:
   struct MemoryCommand {
@@ -166,19 +229,87 @@ class AbstractMapping : public Object {
   AbstractMapping(ObjectData &);
   virtual ~AbstractMapping() {}
 
+  /* Functions for BlockAllocator */
+
+  /**
+   * Return valid page count of specific block.
+   *
+   * \param[in] ppn Physical page address.
+   * \param[in] nlp Number of pages in mapping granularity.
+   */
+  virtual uint32_t getValidPages(PPN ppn, uint64_t nlp = 1) = 0;
+  virtual uint64_t getAge(PPN ppn, uint64_t nlp = 1) = 0;
+
+  /* Functions for AbstractFTL */
+
+  /**
+   * \brief FTL initialization function
+   *
+   * FTL initialization should be handled in this function.
+   * Initialization includes:
+   *  Memory allocation by object.memory->allocate.
+   *  FTL mapping table filling.
+   *
+   * Immediately call AbstractMapping::initialize() when you override this
+   * function.
+   * \code{.cc}
+   * void YOUR_FTL_CLASS::initialize(AbstractFTL *f,
+   *                                 BlockAllocator:AbstractAllocator *a) {
+   *   AbstractMapping::initialize(f, a);
+   *
+   *   // Your initialization code here.
+   * }
+   * \endcode
+   */
   virtual void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *);
 
+  //! Return FTL parameter structure
   Parameter *getInfo();
-  virtual LPN getPageUsage(LPN, LPN) = 0;
 
-  // Allocator
-  virtual uint32_t getValidPages(PPN) = 0;
-  virtual uint64_t getAge(PPN) = 0;
+  /**
+   * \brief Get valid page count
+   *
+   * This function counts valid mapping in mapping table in range.
+   * This function requires starting LPN and ending LPN because NVMe supports
+   * multiple volumes (namespaces) per one SSD.
+   *
+   * \param[in] slpn  Starting logical page address (includes).
+   * \param[in] elpn  Ending logical page address (excludes).
+   */
+  virtual LPN getPageUsage(LPN slpn, LPN elpn) = 0;
 
-  // I/O interfaces
-  virtual void readMapping(Request *, Event) = 0;
-  virtual void writeMapping(Request *, Event) = 0;
-  virtual void invalidateMapping(Request *, Event) = 0;
+  /**
+   * \brief Perform FTL read translation
+   *
+   * This function translate logical page address to physical page address.
+   * Store translated address with req->setPPN() and error with
+   * req->setResponse().
+   *
+   * \param[in] req Pointer to FTL::Request.
+   * \param[in] eid Callback event. Event context should be req->getTag().
+   */
+  virtual void readMapping(Request *req, Event eid) = 0;
+
+  /**
+   * \brief Perform FTL write translation
+   *
+   * This function allocates new page to store new data. Old mapping is
+   * invalidated. Store address of allocated page with req->setPPN().
+   *
+   * \param[in] req Pointer to FTL::Request.
+   * \param[in] eid Callback event. Event context should be req->getTag().
+   */
+  virtual void writeMapping(Request *req, Event eid) = 0;
+
+  /**
+   * \brief Perform FTL invalidation
+   *
+   * This function erases/invalidates mapping.
+   *
+   * \param[in] req Pointer to FTL::Request.
+   * \param[in] eid Callback event. Event context should be req->getTag().
+   */
+  virtual void invalidateMapping(Request *req, Event eid) = 0;
 
   /**
    * \brief Get minimum and preferred mapping granularity
@@ -191,19 +322,29 @@ class AbstractMapping : public Object {
    */
   virtual void getMappingSize(uint64_t *min, uint64_t *prefer = nullptr) = 0;
 
-  // GC interfaces
+  /**
+   * \brief Retrive page copy list
+   *
+   * fatal: Operation is not defined yet.
+   */
   virtual void getCopyList(CopyList &, Event) = 0;
+
+  /**
+   * \brief Free page copy list
+   *
+   * fatal: Operation is not defined yet.
+   */
   virtual void releaseCopyList(CopyList &) = 0;
 
-  //! PPN -> Blk
+  //! Convert physical page address to physical block number
   inline PPN getBlockFromPPN(PPN ppn) {
     return ppn % param.totalPhysicalBlocks;
   }
 
-  //! PPN -> Page
+  //! Convert physical page address to page index
   inline PPN getPageFromPPN(PPN ppn) { return ppn / param.totalPhysicalBlocks; }
 
-  //! Blk/Page -> PPN
+  //! Makge physical page address from physical block number and page index
   inline PPN makePPN(PPN block, PPN page) {
     return block + page * param.totalPhysicalBlocks;
   }
