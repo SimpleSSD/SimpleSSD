@@ -505,9 +505,6 @@ void PageLevel::releaseCopyList(CopyList &copy) {
 void PageLevel::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
   AbstractMapping::getStatList(list, prefix);
-
-  list.emplace_back(prefix + "demandpage.read", "Demand paging read count");
-  list.emplace_back(prefix + "demandpage.write", "Demand paging write count");
 }
 
 void PageLevel::getStatValues(std::vector<double> &values) noexcept {
