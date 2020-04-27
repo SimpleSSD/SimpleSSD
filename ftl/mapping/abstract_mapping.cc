@@ -82,24 +82,6 @@ AbstractMapping::AbstractMapping(ObjectData &o)
                   "FTL::Mapping::AbstractMapping::eventMemoryDone");
 }
 
-void AbstractMapping::makeSpare(LPN lpn, std::vector<uint8_t> &spare) {
-  if (spare.size() != sizeof(LPN)) {
-    spare.resize(sizeof(LPN));
-  }
-
-  memcpy(spare.data(), &lpn, sizeof(LPN));
-}
-
-LPN AbstractMapping::readSpare(std::vector<uint8_t> &spare) {
-  LPN lpn = InvalidLPN;
-
-  panic_if(spare.size() < sizeof(LPN), "Empty spare data.");
-
-  memcpy(&lpn, spare.data(), sizeof(LPN));
-
-  return lpn;
-}
-
 void AbstractMapping::handleMemoryCommand(uint64_t tag) {
   auto iter = memoryCommandList.find(tag);
 

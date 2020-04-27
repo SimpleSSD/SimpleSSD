@@ -59,9 +59,6 @@ class AbstractMapping : public Object {
   uint64_t writeLPNCount;
   uint64_t invalidateLPNCount;
 
-  virtual void makeSpare(LPN, std::vector<uint8_t> &);
-  virtual LPN readSpare(std::vector<uint8_t> &);
-
   inline uint64_t makeEntrySize(uint64_t total, uint64_t shift,
                                 ReadEntryFunction &readFunc,
                                 WriteEntryFunction &writeFunc,
