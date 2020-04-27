@@ -68,8 +68,8 @@ class PageLevel : public AbstractMapping {
 
   LPN getPageUsage(LPN, LPN) override;
 
-  uint32_t getValidPages(PPN) override;
-  uint64_t getAge(PPN) override;
+  uint32_t getValidPages(PPN, uint64_t) override;
+  uint64_t getAge(PPN, uint64_t) override;
 
   void readMapping(Request *, Event) override;
   void writeMapping(Request *, Event) override;

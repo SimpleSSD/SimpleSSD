@@ -390,11 +390,19 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
   return count * param.superpage;
 }
 
-uint32_t PageLevel::getValidPages(PPN ppn) {
+uint32_t PageLevel::getValidPages(PPN ppn, uint64_t nlp) {
+  panic_if(nlp != param.superpage, "Invalid access from block allocator.");
+
+  ppn /= nlp;
+
   return (uint32_t)blockMetadata[getSuperblockFromSPPN(ppn)].validPages.count();
 }
 
-uint64_t PageLevel::getAge(PPN ppn) {
+uint64_t PageLevel::getAge(PPN ppn, uint64_t nlp) {
+  panic_if(nlp != param.superpage, "Invalid access from block allocator.");
+
+  ppn /= nlp;
+
   return blockMetadata[getSuperblockFromSPPN(ppn)].insertedAt;
 }
 
