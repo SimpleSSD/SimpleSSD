@@ -214,12 +214,10 @@ void PageLevel::initialize(AbstractFTL *f,
   }
 
   // Make free block pool in allocator
-  uint64_t parallelism = param.parallelism / param.superpage;
-
-  for (uint64_t i = 0; i < parallelism; i++) {
+  for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
     PPN tmp = InvalidPPN;
 
-    allocator->allocateBlock(tmp);
+    allocator->allocateBlock(tmp, param.superpage);
   }
 
   // Perform filling
