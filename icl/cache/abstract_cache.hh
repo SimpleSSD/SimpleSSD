@@ -73,7 +73,9 @@ class AbstractCache : public Object {
    * \brief Lookup cache
    *
    * Set sreq->setAllocate() when cache needs new cacheline for current
-   * subrequest. Call manager->lookupDone when completed.
+   * subrequest. Set sreq->setMiss() when cache miss. Allocate and miss are
+   * separated because cacheline may contains partial content only.
+   * Call manager->lookupDone when completed.
    *
    * \param[in] sreq    Current subrequest
    */
@@ -102,7 +104,8 @@ class AbstractCache : public Object {
   /**
    * \brief Allocate cacheline in cache
    *
-   * When miss, cache should make place to store new data. Call
+   * This function will be called when sreq->setAllocate() in lookup function.
+   * Allocate empty cacheline here and set metadata properly. Call
    * manager->cacheDone when completed. Use manager->drain for data write-back.
    *
    * \param[in] sreq  Current subrequest

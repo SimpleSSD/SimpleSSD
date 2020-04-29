@@ -84,6 +84,7 @@ class AbstractManager : public Object {
   virtual void initialize(AbstractCache *ac) { cache = ac; }
 
   /* Interface for ICL::ICL */
+
   //! Submit read request
   virtual void read(HIL::SubRequest *) = 0;
 
@@ -100,6 +101,7 @@ class AbstractManager : public Object {
   virtual void dmaDone(HIL::SubRequest *) = 0;
 
   /* Interface for ICL::AbstractCache */
+
   /**
    * \brief Handler for cache lookup
    *
