@@ -32,6 +32,7 @@ class Config : public BaseConfig {
   enum class Mode : uint8_t {
     None,
     SetAssociative,
+    RingBuffer,
   };
 
   enum class EvictPolicyType : uint8_t {

@@ -8,6 +8,7 @@
 #include "icl/icl.hh"
 
 #include "hil/hil.hh"
+#include "icl/cache/ring_buffer.hh"
 #include "icl/cache/set_associative.hh"
 #include "icl/manager/basic.hh"
 #include "util/algorithm.hh"
@@ -27,11 +28,8 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   switch (mode) {
     case Config::Mode::None:
-      // pManager = new NoCache(object, this, pFTL);
-      panic("NoCache not implemented.");
-
-      break;
     case Config::Mode::SetAssociative:
+    case Config::Mode::RingBuffer:
       pManager = new BasicCache(object, this, pFTL);
 
       break;
@@ -45,6 +43,16 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   switch (mode) {
     case Config::Mode::SetAssociative:
       pCache = new SetAssociative(object, pManager, param);
+
+      break;
+    case Config::Mode::None:
+      // Create very small - two superpage size - ring buffer.
+      writeConfigUint(Section::InternalCache, Config::Key::CacheSize,
+                      param->parallelismLevel[0] * param->pageSize * 2);
+
+      /* fallthrough */
+    case Config::Mode::RingBuffer:
+      pCache = new RingBuffer(object, pManager, param);
 
       break;
     default:
