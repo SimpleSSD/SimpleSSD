@@ -20,7 +20,6 @@ namespace SimpleSSD::ICL {
 
 class SetAssociative : public AbstractCache {
  protected:
-  uint32_t sectorsInCacheLine;
   uint32_t setSize;
   uint32_t waySize;
 
@@ -105,7 +104,7 @@ class SetAssociative : public AbstractCache {
     panic_if(skipFront % minIO || skipEnd % minIO,
              "Skip bytes are not aligned to sector size.");
 
-    skipEndBit = sectorsInCacheLine - skipEndBit;
+    skipEndBit = sectorsInPage - skipEndBit;
 
     for (; skipFrontBit < skipEndBit; skipFrontBit++) {
       bitset.set(skipFrontBit);

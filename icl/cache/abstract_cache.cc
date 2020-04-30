@@ -13,12 +13,26 @@ namespace SimpleSSD::ICL {
 
 AbstractCache::AbstractCache(ObjectData &o, AbstractManager *m,
                              FTL::Parameter *p)
-    : Object(o), manager(m), parameter(p) {}
+    : Object(o),
+      sectorsInPage(MIN(p->pageSize / minIO, 1)),
+      manager(m),
+      parameter(p) {}
 
 AbstractCache::~AbstractCache() {}
 
 HIL::SubRequest *AbstractCache::getSubRequest(uint64_t tag) {
   return manager->getSubRequest(tag);
+}
+
+void AbstractCache::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, sectorsInPage);
+}
+
+void AbstractCache::restoreCheckpoint(std::istream &in) noexcept {
+  uint32_t tmp32;
+
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != sectorsInPage, "Page size mismatch.");
 }
 
 }  // namespace SimpleSSD::ICL

@@ -59,6 +59,7 @@ struct CacheLine {
 class AbstractCache : public Object {
  protected:
   static const uint64_t minIO = 512;
+  const uint32_t sectorsInPage;
 
   AbstractManager *manager;
   FTL::Parameter *parameter;
@@ -130,6 +131,9 @@ class AbstractCache : public Object {
    * \param[in] drain True when drain (write)
    */
   virtual void nvmDone(LPN lpn, bool drain) = 0;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::ICL

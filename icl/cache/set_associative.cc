@@ -23,8 +23,6 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
   cacheDataSize = parameter->pageSize;
 
-  sectorsInCacheLine = cacheDataSize / minIO;
-
   // Allocate cachelines
   setSize = 0;
   waySize = (uint32_t)readConfigUint(Section::InternalCache,
@@ -45,7 +43,7 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
   cacheline.reserve(setSize * waySize);
 
   for (uint64_t i = 0; i < (uint64_t)setSize * waySize; i++) {
-    cacheline.emplace_back(CacheLine(sectorsInCacheLine));
+    cacheline.emplace_back(CacheLine(sectorsInPage));
   }
 
   cacheSize = (uint64_t)setSize * waySize * cacheDataSize;
@@ -92,7 +90,7 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
       cacheSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Data");
 
   // Omit insertedAt and accessedAt
-  cacheTagSize = 8 + DIVCEIL(sectorsInCacheLine, 8);
+  cacheTagSize = 8 + DIVCEIL(sectorsInPage, 8);
 
   uint64_t totalTagSize = cacheTagSize * setSize * waySize;
 
@@ -447,7 +445,7 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     }
 
     // Check valid bits
-    Bitset test(sectorsInCacheLine);
+    Bitset test(sectorsInPage);
 
     updateSkip(test, sreq);
 
@@ -749,7 +747,8 @@ void SetAssociative::resetStatValues() noexcept {
 }
 
 void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, sectorsInCacheLine);
+  AbstractCache::createCheckpoint(out);
+
   BACKUP_SCALAR(out, setSize);
   BACKUP_SCALAR(out, waySize);
   BACKUP_SCALAR(out, dirtyLines);
@@ -809,8 +808,7 @@ void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
 void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   uint32_t tmp32;
 
-  RESTORE_SCALAR(in, tmp32);
-  panic_if(tmp32 != sectorsInCacheLine, "Cacheline size mismatch.");
+  AbstractCache::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, tmp32);
   panic_if(tmp32 != setSize, "Set size mismatch.");
@@ -821,7 +819,7 @@ void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, dirtyLines);
 
   uint64_t size;
-  CacheLine line(sectorsInCacheLine);
+  CacheLine line(sectorsInPage);
 
   RESTORE_SCALAR(in, size);
 
