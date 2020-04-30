@@ -168,6 +168,7 @@ set(SRC_ICL
 )
 set(SRC_ICL_CACHE
   icl/cache/abstract_cache.cc
+  icl/cache/ring_buffer.cc
   icl/cache/set_associative.cc
 )
 set(SRC_ICL_MANAGER
