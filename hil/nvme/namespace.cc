@@ -85,7 +85,7 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
   nsid = _nsid;
   nsinfo = *_info;
 
-  if (_disk) {
+  if (_disk && _disk->enable) {
     if (_disk->path.length() == 0) {
       disk = new MemDisk(object);
     }
@@ -102,9 +102,12 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
     panic_if(diskSize != nsinfo.size * nsinfo.lbaSize && _disk->strict,
              "Disk size does not match with configuration");
 
+    const char *path =
+        _disk->path.length() == 0 ? "In-memory" : _disk->path.c_str();
+
     debugprint(Log::DebugID::HIL_NVMe,
-               "NS %-5d | DISK | %" PRIx64 "h bytes | %s", nsid, diskSize,
-               _disk->path.c_str());
+               "NS %-5d | DISK   | %" PRIx64 "h bytes | %s", nsid, diskSize,
+               path);
   }
 
   inited = true;
