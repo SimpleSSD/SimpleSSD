@@ -238,6 +238,10 @@ uint64_t System::allocate(uint64_t size, MemoryType type, std::string &&name,
   uint64_t lastBase =
       type == MemoryType::DRAM ? DRAMbaseAddress : SRAMbaseAddress;
 
+  if (UNLIKELY(unallocated == 0)) {
+    return 1;
+  }
+
   for (auto &iter : allocatedAddressMap) {
     if (validate(iter.base, iter.size) == type) {
       unallocated -= iter.size;
