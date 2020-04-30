@@ -28,8 +28,8 @@ class RingBuffer : public AbstractCache {
   std::vector<CacheLine> cacheline;
   std::map<LPN, uint64_t> tagHashTable;
 
-  // Evict function
-  // compare function
+  std::function<CPU::Function(uint64_t &)> evictFunction;
+  std::function<uint64_t(uint64_t, uint64_t)> compareFunction;
 
   // Lookup pending
   std::unordered_multimap<LPN, uint64_t> lookupList;
@@ -48,6 +48,8 @@ class RingBuffer : public AbstractCache {
   std::unordered_map<LPN, uint64_t> evictList;
 
   // Victim selection functions
+  CPU::Function fifoEviction(uint64_t &);
+  CPU::Function lruEviction(uint64_t &);
 
   // Helper functions
   CPU::Function getValidLine(LPN, uint64_t &);

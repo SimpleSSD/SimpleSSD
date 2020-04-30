@@ -72,8 +72,36 @@ RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
   // Create victim selection
   switch (policy) {
     case Config::EvictPolicyType::FIFO:
+      evictFunction = [this](uint64_t &i) -> CPU::Function {
+        return fifoEviction(i);
+      };
+      compareFunction = [this](uint64_t a, uint64_t b) -> uint64_t {
+        auto &ca = cacheline.at(a);
+        auto &cb = cacheline.at(b);
+
+        if (ca.insertedAt < cb.insertedAt) {
+          return a;
+        }
+
+        return b;
+      };
+
       break;
     case Config::EvictPolicyType::LRU:
+      evictFunction = [this](uint64_t &i) -> CPU::Function {
+        return lruEviction(i);
+      };
+      compareFunction = [this](uint64_t a, uint64_t b) -> uint64_t {
+        auto &ca = cacheline.at(a);
+        auto &cb = cacheline.at(b);
+
+        if (ca.accessedAt < cb.accessedAt) {
+          return a;
+        }
+
+        return b;
+      };
+
       break;
   }
 
@@ -90,6 +118,48 @@ RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
 }
 
 RingBuffer::~RingBuffer() {}
+
+CPU::Function RingBuffer::fifoEviction(uint64_t &idx) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  idx = totalEntries;
+
+  uint64_t min = std::numeric_limits<uint64_t>::max();
+
+  for (auto &iter : tagHashTable) {
+    auto &line = cacheline.at(iter.second);
+
+    if (line.valid && line.insertedAt < min && !line.dmaPending &&
+        !line.nvmPending) {
+      min = line.insertedAt;
+      idx = iter.second;
+    }
+  }
+
+  return fstat;
+}
+
+CPU::Function RingBuffer::lruEviction(uint64_t &idx) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  idx = totalEntries;
+
+  uint64_t min = std::numeric_limits<uint64_t>::max();
+
+  for (auto &iter : tagHashTable) {
+    auto &line = cacheline.at(iter.second);
+
+    if (line.valid && line.accessedAt < min && !line.dmaPending &&
+        !line.nvmPending) {
+      min = line.accessedAt;
+      idx = iter.second;
+    }
+  }
+
+  return fstat;
+}
 
 CPU::Function RingBuffer::getValidLine(LPN lpn, uint64_t &idx) {
   CPU::Function fstat;
@@ -132,9 +202,13 @@ void RingBuffer::getCleanLine(uint64_t &idx) {
     auto &line = cacheline.at(iter.second);
 
     if (!line.dirty) {
-      idx = iter.second;
+      if (idx == totalEntries) {
+        idx = iter.second;
+      }
+      else {
+        idx = compareFunction(iter.second, idx);
+      }
 
-      // TODO: Use compare function here
       break;
     }
   }
