@@ -24,6 +24,7 @@ class RingBuffer : public AbstractCache {
   uint64_t evictThreshold;
   uint64_t dirtyLines;
 
+  uint64_t totalEntries;
   std::vector<CacheLine> cacheline;
   // Evict function
   // compare function

@@ -20,29 +20,30 @@ RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
   uint64_t cacheSize =
       readConfigUint(Section::InternalCache, Config::Key::CacheSize);
 
-  uint64_t entries = MIN(cacheSize / cacheDataSize, p->parallelismLevel[0]);
+  uint64_t totalEntries =
+      MIN(cacheSize / cacheDataSize, p->parallelismLevel[0]);
 
-  cacheline.reserve(entries);
+  cacheline.reserve(totalEntries);
 
-  for (uint64_t i = 0; i < entries; i++) {
+  for (uint64_t i = 0; i < totalEntries; i++) {
     cacheline.emplace_back(CacheLine(sectorsInPage));
   }
 
-  cacheSize = entries * cacheDataSize;  // Recalculate
+  cacheSize = totalEntries * cacheDataSize;  // Recalculate
 
   debugprint(Log::DebugID::ICL_RingBuffer,
-             "CREATE  | Line size %u | Capacity %" PRIu64, cacheDataSize,
+             "CREATE | Line size %u | Capacity %" PRIu64, cacheDataSize,
              cacheSize);
 
   // Dirty cacheline threshold
   evictThreshold =
       readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold) *
-      entries;
+      totalEntries;
 
   // Allocate memory
   cacheTagSize = 8 + DIVCEIL(sectorsInPage, 8);
 
-  uint64_t totalTagSize = cacheTagSize * entries;
+  uint64_t totalTagSize = cacheTagSize * totalEntries;
 
   /// Tag first
   if (object.memory->allocate(cacheTagSize, Memory::MemoryType::SRAM, "",
