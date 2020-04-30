@@ -39,15 +39,20 @@ class RingBuffer : public AbstractCache {
   std::unordered_multimap<LPN, uint64_t> missConflictList;
 
   // Allocate pending
+  std::list<uint64_t> allocateList;
 
   // Flush pending
+  std::list<std::pair<uint64_t, std::unordered_map<LPN, uint64_t>>> flushList;
 
   // Evict pending
+  std::unordered_map<LPN, uint64_t> evictList;
 
   // Victim selection functions
 
   // Helper functions
   CPU::Function getValidLine(LPN, uint64_t &);
+  CPU::Function getEmptyLine(uint64_t &);
+  void getCleanLine(uint64_t &);
 
   inline uint64_t makeTagAddress(uint64_t idx) {
     return cacheTagBaseAddress + cacheTagSize * idx;
@@ -56,6 +61,14 @@ class RingBuffer : public AbstractCache {
   inline uint64_t makeDataAddress(uint64_t idx) {
     return cacheDataBaseAddress + cacheDataSize * idx;
   }
+
+  void tryLookup(LPN, bool = false);
+  void tryAllocate(LPN);
+
+  void collect(std::vector<FlushContext> &);
+
+  Event eventReadTagAll;  // Read all tag
+  void readAll(uint64_t, Event);
 
   Event eventLookupDone;  // Call manager->lookupDone
   Event eventCacheDone;   // Call manager->cacheDone
