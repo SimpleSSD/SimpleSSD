@@ -355,7 +355,7 @@ void RingBuffer::lookup(HIL::SubRequest *sreq) {
       line.validbits |= test;
     }
     else {
-      test &= line.valid;
+      test &= line.validbits;
 
       if (test.none()) {
         sreq->setMiss();

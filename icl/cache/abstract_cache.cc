@@ -14,7 +14,7 @@ namespace SimpleSSD::ICL {
 AbstractCache::AbstractCache(ObjectData &o, AbstractManager *m,
                              FTL::Parameter *p)
     : Object(o),
-      sectorsInPage(MIN(p->pageSize / minIO, 1)),
+      sectorsInPage(MAX(p->pageSize / minIO, 1)),
       manager(m),
       parameter(p) {
   auto evictMode = (Config::Granularity)readConfigUint(
