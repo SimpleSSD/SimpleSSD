@@ -26,7 +26,7 @@ class RingBuffer : public AbstractCache {
 
   uint64_t totalEntries;
   std::vector<CacheLine> cacheline;
-  std::map<LPN, uint64_t> tagHashTable;
+  std::unordered_map<LPN, uint64_t> tagHashTable;
 
   std::function<CPU::Function(uint64_t &)> evictFunction;
   std::function<uint64_t(uint64_t, uint64_t)> compareFunction;
