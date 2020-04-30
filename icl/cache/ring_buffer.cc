@@ -249,7 +249,38 @@ void RingBuffer::tryAllocate(LPN lpn) {
 }
 
 void RingBuffer::collect(std::vector<FlushContext> &list) {
-  // TODO: Fill here
+  std::vector<uint64_t> collected(pagesToEvict, totalEntries);
+
+  for (auto &iter : tagHashTable) {
+    auto &line = cacheline.at(iter.second);
+
+    if (line.valid && line.dirty && !line.dmaPending && !line.nvmPending) {
+      uint32_t offset = line.tag % pagesToEvict;
+
+      auto &idx = collected.at(offset);
+
+      if (idx < totalEntries) {
+        idx = compareFunction(idx, iter.second);
+      }
+      else {
+        idx = iter.second;
+      }
+    }
+  }
+
+  // Prepare list
+  list.reserve(pagesToEvict);
+
+  for (auto &i : collected) {
+    if (i < totalEntries) {
+      auto &line = cacheline.at(i);
+
+      line.nvmPending = true;
+
+      evictList.emplace(line.tag, i);
+      list.emplace_back(FlushContext(line.tag, makeDataAddress(i)));
+    }
+  }
 }
 
 void RingBuffer::lookup(HIL::SubRequest *sreq) {
