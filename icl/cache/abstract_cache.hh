@@ -61,6 +61,8 @@ class AbstractCache : public Object {
   static const uint64_t minIO = 512;
   const uint32_t sectorsInPage;
 
+  uint32_t pagesToEvict;
+
   AbstractManager *manager;
   FTL::Parameter *parameter;
 

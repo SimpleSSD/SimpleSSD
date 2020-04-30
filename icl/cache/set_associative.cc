@@ -15,9 +15,6 @@ namespace SimpleSSD::ICL {
 SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
                                FTL::Parameter *p)
     : AbstractCache(o, m, p), dirtyLines(0) {
-  auto evictMode = (Config::Granularity)readConfigUint(
-      Section::InternalCache, Config::Key::EvictGranularity);
-
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
 
@@ -52,33 +49,6 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
       Log::DebugID::ICL_SetAssociative,
       "CREATE  | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
       setSize, waySize, cacheDataSize, cacheSize);
-
-  // # pages to evict once
-  switch (evictMode) {
-    case Config::Granularity::FirstLevel:
-      pagesToEvict = parameter->parallelismLevel[0];
-
-      break;
-    case Config::Granularity::SecondLevel:
-      pagesToEvict = parameter->parallelismLevel[0];
-      pagesToEvict *= parameter->parallelismLevel[1];
-
-      break;
-    case Config::Granularity::ThirdLevel:
-      pagesToEvict = parameter->parallelismLevel[0];
-      pagesToEvict *= parameter->parallelismLevel[1];
-      pagesToEvict *= parameter->parallelismLevel[2];
-
-      break;
-    case Config::Granularity::AllLevel:
-      pagesToEvict = parameter->parallelism;
-
-      break;
-    default:
-      panic("Unexpected eviction granularity.");
-
-      break;
-  }
 
   // Dirty pages threshold
   evictThreshold =

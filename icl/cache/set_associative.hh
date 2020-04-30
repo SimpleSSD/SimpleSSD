@@ -23,8 +23,6 @@ class SetAssociative : public AbstractCache {
   uint32_t setSize;
   uint32_t waySize;
 
-  uint32_t pagesToEvict;
-
   uint32_t cacheTagSize;
   uint32_t cacheDataSize;
   uint64_t cacheTagBaseAddress;

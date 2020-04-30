@@ -16,7 +16,37 @@ AbstractCache::AbstractCache(ObjectData &o, AbstractManager *m,
     : Object(o),
       sectorsInPage(MIN(p->pageSize / minIO, 1)),
       manager(m),
-      parameter(p) {}
+      parameter(p) {
+  auto evictMode = (Config::Granularity)readConfigUint(
+      Section::InternalCache, Config::Key::EvictGranularity);
+
+  // # pages to evict once
+  switch (evictMode) {
+    case Config::Granularity::FirstLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+
+      break;
+    case Config::Granularity::SecondLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+      pagesToEvict *= parameter->parallelismLevel[1];
+
+      break;
+    case Config::Granularity::ThirdLevel:
+      pagesToEvict = parameter->parallelismLevel[0];
+      pagesToEvict *= parameter->parallelismLevel[1];
+      pagesToEvict *= parameter->parallelismLevel[2];
+
+      break;
+    case Config::Granularity::AllLevel:
+      pagesToEvict = parameter->parallelism;
+
+      break;
+    default:
+      panic("Unexpected eviction granularity.");
+
+      break;
+  }
+}
 
 AbstractCache::~AbstractCache() {}
 
