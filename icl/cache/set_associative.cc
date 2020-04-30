@@ -212,7 +212,7 @@ void SetAssociative::getCleanWay(uint32_t set, uint32_t &way) {
   for (uint32_t i = 0; i < waySize; i++) {
     auto &line = cacheline.at(set * waySize + i);
 
-    if (line.valid && !line.dirty) {
+    if (line.valid && !line.dirty && !line.dmaPending && !line.nvmPending) {
       if (way == waySize) {
         way = i;
       }

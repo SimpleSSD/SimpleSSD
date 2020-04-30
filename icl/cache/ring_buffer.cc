@@ -202,7 +202,7 @@ void RingBuffer::getCleanLine(uint64_t &idx) {
   for (auto &iter : tagHashTable) {
     auto &line = cacheline.at(iter.second);
 
-    if (!line.dirty) {
+    if (!line.dirty && !line.dmaPending && !line.nvmPending) {
       if (idx == totalEntries) {
         idx = iter.second;
       }
