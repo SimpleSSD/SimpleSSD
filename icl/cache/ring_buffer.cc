@@ -22,8 +22,7 @@ RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
   uint64_t cacheSize =
       readConfigUint(Section::InternalCache, Config::Key::CacheSize);
 
-  uint64_t totalEntries =
-      MIN(cacheSize / cacheDataSize, p->parallelismLevel[0]);
+  totalEntries = MAX(cacheSize / cacheDataSize, p->parallelismLevel[0]);
 
   cacheline.reserve(totalEntries);
 
