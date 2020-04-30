@@ -144,13 +144,13 @@ void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
 }
 
 bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
-                                 NamespaceInformation *info) {
+                                 NamespaceInformation *nsinfo) {
   std::list<LPNRange> allocated;
   std::list<LPNRange> unallocated;
 
   // Allocate LPN
   uint64_t requestedLogicalPages =
-      info->size / logicalPageSize * lbaSize[info->lbaFormatIndex];
+      nsinfo->size / logicalPageSize * lbaSize[nsinfo->lbaFormatIndex];
   uint64_t unallocatedLogicalPages = totalLogicalPages - allocatedLogicalPages;
 
   if (requestedLogicalPages > unallocatedLogicalPages) {
@@ -212,27 +212,27 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
   // Allocated unallocated area to namespace
   for (auto iter = unallocated.begin(); iter != unallocated.end(); ++iter) {
     if (iter->second >= requestedLogicalPages) {
-      info->namespaceRange = *iter;
-      info->namespaceRange.second = requestedLogicalPages;
+      nsinfo->namespaceRange = *iter;
+      nsinfo->namespaceRange.second = requestedLogicalPages;
 
       break;
     }
   }
 
-  if (info->namespaceRange.second == 0) {
+  if (nsinfo->namespaceRange.second == 0) {
     return false;
   }
 
   allocatedLogicalPages += requestedLogicalPages;
 
   // Fill Information
-  info->lpnSize = logicalPageSize;
-  info->sizeInByteL = requestedLogicalPages * logicalPageSize;
-  info->sizeInByteH = 0;
+  nsinfo->lpnSize = logicalPageSize;
+  nsinfo->sizeInByteL = requestedLogicalPages * logicalPageSize;
+  nsinfo->sizeInByteH = 0;
 
   // Create namespace
   Namespace *pNS = new Namespace(object, this);
-  pNS->setInfo(nsid, info, disk);
+  pNS->setInfo(nsid, nsinfo, disk);
 
   auto ret = namespaceList.emplace(nsid, pNS);
 
@@ -240,7 +240,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
 
   debugprint(Log::DebugID::HIL_NVMe,
              "NS %-5d | CREATE | LBA size %" PRIu32 " | Capacity %" PRIu64,
-             nsid, info->lbaSize, info->size);
+             nsid, nsinfo->lbaSize, nsinfo->size);
 
   return true;
 }
@@ -249,7 +249,7 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
   auto iter = namespaceList.find(nsid);
 
   if (iter != namespaceList.end()) {
-    auto info = iter->second->getInfo();
+    auto nsinfo = iter->second->getInfo();
     auto list = iter->second->getAttachment();
 
     for (auto &ctrlid : list) {
@@ -266,7 +266,7 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
       }
     }
 
-    allocatedLogicalPages -= info->namespaceRange.second;
+    allocatedLogicalPages -= nsinfo->namespaceRange.second;
 
     debugprint(Log::DebugID::HIL_NVMe, "NS %-5d | DELETE", nsid);
 
@@ -425,7 +425,7 @@ void Subsystem::init() {
   totalByteSize = totalLogicalPages * logicalPageSize;
 
   if (nNamespaces > 0) {
-    NamespaceInformation info;
+    NamespaceInformation nsinfo;
     uint64_t reservedSize = 0;
     uint64_t nsSize;
     uint64_t zeroCount = 0;
@@ -450,16 +450,16 @@ void Subsystem::init() {
 
     for (auto &ns : list) {
       // Make FLABS
-      for (info.lbaFormatIndex = 0; info.lbaFormatIndex < nLBAFormat;
-           info.lbaFormatIndex++) {
-        if (lbaSize[info.lbaFormatIndex] == ns.lbaSize) {
-          info.lbaSize = lbaSize[info.lbaFormatIndex];
+      for (nsinfo.lbaFormatIndex = 0; nsinfo.lbaFormatIndex < nLBAFormat;
+           nsinfo.lbaFormatIndex++) {
+        if (lbaSize[nsinfo.lbaFormatIndex] == ns.lbaSize) {
+          nsinfo.lbaSize = lbaSize[nsinfo.lbaFormatIndex];
 
           break;
         }
       }
 
-      panic_if(info.lbaFormatIndex == nLBAFormat,
+      panic_if(nsinfo.lbaFormatIndex == nLBAFormat,
                "Failed to setting LBA size (LBA size must 512B ~ 4KB).");
 
       if (ns.capacity) {
@@ -472,10 +472,10 @@ void Subsystem::init() {
       }
 
       // Other fields will be filled in createNamespace function
-      info.size = nsSize;
-      info.capacity = info.size;
+      nsinfo.size = nsSize;
+      nsinfo.capacity = nsinfo.size;
 
-      if (!_createNamespace(ns.nsid, ns.pDisk, &info)) {
+      if (!_createNamespace(ns.nsid, ns.pDisk, &nsinfo)) {
         panic("Failed to create namespace %u", ns.nsid);
       }
     }

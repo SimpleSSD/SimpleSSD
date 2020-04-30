@@ -77,13 +77,13 @@ bool Namespace::isAttached(ControllerID ctrlid) {
 }
 
 NamespaceInformation *Namespace::getInfo() {
-  return &info;
+  return &nsinfo;
 }
 
 void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
                         Config::Disk *_disk) {
   nsid = _nsid;
-  info = *_info;
+  nsinfo = *_info;
 
   if (_disk) {
     if (_disk->path.length() == 0) {
@@ -96,10 +96,10 @@ void Namespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
       disk = new Disk(object);
     }
 
-    auto diskSize = disk->open(_disk->path, info.size * info.lbaSize);
+    auto diskSize = disk->open(_disk->path, nsinfo.size * nsinfo.lbaSize);
 
     panic_if(diskSize == 0, "Failed to open/create disk image");
-    panic_if(diskSize != info.size * info.lbaSize && _disk->strict,
+    panic_if(diskSize != nsinfo.size * nsinfo.lbaSize && _disk->strict,
              "Disk size does not match with configuration");
 
     debugprint(Log::DebugID::HIL_NVMe,
@@ -124,7 +124,7 @@ void Namespace::format() {
     delete disk;
     disk = new MemDisk(object);
 
-    disk->open("", info.size * info.lbaSize);
+    disk->open("", nsinfo.size * nsinfo.lbaSize);
   }
 }
 
@@ -135,8 +135,8 @@ void Namespace::read(uint64_t bytesize) {
     health.readCommandH++;
   }
 
-  info.readBytes += bytesize;
-  health.readL = info.readBytes / 1000 / 512;
+  nsinfo.readBytes += bytesize;
+  health.readL = nsinfo.readBytes / 1000 / 512;
 }
 
 void Namespace::write(uint64_t bytesize) {
@@ -146,8 +146,8 @@ void Namespace::write(uint64_t bytesize) {
     health.writeCommandH++;
   }
 
-  info.writeBytes += bytesize;
-  health.writeL = info.writeBytes / 1000 / 512;
+  nsinfo.writeBytes += bytesize;
+  health.writeL = nsinfo.writeBytes / 1000 / 512;
 }
 
 Disk *Namespace::getDisk() {
@@ -166,22 +166,10 @@ void Namespace::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, inited);
   BACKUP_SCALAR(out, nsid);
 
-  BACKUP_SCALAR(out, info.size);
-  BACKUP_SCALAR(out, info.capacity);
-  BACKUP_SCALAR(out, info.utilization);
-  BACKUP_SCALAR(out, info.sizeInByteL);
-  BACKUP_SCALAR(out, info.sizeInByteH);
-  BACKUP_SCALAR(out, info.lbaFormatIndex);
-  BACKUP_SCALAR(out, info.dataProtectionSettings);
-  BACKUP_SCALAR(out, info.namespaceSharingCapabilities);
-  BACKUP_SCALAR(out, info.anaGroupIdentifier);
-  BACKUP_SCALAR(out, info.nvmSetIdentifier);
-  BACKUP_SCALAR(out, info.readBytes);
-  BACKUP_SCALAR(out, info.writeBytes);
-  BACKUP_SCALAR(out, info.lbaSize);
-  BACKUP_SCALAR(out, info.lpnSize);
-  BACKUP_SCALAR(out, info.namespaceRange.first);
-  BACKUP_SCALAR(out, info.namespaceRange.second);
+  BACKUP_SCALAR(out, nsinfo);
+
+  BACKUP_SCALAR(out, nsinfo.namespaceRange.first);
+  BACKUP_SCALAR(out, nsinfo.namespaceRange.second);
 
   BACKUP_BLOB(out, health.data, 0x200);
 
@@ -217,26 +205,13 @@ void Namespace::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, inited);
   RESTORE_SCALAR(in, nsid);
 
-  RESTORE_SCALAR(in, info.size);
-  RESTORE_SCALAR(in, info.capacity);
-  RESTORE_SCALAR(in, info.utilization);
-  RESTORE_SCALAR(in, info.sizeInByteL);
-  RESTORE_SCALAR(in, info.sizeInByteH);
-  RESTORE_SCALAR(in, info.lbaFormatIndex);
-  RESTORE_SCALAR(in, info.dataProtectionSettings);
-  RESTORE_SCALAR(in, info.namespaceSharingCapabilities);
-  RESTORE_SCALAR(in, info.anaGroupIdentifier);
-  RESTORE_SCALAR(in, info.nvmSetIdentifier);
-  RESTORE_SCALAR(in, info.readBytes);
-  RESTORE_SCALAR(in, info.writeBytes);
-  RESTORE_SCALAR(in, info.lbaSize);
-  RESTORE_SCALAR(in, info.lpnSize);
+  RESTORE_SCALAR(in, nsinfo);
 
   uint64_t val1, val2;
   RESTORE_SCALAR(in, val1);
   RESTORE_SCALAR(in, val2);
 
-  info.namespaceRange = LPNRange(val1, val2);
+  nsinfo.namespaceRange = LPNRange(val1, val2);
 
   RESTORE_BLOB(in, health.data, 0x200);
 
