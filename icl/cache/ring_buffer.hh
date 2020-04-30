@@ -26,12 +26,17 @@ class RingBuffer : public AbstractCache {
 
   uint64_t totalEntries;
   std::vector<CacheLine> cacheline;
+  std::unordered_map<LPN, uint64_t> tagHashTable;
+
   // Evict function
   // compare function
 
   // Lookup pending
+  std::unordered_multimap<LPN, uint64_t> lookupList;
 
   // Miss pending
+  std::unordered_set<LPN> missList;
+  std::unordered_multimap<LPN, uint64_t> missConflictList;
 
   // Allocate pending
 
@@ -42,6 +47,18 @@ class RingBuffer : public AbstractCache {
   // Victim selection functions
 
   // Helper functions
+  CPU::Function getValidLine(LPN, uint64_t &);
+
+  inline uint64_t makeTagAddress(uint64_t idx) {
+    return cacheTagBaseAddress + cacheTagSize * idx;
+  }
+
+  inline uint64_t makeDataAddress(uint64_t idx) {
+    return cacheDataBaseAddress + cacheDataSize * idx;
+  }
+
+  Event eventLookupDone;  // Call manager->lookupDone
+  Event eventCacheDone;   // Call manager->cacheDone
 
  public:
   RingBuffer(ObjectData &, AbstractManager *, FTL::Parameter *);
