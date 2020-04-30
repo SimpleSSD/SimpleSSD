@@ -209,8 +209,6 @@ void RingBuffer::getCleanLine(uint64_t &idx) {
       else {
         idx = compareFunction(iter.second, idx);
       }
-
-      break;
     }
   }
 }
