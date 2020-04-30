@@ -68,6 +68,22 @@ class AbstractCache : public Object {
 
   HIL::SubRequest *getSubRequest(uint64_t);
 
+  inline void updateSkip(Bitset &bitset, HIL::SubRequest *req) {
+    uint32_t skipFront = req->getSkipFront();
+    uint32_t skipEnd = req->getSkipEnd();
+    uint32_t skipFrontBit = skipFront / minIO;
+    uint32_t skipEndBit = skipEnd / minIO;
+
+    panic_if(skipFront % minIO || skipEnd % minIO,
+             "Skip bytes are not aligned to sector size.");
+
+    skipEndBit = sectorsInPage - skipEndBit;
+
+    for (; skipFrontBit < skipEndBit; skipFrontBit++) {
+      bitset.set(skipFrontBit);
+    }
+  }
+
  public:
   AbstractCache(ObjectData &, AbstractManager *, FTL::Parameter *);
   virtual ~AbstractCache();
