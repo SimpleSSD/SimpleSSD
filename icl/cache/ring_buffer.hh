@@ -11,6 +11,7 @@
 #define __SIMPLESSD_ICL_CACHE_RING_BUFFER_HH__
 
 #include "icl/cache/abstract_cache.hh"
+#include "icl/manager/abstract_manager.hh"
 
 namespace SimpleSSD::ICL {
 
@@ -65,7 +66,7 @@ class RingBuffer : public AbstractCache {
   }
 
   void tryLookup(LPN, bool = false);
-  void tryAllocate(LPN);
+  void tryAllocate();
 
   void collect(std::vector<FlushContext> &);
 

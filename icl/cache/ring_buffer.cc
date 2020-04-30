@@ -48,14 +48,14 @@ RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
   uint64_t totalTagSize = cacheTagSize * totalEntries;
 
   /// Tag first
-  if (object.memory->allocate(cacheTagSize, Memory::MemoryType::SRAM, "",
+  if (object.memory->allocate(totalTagSize, Memory::MemoryType::SRAM, "",
                               true) == 0) {
     cacheTagBaseAddress = object.memory->allocate(
-        cacheTagSize, Memory::MemoryType::SRAM, "ICL::RingBuffer::Tag");
+        totalTagSize, Memory::MemoryType::SRAM, "ICL::RingBuffer::Tag");
   }
   else {
     cacheTagBaseAddress = object.memory->allocate(
-        cacheTagSize, Memory::MemoryType::DRAM, "ICL::RingBuffer::Tag");
+        totalTagSize, Memory::MemoryType::DRAM, "ICL::RingBuffer::Tag");
   }
 
   /// Data next
@@ -193,6 +193,8 @@ CPU::Function RingBuffer::getEmptyLine(uint64_t &idx) {
       }
     }
   }
+
+  return fstat;
 }
 
 void RingBuffer::getCleanLine(uint64_t &idx) {
@@ -236,7 +238,7 @@ void RingBuffer::tryLookup(LPN lpn, bool flush) {
   }
 }
 
-void RingBuffer::tryAllocate(LPN lpn) {
+void RingBuffer::tryAllocate() {
   if (allocateList.size() > 0) {
     // Try allocate again
     auto req = getSubRequest(allocateList.front());
@@ -398,9 +400,7 @@ void RingBuffer::flush(HIL::SubRequest *sreq) {
     i++;
   }
 
-  auto ret = flushList.emplace_back(sreq->getTag());
-
-  ret.second = std::move(lpnList);
+  auto ret = flushList.emplace_back(sreq->getTag(), std::move(lpnList));
 
   manager->drain(list);
 
@@ -567,7 +567,7 @@ void RingBuffer::dmaDone(LPN lpn) {
     tryLookup(lpn);
 
     // Allocate
-    tryAllocate(lpn);
+    tryAllocate();
   }
 }
 
@@ -637,7 +637,7 @@ void RingBuffer::nvmDone(LPN lpn, bool drain) {
   tryLookup(lpn, found);
 
   // Allocate
-  tryAllocate(lpn);
+  tryAllocate();
 }
 
 void RingBuffer::getStatList(std::vector<Stat> &list,
