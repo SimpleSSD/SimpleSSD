@@ -75,7 +75,7 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
         totalTagSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Tag");
   }
 
-  // Create victim cacheline selecttion
+  // Create victim cacheline selection
   switch (policy) {
     case Config::EvictPolicyType::FIFO:
       evictFunction = [this](uint32_t s, uint32_t &w) -> CPU::Function {
