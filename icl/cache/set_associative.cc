@@ -47,7 +47,7 @@ SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
 
   debugprint(
       Log::DebugID::ICL_SetAssociative,
-      "CREATE  | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
+      "CREATE | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
       setSize, waySize, cacheDataSize, cacheSize);
 
   // Dirty pages threshold
@@ -405,7 +405,7 @@ void SetAssociative::lookup(HIL::SubRequest *sreq) {
     if (line.dmaPending || line.nvmPending) {
       debugprint(Log::DebugID::ICL_SetAssociative,
                  "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
 
       // We need to stall this lookup
       lookupList.emplace(line.tag, sreq->getTag());
