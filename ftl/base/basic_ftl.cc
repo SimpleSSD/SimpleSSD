@@ -578,7 +578,7 @@ void BasicFTL::gc_eraseSubmit() {
              blockId);
   for (uint i = 0; i < minMappingSize; i++) {
     pFIL->erase(
-        FIL::Request(pMapper->getBlockFromSB(blockId, i), eventGCEraseDone, 0));
+        FIL::Request(pMapper->getBlockFromSuperblock(blockId, i), eventGCEraseDone, 0));
     gcctx.copyctx.eraseCounter++;
   }
 }
