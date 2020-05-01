@@ -118,7 +118,7 @@ class Request {
 using SuperRequest = std::vector<Request *>;
 
 struct CopyContext {
-  PPN blockID;
+  PPN sblockID;  // superblockID
 
   std::vector<SuperRequest> list;
   std::vector<SuperRequest>::iterator iter;

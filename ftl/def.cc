@@ -143,7 +143,7 @@ void CopyContext::releaseList() {
 }
 
 CopyContext &CopyContext::operator=(CopyContext &&rhs) {
-  blockID = rhs.blockID;
+  sblockID = rhs.sblockID;
   std::swap(list, rhs.list);
   iter = std::move(rhs.iter);
   tag2ListIdx = std::move(rhs.tag2ListIdx);

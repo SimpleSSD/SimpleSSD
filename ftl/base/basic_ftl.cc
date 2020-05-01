@@ -440,7 +440,7 @@ void BasicFTL::gc_setNextVictimBlock(uint64_t now) {
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
-    gcctx.copyctx.blockID = nextVictimBlock;
+    gcctx.copyctx.sblockID = nextVictimBlock;
     gcctx.copyctx.beginAt = now;
     pMapper->getCopyContext(gcctx.copyctx, eventGCReadSubmit);
   }
@@ -563,7 +563,7 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
       debugprint(Log::DebugID::FTL_PageLevel,
                  "GC | COPYDONE  | BLOCK % " PRIu64 " PAGES %" PRIu64
                  " | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 copyctx.blockID, copyctx.list.size(), copyctx.beginAt, now,
+                 copyctx.sblockID, copyctx.list.size(), copyctx.beginAt, now,
                  now - copyctx.beginAt);
       scheduleNow(eventGCEraseSubmit);
     }
@@ -571,7 +571,7 @@ void BasicFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 }
 
 void BasicFTL::gc_eraseSubmit() {
-  PPN blockId = gcctx.copyctx.blockID;
+  PPN blockId = gcctx.copyctx.sblockID;
   panic_if(pMapper->getValidPages(blockId) > 0, "valid page copy not done");
 
   debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
@@ -594,10 +594,10 @@ void BasicFTL::gc_eraseDone(uint64_t now) {
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
                " (%" PRIu64 ")",
-               copyctx.blockID, copyctx.beginAt, now, now - copyctx.beginAt);
+               copyctx.sblockID, copyctx.beginAt, now, now - copyctx.beginAt);
 
-    pMapper->markBlockErased(copyctx.blockID);
-    pAllocator->reclaimBlocks(copyctx.blockID, eventGCSetNextVictimBlock);
+    pMapper->markBlockErased(copyctx.sblockID);
+    pAllocator->reclaimBlocks(copyctx.sblockID, eventGCSetNextVictimBlock);
   }
 }
 

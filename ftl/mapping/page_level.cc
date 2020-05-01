@@ -480,7 +480,7 @@ void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  const auto block = &blockMetadata[copyctx.blockID]; // superblock
+  const auto block = &blockMetadata[copyctx.sblockID]; // superblock
 
   copyctx.reset();
   copyctx.list.reserve(block->validPages.count());
@@ -493,7 +493,7 @@ void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
       Request *req;
 
       for (uint j = 0; j < param.superpage; j++) {
-        PPN blockID = getBlockFromSuperblock(copyctx.blockID, j);
+        PPN blockID = getBlockFromSuperblock(copyctx.sblockID, j);
         req = new Request(makePPN(blockID, i));
         sReq.emplace_back(req);
       }
