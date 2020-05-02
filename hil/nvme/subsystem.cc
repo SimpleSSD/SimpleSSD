@@ -756,7 +756,7 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
 
 void Subsystem::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
-  prefix += "nvme.";
+  auto nprefix = prefix + "hil_nvme.";
 
   // All controllers
   for (auto &ctrl : controllerList) {
@@ -765,32 +765,32 @@ void Subsystem::getStatList(std::vector<Stat> &list,
     ctrlname += std::to_string(ctrl.first);
     ctrlname += ".";
 
-    ctrl.second->controller->getStatList(list, prefix + ctrlname);
-    ctrl.second->arbitrator->getStatList(list, prefix + ctrlname + "arb.");
+    ctrl.second->controller->getStatList(list, nprefix + ctrlname);
+    ctrl.second->arbitrator->getStatList(list, nprefix + ctrlname + "arb.");
     ctrl.second->interruptManager->getStatList(list,
-                                               prefix + ctrlname + "intr.");
-    ctrl.second->dmaEngine->getStatList(list, prefix + ctrlname + "dma.");
+                                               nprefix + ctrlname + "intr.");
+    ctrl.second->dmaEngine->getStatList(list, nprefix + ctrlname + "dma.");
   }
 
   // All commands
-  commandDeleteSQ->getStatList(list, prefix + "admin.deletesq.");
-  commandCreateSQ->getStatList(list, prefix + "admin.createsq.");
-  commandGetLogPage->getStatList(list, prefix + "admin.getlogpage.");
-  commandDeleteCQ->getStatList(list, prefix + "admin.deletecq.");
-  commandCreateCQ->getStatList(list, prefix + "admin.createcq.");
-  commandIdentify->getStatList(list, prefix + "admin.identify.");
-  commandAbort->getStatList(list, prefix + "admin.abort.");
-  commandSetFeature->getStatList(list, prefix + "admin.setfeature.");
-  commandGetFeature->getStatList(list, prefix + "admin.getfeature.");
-  commandAsyncEventRequest->getStatList(list, prefix + "admin.asynceventreq.");
-  commandNamespaceManagement->getStatList(list, prefix + "admin.nsmgmt.");
-  commandNamespaceAttachment->getStatList(list, prefix + "admin.nsattach.");
-  commandFormatNVM->getStatList(list, prefix + "admin.format.");
-  commandFlush->getStatList(list, prefix + "nvm.flush.");
-  commandWrite->getStatList(list, prefix + "nvm.write.");
-  commandRead->getStatList(list, prefix + "nvm.read.");
-  commandCompare->getStatList(list, prefix + "nvm.compare.");
-  commandDatasetManagement->getStatList(list, prefix + "nvm.datasetmgmt.");
+  commandDeleteSQ->getStatList(list, nprefix + "admin.deletesq.");
+  commandCreateSQ->getStatList(list, nprefix + "admin.createsq.");
+  commandGetLogPage->getStatList(list, nprefix + "admin.getlogpage.");
+  commandDeleteCQ->getStatList(list, nprefix + "admin.deletecq.");
+  commandCreateCQ->getStatList(list, nprefix + "admin.createcq.");
+  commandIdentify->getStatList(list, nprefix + "admin.identify.");
+  commandAbort->getStatList(list, nprefix + "admin.abort.");
+  commandSetFeature->getStatList(list, nprefix + "admin.setfeature.");
+  commandGetFeature->getStatList(list, nprefix + "admin.getfeature.");
+  commandAsyncEventRequest->getStatList(list, nprefix + "admin.asynceventreq.");
+  commandNamespaceManagement->getStatList(list, nprefix + "admin.nsmgmt.");
+  commandNamespaceAttachment->getStatList(list, nprefix + "admin.nsattach.");
+  commandFormatNVM->getStatList(list, nprefix + "admin.format.");
+  commandFlush->getStatList(list, nprefix + "nvm.flush.");
+  commandWrite->getStatList(list, nprefix + "nvm.write.");
+  commandRead->getStatList(list, nprefix + "nvm.read.");
+  commandCompare->getStatList(list, nprefix + "nvm.compare.");
+  commandDatasetManagement->getStatList(list, nprefix + "nvm.datasetmgmt.");
 
   // HIL
   pHIL->getStatList(list, prefix);

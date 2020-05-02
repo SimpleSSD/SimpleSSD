@@ -427,18 +427,17 @@ void BasicFTL::restore(std::istream &in, SuperRequest &list) noexcept {
 
 void BasicFTL::getStatList(std::vector<Stat> &list,
                            std::string prefix) noexcept {
-  list.emplace_back(prefix + "ftl.rmw.count",
-                    "Total read-modify-write operations");
-  list.emplace_back(prefix + "ftl.rmw.merge_count",
+  list.emplace_back(prefix + "rmw.count", "Total read-modify-write operations");
+  list.emplace_back(prefix + "rmw.merge_count",
                     "Total merged read-modify-write operations");
-  list.emplace_back(prefix + "ftl.rmw.read_pages",
+  list.emplace_back(prefix + "rmw.read_pages",
                     "Total read pages in read-modify-write");
-  list.emplace_back(prefix + "ftl.rmw.written_pages",
+  list.emplace_back(prefix + "rmw.written_pages",
                     "Total written pages in read-modify-write");
-  list.emplace_back(prefix + "ftl.gc.count", "Total GC count");
-  list.emplace_back(prefix + "ftl.gc.reclaimed_blocks",
+  list.emplace_back(prefix + "gc.count", "Total GC count");
+  list.emplace_back(prefix + "gc.reclaimed_blocks",
                     "Total reclaimed blocks in GC");
-  list.emplace_back(prefix + "ftl.gc.page_copies", "Total valid page copy");
+  list.emplace_back(prefix + "gc.page_copies", "Total valid page copy");
 }
 
 void BasicFTL::getStatValues(std::vector<double> &values) noexcept {

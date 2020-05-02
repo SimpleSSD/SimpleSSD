@@ -129,7 +129,7 @@ void FTL::invalidate(Request &&req) {
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  pFTL->getStatList(list, prefix + "ftl.");
+  pFTL->getStatList(list, prefix + "ftl.base.");
   pMapper->getStatList(list, prefix + "ftl.mapper.");
   pAllocator->getStatList(list, prefix + "ftl.allocator.");
   pFIL->getStatList(list, prefix);
