@@ -406,7 +406,7 @@ void PAL2::TimelineScheduling(::Command &req, CPDPBP &reqCPD) {
 
             // duration will be updated later
             // Insert tmp after spos
-            auto tmp = MergedTimeSlots.insert(
+            auto tmp = MergedTimeSlots.emplace(
                 ++spos,
                 TimeSlot(tsMEM.StartTick, tsMEM.EndTick - tsMEM.StartTick + 1));
 
@@ -423,12 +423,12 @@ void PAL2::TimelineScheduling(::Command &req, CPDPBP &reqCPD) {
                   TimeSlot(tsMEM.StartTick,
                            tsMEM.EndTick - tsMEM.StartTick + 1);  // copy one
 
-              MergedTimeSlots.insert(MergedTimeSlots.begin(), tmp);
+              MergedTimeSlots.emplace(MergedTimeSlots.begin(), tmp);
             }
             else {
               auto tmp = TimeSlot(tsMEM.StartTick,
                                   999);  // duration will be updated later
-              spos = MergedTimeSlots.insert(MergedTimeSlots.begin(), tmp);
+              spos = MergedTimeSlots.emplace(MergedTimeSlots.begin(), tmp);
             }
           }
 
@@ -782,7 +782,7 @@ void PAL2::AddFreeSlot(
   auto e = tgtFreeSlot.upper_bound(tickLen);
   if (e != tgtFreeSlot.begin()) {
     e--;
-    e->second.insert(std::pair<uint64_t, uint64_t>(
+    e->second.emplace(std::pair<uint64_t, uint64_t>(
         tickFrom, tickFrom + tickLen - (uint64_t)1));
   }
 }
