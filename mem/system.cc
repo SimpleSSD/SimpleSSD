@@ -343,6 +343,7 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_SCALAR(out, memoryTag);
+  BACKUP_SCALAR(out, lastTag);
 
   size = requestQueue.size();
 
@@ -401,6 +402,7 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_SCALAR(in, memoryTag);
+  RESTORE_SCALAR(in, lastTag);
 
   RESTORE_SCALAR(in, size);
 

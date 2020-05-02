@@ -351,6 +351,10 @@ void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
   panic_if((exist && !detector) || (!exist && detector),
            "Existance of sequential detector not matched.");
 
+  if (exist) {
+    detector->restoreCheckpoint(in, object);
+  }
+
   RESTORE_SCALAR(in, prefetchTrigger)
   RESTORE_SCALAR(in, lastPrefetched);
 
