@@ -111,8 +111,8 @@ class FIFO : public DMAInterface, public Object {
   FIFO(ObjectData &, DMAInterface *, FIFOParam &);
   ~FIFO();
 
-  void read(uint64_t, uint64_t, uint8_t *, Event, uint64_t = 0) override;
-  void write(uint64_t, uint64_t, uint8_t *, Event, uint64_t = 0) override;
+  void read(uint64_t, uint32_t, uint8_t *, Event, uint64_t = 0) override;
+  void write(uint64_t, uint32_t, uint8_t *, Event, uint64_t = 0) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

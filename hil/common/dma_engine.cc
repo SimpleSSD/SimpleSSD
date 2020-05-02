@@ -79,9 +79,10 @@ DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
       handled(0),
       requested(s),
       bufferSize(0),
+      regionIndex(0),
       buffer(b) {}
 
-void DMAEngine::DMASession::allocateBuffer(uint64_t size) {
+void DMAEngine::DMASession::allocateBuffer(uint32_t size) {
   bufferSize = size;
   buffer = (uint8_t *)calloc(size, 1);
 }
@@ -480,7 +481,7 @@ void DMAEngine::deinit(DMATag tag) noexcept {
 }
 
 void DMAEngine::readNext(DMASession &session) noexcept {
-  uint64_t read;
+  uint32_t read;
   bool submit = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
@@ -507,7 +508,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
-  uint64_t read;
+  uint32_t read;
   bool submit = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer);
@@ -543,7 +544,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 }
 
 void DMAEngine::writeNext(DMASession &session) noexcept {
-  uint64_t written;
+  uint32_t written;
   bool submit = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
@@ -571,7 +572,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
-  uint64_t written;
+  uint32_t written;
   bool submit = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer);
