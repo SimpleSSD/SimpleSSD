@@ -715,6 +715,7 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
       newTag->prList.emplace_back(pr);
     }
 
+    tagList.emplace(newTag);
     oldTagList.emplace(oldTag, newTag);
   }
 }
