@@ -782,7 +782,6 @@ void CPU::resetStatValues() noexcept {
 
 void CPU::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, lastResetStat);
-  BACKUP_SCALAR(out, lastScheduledAt);
   BACKUP_SCALAR(out, clockSpeed);
   BACKUP_SCALAR(out, clockPeriod);
   BACKUP_SCALAR(out, useDedicatedCore);
@@ -815,7 +814,6 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
   uint16_t tmp16;
 
   RESTORE_SCALAR(in, lastResetStat);
-  RESTORE_SCALAR(in, lastScheduledAt);
   RESTORE_SCALAR(in, clockSpeed);
   RESTORE_SCALAR(in, clockPeriod);
   RESTORE_SCALAR(in, useDedicatedCore);
