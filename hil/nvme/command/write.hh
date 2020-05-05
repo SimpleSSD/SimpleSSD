@@ -40,6 +40,8 @@ class Write : public Command {
   Event eventCompletion;
   void completion(uint64_t, uint64_t);
 
+  uint64_t count;
+
  public:
   Write(ObjectData &, Subsystem *);
 

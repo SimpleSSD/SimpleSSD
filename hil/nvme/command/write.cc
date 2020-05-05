@@ -18,6 +18,8 @@ Write::Write(ObjectData &o, Subsystem *s) : Command(o, s) {
   eventCompletion =
       createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
                   "HIL::NVMe::Write::eventCompletion");
+
+  count = 0;
 }
 
 void Write::dmaInitDone(uint64_t gcid) {
@@ -110,13 +112,21 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
     // Allocate buffer
     tag->request.createBuffer();
   }
+
+  count++;
 }
 
-void Write::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void Write::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  list.emplace_back(prefix + "count", "Number of write command");
+}
 
-void Write::getStatValues(std::vector<double> &) noexcept {}
+void Write::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)count);
+}
 
-void Write::resetStatValues() noexcept {}
+void Write::resetStatValues() noexcept {
+  count = 0;
+}
 
 void Write::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);

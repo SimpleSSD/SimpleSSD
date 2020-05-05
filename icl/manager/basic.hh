@@ -67,8 +67,13 @@ class BasicManager : public AbstractManager {
   void readDone(uint64_t);
 
   // Statistics
-  uint64_t prefetched;
-  uint64_t drained;
+  struct {
+    uint64_t prefetched;  // prefetched pages
+    uint64_t drained;     // evicted pages
+    uint64_t hit;         // cache hit
+    uint64_t miss;        // cache miss
+    uint64_t eviction;    // cache eviction
+  } stat;
 
  public:
   BasicManager(ObjectData &, ICL *, FTL::FTL *);

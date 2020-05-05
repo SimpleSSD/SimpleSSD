@@ -18,6 +18,8 @@ Read::Read(ObjectData &o, Subsystem *s) : Command(o, s) {
   eventCompletion =
       createEvent([this](uint64_t t, uint64_t d) { completion(t, d); },
                   "HIL::NVMe::Read::eventCompletion");
+
+  count = 0;
 }
 
 void Read::dmaInitDone(uint64_t gcid) {
@@ -101,13 +103,21 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
 
     disk->read(slba * lbaSize, nlb * lbaSize, buffer);
   }
+
+  count++;
 }
 
-void Read::getStatList(std::vector<Stat> &, std::string) noexcept {}
+void Read::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  list.emplace_back(prefix + "count", "Number of read command");
+}
 
-void Read::getStatValues(std::vector<double> &) noexcept {}
+void Read::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)count);
+}
 
-void Read::resetStatValues() noexcept {}
+void Read::resetStatValues() noexcept {
+  count = 0;
+}
 
 void Read::createCheckpoint(std::ostream &out) const noexcept {
   Command::createCheckpoint(out);

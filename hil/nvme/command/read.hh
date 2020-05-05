@@ -40,6 +40,8 @@ class Read : public Command {
   Event eventCompletion;
   void completion(uint64_t, uint64_t);
 
+  uint64_t count;
+
  public:
   Read(ObjectData &, Subsystem *);
 

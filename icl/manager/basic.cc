@@ -110,8 +110,7 @@ BasicManager::BasicManager(ObjectData &o, ICL *p, FTL::FTL *f)
     prefetchCount *= ftlparam->parallelismLevel[3];
   }
 
-  prefetched = 0;
-  drained = 0;
+  memset(&stat, 0, sizeof(stat));
 
   eventDrainDone =
       createEvent([this](uint64_t t, uint64_t d) { drainDone(t, d); },
@@ -159,7 +158,7 @@ void BasicManager::read(HIL::SubRequest *req) {
       prefetchTrigger = begin + prefetchCount / 2;
       lastPrefetched = begin + prefetchCount;
 
-      prefetched += prefetchCount;
+      stat.prefetched += prefetchCount;
 
       pICL->makeRequest(begin, prefetchCount);
     }
@@ -186,9 +185,11 @@ void BasicManager::lookupDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   if (req->getMiss()) {
+    stat.miss++;
     debugprint_basic(req, "CACHE MISS");
   }
   else {
+    stat.hit++;
     debugprint_basic(req, "CACHE HIT");
   }
 
@@ -248,6 +249,8 @@ void BasicManager::drain(std::vector<FlushContext> &list) {
   }
 
   drainRange(begin, list.end());
+
+  stat.eviction++;
 }
 
 void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
@@ -270,7 +273,7 @@ void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
     pFTL->write(std::move(req));
   }
 
-  drained += nlp;
+  stat.drained += nlp;
 }
 
 void BasicManager::drainDone(uint64_t now, uint64_t tag) {
@@ -301,16 +304,21 @@ void BasicManager::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
   list.emplace_back(prefix + "prefetched", "Prefetched pages");
   list.emplace_back(prefix + "drained", "Written pages");
+  list.emplace_back(prefix + "hit", "Number of cache hit");
+  list.emplace_back(prefix + "miss", "Number of cache miss");
+  list.emplace_back(prefix + "eviction", "Number of cache eviction");
 }
 
 void BasicManager::getStatValues(std::vector<double> &values) noexcept {
-  values.emplace_back((double)prefetched);
-  values.emplace_back((double)drained);
+  values.emplace_back((double)stat.prefetched);
+  values.emplace_back((double)stat.drained);
+  values.emplace_back((double)stat.hit);
+  values.emplace_back((double)stat.miss);
+  values.emplace_back((double)stat.eviction);
 }
 
 void BasicManager::resetStatValues() noexcept {
-  prefetched = 0;
-  drained = 0;
+  memset(&stat, 0, sizeof(stat));
 }
 
 void BasicManager::createCheckpoint(std::ostream &out) const noexcept {
