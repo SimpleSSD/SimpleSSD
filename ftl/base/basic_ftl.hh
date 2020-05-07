@@ -79,7 +79,7 @@ class BasicFTL : public AbstractFTL {
 
   struct GCContext {
     bool inProgress;
-    std::vector<PPN> blockList;
+    std::vector<PPN> victimSBlockList;
     CopyContext copyctx;
     uint64_t bufferBaseAddress;
 
@@ -91,7 +91,7 @@ class BasicFTL : public AbstractFTL {
     void init(uint64_t now) {
       inProgress = true;
       beginAt = now;
-      blockList.clear();
+      victimSBlockList.clear();
       erasedBlocks = 0;
     }
   };

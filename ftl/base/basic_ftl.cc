@@ -427,16 +427,16 @@ void BasicFTL::gc_trigger(uint64_t now) {
   stat.gcCount++;
 
   // victim block selection
-  pAllocator->getVictimBlocks(gcctx.blockList, eventGCSetNextVictimBlock);
+  pAllocator->getVictimBlocks(gcctx.victimSBlockList, eventGCSetNextVictimBlock);
 
   debugprint(Log::DebugID::FTL_PageLevel, "GC    | On-demand | %u blocks",
-             gcctx.blockList.size());
+             gcctx.victimSBlockList.size());
 }
 
 void BasicFTL::gc_setNextVictimBlock(uint64_t now) {
-  if (LIKELY(gcctx.blockList.size() > 0)) {
-    PPN nextVictimBlock = gcctx.blockList.back();
-    gcctx.blockList.pop_back();
+  if (LIKELY(gcctx.victimSBlockList.size() > 0)) {
+    PPN nextVictimBlock = gcctx.victimSBlockList.back();
+    gcctx.victimSBlockList.pop_back();
 
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
