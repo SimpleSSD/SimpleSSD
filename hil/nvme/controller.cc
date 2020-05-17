@@ -411,7 +411,7 @@ void Controller::handleControllerConfig(uint32_t update) {
   }
   if (((old >> 4) & 0x07) != registers.cc.css) {
     // I/O Command Set Selected changed
-    warn_if(registers.cc.css != 0, "Unexpedted I/O command set.");
+    warn_if(registers.cc.css != 0, "Unexpected I/O command set.");
   }
   if ((old & 0x01) != registers.cc.en) {
     // Enable changed
