@@ -79,9 +79,10 @@ DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
       handled(0),
       requested(s),
       bufferSize(0),
+      regionIndex(0),
       buffer(b) {}
 
-void DMAEngine::DMASession::allocateBuffer(uint64_t size) {
+void DMAEngine::DMASession::allocateBuffer(uint32_t size) {
   bufferSize = size;
   buffer = (uint8_t *)calloc(size, 1);
 }
@@ -480,7 +481,7 @@ void DMAEngine::deinit(DMATag tag) noexcept {
 }
 
 void DMAEngine::readNext(DMASession &session) noexcept {
-  uint64_t read;
+  uint32_t read;
   bool submit = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
@@ -507,7 +508,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
-  uint64_t read;
+  uint32_t read;
   bool submit = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer);
@@ -543,7 +544,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 }
 
 void DMAEngine::writeNext(DMASession &session) noexcept {
-  uint64_t written;
+  uint32_t written;
   bool submit = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
@@ -571,7 +572,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
-  uint64_t written;
+  uint32_t written;
   bool submit = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer);
@@ -639,8 +640,6 @@ void DMAEngine::getStatValues(std::vector<double> &) noexcept {}
 void DMAEngine::resetStatValues() noexcept {}
 
 void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
-  bool exist;
-
   BACKUP_EVENT(out, eventReadDMADone);
   BACKUP_EVENT(out, eventWriteDMADone);
   BACKUP_EVENT(out, eventPRDTInitDone);
@@ -663,32 +662,26 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  size = sessionList.size();
-  BACKUP_SCALAR(out, size);
+  {
+    /**
+     * DMA Sessions cannot be checkpointed -- serialized. Because it has buffer
+     * pointer, which may have different value after restarting simulation.
+     * The gem5 provides concept of Drain - DrainState, drain() function of
+     * SimObject. All pending DMA operations should be drained before
+     * checkpoint -- serialized.
+     */
+    if (UNLIKELY(sessionList.size() != 0)) {
+      // Remove const qualifier
+      auto pthis = const_cast<DMAEngine *>(this);
 
-  for (auto &iter : sessionList) {
-    BACKUP_SCALAR(out, iter.first);
-
-    BACKUP_DMATAG(out, iter.second.parent);
-    BACKUP_EVENT(out, iter.second.eid);
-    BACKUP_SCALAR(out, iter.second.data);
-    BACKUP_SCALAR(out, iter.second.handled);
-    BACKUP_SCALAR(out, iter.second.requested);
-
-    exist = iter.second.buffer != nullptr;
-    BACKUP_SCALAR(out, exist);
-
-    if (exist) {
-      BACKUP_BLOB(out, iter.second.buffer, iter.second.requested);
+      pthis->panic_log("%s:%u: %s\n  "
+                       "Sessions cannot be checkpointed.",
+                       __FILENAME__, __LINE__, __PRETTY_FUNCTION__);
     }
-
-    BACKUP_SCALAR(out, iter.second.regionIndex);
   }
 }
 
 void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
-  bool exist;
-
   RESTORE_EVENT(in, eventReadDMADone);
   RESTORE_EVENT(in, eventWriteDMADone);
   RESTORE_EVENT(in, eventPRDTInitDone);
@@ -722,39 +715,8 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
       newTag->prList.emplace_back(pr);
     }
 
+    tagList.emplace(newTag);
     oldTagList.emplace(oldTag, newTag);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t tag;
-
-    RESTORE_SCALAR(in, tag);
-
-    DMASession session(tag);
-
-    RESTORE_SCALAR(in, oldTag);
-    oldTag = restoreDMATag(oldTag);
-
-    session.parent = oldTag;
-
-    RESTORE_EVENT(in, session.eid);
-    RESTORE_SCALAR(in, session.data);
-
-    RESTORE_SCALAR(in, session.handled);
-    RESTORE_SCALAR(in, session.requested);
-
-    RESTORE_SCALAR(in, exist);
-
-    if (exist) {
-      session.buffer = (uint8_t *)calloc(session.requested, 1);
-      RESTORE_BLOB(in, session.buffer, session.requested);
-    }
-
-    RESTORE_SCALAR(in, session.regionIndex);
-
-    sessionList.emplace(tag, session);
   }
 }
 

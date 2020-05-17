@@ -71,14 +71,14 @@ class DMAEngine : public Object {
     Event eid;
     uint64_t data;
 
-    uint64_t handled;
-    uint64_t requested;
-    uint64_t bufferSize;
+    uint32_t handled;
+    uint32_t requested;
+    uint32_t bufferSize;
+    uint32_t regionIndex;
+
     uint8_t *buffer;
 
-    uint64_t regionIndex;
-
-    void allocateBuffer(uint64_t);
+    void allocateBuffer(uint32_t);
     void deallocateBuffer();
 
     DMASession(uint64_t t) : tag(t) {}

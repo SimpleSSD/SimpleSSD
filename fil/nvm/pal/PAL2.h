@@ -12,14 +12,6 @@
 #ifndef __PAL2_h__
 #define __PAL2_h__
 
-#include "SimpleSSD_types.h"
-
-#include "Latency.h"
-#include "PALStatistics.h"
-#include "fil/fil.hh"
-
-#include "PAL2_TimeSlot.h"
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -27,6 +19,13 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+
+#include "Latency.h"
+#include "PAL2_TimeSlot.h"
+#include "PALStatistics.h"
+#include "SimpleSSD_types.h"
+#include "fil/fil.hh"
+
 using namespace std;
 
 class PALStatistics;
@@ -49,9 +48,9 @@ class PAL2  // let's not inherit PAL1
 
   std::map<uint64_t, uint64_t> OpTimeStamp[3];
 
-  std::map<uint64_t, std::map<uint64_t, uint64_t> *> *ChFreeSlots;
+  std::map<uint64_t, std::map<uint64_t, uint64_t>> *ChFreeSlots;
   uint64_t *ChStartPoint;  // record the start point of rightmost free slot
-  std::map<uint64_t, std::map<uint64_t, uint64_t> *> *DieFreeSlots;
+  std::map<uint64_t, std::map<uint64_t, uint64_t>> *DieFreeSlots;
   uint64_t *DieStartPoint;
 
   void submit(::Command &cmd, CPDPBP &addr);
@@ -70,19 +69,19 @@ class PAL2  // let's not inherit PAL1
 
   // Jie: return: FreeSlot is found?
   bool FindFreeTime(
-      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      std::map<uint64_t, std::map<uint64_t, uint64_t>> &tgtFreeSlot,
       uint64_t tickLen, uint64_t tickFrom, uint64_t &startTick,
       bool &conflicts);
   void InsertFreeSlot(
-      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      std::map<uint64_t, std::map<uint64_t, uint64_t>> &tgtFreeSlot,
       uint64_t tickLen, uint64_t tickFrom, uint64_t startTick,
       uint64_t &startPoint, bool split);
   void AddFreeSlot(
-      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      std::map<uint64_t, std::map<uint64_t, uint64_t>> &tgtFreeSlot,
       uint64_t tickLen, uint64_t tickFrom);
   void FlushFreeSlots(uint64_t currentTick);
   void FlushAFreeSlot(
-      std::map<uint64_t, std::map<uint64_t, uint64_t> *> &tgtFreeSlot,
+      std::map<uint64_t, std::map<uint64_t, uint64_t>> &tgtFreeSlot,
       uint64_t currentTick);
 
   // PPN Conversion related //ToDo: Shifted-Mode is also required for better

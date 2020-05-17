@@ -36,7 +36,7 @@ class DMAInterface {
    * \param[in]  eid      Event ID of callback function
    * \param[in] eid       Corresponding data
    */
-  virtual void read(uint64_t offset, uint64_t length, uint8_t *buffer,
+  virtual void read(uint64_t offset, uint32_t length, uint8_t *buffer,
                     Event eid, uint64_t data = 0) = 0;
 
   /**
@@ -51,7 +51,7 @@ class DMAInterface {
    * \param[in] eid       Event ID of callback function
    * \param[in] eid       Corresponding data
    */
-  virtual void write(uint64_t offset, uint64_t length, uint8_t *buffer,
+  virtual void write(uint64_t offset, uint32_t length, uint8_t *buffer,
                      Event eid, uint64_t data = 0) = 0;
 };
 

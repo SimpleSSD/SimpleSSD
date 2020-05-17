@@ -476,7 +476,7 @@ void FIFO::insertReadDoneNext() {
   }
 }
 
-void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
+void FIFO::read(uint64_t addr, uint32_t size, uint8_t *buffer, Event eid,
                 uint64_t data) {
   if (size == 0) {
     warn("FIFO: zero-size DMA read request. Ignore.");
@@ -490,7 +490,7 @@ void FIFO::read(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
   transferRead();
 }
 
-void FIFO::write(uint64_t addr, uint64_t size, uint8_t *buffer, Event eid,
+void FIFO::write(uint64_t addr, uint32_t size, uint8_t *buffer, Event eid,
                  uint64_t data) {
   if (size == 0) {
     warn("FIFO: zero-size DMA write request. Ignore.");
