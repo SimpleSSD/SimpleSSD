@@ -692,6 +692,8 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
                                TimeSlot &DMA0, TimeSlot &MEM, TimeSlot &DMA1)
 #endif
 {
+  return;
+
   uint32_t oper = CMD.operation;
   uint32_t chIdx = CPD->Channel;
   uint64_t time_all[TICK_STAT_NUM];
@@ -811,6 +813,7 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
     Access_Capacity.add(oper, param->pageSize * param->page);  // ERASE
   else
     Access_Capacity.add(oper, param->pageSize);  // READ,WRITE
+
   //************************************************
   update_point = finished_time / EPOCH_INTERVAL;
   std::map<uint64_t, ValueOper *>::iterator f =
