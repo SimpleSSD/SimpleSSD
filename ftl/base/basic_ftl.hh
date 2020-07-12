@@ -75,7 +75,9 @@ class BasicFTL : public AbstractFTL {
   };
 
   std::unordered_map<uint64_t, ReadModifyWriteContext> rmwList;
-  std::list<std::vector<Request *>> list;
+
+  // list of stalled request <tag, writeRequestType>
+  std::deque<Request *> stalledRequests;
 
   struct GCContext {
     bool inProgress;
@@ -117,6 +119,7 @@ class BasicFTL : public AbstractFTL {
 
   virtual inline void triggerGC() {
     if (pAllocator->checkGCThreshold() && !gcctx.inProgress) {
+      gcctx.inProgress = true;
       scheduleNow(eventGCTrigger);
     }
   }

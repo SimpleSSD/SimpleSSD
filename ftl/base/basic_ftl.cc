@@ -148,6 +148,17 @@ void BasicFTL::read_done(uint64_t tag) {
 }
 
 void BasicFTL::write(Request *cmd) {
+  // if SSD is running out of free block, stall request.
+  // Stalled requests will be continued after GC
+  if (!pAllocator->checkFreeBlockExist()) {
+    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
+               cmd->getTag());
+    stalledRequests.push_back(cmd);
+
+    triggerGC();
+    return;
+  }
+
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -613,6 +624,19 @@ void BasicFTL::gc_done(uint64_t now) {
              " (%" PRIu64 ")",
              gcctx.beginAt, gcctx.erasedBlocks, now, gcctx.beginAt,
              now - gcctx.beginAt);
+
+  // continue stalled request
+  while (!stalledRequests.empty()) {
+    auto cmd = stalledRequests.front();
+    debugprint(Log::DebugID::FTL_PageLevel,
+                "WRITE | CONTINUE | TAG : %" PRIu64, cmd->getTag());
+    write(cmd);
+    stalledRequests.pop_front();
+
+    // if gc restarted, stop continuing
+    if (gcctx.inProgress)
+      break;
+  }
 }
 
 void BasicFTL::backup(std::ostream &out, const SuperRequest &list) const
