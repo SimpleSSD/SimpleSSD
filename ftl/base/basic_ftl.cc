@@ -455,6 +455,10 @@ void BasicFTL::gc_readSubmit() {
   // alias
   auto &copyctx = gcctx.copyctx;
 
+  // current victim block has no valid pages to copy
+  if (UNLIKELY(copyctx.list.size() == 0))
+    scheduleNow(eventGCEraseSubmit);
+
   if (LIKELY(!copyctx.isReadSubmitDone())) {
     auto firstReq = copyctx.iter->front();
     PPN ppnBegin = firstReq->getPPN();
