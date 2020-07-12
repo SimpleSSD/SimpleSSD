@@ -83,6 +83,14 @@ class AbstractAllocator : public Object {
   virtual bool checkGCThreshold() = 0;
 
   /**
+   * Check if there is a free block.
+   * If not, GC must be invoked now.
+   *
+   * \return True if there is a free block
+   */
+  virtual bool checkFreeBlockExist() = 0;
+
+  /**
    * \brief Select block to erase
    *
    * Return physical block address to erase. This function may return multiple

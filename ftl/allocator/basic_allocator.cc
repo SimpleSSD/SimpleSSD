@@ -315,6 +315,10 @@ bool BasicAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
 }
 
+bool BasicAllocator::checkFreeBlockExist() {
+  return freeBlockCount > parallelism;
+}
+
 void BasicAllocator::getVictimBlocks(std::vector<PPN> &victimList, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);

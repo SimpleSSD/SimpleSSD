@@ -55,6 +55,7 @@ class BasicAllocator : public AbstractAllocator {
   PPN getBlockAt(PPN, uint64_t) override;
 
   bool checkGCThreshold() override;
+  bool checkFreeBlockExist() override;
   void getVictimBlocks(std::vector<PPN> &, Event) override;
   void reclaimBlocks(PPN, Event) override;
 
