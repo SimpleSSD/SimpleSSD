@@ -313,7 +313,14 @@ void RingBuffer::lookup(HIL::SubRequest *sreq) {
                  " | Miss conflict",
                  sreq->getParentTag(), sreq->getTagForLog(), lpn);
 
-      missConflictList.emplace(lpn, sreq->getTag());
+      // Don't add to pending list when read-ahead/prefetch
+      if (UNLIKELY(sreq->isICLRequest())) {
+        // Call completion
+        manager->cacheDone(sreq->getTag());
+      }
+      else {
+        missConflictList.emplace(lpn, sreq->getTag());
+      }
 
       return;
     }

@@ -135,7 +135,7 @@ void BasicCache::read(HIL::SubRequest *req) {
     detector->submitSubRequest(req);
 
     if (detector->isEnabled()) {
-      LPN nextlpn = req->getLPN() + 1;
+      LPN nextlpn = req->getSLPN() + req->getNLP();
 
       if (old) {
         // Continued - prefetch
