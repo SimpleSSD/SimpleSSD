@@ -19,8 +19,8 @@ IdealDRAM::IdealDRAM(ObjectData &o)
           [this](Request *r) { postDone(r); }, Request::backup,
           Request::restore) {
   // Latency of transfer (MemoryPacketSize)
-  auto bytesPerClock = 2.0 * pStructure->width * pStructure->chip / 8.0 /
-                       pTiming->tCK;  // bytes / ps
+  auto bytesPerClock = 2.0 * pStructure->channel * pStructure->width *
+                       pStructure->chip / 8.0 / pTiming->tCK;  // bytes / ps
   packetLatency = MemoryPacketSize / bytesPerClock;
 }
 
