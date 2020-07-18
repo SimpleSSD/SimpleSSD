@@ -66,6 +66,22 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   // Must be called later -- because of memory allocation
   pFTL->initialize();
+
+  // Create events
+  eventPrefetch = createEvent(
+      [this](uint64_t, uint64_t) {
+        while (prefetchQueue.size() > 0) {
+          auto &front = prefetchQueue.front();
+          auto *req = new HIL::Request(InvalidEventID, 0);
+
+          req->setAddress(front.first, front.second, logicalPageSize);
+
+          pHIL->read(req);
+
+          prefetchQueue.pop_front();
+        }
+      },
+      "ICL::eventPrefetch");
 }
 
 ICL::~ICL() {
@@ -99,11 +115,11 @@ void ICL::done(HIL::SubRequest *req) {
 }
 
 void ICL::makeRequest(LPN slpn, uint32_t length) {
-  auto *req = new HIL::Request(InvalidEventID, 0);
+  prefetchQueue.emplace_back(slpn, length);
 
-  req->setAddress(slpn, length, logicalPageSize);
-
-  pHIL->read(req);
+  if (!isScheduled(eventPrefetch)) {
+    scheduleNow(eventPrefetch);
+  }
 }
 
 LPN ICL::getPageUsage(LPN offset, LPN length) {
@@ -144,6 +160,16 @@ void ICL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, logicalPageSize);
 
+  uint64_t size = prefetchQueue.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : prefetchQueue) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
+  BACKUP_EVENT(out, eventPrefetch)
+
   pCache->createCheckpoint(out);
   pManager->createCheckpoint(out);
   pFTL->createCheckpoint(out);
@@ -152,6 +178,21 @@ void ICL::createCheckpoint(std::ostream &out) const noexcept {
 void ICL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, logicalPageSize);
+
+  uint64_t size;
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    LPN l;
+    uint32_t s;
+
+    RESTORE_SCALAR(in, l);
+    RESTORE_SCALAR(in, s);
+
+    prefetchQueue.emplace_back(l, s);
+  }
+
+  RESTORE_EVENT(in, eventPrefetch);
 
   pCache->restoreCheckpoint(in);
   pManager->restoreCheckpoint(in);

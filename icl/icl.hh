@@ -44,6 +44,10 @@ class ICL : public Object {
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;
 
+  std::deque<std::pair<LPN, uint32_t>> prefetchQueue;
+
+  Event eventPrefetch;
+
  public:
   ICL(ObjectData &, HIL::HIL *);
   ~ICL();
