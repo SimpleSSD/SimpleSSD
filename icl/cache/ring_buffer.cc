@@ -321,7 +321,7 @@ void RingBuffer::lookup(HIL::SubRequest *sreq) {
   else {
     debugprint(Log::DebugID::ICL_RingBuffer,
                "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64
-               "| Line %" PRIu64,
+               " | Line %" PRIu64,
                sreq->getParentTag(), sreq->getTagForLog(), lpn, idx);
 
     sreq->setDRAMAddress(makeDataAddress(idx));
