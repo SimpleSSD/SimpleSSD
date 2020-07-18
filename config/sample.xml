@@ -70,7 +70,7 @@
     <!-- System -->
     <section name="system">
       <!-- <int:u64> Bus clock speed in Hz -->
-      <config name="BusClock">200m</config>
+      <config name="BusClock">400m</config>
     </section>
     <!-- LLC -->
     <section name="cache">
@@ -115,11 +115,11 @@
          0: Ideal DRAM model with only DDR bus latency
          1: Simple DRAM model
        -->
-      <config name="Model">1</config>
+      <config name="Model">0</config>
       <!-- DRAM structural configuration -->
       <section name="struct">
         <!-- <int:u8> # Channel -->
-        <config name="Channel">2</config>
+        <config name="Channel">1</config>
         <!-- <int:u8> # Rank / Channel -->
         <config name="Rank">1</config>
         <!-- <int:u8> # Bank / Rank -->
@@ -135,7 +135,7 @@
         <!-- <int:u64> # Chip size in bytes -->
         <config name="ChipSize">1073741824</config>
         <!-- <int:u32> Row buffersize in bytes -->
-        <config name="RowBufferSize">2048</config>
+        <config name="RowBufferSize">4096</config>
       </section>
       <!--
         DRAM timing configuration
@@ -284,9 +284,9 @@
       <!-- AXI4 configuration -->
       <section name="axi">
         <!-- <int:u16> AXI bus width (32 ~ 1024, power of 2) -->
-        <config name="Width">256</config>
+        <config name="Width">64</config>
         <!-- <int:u64> AXI bus speed in Hz -->
-        <config name="Clock">100m</config>
+        <config name="Clock">400m</config>
       </section>
     </section>
     <!--
@@ -368,7 +368,7 @@
           Must be power of 2, greater than and equal to 512. In Linux, logical
           block size greater than page size (usually 4K) is not supported.
          -->
-        <config name="LBASize">512</config>
+        <config name="LBASize">4096</config>
         <!--
           <int:u64> Capacity in bytes
 
@@ -391,7 +391,7 @@
         1: Set associative
         2: Ring buffer
      -->
-    <config name="CacheMode">0</config>
+    <config name="CacheMode">1</config>
     <!-- <int:u64> Cache size in bytes -->
     <config name="CacheSize">512M</config>
     <!-- Prefetch/Read-ahead configration -->
@@ -455,7 +455,7 @@
         In ring buffer, if current dirty pages / cache size >= this value,
         background write worker will triggered to evict pages to FTL.
        -->
-      <config name="EvictThreshold">0.8</config>
+      <config name="EvictThreshold">0.05</config>
     </section>
     <!-- Set-associative cache configuration -->
     <section name="setassoc">
@@ -546,14 +546,14 @@
         read-modify-write operation to improve performance. If this config value
         is false, BasicFTL will not perform merge operation.
        -->
-      <config name="MergeReadModifyWrite">true</config>
+      <config name="MergeReadModifyWrite">false</config>
       <!--
         <bool> Enable demand paging
 
         If demand paging is diabled and memory is too small for mapping table,
         simulation will be terminated with out-of-memory.
        -->
-      <config name="DemandPaging">true</config>
+      <config name="DemandPaging">false</config>
       <!-- Filling/Warm-up configuration -->
       <section name="warmup">
         <!--
