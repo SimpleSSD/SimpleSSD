@@ -32,6 +32,9 @@ class Config : public BaseConfig {
     MPHYLane,
     AXIWidth,
     AXIClock,
+    FIFOTransferUnit,
+    FIFORxBuffer,
+    FIFOTxBuffer,
     NVMeMaxSQ,
     NVMeMaxCQ,
     NVMeWRRHigh,
@@ -74,6 +77,11 @@ class Config : public BaseConfig {
   uint16_t wrrMedium;
   uint32_t maxNamespace;
   uint32_t defaultNamespace;
+
+  uint64_t fifoTransferUnit;
+  uint64_t fifoRxBuffer;
+  uint64_t fifoTxBuffer;
+
   bool attachDefaultNamespaces;
 
   std::vector<Disk> diskList;

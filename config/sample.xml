@@ -288,6 +288,14 @@
         <!-- <int:u64> AXI bus speed in Hz -->
         <config name="Clock">400m</config>
       </section>
+      <section name="fifo">
+        <!-- <int:u64> FIFO queue transfer unit in bytes -->
+        <config name="TransferUnit">2048</config>
+        <!-- <int:u64> FIFO queue tx buffer size in bytes -->
+        <config name="TxBufferSize">8K</config>
+        <!-- <int:u64> FIFO queue rx buffer size in bytes -->
+        <config name="RxBufferSize">8K</config>
+      </section>
     </section>
     <!--
       Disk configuration
