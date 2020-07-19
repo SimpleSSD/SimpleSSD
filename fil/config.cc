@@ -142,7 +142,7 @@ void Config::loadNANDTiming(pugi::xml_node &section) {
     LOAD_NAME_TIME_TYPE(node, NAME_TWB, uint32_t, nandTiming.tWB);
     LOAD_NAME_TIME_TYPE(node, NAME_TWC, uint32_t, nandTiming.tWC);
     LOAD_NAME_TIME_TYPE(node, NAME_TWP, uint32_t, nandTiming.tWP);
-    LOAD_NAME_TIME_TYPE(node, NAME_TBERS, uint32_t, nandTiming.tBERS);
+    LOAD_NAME_TIME(node, NAME_TBERS, nandTiming.tBERS);
     LOAD_NAME_TIME_TYPE(node, NAME_TCBSY, uint32_t, nandTiming.tCBSY);
     LOAD_NAME_TIME_TYPE(node, NAME_TDBSY, uint32_t, nandTiming.tDBSY);
     LOAD_NAME_TIME_TYPE(node, NAME_TRCBSY, uint32_t, nandTiming.tRCBSY);
