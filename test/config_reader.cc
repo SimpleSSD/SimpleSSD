@@ -149,6 +149,12 @@ TEST_CASE("ConfigReader") {
                        utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::AXIClock,
                        utest);
+      reader.writeUint(Section::HostInterface,
+                       HIL::Config::Key::FIFOTransferUnit, utest);
+      reader.writeUint(Section::HostInterface, HIL::Config::Key::FIFORxBuffer,
+                       utest);
+      reader.writeUint(Section::HostInterface, HIL::Config::Key::FIFOTxBuffer,
+                       utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::NVMeMaxSQ,
                        utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::NVMeMaxCQ,
@@ -415,6 +421,12 @@ TEST_CASE("ConfigReader") {
                               HIL::Config::Key::AXIWidth) == utest * 8);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::AXIClock) == utest);
+      REQUIRE(reader.readUint(Section::HostInterface,
+                              HIL::Config::Key::FIFOTransferUnit) == utest);
+      REQUIRE(reader.readUint(Section::HostInterface,
+                              HIL::Config::Key::FIFORxBuffer) == utest);
+      REQUIRE(reader.readUint(Section::HostInterface,
+                              HIL::Config::Key::FIFOTxBuffer) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::NVMeMaxSQ) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
