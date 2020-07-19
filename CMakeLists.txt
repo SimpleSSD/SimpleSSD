@@ -74,30 +74,6 @@ set(VERSION_TARGET "simplessd_version")
 
 include(${PROJECT_SOURCE_DIR}/util/scripts/simplessd_version.cmake)
 
-# Platform specific settings
-if (MSVC)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-  add_compile_options(/wd4819)  # Surpress unicode warning
-
-  if (FW_LATENCY)
-    message(WARNING "Automatic firmware latency generation is not tested on Windows")
-  endif ()
-else ()
-  add_compile_options(-g)
-  add_compile_options(-Wall)
-  add_compile_options(-Wextra)
-  add_compile_options(-Werror)
-
-  set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
-
-  if (DEBUG_BUILD)
-    add_definitions(-DSIMPLESSD_DEBUG)
-    add_compile_options(-O0)
-  else ()
-    add_compile_options(-O2)
-  endif ()
-endif ()
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
@@ -271,6 +247,10 @@ set(SRCS_EXCLUDE
   ${OUTPUT_VERSION_FILE}
 )
 
+if (MSVC AND FW_LATENCY)
+  message(WARNING "Automatic firmware latency generation is not tested on Windows")
+endif ()
+
 if (FW_LATENCY)
   # Check llvm-simplessd is valid
   if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
@@ -405,6 +385,23 @@ if (FW_LATENCY)
   add_dependencies(simplessd build-objects)
 else ()
   add_library(simplessd STATIC ${SRCS} ${SRCS_EXCLUDE})
+endif ()
+
+# Platform specific settings
+if (MSVC)
+  target_compile_definitions(simplessd PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+  target_compile_options(simplessd PRIVATE /wd4819)  # Surpress unicode warning
+else ()
+  target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror)
+
+  set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
+
+  if (DEBUG_BUILD)
+    target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
+    target_compile_options(simplessd PRIVATE -O0)
+  else ()
+    target_compile_options(simplessd PRIVATE -O2)
+  endif ()
 endif ()
 
 # Force version checking in every build
