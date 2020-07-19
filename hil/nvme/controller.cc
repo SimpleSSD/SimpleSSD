@@ -53,9 +53,12 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
 
   FIFOParam param;
 
-  param.rqSize = 8192;
-  param.wqSize = 8192;
-  param.transferUnit = 64;
+  param.rqSize =
+      readConfigUint(Section::HostInterface, Config::Key::FIFORxBuffer);
+  param.wqSize =
+      readConfigUint(Section::HostInterface, Config::Key::FIFOTxBuffer);
+  param.transferUnit =
+      readConfigUint(Section::HostInterface, Config::Key::FIFOTransferUnit);
   param.latency = ARM::AXI::makeFunction(axiClock, axiWidth);
 
   pcie = new FIFO(o, i, param);
