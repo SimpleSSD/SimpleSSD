@@ -10,9 +10,9 @@
 #include "icl/manager/abstract_manager.hh"
 #include "util/algorithm.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Cache {
 
-SetAssociative::SetAssociative(ObjectData &o, AbstractManager *m,
+SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
                                FTL::Parameter *p)
     : AbstractCache(o, m, p), dirtyLines(0) {
   auto policy = (Config::EvictPolicyType)readConfigUint(
@@ -271,7 +271,8 @@ void SetAssociative::tryAllocate(LPN lpn) {
   }
 }
 
-void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
+void SetAssociative::collect(uint32_t curSet,
+                             std::vector<Manager::FlushContext> &list) {
   uint64_t size = cacheline.size();
   std::vector<uint64_t> collected(pagesToEvict, size);
 
@@ -349,7 +350,8 @@ void SetAssociative::collect(uint32_t curSet, std::vector<FlushContext> &list) {
       line.nvmPending = true;
 
       evictList.emplace(line.tag, LineInfo(set, way));
-      list.emplace_back(FlushContext(line.tag, makeDataAddress(set, way)));
+      list.emplace_back(
+          Manager::FlushContext(line.tag, makeDataAddress(set, way)));
     }
   }
 }
@@ -450,7 +452,7 @@ void SetAssociative::flush(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  std::vector<FlushContext> list;
+  std::vector<Manager::FlushContext> list;
   std::unordered_map<LPN, LineInfo> lpnList;
 
   LPN slpn = sreq->getOffset();
@@ -602,7 +604,7 @@ void SetAssociative::allocate(HIL::SubRequest *sreq) {
 
   if (evict && (evictList.size() < pagesToEvict || eid == InvalidEventID)) {
     // Perform eviction
-    std::vector<FlushContext> list;
+    std::vector<Manager::FlushContext> list;
 
     collect(set, list);
 
@@ -867,4 +869,4 @@ void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventCacheDone);
 }
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Cache

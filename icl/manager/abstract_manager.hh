@@ -15,7 +15,13 @@
 
 namespace SimpleSSD::ICL {
 
+namespace Cache {
+
 class AbstractCache;
+
+}
+
+namespace Manager {
 
 struct FlushContext {
   LPN lpn;           // Logical address of request
@@ -63,7 +69,7 @@ class AbstractManager : public Object {
   ICL *pICL;
 
   FTL::FTL *pFTL;
-  AbstractCache *cache;
+  Cache::AbstractCache *cache;
 
   Event eventICLCompletion;
 
@@ -81,7 +87,7 @@ class AbstractManager : public Object {
   }
 
   void setCallbackFunction(Event e) { eventICLCompletion = e; }
-  virtual void initialize(AbstractCache *ac) { cache = ac; }
+  virtual void initialize(Cache::AbstractCache *ac) { cache = ac; }
 
   /* Interface for ICL::ICL */
 
@@ -117,6 +123,8 @@ class AbstractManager : public Object {
   //! Cache write-back requester
   virtual void drain(std::vector<FlushContext> &) = 0;
 };
+
+}  // namespace Manager
 
 }  // namespace SimpleSSD::ICL
 

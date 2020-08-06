@@ -9,9 +9,10 @@
 
 #include "icl/manager/abstract_manager.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Cache {
 
-RingBuffer::RingBuffer(ObjectData &o, AbstractManager *m, FTL::Parameter *p)
+RingBuffer::RingBuffer(ObjectData &o, Manager::AbstractManager *m,
+                       FTL::Parameter *p)
     : AbstractCache(o, m, p), dirtyLines(0) {
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
@@ -247,7 +248,7 @@ void RingBuffer::tryAllocate() {
   }
 }
 
-void RingBuffer::collect(std::vector<FlushContext> &list) {
+void RingBuffer::collect(std::vector<Manager::FlushContext> &list) {
   std::vector<uint64_t> collected(pagesToEvict, totalEntries);
 
   for (auto &iter : tagHashTable) {
@@ -277,7 +278,7 @@ void RingBuffer::collect(std::vector<FlushContext> &list) {
       line.nvmPending = true;
 
       evictList.emplace(line.tag, i);
-      list.emplace_back(FlushContext(line.tag, makeDataAddress(i)));
+      list.emplace_back(Manager::FlushContext(line.tag, makeDataAddress(i)));
     }
   }
 }
@@ -377,7 +378,7 @@ void RingBuffer::flush(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  std::vector<FlushContext> list;
+  std::vector<Manager::FlushContext> list;
   std::unordered_map<LPN, uint64_t> lpnList;
 
   LPN slpn = sreq->getOffset();
@@ -544,7 +545,7 @@ void RingBuffer::allocate(HIL::SubRequest *sreq) {
 
   if (evict && (evictList.size() < pagesToEvict || eid == InvalidEventID)) {
     // Perform eviction
-    std::vector<FlushContext> list;
+    std::vector<Manager::FlushContext> list;
 
     collect(list);
 
@@ -796,4 +797,4 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventCacheDone);
 }
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Cache

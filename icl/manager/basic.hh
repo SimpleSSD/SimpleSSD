@@ -14,11 +14,11 @@
 
 #include "icl/manager/abstract_manager.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Manager {
 
 #define debugprint_basic(req, format, ...)                                     \
   {                                                                            \
-    debugprint(Log::DebugID::ICL_BasicCache,                                   \
+    debugprint(Log::DebugID::ICL_BasicManager,                                 \
                "%s | REQ %7" PRIu64 ":%-3u | " format,                         \
                HIL::getOperationName(req->getOpcode()), req->getParentTag(),   \
                req->getTagForLog(), ##__VA_ARGS__);                            \
@@ -46,7 +46,7 @@ class BasicDetector : public SequentialDetector {
   void restoreCheckpoint(std::istream &, ObjectData &) noexcept override;
 };
 
-class BasicCache : public AbstractManager {
+class BasicManager : public AbstractManager {
  protected:
   SequentialDetector *detector;
 
@@ -71,8 +71,8 @@ class BasicCache : public AbstractManager {
   uint64_t drained;
 
  public:
-  BasicCache(ObjectData &, ICL *, FTL::FTL *);
-  ~BasicCache();
+  BasicManager(ObjectData &, ICL *, FTL::FTL *);
+  ~BasicManager();
 
   void read(HIL::SubRequest *) override;
   void write(HIL::SubRequest *) override;
@@ -92,6 +92,6 @@ class BasicCache : public AbstractManager {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Manager
 
 #endif

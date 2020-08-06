@@ -25,8 +25,17 @@ class HIL;
 
 namespace ICL {
 
+namespace Manager {
+
 class AbstractManager;
+
+}
+
+namespace Cache {
+
 class AbstractCache;
+
+}
 
 /**
  * \brief ICL (Internal Cache Layer) class
@@ -38,8 +47,8 @@ class ICL : public Object {
   HIL::HIL *pHIL;
 
   FTL::FTL *pFTL;
-  AbstractManager *pManager;
-  AbstractCache *pCache;
+  Manager::AbstractManager *pManager;
+  Cache::AbstractCache *pCache;
 
   uint64_t totalLogicalPages;
   uint32_t logicalPageSize;

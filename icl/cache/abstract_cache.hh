@@ -15,7 +15,13 @@
 
 namespace SimpleSSD::ICL {
 
+namespace Manager {
+
 class AbstractManager;
+
+}
+
+namespace Cache {
 
 struct CacheLine {
   union {
@@ -63,7 +69,7 @@ class AbstractCache : public Object {
 
   uint32_t pagesToEvict;
 
-  AbstractManager *manager;
+  Manager::AbstractManager *manager;
   FTL::Parameter *parameter;
 
   HIL::SubRequest *getSubRequest(uint64_t);
@@ -85,7 +91,7 @@ class AbstractCache : public Object {
   }
 
  public:
-  AbstractCache(ObjectData &, AbstractManager *, FTL::Parameter *);
+  AbstractCache(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
   virtual ~AbstractCache();
 
   /**
@@ -153,6 +159,8 @@ class AbstractCache : public Object {
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };
+
+}  // namespace Cache
 
 }  // namespace SimpleSSD::ICL
 

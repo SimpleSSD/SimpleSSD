@@ -26,7 +26,7 @@ const std::string idPrefix[] = {
     "HIL::NVMe",
     "HIL::NVMe::Command",
     "ICL",
-    "ICL::BasicCache",
+    "ICL::BasicManager",
     "ICL::RingBuffer",
     "ICL::SetAssociative",
     "FTL",

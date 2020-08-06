@@ -9,7 +9,7 @@
 
 #include "icl/cache/abstract_cache.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Manager {
 
 BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
     : SequentialDetector(p),
@@ -73,7 +73,7 @@ void BasicDetector::restoreCheckpoint(std::istream &in,
   RESTORE_SCALAR(in, accessCounter);
 }
 
-BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
+BasicManager::BasicManager(ObjectData &o, ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f), detector(nullptr), drainCounter(0) {
   auto ftlparam = f->getInfo();
   bool enable =
@@ -115,18 +115,18 @@ BasicCache::BasicCache(ObjectData &o, ICL *p, FTL::FTL *f)
 
   eventDrainDone =
       createEvent([this](uint64_t t, uint64_t d) { drainDone(t, d); },
-                  "ICL::BasicCache::eventDrainDone");
+                  "ICL::BasicManager::eventDrainDone");
   eventReadDone = createEvent([this](uint64_t, uint64_t d) { readDone(d); },
-                              "ICL::BasicCache::eventReadDone");
+                              "ICL::BasicManager::eventReadDone");
 }
 
-BasicCache::~BasicCache() {
+BasicManager::~BasicManager() {
   if (detector) {
     delete detector;
   }
 }
 
-void BasicCache::read(HIL::SubRequest *req) {
+void BasicManager::read(HIL::SubRequest *req) {
   cache->lookup(req);
 
   if (detector && !req->isICLRequest()) {
@@ -166,23 +166,23 @@ void BasicCache::read(HIL::SubRequest *req) {
   }
 }
 
-void BasicCache::write(HIL::SubRequest *req) {
+void BasicManager::write(HIL::SubRequest *req) {
   cache->lookup(req);
 }
 
-void BasicCache::flush(HIL::SubRequest *req) {
+void BasicManager::flush(HIL::SubRequest *req) {
   cache->flush(req);
 }
 
-void BasicCache::erase(HIL::SubRequest *req) {
+void BasicManager::erase(HIL::SubRequest *req) {
   cache->erase(req);
 }
 
-void BasicCache::dmaDone(HIL::SubRequest *req) {
+void BasicManager::dmaDone(HIL::SubRequest *req) {
   cache->dmaDone(req->getLPN());
 }
 
-void BasicCache::lookupDone(uint64_t tag) {
+void BasicManager::lookupDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   if (req->getMiss()) {
@@ -201,7 +201,7 @@ void BasicCache::lookupDone(uint64_t tag) {
   }
 }
 
-void BasicCache::cacheDone(uint64_t tag) {
+void BasicManager::cacheDone(uint64_t tag) {
   auto req = getSubRequest(tag);
   auto opcode = req->getOpcode();
 
@@ -217,13 +217,13 @@ void BasicCache::cacheDone(uint64_t tag) {
   }
 }
 
-void BasicCache::drain(std::vector<FlushContext> &list) {
+void BasicManager::drain(std::vector<FlushContext> &list) {
   uint64_t now = getTick();
   uint64_t size = list.size();
 
   panic_if(size == 0, "Empty flush list.");
 
-  debugprint(Log::DebugID::ICL_BasicCache, "DRAIN | %" PRIu64 " PAGES", size);
+  debugprint(Log::DebugID::ICL_BasicManager, "DRAIN | %" PRIu64 " PAGES", size);
 
   // Sort
   std::sort(list.begin(), list.end(), FlushContext::compare);
@@ -250,11 +250,11 @@ void BasicCache::drain(std::vector<FlushContext> &list) {
   drainRange(begin, list.end());
 }
 
-void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
-                            std::vector<FlushContext>::iterator end) {
+void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
+                              std::vector<FlushContext>::iterator end) {
   uint32_t nlp = std::distance(begin, end);
 
-  debugprint(Log::DebugID::ICL_BasicCache, "DRAIN | LPN %" PRIu64 " + %u",
+  debugprint(Log::DebugID::ICL_BasicManager, "DRAIN | LPN %" PRIu64 " + %u",
              begin->lpn, nlp);
 
   for (auto iter = begin; iter < end; iter++) {
@@ -273,12 +273,12 @@ void BasicCache::drainRange(std::vector<FlushContext>::iterator begin,
   drained += nlp;
 }
 
-void BasicCache::drainDone(uint64_t now, uint64_t tag) {
+void BasicManager::drainDone(uint64_t now, uint64_t tag) {
   auto iter = drainQueue.find(tag);
 
   panic_if(iter == drainQueue.end(), "Unexpected drain ID %" PRIu64 ".", tag);
 
-  debugprint(Log::DebugID::ICL_BasicCache,
+  debugprint(Log::DebugID::ICL_BasicManager,
              "DRAIN | LPN %" PRIu64 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64
              ")",
              iter->second.lpn, iter->second.flushedAt, now,
@@ -289,7 +289,7 @@ void BasicCache::drainDone(uint64_t now, uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void BasicCache::readDone(uint64_t tag) {
+void BasicManager::readDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   cache->nvmDone(req->getLPN(), false);
@@ -297,23 +297,23 @@ void BasicCache::readDone(uint64_t tag) {
   scheduleNow(eventICLCompletion, tag);
 }
 
-void BasicCache::getStatList(std::vector<Stat> &list,
-                             std::string prefix) noexcept {
+void BasicManager::getStatList(std::vector<Stat> &list,
+                               std::string prefix) noexcept {
   list.emplace_back(prefix + "prefetched", "Prefetched pages");
   list.emplace_back(prefix + "drained", "Written pages");
 }
 
-void BasicCache::getStatValues(std::vector<double> &values) noexcept {
+void BasicManager::getStatValues(std::vector<double> &values) noexcept {
   values.emplace_back((double)prefetched);
   values.emplace_back((double)drained);
 }
 
-void BasicCache::resetStatValues() noexcept {
+void BasicManager::resetStatValues() noexcept {
   prefetched = 0;
   drained = 0;
 }
 
-void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
+void BasicManager::createCheckpoint(std::ostream &out) const noexcept {
   bool exist = detector != nullptr;
 
   BACKUP_SCALAR(out, exist);
@@ -343,7 +343,7 @@ void BasicCache::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventReadDone);
 }
 
-void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
+void BasicManager::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
   RESTORE_SCALAR(in, exist);
@@ -380,4 +380,4 @@ void BasicCache::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventReadDone);
 }
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Manager

@@ -16,7 +16,7 @@
 #include "icl/manager/abstract_manager.hh"
 #include "util/bitset.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Cache {
 
 class SetAssociative : public AbstractCache {
  protected:
@@ -100,7 +100,7 @@ class SetAssociative : public AbstractCache {
   void tryLookup(LPN, bool = false);
   void tryAllocate(LPN);
 
-  void collect(uint32_t, std::vector<FlushContext> &);
+  void collect(uint32_t, std::vector<Manager::FlushContext> &);
 
   Event eventLookupMemory;
   Event eventLookupDone;
@@ -110,7 +110,7 @@ class SetAssociative : public AbstractCache {
   Event eventCacheDone;
 
  public:
-  SetAssociative(ObjectData &, AbstractManager *, FTL::Parameter *);
+  SetAssociative(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
   ~SetAssociative();
 
   void lookup(HIL::SubRequest *) override;
@@ -128,6 +128,6 @@ class SetAssociative : public AbstractCache {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Cache
 
 #endif

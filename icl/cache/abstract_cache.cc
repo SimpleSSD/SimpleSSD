@@ -9,9 +9,9 @@
 
 #include "icl/manager/abstract_manager.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Cache {
 
-AbstractCache::AbstractCache(ObjectData &o, AbstractManager *m,
+AbstractCache::AbstractCache(ObjectData &o, Manager::AbstractManager *m,
                              FTL::Parameter *p)
     : Object(o),
       sectorsInPage(MAX(p->pageSize / minIO, 1)),
@@ -65,4 +65,4 @@ void AbstractCache::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp32 != sectorsInPage, "Page size mismatch.");
 }
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Cache

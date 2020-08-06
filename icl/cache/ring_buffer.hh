@@ -13,7 +13,7 @@
 #include "icl/cache/abstract_cache.hh"
 #include "icl/manager/abstract_manager.hh"
 
-namespace SimpleSSD::ICL {
+namespace SimpleSSD::ICL::Cache {
 
 class RingBuffer : public AbstractCache {
  protected:
@@ -68,7 +68,7 @@ class RingBuffer : public AbstractCache {
   void tryLookup(LPN, bool = false);
   void tryAllocate();
 
-  void collect(std::vector<FlushContext> &);
+  void collect(std::vector<Manager::FlushContext> &);
 
   Event eventReadTagAll;  // Read all tag
   void readAll(uint64_t, Event);
@@ -77,7 +77,7 @@ class RingBuffer : public AbstractCache {
   Event eventCacheDone;   // Call manager->cacheDone
 
  public:
-  RingBuffer(ObjectData &, AbstractManager *, FTL::Parameter *);
+  RingBuffer(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
   ~RingBuffer();
 
   void lookup(HIL::SubRequest *) override;
@@ -95,6 +95,6 @@ class RingBuffer : public AbstractCache {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace SimpleSSD::ICL
+}  // namespace SimpleSSD::ICL::Cache
 
 #endif

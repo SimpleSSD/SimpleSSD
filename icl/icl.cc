@@ -30,7 +30,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
     case Config::Mode::None:
     case Config::Mode::SetAssociative:
     case Config::Mode::RingBuffer:
-      pManager = new BasicCache(object, this, pFTL);
+      pManager = new Manager::BasicManager(object, this, pFTL);
 
       break;
     default:
@@ -42,7 +42,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
   // Create cache structure
   switch (mode) {
     case Config::Mode::SetAssociative:
-      pCache = new SetAssociative(object, pManager, param);
+      pCache = new Cache::SetAssociative(object, pManager, param);
 
       break;
     case Config::Mode::None:
@@ -52,7 +52,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
       /* fallthrough */
     case Config::Mode::RingBuffer:
-      pCache = new RingBuffer(object, pManager, param);
+      pCache = new Cache::RingBuffer(object, pManager, param);
 
       break;
     default:
