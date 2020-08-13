@@ -762,7 +762,7 @@ uint8_t Subsystem::destroyNamespace(uint32_t nsid) {
 
 void Subsystem::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
-  auto nprefix = prefix + "hil_nvme.";
+  auto nprefix = prefix + "hil.nvme.";
 
   // All controllers
   for (auto &ctrl : controllerList) {
