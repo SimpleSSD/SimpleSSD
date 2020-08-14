@@ -236,9 +236,16 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
           req.dmaBeginAt = now;
         }
 
-        req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, buffer,
-                             sreq.address + sreq.skipFront, eventDMACompletion,
-                             sreq.requestTag);
+        if (LIKELY(req.dmaEngine)) {
+          req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, buffer,
+                               sreq.address + sreq.skipFront,
+                               eventDMACompletion, sreq.requestTag);
+        }
+        else {
+          // No DMA Engine -- None interface
+          object.memory->read(sreq.address + sreq.skipFront, sreq.length,
+                              eventDMACompletion, sreq.requestTag, false);
+        }
       }
 
       break;
@@ -248,9 +255,16 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         req.dmaBeginAt = now;
       }
 
-      req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, buffer,
-                          sreq.address + sreq.skipFront, eventDMACompletion,
-                          sreq.requestTag);
+      if (LIKELY(req.dmaEngine)) {
+        req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, buffer,
+                            sreq.address + sreq.skipFront, eventDMACompletion,
+                            sreq.requestTag);
+      }
+      else {
+        // No DMA Engine -- None interface
+        object.memory->write(sreq.address + sreq.skipFront, sreq.length,
+                             eventDMACompletion, sreq.requestTag, false);
+      }
 
       break;
     case Operation::WriteZeroes:
