@@ -26,10 +26,14 @@ HIL *Controller::getHIL() const {
 
 uint64_t Controller::read(uint64_t, uint32_t, uint8_t *) noexcept {
   panic("Read controller register not implemented.");
+
+  return 0;
 }
 
 uint64_t Controller::write(uint64_t, uint32_t, uint8_t *) noexcept {
   panic("Write controller register not implemented.");
+
+  return 0;
 }
 
 void Controller::getStatList(std::vector<Stat> &, std::string) noexcept {}

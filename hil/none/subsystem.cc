@@ -30,7 +30,7 @@ void Subsystem::init() {
 ControllerID Subsystem::createController(Interface *interface) noexcept {
   panic_if(pController != nullptr, "Only one controller is supported.");
 
-  auto ctrl = new Controller(object, 0, this, interface);
+  pController = new Controller(object, 0, this, interface);
 
   return 0;
 }
@@ -78,7 +78,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
   pHIL->restoreCheckpoint(in);
 }
 
-Request *Subsystem::restoreRequest(uint64_t tag) noexcept {
+Request *Subsystem::restoreRequest(uint64_t) noexcept {
   panic("Checkpoint not works.");
 
   return nullptr;
