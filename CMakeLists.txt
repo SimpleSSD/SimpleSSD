@@ -108,6 +108,10 @@ set(SRC_HIL_COMMON
   hil/common/dma_engine.cc
   hil/common/interrupt_manager.cc
 )
+set(SRC_HIL_NONE
+  hil/none/controller.cc
+  hil/none/subsystem.cc
+)
 set(SRC_HIL_NVME
   hil/nvme/controller.cc
   hil/nvme/namespace.cc
@@ -213,6 +217,7 @@ SOURCE_GROUP("Source Files\\cpu" FILES ${SRC_CPU})
 SOURCE_GROUP("Source Files\\memory" FILES ${SRC_MEM})
 SOURCE_GROUP("Source Files\\hil" FILES ${SRC_HIL})
 SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
+SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_NONE})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
 SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
@@ -233,6 +238,7 @@ SOURCE_GROUP("Source Files\\util" FILES ${SRC_UTIL})
 set(SRCS
   ${SRC_HIL}
   ${SRC_HIL_COMMON}
+  ${SRC_HIL_NONE}
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
   ${SRC_ICL}
