@@ -11,7 +11,8 @@
 
 namespace SimpleSSD::HIL::None {
 
-Subsystem::Subsystem(ObjectData &o) : AbstractSubsystem(o) {
+Subsystem::Subsystem(ObjectData &o)
+    : AbstractSubsystem(o), pController(nullptr) {
   pHIL = new HIL(o, this);
 }
 
