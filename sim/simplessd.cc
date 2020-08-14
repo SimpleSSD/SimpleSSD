@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include "hil/none/subsystem.hh"
 #include "hil/nvme/subsystem.hh"
 #include "mem/system.hh"
 #include "sim/version.hh"
@@ -119,6 +120,9 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
 
   // Initialize objects
   switch (mode) {
+    case Config::Mode::None:
+      subsystem = new HIL::None::Subsystem(object);
+      break;
     case Config::Mode::NVMe:
       subsystem = new HIL::NVMe::Subsystem(object);
       break;
