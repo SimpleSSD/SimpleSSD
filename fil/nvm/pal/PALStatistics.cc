@@ -692,8 +692,6 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
                                TimeSlot &DMA0, TimeSlot &MEM, TimeSlot &DMA1)
 #endif
 {
-  return;
-
   uint32_t oper = CMD.operation;
   uint32_t chIdx = CPD->Channel;
   uint64_t time_all[TICK_STAT_NUM];
@@ -766,6 +764,9 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   Energy_MEM.add(oper, (double)energy_mem);
   Energy_DMA1.add(oper, (double)energy_dma1);
   Energy_Total.add(oper, (double)(energy_dma0 + energy_mem + energy_dma1));
+
+  return;
+
   // printf("[Energy(fJ) of Oper(%d)] DMA0(%llu) MEM(%llu) DMA1(%llu)\n", oper,
   // energy_dma0, energy_mem, energy_dma1);
   uint64_t finished_time = CMD.finished;
