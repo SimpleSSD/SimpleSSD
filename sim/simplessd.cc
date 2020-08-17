@@ -154,6 +154,15 @@ void SimpleSSD::deinit() noexcept {
     {
       Power power;
 
+      if (UNLIKELY(debugfile == nullptr)) {
+        auto dummy = std::string("");
+        auto dummy2 = std::string(FILE_STDOUT);
+
+        debugfile = openStream(dummy, dummy2);
+
+        log.init(object.cpu, outfile, errfile, debugfile);
+      }
+
       debugprint(Log::DebugID::CPU, "Begin CPU power calculation");
 
       object.cpu->calculatePower(power);
