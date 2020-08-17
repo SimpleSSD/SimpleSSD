@@ -18,9 +18,6 @@
 #include "util/algorithm.hh"
 #include "util/path.hh"
 
-#define FLUSH_PERIOD 100000000000ull  // 0.1sec
-#define FLUSH_RANGE 10000000000ull    // 0.01sec
-
 namespace SimpleSSD::FIL::NVM {
 
 PALOLD::PALOLD(ObjectData &o, Event e)
@@ -62,17 +59,6 @@ PALOLD::PALOLD(ObjectData &o, Event e)
   // Create spare data file (platform specific - temp code)
   spareList.reserve(stats->channel * stats->package * param->die *
                     param->plane * param->block * param->die);
-
-  // We will periodically flush timeslot for saving memory
-  flushEvent = createEvent(
-      [this](uint64_t tick, uint64_t) {
-        pal->FlushFreeSlots(tick - FLUSH_RANGE);
-        pal->FlushTimeSlots(tick - FLUSH_RANGE);
-
-        scheduleRel(flushEvent, 0ull, FLUSH_PERIOD);
-      },
-      "FIL::PALOLD::flushEvent");
-  scheduleRel(flushEvent, 0ull, FLUSH_PERIOD);
 }
 
 PALOLD::~PALOLD() {
@@ -337,7 +323,6 @@ void PALOLD::resetStatValues() noexcept {
 }
 
 void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_EVENT(out, flushEvent);
   BACKUP_SCALAR(out, lastResetTick);
   BACKUP_BLOB(out, &stat, sizeof(stat));
   BACKUP_EVENT(out, completeEvent);
@@ -357,7 +342,6 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
-  RESTORE_EVENT(in, flushEvent);
   RESTORE_SCALAR(in, lastResetTick);
   RESTORE_BLOB(in, &stat, sizeof(stat));
   RESTORE_EVENT(in, completeEvent);

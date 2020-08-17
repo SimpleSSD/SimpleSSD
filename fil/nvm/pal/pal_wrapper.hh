@@ -33,8 +33,6 @@ class PALOLD : public AbstractNVM {
 
   Config::NANDStructure *param;
 
-  Event flushEvent;
-
   uint64_t lastResetTick;
 
   struct {
