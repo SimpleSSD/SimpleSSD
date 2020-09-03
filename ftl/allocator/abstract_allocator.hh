@@ -100,9 +100,7 @@ class AbstractAllocator : public Object {
   virtual void reclaimBlocks(PPN, Event) = 0;
 
   //! Get parallelism index from physical page address.
-  inline PPN getParallelismFromPPN(PPN ppn) {
-    return ppn % param->parallelism;
-  }
+  inline PPN getParallelismFromPPN(PPN ppn) { return ppn % param->parallelism; }
 };
 
 }  // namespace BlockAllocator

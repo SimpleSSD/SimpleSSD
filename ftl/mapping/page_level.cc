@@ -480,7 +480,7 @@ void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  const auto block = &blockMetadata[copyctx.sblockID]; // superblock
+  const auto block = &blockMetadata[copyctx.sblockID];  // superblock
 
   copyctx.reset();
   copyctx.list.reserve(block->validPages.count());

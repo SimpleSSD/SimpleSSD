@@ -45,7 +45,11 @@ class Request {
   Request(PPN p, Event e, uint64_t d)
       : lpn(InvalidLPN), ppn(p), eid(e), data(d), parent(nullptr) {}
   Request(FTL::Request *r, Event e)
-      : lpn(r->getLPN()), ppn(r->getPPN()), eid(e), data(r->getTag()), parent(r) {}
+      : lpn(r->getLPN()),
+        ppn(r->getPPN()),
+        eid(e),
+        data(r->getTag()),
+        parent(r) {}
 
   inline uint64_t getTag() { return tag; }
   inline Operation getOpcode() { return opcode; }

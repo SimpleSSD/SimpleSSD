@@ -427,7 +427,8 @@ void BasicFTL::gc_trigger(uint64_t now) {
   stat.gcCount++;
 
   // victim block selection
-  pAllocator->getVictimBlocks(gcctx.victimSBlockList, eventGCSetNextVictimBlock);
+  pAllocator->getVictimBlocks(gcctx.victimSBlockList,
+                              eventGCSetNextVictimBlock);
 
   debugprint(Log::DebugID::FTL_PageLevel, "GC    | On-demand | %u blocks",
              gcctx.victimSBlockList.size());
@@ -577,8 +578,8 @@ void BasicFTL::gc_eraseSubmit() {
   debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
              blockId);
   for (uint i = 0; i < minMappingSize; i++) {
-    pFIL->erase(
-        FIL::Request(pMapper->getBlockFromSuperblock(blockId, i), eventGCEraseDone, 0));
+    pFIL->erase(FIL::Request(pMapper->getBlockFromSuperblock(blockId, i),
+                             eventGCEraseDone, 0));
     gcctx.copyctx.eraseCounter++;
   }
 }
