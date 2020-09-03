@@ -32,3 +32,8 @@ temp_build/
 
 # Library output
 *.a
+
+# Patch
+*.patch
+*.diff
+*.rej
