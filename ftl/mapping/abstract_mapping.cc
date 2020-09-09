@@ -3,6 +3,7 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
+ *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #include "ftl/mapping/abstract_mapping.hh"
