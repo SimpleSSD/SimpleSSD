@@ -145,16 +145,6 @@ TEST_CASE("ConfigReader") {
                        utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::MPHYLane,
                        utest);
-      reader.writeUint(Section::HostInterface, HIL::Config::Key::AXIWidth,
-                       utest);
-      reader.writeUint(Section::HostInterface, HIL::Config::Key::AXIClock,
-                       utest);
-      reader.writeUint(Section::HostInterface,
-                       HIL::Config::Key::FIFOTransferUnit, utest);
-      reader.writeUint(Section::HostInterface, HIL::Config::Key::FIFORxBuffer,
-                       utest);
-      reader.writeUint(Section::HostInterface, HIL::Config::Key::FIFOTxBuffer,
-                       utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::NVMeMaxSQ,
                        utest);
       reader.writeUint(Section::HostInterface, HIL::Config::Key::NVMeMaxCQ,
@@ -211,7 +201,11 @@ TEST_CASE("ConfigReader") {
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::DChoiceParam, utest);
       reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::GCThreshold, ftest);
+                        FTL::Config::Key::FGCThreshold, ftest);
+      reader.writeFloat(Section::FlashTranslation,
+                        FTL::Config::Key::BGCThreshold, ftest * 2.f);
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::BGCIdleTime,
+                       utest);
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::OverProvisioningRatio, ftest);
       reader.writeUint(Section::FlashTranslation,
@@ -416,17 +410,6 @@ TEST_CASE("ConfigReader") {
                               HIL::Config::Key::MPHYMode) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::MPHYLane) == utest);
-      // utest * 8 because it handled in update()
-      REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::AXIWidth) == utest * 8);
-      REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::AXIClock) == utest);
-      REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::FIFOTransferUnit) == utest);
-      REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::FIFORxBuffer) == utest);
-      REQUIRE(reader.readUint(Section::HostInterface,
-                              HIL::Config::Key::FIFOTxBuffer) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
                               HIL::Config::Key::NVMeMaxSQ) == utest);
       REQUIRE(reader.readUint(Section::HostInterface,
@@ -488,7 +471,11 @@ TEST_CASE("ConfigReader") {
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::DChoiceParam) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::GCThreshold) == ftest);
+                               FTL::Config::Key::FGCThreshold) == ftest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::BGCThreshold) == ftest * 2.f);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::BGCIdleTime) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::OverProvisioningRatio) ==
               ftest);
