@@ -77,12 +77,16 @@ class DMAEngine : public Object {
     uint32_t regionIndex;
 
     uint8_t *buffer;
+    uint64_t memoryAddress;
+
+    bool both;
 
     void allocateBuffer(uint32_t);
     void deallocateBuffer();
 
-    DMASession(uint64_t t) : tag(t) {}
-    DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *);
+    DMASession(uint64_t t) : tag(t), both(false) {}
+    DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *,
+               uint64_t);
   };
 
   DMAInterface *interface;
@@ -125,10 +129,8 @@ class DMAEngine : public Object {
   void writeNext(DMASession &) noexcept;
 
   inline DMASession &findSession(uint64_t);
-  inline std::pair<const uint64_t, DMASession> &createSession(DMATag, Event,
-                                                              uint64_t,
-                                                              uint64_t,
-                                                              uint8_t *);
+  inline std::pair<const uint64_t, DMASession> &createSession(
+      DMATag, Event, uint64_t, uint64_t, uint8_t *, uint64_t);
   inline void destroySession(uint64_t);
 
  public:
@@ -192,7 +194,7 @@ class DMAEngine : public Object {
    * \param[in] data    Event data
    */
   void read(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
-            Event eid, uint64_t data = 0) noexcept;
+            uint64_t memaddr, Event eid, uint64_t data = 0) noexcept;
 
   /**
    * \brief DMA Write (SSD -> Host)
@@ -201,7 +203,7 @@ class DMAEngine : public Object {
    * description.
    */
   void write(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
-             Event eid, uint64_t data = 0) noexcept;
+             uint64_t memaddr, Event eid, uint64_t data = 0) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
