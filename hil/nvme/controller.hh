@@ -106,9 +106,6 @@ class Controller : public AbstractController {
 
   ControllerData controllerData;
 
-  FIFO *pcie;  //!< FIFO for PCIe bus <-> PCIe PHY
-  // FIFO *interconnect;  //!< FIFO for PCIe PHY <-> Interconnect
-
   RegisterTable registers;
   PersistentMemoryRegion pmrRegisters;
 

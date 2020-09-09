@@ -46,23 +46,6 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.interruptManager = nullptr;
   controllerData.arbitrator = nullptr;
 
-  // Initialize FIFO queues
-  auto axiWidth = (ARM::AXI::Width)readConfigUint(Section::HostInterface,
-                                                  Config::Key::AXIWidth);
-  auto axiClock = readConfigUint(Section::HostInterface, Config::Key::AXIClock);
-
-  FIFOParam param;
-
-  param.rqSize =
-      readConfigUint(Section::HostInterface, Config::Key::FIFORxBuffer);
-  param.wqSize =
-      readConfigUint(Section::HostInterface, Config::Key::FIFOTxBuffer);
-  param.transferUnit =
-      readConfigUint(Section::HostInterface, Config::Key::FIFOTransferUnit);
-  param.latency = ARM::AXI::makeFunction(axiClock, axiWidth);
-
-  pcie = new FIFO(o, i, param);
-
   // [Bits ] Name  : Description                        : Current Setting
   // [63:58] Reserved
   // [57:57] CMBS  : Controller Memory Buffer Supported : No
@@ -93,7 +76,7 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   controllerData.interruptManager =
       new InterruptManager(object, interface, controllerID);
   controllerData.arbitrator = new Arbitrator(object, &controllerData);
-  controllerData.dmaEngine = new DMAEngine(object, pcie);
+  controllerData.dmaEngine = new DMAEngine(object, interface);
 
   controllerData.dmaEngine->updatePageSize(1ull << 12);
 
@@ -104,8 +87,6 @@ Controller::~Controller() {
   delete controllerData.interruptManager;
   delete controllerData.arbitrator;
   delete controllerData.dmaEngine;
-  delete pcie;
-  // delete interconnect;
 }
 
 void Controller::notifySubsystem() {
@@ -448,7 +429,6 @@ void Controller::createCheckpoint(std::ostream &out) const noexcept {
   controllerData.dmaEngine->createCheckpoint(out);
   controllerData.interruptManager->createCheckpoint(out);
   controllerData.arbitrator->createCheckpoint(out);
-  pcie->createCheckpoint(out);
 
   feature.createCheckpoint(out);
   logPage.createCheckpoint(out);
@@ -469,7 +449,6 @@ void Controller::restoreCheckpoint(std::istream &in) noexcept {
   controllerData.dmaEngine->restoreCheckpoint(in);
   controllerData.interruptManager->restoreCheckpoint(in);
   controllerData.arbitrator->restoreCheckpoint(in);
-  pcie->restoreCheckpoint(in);
 
   feature.restoreCheckpoint(in);
   logPage.restoreCheckpoint(in);
