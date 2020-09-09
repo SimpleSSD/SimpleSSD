@@ -69,7 +69,13 @@
   <section name="memory">
     <!-- System -->
     <section name="system">
-      <!-- <int:u64> Bus clock speed in Hz -->
+      <!--
+        <int:u64> Bus clock speed in Hz
+
+        This simple system bus can transfer 64bytes in one cycle. All memory
+        access (object->memory) packet transmitted to memory controller via this
+        system bus.
+       -->
       <config name="BusClock">400m</config>
     </section>
     <!-- LLC -->
@@ -280,21 +286,6 @@
         <config name="Mode">2</config>
         <!-- <int:u8> M-PHY Lane (1 ~ 2) -->
         <config name="Lane">2</config>
-      </section>
-      <!-- AXI4 configuration -->
-      <section name="axi">
-        <!-- <int:u16> AXI bus width (32 ~ 1024, power of 2) -->
-        <config name="Width">64</config>
-        <!-- <int:u64> AXI bus speed in Hz -->
-        <config name="Clock">400m</config>
-      </section>
-      <section name="fifo">
-        <!-- <int:u64> FIFO queue transfer unit in bytes -->
-        <config name="TransferUnit">2048</config>
-        <!-- <int:u64> FIFO queue tx buffer size in bytes -->
-        <config name="TxBufferSize">8K</config>
-        <!-- <int:u64> FIFO queue rx buffer size in bytes -->
-        <config name="RxBufferSize">8K</config>
       </section>
     </section>
     <!--

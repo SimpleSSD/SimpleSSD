@@ -30,11 +30,6 @@ class Config : public BaseConfig {
     SATAGeneration,
     MPHYMode,
     MPHYLane,
-    AXIWidth,
-    AXIClock,
-    FIFOTransferUnit,
-    FIFORxBuffer,
-    FIFOTxBuffer,
     NVMeMaxSQ,
     NVMeMaxCQ,
     NVMeWRRHigh,
@@ -68,8 +63,6 @@ class Config : public BaseConfig {
   SATA::Generation sataGen;
   MIPI::M_PHY::Mode mphyMode;
   uint8_t mphyLane;
-  ARM::AXI::Width axiWidth;
-  uint64_t axiClock;
 
   uint16_t maxSQ;
   uint16_t maxCQ;
@@ -77,10 +70,6 @@ class Config : public BaseConfig {
   uint16_t wrrMedium;
   uint32_t maxNamespace;
   uint32_t defaultNamespace;
-
-  uint64_t fifoTransferUnit;
-  uint64_t fifoRxBuffer;
-  uint64_t fifoTxBuffer;
 
   bool attachDefaultNamespaces;
 

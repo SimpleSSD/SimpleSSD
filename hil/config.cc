@@ -18,8 +18,6 @@ const char NAME_FIFO_SIZE[] = "RequestQueueSize";
 const char NAME_GENERATION[] = "Generation";
 const char NAME_LANE[] = "Lane";
 const char NAME_MODE[] = "Mode";
-const char NAME_WIDTH[] = "Width";
-const char NAME_CLOCK[] = "Clock";
 const char NAME_ENABLE_DISK_IMAGE[] = "EnableDiskImage";
 const char NAME_STRICT_SIZE_CHECK[] = "StrickSizecheck";
 const char NAME_USE_COW_DISK[] = "UseCopyOnWriteDisk";
@@ -33,9 +31,6 @@ const char NAME_DEFAULT_NAMESPACE[] = "DefaultNamespace";
 const char NAME_ATTACH_DEFAULT_NAMESPACES[] = "AttachDefaultNamespaces";
 const char NAME_LBA_SIZE[] = "LBASize";
 const char NAME_CAPACITY[] = "Capacity";
-const char NAME_FIFO_TRANSFER_UNIT[] = "TransferUnit";
-const char NAME_FIFO_RX_BUFFER_SIZE[] = "RxBufferSize";
-const char NAME_FIFO_TX_BUFFER_SIZE[] = "TxBufferSize";
 
 //! A constructor
 Config::Config() {
@@ -47,8 +42,6 @@ Config::Config() {
   sataGen = SATA::Generation::Gen3;
   mphyMode = MIPI::M_PHY::Mode::HighSpeed_Gear3;
   mphyLane = 2;
-  axiWidth = ARM::AXI::Width::Bit256;
-  axiClock = 100000000;
 
   maxSQ = 16;
   maxCQ = 16;
@@ -56,10 +49,6 @@ Config::Config() {
   wrrMedium = 2;
   maxNamespace = 16;
   defaultNamespace = 0;
-
-  fifoTransferUnit = 64;
-  fifoRxBuffer = 8192;
-  fifoTxBuffer = 8192;
 }
 
 void Config::loadInterface(pugi::xml_node &section) {
@@ -85,21 +74,6 @@ void Config::loadInterface(pugi::xml_node &section) {
            node2 = node2.next_sibling()) {
         LOAD_NAME_UINT_TYPE(node2, NAME_MODE, MIPI::M_PHY::Mode, mphyMode);
         LOAD_NAME_UINT_TYPE(node2, NAME_LANE, uint8_t, mphyLane);
-      }
-    }
-    else if (strcmp(name, "axi") == 0 && isSection(node)) {
-      for (auto node2 = node.first_child(); node2;
-           node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT_TYPE(node2, NAME_WIDTH, ARM::AXI::Width, axiWidth);
-        LOAD_NAME_UINT(node2, NAME_CLOCK, axiClock);
-      }
-    }
-    else if (strcmp(name, "fifo") == 0 && isSection(node)) {
-      for (auto node2 = node.first_child(); node2;
-           node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT(node2, NAME_FIFO_TRANSFER_UNIT, fifoTransferUnit);
-        LOAD_NAME_UINT(node2, NAME_FIFO_RX_BUFFER_SIZE, fifoRxBuffer);
-        LOAD_NAME_UINT(node2, NAME_FIFO_TX_BUFFER_SIZE, fifoTxBuffer);
       }
     }
   }
@@ -159,15 +133,6 @@ void Config::storeInterface(pugi::xml_node &section) {
   STORE_SECTION(section, "mphy", node);
   STORE_NAME_UINT(node, NAME_MODE, mphyMode);
   STORE_NAME_UINT(node, NAME_LANE, mphyLane);
-
-  STORE_SECTION(section, "axi", node);
-  STORE_NAME_UINT(node, NAME_WIDTH, axiWidth * 8);  // Byte -> Bit
-  STORE_NAME_UINT(node, NAME_CLOCK, axiClock);
-
-  STORE_SECTION(section, "fifo", node);
-  STORE_NAME_UINT(node, NAME_FIFO_TRANSFER_UNIT, fifoTransferUnit);
-  STORE_NAME_UINT(node, NAME_FIFO_RX_BUFFER_SIZE, fifoRxBuffer);
-  STORE_NAME_UINT(node, NAME_FIFO_TX_BUFFER_SIZE, fifoTxBuffer);
 }
 
 void Config::storeDisk(pugi::xml_node &section, Disk *disk) {
@@ -263,15 +228,6 @@ void Config::update() {
 
   panic_if((uint8_t)mphyMode > 3, "Invalid M-PHY mode %u.", (uint8_t)mphyMode);
   panic_if(mphyLane == 0 || mphyLane > 2, "Invalid M-PHY lane %u.", mphyLane);
-
-  panic_if(popcount16((uint16_t)axiWidth) != 1 || (uint16_t)axiWidth > 1024 ||
-               (uint16_t)axiWidth < 32,
-           "Invalid AXI bus width %u.", (uint16_t)axiWidth);
-  axiWidth = (ARM::AXI::Width)((uint16_t)axiWidth / 8);
-
-  panic_if(popcount64(fifoTransferUnit) != 1, "Invalid FIFO transfer unit.");
-  panic_if(popcount64(fifoRxBuffer) != 1, "Invalid FIFO receive buffer size.");
-  panic_if(popcount64(fifoTxBuffer) != 1, "Invalid FIFO transfer buffer size.");
 
   for (auto &disk : diskList) {
     panic_if(
@@ -370,21 +326,6 @@ uint64_t Config::readUint(uint32_t idx) {
     case MPHYLane:
       ret = mphyLane;
       break;
-    case AXIWidth:
-      ret = (uint64_t)axiWidth;
-      break;
-    case AXIClock:
-      ret = axiClock;
-      break;
-    case FIFOTransferUnit:
-      ret = fifoTransferUnit;
-      break;
-    case FIFORxBuffer:
-      ret = fifoRxBuffer;
-      break;
-    case FIFOTxBuffer:
-      ret = fifoTxBuffer;
-      break;
     case NVMeMaxSQ:
       ret = maxSQ;
       break;
@@ -441,21 +382,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
       break;
     case MPHYLane:
       mphyLane = (uint8_t)value;
-      break;
-    case AXIWidth:
-      axiWidth = (ARM::AXI::Width)value;
-      break;
-    case AXIClock:
-      axiClock = value;
-      break;
-    case FIFOTransferUnit:
-      fifoTransferUnit = value;
-      break;
-    case FIFORxBuffer:
-      fifoRxBuffer = value;
-      break;
-    case FIFOTxBuffer:
-      fifoTxBuffer = value;
       break;
     case NVMeMaxSQ:
       maxSQ = (uint16_t)value;
