@@ -178,11 +178,28 @@ class DMAEngine : public Object {
    */
   void deinit(DMATag tag) noexcept;
 
-  //! DMA read with provided session
+  /**
+   * \brief DMA Read (Host -> SSD)
+   *
+   * Read data from host using initialized DMATag.
+   *
+   * \param[in] tag     DMATag returned by init* functions
+   * \param[in] offset  Offset in DMATag to start read
+   * \param[in] size    # of bytes to read
+   * \param[in] buffer  Pointer to buffer
+   * \param[in] memaddr Memory address of buffer
+   * \param[in] eid     Callback event
+   * \param[in] data    Event data
+   */
   void read(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
             Event eid, uint64_t data = 0) noexcept;
 
-  //! DMA write with provided session
+  /**
+   * \brief DMA Write (SSD -> Host)
+   *
+   * Write data to host using initialized DMATag. See read() for parameter
+   * description.
+   */
   void write(DMATag tag, uint64_t offset, uint32_t size, uint8_t *buffer,
              Event eid, uint64_t data = 0) noexcept;
 
