@@ -236,10 +236,8 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
         }
 
         req.dmaEngine->write(req.dmaTag, sreq.offset, sreq.length, buffer,
-                             eventDMACompletion, sreq.requestTag);
-
-        object.memory->read(sreq.address + sreq.skipFront, sreq.length,
-                            InvalidEventID, false);
+                             sreq.address + sreq.skipFront, eventDMACompletion,
+                             sreq.requestTag);
       }
 
       break;
@@ -250,10 +248,8 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
       }
 
       req.dmaEngine->read(req.dmaTag, sreq.offset, sreq.length, buffer,
-                          eventDMACompletion, sreq.requestTag);
-
-      object.memory->write(sreq.address + sreq.skipFront, sreq.length,
-                           InvalidEventID, false);
+                          sreq.address + sreq.skipFront, eventDMACompletion,
+                          sreq.requestTag);
 
       break;
     case Operation::WriteZeroes:
