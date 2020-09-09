@@ -23,7 +23,7 @@ class AbstractManager;
 
 namespace Cache {
 
-struct CacheLine {
+struct CacheTag {
   union {
     uint8_t data;
     struct {
@@ -40,7 +40,7 @@ struct CacheLine {
   uint64_t accessedAt;  //!< Created time
   Bitset validbits;     //!< Valid sector bits
 
-  CacheLine(uint64_t size)
+  CacheTag(uint64_t size)
       : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
 
   void createCheckpoint(std::ostream &out) const noexcept {
