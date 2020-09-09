@@ -16,10 +16,11 @@ const char NAME_FILL_RATIO[] = "FillRatio";
 const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
 const char NAME_GC_D_CHOICE_PARAM[] = "DChoiceParam";
-const char NAME_GC_THRESHOLD[] = "GCThreshold";
+const char NAME_FGC_THRESHOLD[] = "FGCThreshold";
+const char NAME_BGC_THRESHOLD[] = "BGCThreshold";
+const char NAME_BGC_IDLETIME[] = "BGCIdleTime";
 const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
 const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
-const char NAME_PARTIAL_MAPPING_TABLE_RATIO[] = "VLTableRatio";
 const char NAME_MERGE_THRESHOLD[] = "MergeThreshold";
 const char NAME_DEMAND_PAGING[] = "DemandPaging";
 
@@ -35,7 +36,9 @@ Config::Config() {
 
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
-  gcThreshold = 0.05f;
+  fgcThreshold = 0.05f;
+  bgcThreshold = 0.1f;
+  bgcIdletime = 5000000000000ul;
   superpageAllocation = FIL::PageAllocation::None;
 }
 
@@ -51,7 +54,9 @@ void Config::loadFrom(pugi::xml_node &section) {
         LOAD_NAME_UINT_TYPE(node2, NAME_GC_EVICT_POLICY, VictimSelectionMode,
                             gcBlockSelection);
         LOAD_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-        LOAD_NAME_FLOAT(node2, NAME_GC_THRESHOLD, gcThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_BGC_IDLETIME, bgcIdletime);
       }
     }
     else if (strcmp(name, "common") == 0 && isSection(node)) {
@@ -100,7 +105,9 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_SECTION(section, "gc", node);
   STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
   STORE_NAME_UINT(node, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-  STORE_NAME_FLOAT(node, NAME_GC_THRESHOLD, gcThreshold);
+  STORE_NAME_FLOAT(node, NAME_FGC_THRESHOLD, fgcThreshold);
+  STORE_NAME_FLOAT(node, NAME_BGC_THRESHOLD, bgcThreshold);
+  STORE_NAME_FLOAT(node, NAME_BGC_IDLETIME, bgcIdletime);
 
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
@@ -122,6 +129,10 @@ void Config::update() {
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
            "Invalid InvalidPageRatio.");
+
+  panic_if(
+      bgcThreshold <= fgcThreshold,
+      "Background GC threshold should be larger than Foreground GC threshold.");
 
   if (superpage.length() > 0) {
     superpageAllocation = 0;
@@ -162,6 +173,9 @@ uint64_t Config::readUint(uint32_t idx) {
     case SuperpageAllocation:
       ret = superpageAllocation;
       break;
+    case BGCIdleTime:
+      ret = bgcIdletime;
+      break;
   }
 
   return ret;
@@ -180,8 +194,11 @@ float Config::readFloat(uint32_t idx) {
     case InvalidFillRatio:
       ret = invalidFillRatio;
       break;
-    case GCThreshold:
-      ret = gcThreshold;
+    case FGCThreshold:
+      ret = fgcThreshold;
+      break;
+    case BGCThreshold:
+      ret = bgcThreshold;
       break;
   }
 
@@ -220,6 +237,9 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
     case SuperpageAllocation:
       superpageAllocation = (uint8_t)value;
       break;
+    case BGCIdleTime:
+      bgcIdletime = value;
+      break;
     default:
       ret = false;
       break;
@@ -241,8 +261,11 @@ bool Config::writeFloat(uint32_t idx, float value) {
     case InvalidFillRatio:
       invalidFillRatio = value;
       break;
-    case GCThreshold:
-      gcThreshold = value;
+    case FGCThreshold:
+      fgcThreshold = value;
+      break;
+    case BGCThreshold:
+      bgcThreshold = value;
       break;
     default:
       ret = false;

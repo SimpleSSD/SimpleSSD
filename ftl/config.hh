@@ -28,7 +28,9 @@ class Config : public BaseConfig {
     // Garbage Collection
     VictimSelectionPolicy,
     DChoiceParam,
-    GCThreshold,
+    FGCThreshold,
+    BGCThreshold,
+    BGCIdleTime,
 
     // Common FTL setting
     OverProvisioningRatio,
@@ -66,7 +68,9 @@ class Config : public BaseConfig {
   bool demandPaging;
 
   uint64_t dChoiceParam;
-  float gcThreshold;
+  uint64_t bgcIdletime;
+  float fgcThreshold;
+  float bgcThreshold;
   VictimSelectionMode gcBlockSelection;
   uint8_t superpageAllocation;
 

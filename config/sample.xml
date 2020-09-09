@@ -496,11 +496,11 @@
         <int:u8> Victim block selection algorithm
 
         Possible values:
-          0: Greedy: Choose lease utilized block (lease number of valid pages).
+          0: Greedy: Choose leaset utilized block (leaset number of valid pages)
           1: Random: Choose random block
           2: Cost-benefit: Choose block with lowest following value:
             utilization / ((1 - utilization) * age)
-          3: D-Choice: Choose lease utilized block in randomly sampled blocks
+          3: D-Choice: Choose leaset utilized block in randomly sampled blocks
        -->
       <config name="VictimSelectionPolicy">0</config>
       <!--
@@ -511,12 +511,29 @@
        -->
       <config name="DChoiceParam">3</config>
       <!--
-        <float> GC triggering threshold
+        <float> Foreground GC triggering threshold
 
-        If the number of free blocks left < (this config value) * (total blocks)
+        If the number of free blocks left < [FGCThreshold] * (total blocks),
         On-demand GC (Foreground GC) will triggered.
        -->
-      <config name="GCThreshold">0.05</config>
+      <config name="FGCThreshold">0.05</config>
+      <!--
+        <float> Background GC triggering threshold
+
+        If the number of free blocks left < [BGCThreshold] * (total blocks) and
+        request does not issued in [BGCIdleTime] time, Background GC will be
+        triggered.
+
+        This value should be larger than FGCThreshold.
+       -->
+      <config name="BGCThreshold">0.1</config>
+      <!--
+        <time> Background GC trigger option - Idle time
+
+        If no requests are issued by host, SSD assumes that request will not
+        submitted in near-future, triggers Background GC.
+       -->
+      <config name="BGCIdleTime">5s</config>
     </section>
     <!--
       Common FTL algorithm configurations
