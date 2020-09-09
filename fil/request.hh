@@ -40,16 +40,24 @@ class Request {
   Event eid;
   uint64_t data;
 
+  uint64_t memoryAddress;
+
   FTL::Request *parent;
 
  public:
-  Request(PPN p, Event e, uint64_t d)
-      : lpn(InvalidLPN), ppn(p), eid(e), data(d), parent(nullptr) {}
+  Request(PPN p, uint64_t a, Event e, uint64_t d)
+      : lpn(InvalidLPN),
+        ppn(p),
+        eid(e),
+        data(d),
+        memoryAddress(a),
+        parent(nullptr) {}
   Request(FTL::Request *r, Event e)
       : lpn(r->getLPN()),
         ppn(r->getPPN()),
         eid(e),
         data(r->getTag()),
+        memoryAddress(r->getDRAMAddress()),
         parent(r) {}
 
   inline uint64_t getTag() { return tag; }
@@ -61,6 +69,8 @@ class Request {
   inline Event getEvent() { return eid; }
   inline uint64_t getEventData() { return data; }
 
+  inline uint64_t getDRAMAddress() { return memoryAddress; }
+
   inline void setLPN(LPN l) {
     lpn = l;
     if (parent) {
@@ -68,6 +78,7 @@ class Request {
     }
   }
 };
+
 using SuperRequest = std::vector<Request *>;
 
 }  // namespace SimpleSSD::FIL

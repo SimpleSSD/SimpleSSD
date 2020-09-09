@@ -85,6 +85,7 @@ void PALOLD::submit(Request *req) {
   Complete cplt;
 
   LPN lpn = req->getLPN();
+  uint64_t memaddr = req->getDRAMAddress();
   cplt.id = req->getTag();
   cplt.ppn = req->getPPN();
   cplt.beginAt = getTick();
@@ -103,6 +104,8 @@ void PALOLD::submit(Request *req) {
       // req->setData(backingFile.read(blockID, cplt.addr.Page));
       // readSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
       readSpare(cplt.ppn, (uint8_t *)&lpn, sizeof(PPN));
+      object.memory->write(memaddr, param->pageSize, InvalidEventID, 0ul,
+                           false);
 
       stat.readCount++;
       break;
@@ -112,6 +115,7 @@ void PALOLD::submit(Request *req) {
       // backingFile.write(blockID, cplt.addr.Page, req->getData());
       // writeSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
       writeSpare(cplt.ppn, (uint8_t *)&lpn, sizeof(PPN));
+      object.memory->read(memaddr, param->pageSize, InvalidEventID, 0ul, false);
 
       stat.writeCount++;
       break;

@@ -131,10 +131,7 @@ void BasicFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   if (LIKELY(req->getResponse() == Response::Success)) {
-    pFIL->read(FIL::Request(req->getPPN(), eventReadDone, tag));
-
-    object.memory->write(req->getDRAMAddress(), pageSize, InvalidEventID,
-                         false);
+    pFIL->read(FIL::Request(req, eventReadDone));
   }
   else {
     // Error while translation
@@ -247,10 +244,8 @@ void BasicFTL::write_submit(uint64_t tag) {
 
   for (auto &req : *list) {
     if (LIKELY(req->getResponse() == Response::Success)) {
-      pFIL->program(FIL::Request(ppn + offset, eventWriteDone, req->getTag()));
-
-      object.memory->read(req->getDRAMAddress(), pageSize, InvalidEventID,
-                          false);
+      pFIL->program(FIL::Request(ppn + offset, req->getDRAMAddress(),
+                                 eventWriteDone, req->getTag()));
     }
     else {
       completeRequest(req);
@@ -291,9 +286,9 @@ void BasicFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
 
     for (auto &cmd : ctx.list) {
       if (!cmd) {
-        pFIL->read(FIL::Request(ppnBegin, eventPartialReadDone, tag));
-        object.memory->write(pendingListBaseAddress + offset * pageSize,
-                             pageSize, InvalidEventID, false);
+        pFIL->read(FIL::Request(ppnBegin,
+                                pendingListBaseAddress + offset * pageSize,
+                                eventPartialReadDone, tag));
 
         ctx.counter++;
       }
@@ -353,15 +348,14 @@ void BasicFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
     uint64_t offset = 0;
 
     for (auto &cmd : ctx.list) {
-      pFIL->program(FIL::Request(ppnBegin, eventPartialWriteDone, tag));
-
       if (cmd) {
-        object.memory->read(cmd->getDRAMAddress(), pageSize, InvalidEventID,
-                            false);
+        pFIL->program(FIL::Request(ppnBegin, cmd->getDRAMAddress(),
+                                   eventPartialWriteDone, tag));
       }
       else {
-        object.memory->read(pendingListBaseAddress + offset * pageSize,
-                            pageSize, InvalidEventID, false);
+        pFIL->program(FIL::Request(ppnBegin,
+                                   pendingListBaseAddress + offset * pageSize,
+                                   eventPartialWriteDone, tag));
       }
 
       ctx.counter++;
@@ -629,8 +623,8 @@ void BasicFTL::gc_done(uint64_t now) {
   // continue stalled request
   while (!stalledRequests.empty()) {
     auto cmd = stalledRequests.front();
-    debugprint(Log::DebugID::FTL_PageLevel,
-                "WRITE | CONTINUE | TAG : %" PRIu64, cmd->getTag());
+    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | CONTINUE | TAG : %" PRIu64,
+               cmd->getTag());
     write(cmd);
     stalledRequests.pop_front();
 
