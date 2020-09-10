@@ -23,6 +23,8 @@ class SetAssociative : public AbstractTagArray {
   uint32_t setSize;
   uint32_t waySize;
 
+  uint64_t cacheTagSize;
+  uint64_t cacheDataSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 
@@ -83,7 +85,7 @@ class SetAssociative : public AbstractTagArray {
   Event eventWriteOne;
 
  public:
-  SetAssociative(ObjectData &, Manager::AbstractManager *, uint64_t, uint64_t);
+  SetAssociative(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
   ~SetAssociative();
 
   uint64_t getArraySize() override;

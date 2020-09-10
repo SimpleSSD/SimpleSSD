@@ -13,10 +13,13 @@
 namespace SimpleSSD::ICL::Cache {
 
 SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
-                               uint64_t t, uint64_t d)
-    : AbstractTagArray(o, m, t, d) {
+                               FTL::Parameter *p)
+    : AbstractTagArray(o, m, p) {
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
+
+  cacheTagSize = 8 + DIVCEIL(sectorsInPage, 8);
+  cacheDataSize = p->pageSize;
 
   // Allocate cachelines
   setSize = 0;

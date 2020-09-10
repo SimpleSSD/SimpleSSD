@@ -18,9 +18,6 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
   auto mode = (Config::Mode)readConfigUint(Section::InternalCache,
                                            Config::Key::CacheMode);
 
-  cacheTagSize = 8 + DIVCEIL(sectorsInPage, 8);
-  cacheDataSize = parameter->pageSize;
-
   switch (mode) {
     case Config::Mode::SetAssociative:
     case Config::Mode::RingBuffer:

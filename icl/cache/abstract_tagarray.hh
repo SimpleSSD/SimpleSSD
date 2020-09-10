@@ -70,8 +70,6 @@ class AbstractTagArray : public Object {
 
   uint32_t pagesToEvict;
   const uint32_t sectorsInPage;
-  const uint64_t cacheTagSize;
-  const uint64_t cacheDataSize;
 
   inline HIL::SubRequest *getSubRequest(uint64_t tag) {
     return manager->getSubRequest(tag);
@@ -81,14 +79,12 @@ class AbstractTagArray : public Object {
   Event eventCacheDone;
 
  public:
-  AbstractTagArray(ObjectData &o, Manager::AbstractManager *m, uint64_t t,
-                   uint64_t d)
+  AbstractTagArray(ObjectData &o, Manager::AbstractManager *m,
+                   FTL::Parameter *p)
       : Object(o),
         manager(m),
         pagesToEvict(0),
-        sectorsInPage(MAX(d / AbstractCache::minIO, 1)),
-        cacheTagSize(t),
-        cacheDataSize(d) {}
+        sectorsInPage(DIVCEIL(p->pageSize, AbstractCache::minIO)) {}
   virtual ~AbstractTagArray() {}
 
   //! Initialize
@@ -105,13 +101,13 @@ class AbstractTagArray : public Object {
   virtual uint64_t getDataAddress(CacheTag *) = 0;
 
   //! Return event should be called when lookup is completed
-  virtual Event getLookupMemoryEvent() = 0;
+  virtual Event getLookupMemoryEvent() { return eventLookupDone; }
 
   //! Return event should be called when all tag array has been read
-  virtual Event getReadAllMemoryEvent() = 0;
+  virtual Event getReadAllMemoryEvent() { return eventCacheDone; }
 
   //! Return event should be called when allocate is completed
-  virtual Event getWriteOneMemoryEvent() = 0;
+  virtual Event getWriteOneMemoryEvent() { return eventCacheDone; }
 
   //! Clear all flags of cachelines in range
   virtual CPU::Function erase(LPN slpn, uint32_t nlp) = 0;
