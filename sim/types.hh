@@ -29,7 +29,7 @@ struct Parameter;
 #define INVALID_NUMBER32 std::numeric_limits<uint32_t>::max()
 
 static void assertNumber(uint64_t v) noexcept {
-#ifndef SIMPLESSD_DEBUG
+#ifdef SIMPLESSD_DEBUG
   if (UNLIKELY(v == INVALID_NUMBER64)) {
     std::cerr << "TypeError: Operation performed on invalid number."
               << std::endl;
@@ -39,7 +39,7 @@ static void assertNumber(uint64_t v) noexcept {
 }
 
 static void assertNumber(uint32_t v) noexcept {
-#ifndef SIMPLESSD_DEBUG
+#ifdef SIMPLESSD_DEBUG
   if (UNLIKELY(v == INVALID_NUMBER32)) {
     std::cerr << "TypeError: Operation performed on invalid number."
               << std::endl;
