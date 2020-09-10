@@ -370,11 +370,11 @@ void HIL::compare(Request *req, bool fused) {
   }
 }
 
-LPN HIL::getPageUsage(LPN offset, LPN length) {
+uint64_t HIL::getPageUsage(LPN offset, uint64_t length) {
   return icl.getPageUsage(offset, length);
 }
 
-LPN HIL::getTotalPages() {
+uint64_t HIL::getTotalPages() {
   return icl.getTotalPages();
 }
 

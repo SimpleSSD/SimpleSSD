@@ -93,10 +93,10 @@ class ICL : public Object {
    * To implement per-namespace bases utilization, this function requires offset
    * and length.
    */
-  LPN getPageUsage(LPN, LPN);
+  uint64_t getPageUsage(LPN, uint64_t);
 
   //! Get total logical pages in current HIL object
-  LPN getTotalPages();
+  uint64_t getTotalPages();
 
   //! Get bytesize of one logical page.
   uint32_t getLPNSize();

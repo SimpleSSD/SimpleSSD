@@ -55,7 +55,7 @@ class FTL : public Object {
   void initialize();
   const Parameter *getInfo();
 
-  LPN getPageUsage(LPN, LPN);
+  uint64_t getPageUsage(LPN, uint64_t);
   Request *getRequest(uint64_t);
   void completeRequest(Request *);
   inline uint64_t generateFTLTag() { return ++requestCounter; }

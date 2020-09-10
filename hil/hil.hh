@@ -121,10 +121,10 @@ class HIL : public Object {
    * To implement per-namespace bases utilization, this function requires offset
    * and length.
    */
-  LPN getPageUsage(LPN offset, LPN length);
+  uint64_t getPageUsage(LPN offset, uint64_t length);
 
   //! Get total logical pages in current HIL object
-  LPN getTotalPages();
+  uint64_t getTotalPages();
 
   //! Get bytesize of one logical page.
   uint32_t getLPNSize();

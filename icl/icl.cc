@@ -118,11 +118,11 @@ void ICL::makeRequest(LPN slpn, uint32_t length) {
   }
 }
 
-LPN ICL::getPageUsage(LPN offset, LPN length) {
+uint64_t ICL::getPageUsage(LPN offset, uint64_t length) {
   return pFTL->getPageUsage(offset, length);
 }
 
-LPN ICL::getTotalPages() {
+uint64_t ICL::getTotalPages() {
   return totalLogicalPages;
 }
 

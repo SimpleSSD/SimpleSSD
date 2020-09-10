@@ -281,10 +281,10 @@ class AbstractMapping : public Object {
    * This function requires starting LPN and ending LPN because NVMe supports
    * multiple volumes (namespaces) per one SSD.
    *
-   * \param[in] slpn  Starting logical page address (includes).
-   * \param[in] elpn  Ending logical page address (excludes).
+   * \param[in] slpn  Starting logical page address.
+   * \param[in] nlp   # of logical pages.
    */
-  virtual LPN getPageUsage(LPN slpn, LPN elpn) = 0;
+  virtual uint64_t getPageUsage(LPN slpn, uint64_t nlp) = 0;
 
   /**
    * \brief Perform FTL read translation

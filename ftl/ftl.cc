@@ -85,8 +85,8 @@ const Parameter *FTL::getInfo() {
   return pMapper->getInfo();
 }
 
-LPN FTL::getPageUsage(LPN lpnBegin, LPN lpnEnd) {
-  return pMapper->getPageUsage(lpnBegin, lpnEnd);
+uint64_t FTL::getPageUsage(LPN slpn, uint64_t nlp) {
+  return pMapper->getPageUsage(slpn, nlp);
 }
 
 Request *FTL::getRequest(uint64_t tag) {
