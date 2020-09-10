@@ -11,9 +11,7 @@
 namespace SimpleSSD::FTL {
 
 Request::Request(Event e, uint64_t d)
-    : lpn(InvalidLPN),
-      ppn(InvalidPPN),
-      offset(0),
+    : offset(0),
       length(0),
       slpn(0),
       nlp(0),
@@ -25,7 +23,7 @@ Request::Request(Event e, uint64_t d)
       counter(0) {}
 
 Request::Request(Event e, HIL::SubRequest *r)
-    : ppn(InvalidPPN), result(Response::Success), event(e), counter(0) {
+    : result(Response::Success), event(e), counter(0) {
   // Opcode
   switch (r->getOpcode()) {
     case HIL::Operation::Read:
@@ -62,7 +60,6 @@ Request::Request(Event e, HIL::SubRequest *r)
 Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
                  uint32_t nl, Event e, uint64_t d)
     : lpn(l),
-      ppn(InvalidPPN),
       offset(o),
       length(s),
       slpn(sl),
@@ -75,8 +72,7 @@ Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
       counter(0) {}
 
 Request::Request(PPN p)
-    : lpn(InvalidLPN),
-      ppn(p),
+    : ppn(p),
       offset(0),
       length(0),
       slpn(0),

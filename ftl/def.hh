@@ -23,24 +23,8 @@ namespace SimpleSSD::FTL {
 
 class FTL;
 
-//! Logical Superpage Number definition
-using LSPN = uint64_t;
-const LSPN InvalidLSPN = std::numeric_limits<LSPN>::max();
-
-//! Physical Superpage Number definition
-using PSPN = uint64_t;
-const PSPN InvalidPSPN = std::numeric_limits<PSPN>::max();
-
-//! Physical Block Number definition
-using PBN = uint32_t;
-const PBN InvalidPBN = std::numeric_limits<PBN>::max();
-
-//! Physical Superblock Number definition
-using PSBN = uint32_t;
-const PSBN InvalidPSBN = std::numeric_limits<PSBN>::max();
-
 //! FTL parameter
-typedef struct {
+struct Parameter {
   uint64_t totalPhysicalBlocks;
   uint64_t totalPhysicalPages;
   uint64_t totalLogicalBlocks;
@@ -65,52 +49,86 @@ typedef struct {
    */
 
   //! Get PBN from PPN
-  inline PBN getPBNFromPPN(PPN ppn) const { return ppn % totalPhysicalBlocks; }
+  inline PBN getPBNFromPPN(PPN ppn) const {
+    assertNumber(static_cast<uint64_t>(ppn));
+    return static_cast<uint64_t>(ppn) % totalPhysicalBlocks;
+  }
 
   //! Get PageIndex from PPN
   inline uint32_t getPageIndexFromPPN(PPN ppn) const {
-    return ppn / totalPhysicalBlocks;
+    assertNumber(static_cast<uint64_t>(ppn));
+    return static_cast<uint64_t>(ppn) / totalPhysicalBlocks;
   }
 
   //! Make PPN from PBN and PageIndex
   inline PPN makePPN(PBN pbn, uint32_t pageIndex) const {
-    return pbn + pageIndex * totalPhysicalBlocks;
+    assertNumber(static_cast<uint32_t>(pbn));
+    return static_cast<uint32_t>(pbn) + pageIndex * totalPhysicalBlocks;
   }
 
-  //! Get Superpage Number from Page Number
-  inline PSPN getSPNFromPN(PPN pn) const { return pn / superpage; }
+  //! Get Physical Superpage Number from Physical Page Number
+  inline PSPN getPSPNFromPPN(PPN ppn) const {
+    assertNumber(static_cast<uint64_t>(ppn));
+    return static_cast<uint64_t>(ppn) / superpage;
+  }
 
-  //! Get SuperpageIndex from Page Number
-  inline uint32_t getSuperpageIndexFromPN(PPN pn) const {
-    return pn % superpage;
+  //! Get Logical Superpage Number from Logical Page Number
+  inline LSPN getPSPNFromLPN(LPN lpn) const {
+    assertNumber(static_cast<uint64_t>(lpn));
+    return static_cast<uint64_t>(lpn) / superpage;
+  }
+
+  //! Get SuperpageIndex from Physical Page Number
+  inline uint32_t getSuperpageIndexFromPPN(PPN ppn) const {
+    assertNumber(static_cast<uint64_t>(ppn));
+    return static_cast<uint64_t>(ppn) % superpage;
+  }
+
+  //! Get SuperpageIndex from Logical Page Number
+  inline uint32_t getSuperpageIndexFromLPN(LPN lpn) const {
+    assertNumber(static_cast<uint64_t>(lpn));
+    return static_cast<uint64_t>(lpn) % superpage;
   }
 
   //! Get PSBN from PSPN
   inline PSBN getPSBNFromPSPN(PSPN pspn) const {
-    return pspn % (totalPhysicalBlocks / superpage);
+    assertNumber(static_cast<uint64_t>(pspn));
+    return static_cast<uint64_t>(pspn) % (totalPhysicalBlocks / superpage);
   }
 
   //! Get PageIndex from PSPN
   inline uint32_t getPageIndexFromPSPN(PSPN pspn) const {
-    return pspn / (totalPhysicalBlocks / superpage);
+    assertNumber(static_cast<uint64_t>(pspn));
+    return static_cast<uint64_t>(pspn) / (totalPhysicalBlocks / superpage);
   }
 
   //! Make PSPN from PSBN and PageIndex
   inline PSPN makePSPN(PSBN psbn, uint32_t pageIndex) const {
-    return psbn + pageIndex * (totalPhysicalBlocks / superpage);
+    assertNumber(static_cast<uint32_t>(psbn));
+    return static_cast<uint32_t>(psbn) +
+           pageIndex * (totalPhysicalBlocks / superpage);
   }
 
   //! Make PPN from PSBN, SuperpageIndex and PageIndex
   inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
                      uint32_t pageIndex) const {
-    return psbn * superpage + superpageIndex + pageIndex * totalPhysicalBlocks;
+    assertNumber(static_cast<uint32_t>(psbn));
+    return static_cast<uint32_t>(psbn) * superpage + superpageIndex +
+           pageIndex * totalPhysicalBlocks;
   }
 
   //! Get parallelism index from PPN
   inline uint64_t getParallelismIndexFromPPN(PPN ppn) const {
-    return ppn % parallelism;
+    assertNumber(static_cast<uint64_t>(ppn));
+    return static_cast<uint64_t>(ppn) % parallelism;
   }
-} Parameter;
+
+  //! Get parallelism index from PSPN
+  inline uint64_t getParallelismIndexFromPSPN(PSPN pspn) const {
+    assertNumber(static_cast<uint64_t>(pspn));
+    return static_cast<uint64_t>(pspn) % (parallelism / superpage);
+  }
+};
 
 enum class Operation : uint8_t {
   None,
