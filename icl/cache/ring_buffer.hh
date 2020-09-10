@@ -51,7 +51,7 @@ class RingBuffer : public AbstractTagArray {
   void readAll(uint64_t, Event);
 
  public:
-  RingBuffer(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
+  RingBuffer(ObjectData &, Manager::AbstractManager *, const FTL::Parameter *);
   ~RingBuffer();
 
   uint64_t getArraySize() override;

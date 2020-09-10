@@ -81,7 +81,7 @@ void FTL::initialize() {
   pFTL->initialize();
 }
 
-Parameter *FTL::getInfo() {
+const Parameter *FTL::getInfo() {
   return pMapper->getInfo();
 }
 

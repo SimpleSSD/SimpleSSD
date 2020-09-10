@@ -141,7 +141,7 @@ void AbstractMapping::initialize(AbstractFTL *f,
   allocator = a;
 };
 
-Parameter *AbstractMapping::getInfo() {
+const Parameter *AbstractMapping::getInfo() {
   return &param;
 };
 

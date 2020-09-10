@@ -15,7 +15,7 @@
 namespace SimpleSSD::ICL::Cache {
 
 GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
-                           FTL::Parameter *p)
+                           const FTL::Parameter *p)
     : AbstractCache(o, m, p), dirtyLines(0), pendingEviction(0) {
   auto mode = (Config::Mode)readConfigUint(Section::InternalCache,
                                            Config::Key::CacheMode);

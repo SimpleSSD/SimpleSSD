@@ -12,7 +12,7 @@
 namespace SimpleSSD::ICL::Cache {
 
 AbstractCache::AbstractCache(ObjectData &o, Manager::AbstractManager *m,
-                             FTL::Parameter *p)
+                             const FTL::Parameter *p)
     : Object(o),
       sectorsInPage(MAX(p->pageSize / minIO, 1)),
       manager(m),

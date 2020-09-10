@@ -272,7 +272,7 @@ class AbstractMapping : public Object {
   virtual void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *);
 
   //! Return FTL parameter structure
-  Parameter *getInfo();
+  const Parameter *getInfo();
 
   /**
    * \brief Get valid page count

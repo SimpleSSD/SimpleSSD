@@ -80,7 +80,7 @@ class AbstractTagArray : public Object {
 
  public:
   AbstractTagArray(ObjectData &o, Manager::AbstractManager *m,
-                   FTL::Parameter *p)
+                   const FTL::Parameter *p)
       : Object(o),
         manager(m),
         pagesToEvict(0),

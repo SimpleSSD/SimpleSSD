@@ -33,7 +33,7 @@ class AbstractCache : public Object {
   uint32_t pagesToEvict;
 
   Manager::AbstractManager *manager;
-  FTL::Parameter *parameter;
+  const FTL::Parameter *parameter;
 
   HIL::SubRequest *getSubRequest(uint64_t);
 
@@ -54,7 +54,8 @@ class AbstractCache : public Object {
   }
 
  public:
-  AbstractCache(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
+  AbstractCache(ObjectData &, Manager::AbstractManager *,
+                const FTL::Parameter *);
   virtual ~AbstractCache();
 
   /**

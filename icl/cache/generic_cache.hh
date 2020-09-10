@@ -68,7 +68,8 @@ class GenericCache : public AbstractCache {
   Event eventCacheDone;
 
  public:
-  GenericCache(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
+  GenericCache(ObjectData &, Manager::AbstractManager *,
+               const FTL::Parameter *);
   ~GenericCache();
 
   void lookup(HIL::SubRequest *) override;

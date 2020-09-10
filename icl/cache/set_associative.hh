@@ -87,7 +87,8 @@ class SetAssociative : public AbstractTagArray {
   Event eventWriteOne;
 
  public:
-  SetAssociative(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
+  SetAssociative(ObjectData &, Manager::AbstractManager *,
+                 const FTL::Parameter *);
   ~SetAssociative();
 
   uint64_t getArraySize() override;

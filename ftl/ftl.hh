@@ -53,7 +53,7 @@ class FTL : public Object {
   ~FTL();
 
   void initialize();
-  Parameter *getInfo();
+  const Parameter *getInfo();
 
   LPN getPageUsage(LPN, LPN);
   Request *getRequest(uint64_t);

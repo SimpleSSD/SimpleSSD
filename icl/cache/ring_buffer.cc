@@ -12,7 +12,7 @@
 namespace SimpleSSD::ICL::Cache {
 
 RingBuffer::RingBuffer(ObjectData &o, Manager::AbstractManager *m,
-                       FTL::Parameter *p)
+                       const FTL::Parameter *p)
     : AbstractTagArray(o, m, p) {
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
