@@ -79,18 +79,18 @@ class Config : public BaseConfig {
  public:
   Config();
 
-  const char *getSectionName() override { return "ftl"; }
+  const char *getSectionName() noexcept override { return "ftl"; }
 
-  void loadFrom(pugi::xml_node &) override;
-  void storeTo(pugi::xml_node &) override;
-  void update() override;
+  void loadFrom(pugi::xml_node &) noexcept override;
+  void storeTo(pugi::xml_node &) noexcept override;
+  void update() noexcept override;
 
-  uint64_t readUint(uint32_t) override;
-  float readFloat(uint32_t) override;
-  bool readBoolean(uint32_t) override;
-  bool writeUint(uint32_t, uint64_t) override;
-  bool writeFloat(uint32_t, float) override;
-  bool writeBoolean(uint32_t, bool) override;
+  uint64_t readUint(uint32_t) const noexcept override;
+  float readFloat(uint32_t) const noexcept override;
+  bool readBoolean(uint32_t) const noexcept override;
+  bool writeUint(uint32_t, uint64_t) noexcept override;
+  bool writeFloat(uint32_t, float) noexcept override;
+  bool writeBoolean(uint32_t, bool) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL

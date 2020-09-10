@@ -76,31 +76,31 @@ class Config : public BaseConfig {
   std::vector<Disk> diskList;
   std::vector<Namespace> namespaceList;
 
-  void loadInterface(pugi::xml_node &);
-  void loadDisk(pugi::xml_node &, Disk *);
-  void loadNVMe(pugi::xml_node &);
-  void loadNamespace(pugi::xml_node &, Namespace *);
-  void storeInterface(pugi::xml_node &);
-  void storeDisk(pugi::xml_node &, Disk *);
-  void storeNVMe(pugi::xml_node &);
-  void storeNamespace(pugi::xml_node &, Namespace *);
+  void loadInterface(pugi::xml_node &) noexcept;
+  void loadDisk(pugi::xml_node &, Disk *) noexcept;
+  void loadNVMe(pugi::xml_node &) noexcept;
+  void loadNamespace(pugi::xml_node &, Namespace *) noexcept;
+  void storeInterface(pugi::xml_node &) noexcept;
+  void storeDisk(pugi::xml_node &, Disk *) noexcept;
+  void storeNVMe(pugi::xml_node &) noexcept;
+  void storeNamespace(pugi::xml_node &, Namespace *) noexcept;
 
  public:
   Config();
 
-  const char *getSectionName() override { return "hil"; }
+  const char *getSectionName() noexcept override { return "hil"; }
 
-  void loadFrom(pugi::xml_node &) override;
-  void storeTo(pugi::xml_node &) override;
-  void update() override;
+  void loadFrom(pugi::xml_node &) noexcept override;
+  void storeTo(pugi::xml_node &) noexcept override;
+  void update() noexcept override;
 
-  uint64_t readUint(uint32_t) override;
-  bool readBoolean(uint32_t) override;
-  bool writeUint(uint32_t, uint64_t) override;
-  bool writeBoolean(uint32_t, bool) override;
+  uint64_t readUint(uint32_t) const noexcept override;
+  bool readBoolean(uint32_t) const noexcept override;
+  bool writeUint(uint32_t, uint64_t) noexcept override;
+  bool writeBoolean(uint32_t, bool) noexcept override;
 
-  std::vector<Disk> &getDiskList();
-  std::vector<Namespace> &getNamespaceList();
+  std::vector<Disk> &getDiskList() noexcept;
+  std::vector<Namespace> &getNamespaceList() noexcept;
 };
 
 }  // namespace SimpleSSD::HIL

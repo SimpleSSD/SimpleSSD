@@ -105,7 +105,7 @@ Config::Config() {
   nandPower.current.pISB = 30;
 }
 
-void Config::loadNANDStructure(pugi::xml_node &section) {
+void Config::loadNANDStructure(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -131,7 +131,7 @@ void Config::loadNANDStructure(pugi::xml_node &section) {
   }
 }
 
-void Config::loadNANDTiming(pugi::xml_node &section) {
+void Config::loadNANDTiming(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TIME_TYPE(node, NAME_TADL, uint32_t, nandTiming.tADL);
     LOAD_NAME_TIME_TYPE(node, NAME_TCS, uint32_t, nandTiming.tCS);
@@ -167,7 +167,7 @@ void Config::loadNANDTiming(pugi::xml_node &section) {
   }
 }
 
-void Config::loadNANDPower(pugi::xml_node &section) {
+void Config::loadNANDPower(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT(node, NAME_NAND_VCC, nandPower.pVCC);
     LOAD_NAME_UINT(node, NAME_NAND_ICC1, nandPower.current.pICC1);
@@ -180,7 +180,7 @@ void Config::loadNANDPower(pugi::xml_node &section) {
   }
 }
 
-void Config::storeNANDStructure(pugi::xml_node &section) {
+void Config::storeNANDStructure(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   STORE_NAME_UINT(section, NAME_NOP, nandStructure.nop);
@@ -202,7 +202,7 @@ void Config::storeNANDStructure(pugi::xml_node &section) {
   storeNANDPower(node);
 }
 
-void Config::storeNANDTiming(pugi::xml_node &section) {
+void Config::storeNANDTiming(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_TADL, nandTiming.tADL);
   STORE_NAME_UINT(section, NAME_TCS, nandTiming.tCS);
   STORE_NAME_UINT(section, NAME_TDH, nandTiming.tDH);
@@ -236,7 +236,7 @@ void Config::storeNANDTiming(pugi::xml_node &section) {
   }
 }
 
-void Config::storeNANDPower(pugi::xml_node &section) {
+void Config::storeNANDPower(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_NAND_VCC, nandPower.pVCC);
   STORE_NAME_UINT(section, NAME_NAND_ICC1, nandPower.current.pICC1);
   STORE_NAME_UINT(section, NAME_NAND_ICC2, nandPower.current.pICC2);
@@ -247,7 +247,7 @@ void Config::storeNANDPower(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_NAND_ISB, nandPower.current.pISB);
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -262,7 +262,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   // Re-generate page allocation string
@@ -299,7 +299,7 @@ void Config::storeTo(pugi::xml_node &section) {
   storeNANDStructure(node);
 }
 
-void Config::update() {
+void Config::update() noexcept {
   panic_if(nandStructure.dmaWidth & 0x07, "dmaWidth should be multiple of 8.");
 
   // Parse page allocation setting
@@ -350,7 +350,7 @@ void Config::update() {
            "Invalid page allocation string");
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   uint64_t ret = 0;
 
   switch (idx) {
@@ -371,7 +371,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -395,15 +395,15 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-Config::NANDStructure *Config::getNANDStructure() {
+Config::NANDStructure *Config::getNANDStructure() noexcept {
   return &nandStructure;
 }
 
-Config::NANDTiming *Config::getNANDTiming() {
+Config::NANDTiming *Config::getNANDTiming() noexcept {
   return &nandTiming;
 }
 
-Config::NANDPower *Config::getNANDPower() {
+Config::NANDPower *Config::getNANDPower() noexcept {
   return &nandPower;
 }
 

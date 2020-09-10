@@ -33,7 +33,7 @@ Config::Config() {
   waySize = 8;
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -68,7 +68,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   STORE_NAME_UINT(section, NAME_CACHE_MODE, mode);
@@ -89,14 +89,14 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_WAY_SIZE, waySize);
 }
 
-void Config::update() {
+void Config::update() noexcept {
   panic_if(prefetchCount == 0, "Invalid PrefetchCount.");
   panic_if(prefetchRatio == 0, "Invalid PrefetchRatio.");
   panic_if(evictThreshold < 0.f || evictThreshold >= 1.f,
            "Invalid EvictThreshold.");
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   uint64_t ret = 0;
 
   switch (idx) {
@@ -129,7 +129,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-float Config::readFloat(uint32_t idx) {
+float Config::readFloat(uint32_t idx) const noexcept {
   switch (idx) {
     case EvictThreshold:
       return evictThreshold;
@@ -139,7 +139,7 @@ float Config::readFloat(uint32_t idx) {
   return 0.f;
 }
 
-bool Config::readBoolean(uint32_t idx) {
+bool Config::readBoolean(uint32_t idx) const noexcept {
   bool ret = false;
 
   switch (idx) {
@@ -151,7 +151,7 @@ bool Config::readBoolean(uint32_t idx) {
   return ret;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -187,7 +187,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-bool Config::writeFloat(uint32_t idx, float value) {
+bool Config::writeFloat(uint32_t idx, float value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -202,7 +202,7 @@ bool Config::writeFloat(uint32_t idx, float value) {
   return ret;
 }
 
-bool Config::writeBoolean(uint32_t idx, bool value) {
+bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
   bool ret = true;
 
   switch (idx) {

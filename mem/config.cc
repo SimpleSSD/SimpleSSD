@@ -180,7 +180,7 @@ Config::Config() {
   controller.pagePolicy = PagePolicy::OpenAdaptive;
 }
 
-void Config::loadCache(pugi::xml_node &section, CacheConfig &cache) {
+void Config::loadCache(pugi::xml_node &section, CacheConfig &cache) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, cache.size);
     LOAD_NAME_UINT_TYPE(node, NAME_WAY_SIZE, uint16_t, cache.way);
@@ -191,7 +191,7 @@ void Config::loadCache(pugi::xml_node &section, CacheConfig &cache) {
   }
 }
 
-void Config::loadSRAM(pugi::xml_node &section) {
+void Config::loadSRAM(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_SIZE, uint32_t, sram.size);
     LOAD_NAME_UINT_TYPE(node, NAME_DATA_RATE, uint16_t, sram.dataRate);
@@ -205,7 +205,7 @@ void Config::loadSRAM(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDRAMStructure(pugi::xml_node &section) {
+void Config::loadDRAMStructure(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_CHANNEL, uint8_t, dram.channel);
     LOAD_NAME_UINT_TYPE(node, NAME_RANK, uint8_t, dram.rank);
@@ -219,7 +219,7 @@ void Config::loadDRAMStructure(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDRAMTiming(pugi::xml_node &section) {
+void Config::loadDRAMTiming(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_TIME_TYPE(node, NAME_TCK, uint32_t, timing.tCK);
     LOAD_NAME_TIME_TYPE(node, NAME_TRAS, uint32_t, timing.tRAS);
@@ -243,7 +243,7 @@ void Config::loadDRAMTiming(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDRAMPower(pugi::xml_node &section) {
+void Config::loadDRAMPower(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_FLOAT(node, NAME_IDD0_0, power.pIDD0[0]);
     LOAD_NAME_FLOAT(node, NAME_IDD0_1, power.pIDD0[1]);
@@ -272,7 +272,7 @@ void Config::loadDRAMPower(pugi::xml_node &section) {
   }
 }
 
-void Config::loadTimingDRAM(pugi::xml_node &section) {
+void Config::loadTimingDRAM(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_WRITE_QUEUE_SIZE, uint16_t,
                         controller.writeQueueSize);
@@ -293,7 +293,7 @@ void Config::loadTimingDRAM(pugi::xml_node &section) {
   }
 }
 
-void Config::storeCache(pugi::xml_node &section, CacheConfig &cache) {
+void Config::storeCache(pugi::xml_node &section, CacheConfig &cache) noexcept {
   STORE_NAME_UINT(section, NAME_SIZE, cache.size);
   STORE_NAME_UINT(section, NAME_WAY_SIZE, cache.way);
   STORE_NAME_UINT(section, NAME_TAG_LATENCY, cache.tagCycles);
@@ -301,7 +301,7 @@ void Config::storeCache(pugi::xml_node &section, CacheConfig &cache) {
   STORE_NAME_UINT(section, NAME_RESPONSE_LATENCY, cache.responseCycles);
 }
 
-void Config::storeSRAM(pugi::xml_node &section) {
+void Config::storeSRAM(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_SIZE, sram.size);
   STORE_NAME_UINT(section, NAME_DATA_RATE, sram.dataRate);
   STORE_NAME_UINT(section, NAME_DATA_WIDTH, sram.dataWidth);
@@ -313,7 +313,7 @@ void Config::storeSRAM(pugi::xml_node &section) {
   STORE_NAME_FLOAT(section, NAME_VCC, sram.pVCC);
 }
 
-void Config::storeDRAMStructure(pugi::xml_node &section) {
+void Config::storeDRAMStructure(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_CHANNEL, dram.channel);
   STORE_NAME_UINT(section, NAME_RANK, dram.rank);
   STORE_NAME_UINT(section, NAME_BANK, dram.bank);
@@ -325,7 +325,7 @@ void Config::storeDRAMStructure(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_ROWBUFFER_SIZE, dram.rowSize);
 }
 
-void Config::storeDRAMTiming(pugi::xml_node &section) {
+void Config::storeDRAMTiming(pugi::xml_node &section) noexcept {
   STORE_NAME_TIME(section, NAME_TCK, timing.tCK);
   STORE_NAME_TIME(section, NAME_TRAS, timing.tRAS);
   STORE_NAME_TIME(section, NAME_TRRD, timing.tRRD);
@@ -347,7 +347,7 @@ void Config::storeDRAMTiming(pugi::xml_node &section) {
   STORE_NAME_TIME(section, NAME_TFAW, timing.tFAW);
 }
 
-void Config::storeDRAMPower(pugi::xml_node &section) {
+void Config::storeDRAMPower(pugi::xml_node &section) noexcept {
   STORE_NAME_FLOAT(section, NAME_IDD0_0, power.pIDD0[0]);
   STORE_NAME_FLOAT(section, NAME_IDD0_1, power.pIDD0[1]);
   STORE_NAME_FLOAT(section, NAME_IDD2P0_0, power.pIDD2P0[0]);
@@ -374,7 +374,7 @@ void Config::storeDRAMPower(pugi::xml_node &section) {
   STORE_NAME_FLOAT(section, NAME_VDD_1, power.pVDD[1]);
 }
 
-void Config::storeTimingDRAM(pugi::xml_node &section) {
+void Config::storeTimingDRAM(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_WRITE_QUEUE_SIZE, controller.writeQueueSize);
   STORE_NAME_UINT(section, NAME_READ_QUEUE_SIZE, controller.readQueueSize);
   STORE_NAME_FLOAT(section, NAME_WRITE_MIN_THRESHOLD,
@@ -387,7 +387,7 @@ void Config::storeTimingDRAM(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_PAGE_POLICY, controller.pagePolicy);
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -420,7 +420,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node, node2;
 
   STORE_NAME_UINT(section, NAME_BUS_CLOCK, systemBusSpeed);
@@ -444,9 +444,7 @@ void Config::storeTo(pugi::xml_node &section) {
   storeTimingDRAM(node2);
 }
 
-void Config::update() {}
-
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   switch (idx) {
     case DRAMModel:
       return dramModel;
@@ -457,7 +455,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return 0;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -475,27 +473,27 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-Config::CacheConfig *Config::getLLC() {
+Config::CacheConfig *Config::getLLC() noexcept {
   return &llc;
 }
 
-Config::SRAMStructure *Config::getSRAM() {
+Config::SRAMStructure *Config::getSRAM() noexcept {
   return &sram;
 }
 
-Config::DRAMStructure *Config::getDRAM() {
+Config::DRAMStructure *Config::getDRAM() noexcept {
   return &dram;
 }
 
-Config::DRAMTiming *Config::getDRAMTiming() {
+Config::DRAMTiming *Config::getDRAMTiming() noexcept {
   return &timing;
 }
 
-Config::DRAMPower *Config::getDRAMPower() {
+Config::DRAMPower *Config::getDRAMPower() noexcept {
   return &power;
 }
 
-Config::DRAMController *Config::getDRAMController() {
+Config::DRAMController *Config::getDRAMController() noexcept {
   return &controller;
 }
 

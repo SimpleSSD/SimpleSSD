@@ -66,33 +66,33 @@ class ConfigReader {
   void save(const char *) noexcept;
   void save(std::string &) noexcept;
 
-  int64_t readInt(Section, uint32_t);
-  uint64_t readUint(Section, uint32_t);
-  float readFloat(Section, uint32_t);
-  std::string readString(Section, uint32_t);
-  bool readBoolean(Section, uint32_t);
+  int64_t readInt(Section, uint32_t) const noexcept;
+  uint64_t readUint(Section, uint32_t) const noexcept;
+  float readFloat(Section, uint32_t) const noexcept;
+  std::string readString(Section, uint32_t) const noexcept;
+  bool readBoolean(Section, uint32_t) const noexcept;
 
-  bool writeInt(Section, uint32_t, int64_t);
-  bool writeUint(Section, uint32_t, uint64_t);
-  bool writeFloat(Section, uint32_t, float);
-  bool writeString(Section, uint32_t, std::string);
-  bool writeBoolean(Section, uint32_t, bool);
+  bool writeInt(Section, uint32_t, int64_t) noexcept;
+  bool writeUint(Section, uint32_t, uint64_t) noexcept;
+  bool writeFloat(Section, uint32_t, float) noexcept;
+  bool writeString(Section, uint32_t, std::string) noexcept;
+  bool writeBoolean(Section, uint32_t, bool) noexcept;
 
   // Interface for Memory::Config
-  Memory::Config::SRAMStructure *getSRAM();
-  Memory::Config::DRAMStructure *getDRAM();
-  Memory::Config::DRAMTiming *getDRAMTiming();
-  Memory::Config::DRAMPower *getDRAMPower();
-  Memory::Config::DRAMController *getDRAMController();
+  Memory::Config::SRAMStructure *getSRAM() noexcept;
+  Memory::Config::DRAMStructure *getDRAM() noexcept;
+  Memory::Config::DRAMTiming *getDRAMTiming() noexcept;
+  Memory::Config::DRAMPower *getDRAMPower() noexcept;
+  Memory::Config::DRAMController *getDRAMController() noexcept;
 
   // Interface for HIL::Config
-  std::vector<HIL::Config::Disk> &getDiskList();
-  std::vector<HIL::Config::Namespace> &getNamespaceList();
+  std::vector<HIL::Config::Disk> &getDiskList() noexcept;
+  std::vector<HIL::Config::Namespace> &getNamespaceList() noexcept;
 
   // Interface for FIL::Config
-  FIL::Config::NANDStructure *getNANDStructure();
-  FIL::Config::NANDTiming *getNANDTiming();
-  FIL::Config::NANDPower *getNANDPower();
+  FIL::Config::NANDStructure *getNANDStructure() noexcept;
+  FIL::Config::NANDTiming *getNANDTiming() noexcept;
+  FIL::Config::NANDPower *getNANDPower() noexcept;
 };
 
 }  // namespace SimpleSSD

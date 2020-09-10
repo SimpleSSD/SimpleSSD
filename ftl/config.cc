@@ -42,7 +42,7 @@ Config::Config() {
   superpageAllocation = FIL::PageAllocation::None;
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -83,7 +83,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node, node2;
 
   // Re-generate superpage allocation string
@@ -121,7 +121,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
 }
 
-void Config::update() {
+void Config::update() noexcept {
   panic_if((uint8_t)mappingMode > 2, "Invalid MappingMode.");
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
@@ -154,7 +154,7 @@ void Config::update() {
   }
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   uint64_t ret = 0;
 
   switch (idx) {
@@ -181,7 +181,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-float Config::readFloat(uint32_t idx) {
+float Config::readFloat(uint32_t idx) const noexcept {
   float ret = 0.f;
 
   switch (idx) {
@@ -205,7 +205,7 @@ float Config::readFloat(uint32_t idx) {
   return ret;
 }
 
-bool Config::readBoolean(uint32_t idx) {
+bool Config::readBoolean(uint32_t idx) const noexcept {
   switch (idx) {
     case MergeReadModifyWrite:
       return mergeRMW;
@@ -218,7 +218,7 @@ bool Config::readBoolean(uint32_t idx) {
   return false;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -248,7 +248,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-bool Config::writeFloat(uint32_t idx, float value) {
+bool Config::writeFloat(uint32_t idx, float value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -275,7 +275,7 @@ bool Config::writeFloat(uint32_t idx, float value) {
   return ret;
 }
 
-bool Config::writeBoolean(uint32_t idx, bool value) {
+bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
   bool ret = true;
 
   switch (idx) {

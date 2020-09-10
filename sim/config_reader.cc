@@ -155,7 +155,7 @@ void ConfigReader::save(std::string &path) noexcept {
 }
 
 //! Read configuration as int64
-int64_t ConfigReader::readInt(Section section, uint32_t key) {
+int64_t ConfigReader::readInt(Section section, uint32_t key) const noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readInt(key);
@@ -177,7 +177,7 @@ int64_t ConfigReader::readInt(Section section, uint32_t key) {
 }
 
 //! Read configuration as uint64
-uint64_t ConfigReader::readUint(Section section, uint32_t key) {
+uint64_t ConfigReader::readUint(Section section, uint32_t key) const noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readUint(key);
@@ -199,7 +199,7 @@ uint64_t ConfigReader::readUint(Section section, uint32_t key) {
 }
 
 //! Read configuration as float
-float ConfigReader::readFloat(Section section, uint32_t key) {
+float ConfigReader::readFloat(Section section, uint32_t key) const noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readFloat(key);
@@ -221,7 +221,8 @@ float ConfigReader::readFloat(Section section, uint32_t key) {
 }
 
 //! Read configuration as string
-std::string ConfigReader::readString(Section section, uint32_t key) {
+std::string ConfigReader::readString(Section section, uint32_t key) const
+    noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readString(key);
@@ -243,7 +244,7 @@ std::string ConfigReader::readString(Section section, uint32_t key) {
 }
 
 //! Read configuration as boolean
-bool ConfigReader::readBoolean(Section section, uint32_t key) {
+bool ConfigReader::readBoolean(Section section, uint32_t key) const noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readBoolean(key);
@@ -265,7 +266,8 @@ bool ConfigReader::readBoolean(Section section, uint32_t key) {
 }
 
 //! Write configuration as int64
-bool ConfigReader::writeInt(Section section, uint32_t key, int64_t value) {
+bool ConfigReader::writeInt(Section section, uint32_t key,
+                            int64_t value) noexcept {
   bool ret = false;
 
   switch (section) {
@@ -296,7 +298,8 @@ bool ConfigReader::writeInt(Section section, uint32_t key, int64_t value) {
 }
 
 //! Write configuration as uint64
-bool ConfigReader::writeUint(Section section, uint32_t key, uint64_t value) {
+bool ConfigReader::writeUint(Section section, uint32_t key,
+                             uint64_t value) noexcept {
   bool ret = false;
 
   switch (section) {
@@ -327,7 +330,8 @@ bool ConfigReader::writeUint(Section section, uint32_t key, uint64_t value) {
 }
 
 //! Write configuration as float
-bool ConfigReader::writeFloat(Section section, uint32_t key, float value) {
+bool ConfigReader::writeFloat(Section section, uint32_t key,
+                              float value) noexcept {
   bool ret = false;
 
   switch (section) {
@@ -359,7 +363,7 @@ bool ConfigReader::writeFloat(Section section, uint32_t key, float value) {
 
 //! Write configuration as string
 bool ConfigReader::writeString(Section section, uint32_t key,
-                               std::string value) {
+                               std::string value) noexcept {
   bool ret = false;
 
   switch (section) {
@@ -390,7 +394,8 @@ bool ConfigReader::writeString(Section section, uint32_t key,
 }
 
 //! Write configuration as boolean
-bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
+bool ConfigReader::writeBoolean(Section section, uint32_t key,
+                                bool value) noexcept {
   bool ret = false;
 
   switch (section) {
@@ -420,41 +425,41 @@ bool ConfigReader::writeBoolean(Section section, uint32_t key, bool value) {
   return ret;
 }
 
-Memory::Config::SRAMStructure *ConfigReader::getSRAM() {
+Memory::Config::SRAMStructure *ConfigReader::getSRAM() noexcept {
   return memConfig.getSRAM();
 }
 
-Memory::Config::DRAMStructure *ConfigReader::getDRAM() {
+Memory::Config::DRAMStructure *ConfigReader::getDRAM() noexcept {
   return memConfig.getDRAM();
 }
 
-Memory::Config::DRAMTiming *ConfigReader::getDRAMTiming() {
+Memory::Config::DRAMTiming *ConfigReader::getDRAMTiming() noexcept {
   return memConfig.getDRAMTiming();
 }
 
-Memory::Config::DRAMPower *ConfigReader::getDRAMPower() {
+Memory::Config::DRAMPower *ConfigReader::getDRAMPower() noexcept {
   return memConfig.getDRAMPower();
 }
 
-Memory::Config::DRAMController *ConfigReader::getDRAMController() {
+Memory::Config::DRAMController *ConfigReader::getDRAMController() noexcept {
   return memConfig.getDRAMController();
 }
 
-std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() {
+std::vector<HIL::Config::Disk> &ConfigReader::getDiskList() noexcept {
   return hilConfig.getDiskList();
 }
 
-std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() {
+std::vector<HIL::Config::Namespace> &ConfigReader::getNamespaceList() noexcept {
   return hilConfig.getNamespaceList();
 }
 
-FIL::Config::NANDStructure *ConfigReader::getNANDStructure() {
+FIL::Config::NANDStructure *ConfigReader::getNANDStructure() noexcept {
   return filConfig.getNANDStructure();
 }
-FIL::Config::NANDTiming *ConfigReader::getNANDTiming() {
+FIL::Config::NANDTiming *ConfigReader::getNANDTiming() noexcept {
   return filConfig.getNANDTiming();
 }
-FIL::Config::NANDPower *ConfigReader::getNANDPower() {
+FIL::Config::NANDPower *ConfigReader::getNANDPower() noexcept {
   return filConfig.getNANDPower();
 }
 

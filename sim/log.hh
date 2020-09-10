@@ -62,7 +62,7 @@ class Log {
   std::ostream *err;    //!< File for warn/panic
   std::ostream *debug;  //!< File for debug printout
 
-  inline void print(std::ostream *, const char *, va_list) noexcept;
+  inline void print(std::ostream *, const char *, va_list) const noexcept;
 
  public:
   Log();
@@ -77,8 +77,8 @@ class Log {
             std::ostream *) noexcept;
   void deinit() noexcept;
 
-  void print(LogID, const char *, va_list) noexcept;
-  void debugprint(DebugID, const char *, va_list) noexcept;
+  void print(LogID, const char *, va_list) const noexcept;
+  void debugprint(DebugID, const char *, va_list) const noexcept;
 };
 
 }  // namespace SimpleSSD

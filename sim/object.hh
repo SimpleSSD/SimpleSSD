@@ -105,7 +105,7 @@ class Object {
   ObjectData &object;
 
   /* Helper APIs for CPU */
-  inline uint64_t getTick() noexcept { return object.cpu->getTick(); }
+  inline uint64_t getTick() const noexcept { return object.cpu->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return object.cpu->createEvent(std::move(ef), std::move(s));
   }
@@ -133,19 +133,19 @@ class Object {
   inline void destroyEvent(Event e) noexcept { object.cpu->destroyEvent(e); }
 
   /* Helper APIs for Config */
-  inline int64_t readConfigInt(Section s, uint32_t k) noexcept {
+  inline int64_t readConfigInt(Section s, uint32_t k) const noexcept {
     return object.config->readInt(s, k);
   }
-  inline uint64_t readConfigUint(Section s, uint32_t k) noexcept {
+  inline uint64_t readConfigUint(Section s, uint32_t k) const noexcept {
     return object.config->readUint(s, k);
   }
-  inline float readConfigFloat(Section s, uint32_t k) noexcept {
+  inline float readConfigFloat(Section s, uint32_t k) const noexcept {
     return object.config->readFloat(s, k);
   }
-  inline std::string readConfigString(Section s, uint32_t k) noexcept {
+  inline std::string readConfigString(Section s, uint32_t k) const noexcept {
     return object.config->readString(s, k);
   }
-  inline bool readConfigBoolean(Section s, uint32_t k) noexcept {
+  inline bool readConfigBoolean(Section s, uint32_t k) const noexcept {
     return object.config->readBoolean(s, k);
   }
   inline bool writeConfigInt(Section s, uint32_t k, int64_t v) noexcept {
@@ -166,28 +166,29 @@ class Object {
   }
 
   /* Helper APIs for Log */
-  inline void info_log(const char *format, ...) noexcept {
+  inline void info_log(const char *format, ...) const noexcept {
     va_list args;
 
     va_start(args, format);
     object.log->print(Log::LogID::Info, format, args);
     va_end(args);
   }
-  inline void warn_log(const char *format, ...) noexcept {
+  inline void warn_log(const char *format, ...) const noexcept {
     va_list args;
 
     va_start(args, format);
     object.log->print(Log::LogID::Warn, format, args);
     va_end(args);
   }
-  inline void panic_log(const char *format, ...) noexcept {
+  inline void panic_log(const char *format, ...) const noexcept {
     va_list args;
 
     va_start(args, format);
     object.log->print(Log::LogID::Panic, format, args);
     va_end(args);
   }
-  inline void debugprint(Log::DebugID id, const char *format, ...) noexcept {
+  inline void debugprint(Log::DebugID id, const char *format, ...) const
+      noexcept {
     va_list args;
 
     va_start(args, format);

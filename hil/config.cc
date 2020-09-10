@@ -51,7 +51,7 @@ Config::Config() {
   defaultNamespace = 0;
 }
 
-void Config::loadInterface(pugi::xml_node &section) {
+void Config::loadInterface(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -79,7 +79,7 @@ void Config::loadInterface(pugi::xml_node &section) {
   }
 }
 
-void Config::loadDisk(pugi::xml_node &section, Disk *disk) {
+void Config::loadDisk(pugi::xml_node &section, Disk *disk) noexcept {
   disk->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
 
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
@@ -90,7 +90,7 @@ void Config::loadDisk(pugi::xml_node &section, Disk *disk) {
   }
 }
 
-void Config::loadNVMe(pugi::xml_node &section) {
+void Config::loadNVMe(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_MAX_SQ, uint16_t, maxSQ);
     LOAD_NAME_UINT_TYPE(node, NAME_MAX_CQ, uint16_t, maxCQ);
@@ -111,7 +111,7 @@ void Config::loadNVMe(pugi::xml_node &section) {
   }
 }
 
-void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) {
+void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) noexcept {
   ns->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
 
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
@@ -120,7 +120,7 @@ void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) {
   }
 }
 
-void Config::storeInterface(pugi::xml_node &section) {
+void Config::storeInterface(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   STORE_SECTION(section, "pcie", node);
@@ -135,7 +135,7 @@ void Config::storeInterface(pugi::xml_node &section) {
   STORE_NAME_UINT(node, NAME_LANE, mphyLane);
 }
 
-void Config::storeDisk(pugi::xml_node &section, Disk *disk) {
+void Config::storeDisk(pugi::xml_node &section, Disk *disk) noexcept {
   section.append_attribute("nsid").set_value(disk->nsid);
 
   STORE_NAME_BOOLEAN(section, NAME_ENABLE_DISK_IMAGE, disk->enable);
@@ -144,7 +144,7 @@ void Config::storeDisk(pugi::xml_node &section, Disk *disk) {
   STORE_NAME_STRING(section, NAME_DISK_IMAGE_PATH, disk->path);
 }
 
-void Config::storeNVMe(pugi::xml_node &section) {
+void Config::storeNVMe(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   STORE_NAME_UINT(section, NAME_MAX_SQ, maxSQ);
@@ -163,14 +163,14 @@ void Config::storeNVMe(pugi::xml_node &section) {
   }
 }
 
-void Config::storeNamespace(pugi::xml_node &section, Namespace *ns) {
+void Config::storeNamespace(pugi::xml_node &section, Namespace *ns) noexcept {
   section.append_attribute("nsid").set_value(ns->nsid);
 
   STORE_NAME_UINT(section, NAME_LBA_SIZE, ns->lbaSize);
   STORE_NAME_UINT(section, NAME_CAPACITY, ns->capacity);
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     auto name = node.attribute("name").value();
 
@@ -191,7 +191,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
   STORE_NAME_UINT(section, NAME_WORK_INTERVAL, workInterval);
@@ -210,7 +210,7 @@ void Config::storeTo(pugi::xml_node &section) {
   storeNVMe(node);
 }
 
-void Config::update() {
+void Config::update() noexcept {
   // Validates
   warn_if(workInterval >= 1000000000, "Work interval %" PRIu64 " is too large.",
           workInterval);
@@ -301,7 +301,7 @@ void Config::update() {
   }
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   uint64_t ret = 0;
 
   switch (idx) {
@@ -349,7 +349,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-bool Config::readBoolean(uint32_t idx) {
+bool Config::readBoolean(uint32_t idx) const noexcept {
   switch (idx) {
     case NVMeAttachDefaultNamespaces:
       return attachDefaultNamespaces;
@@ -358,7 +358,7 @@ bool Config::readBoolean(uint32_t idx) {
   return false;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -409,7 +409,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-bool Config::writeBoolean(uint32_t idx, bool value) {
+bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -424,11 +424,11 @@ bool Config::writeBoolean(uint32_t idx, bool value) {
   return ret;
 }
 
-std::vector<Config::Disk> &Config::getDiskList() {
+std::vector<Config::Disk> &Config::getDiskList() noexcept {
   return diskList;
 }
 
-std::vector<Config::Namespace> &Config::getNamespaceList() {
+std::vector<Config::Namespace> &Config::getNamespaceList() noexcept {
   return namespaceList;
 }
 

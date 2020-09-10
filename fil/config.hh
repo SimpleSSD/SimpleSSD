@@ -100,28 +100,28 @@ class Config : public BaseConfig {
 
   std::string _pageAllocation;
 
-  void loadNANDStructure(pugi::xml_node &);
-  void loadNANDTiming(pugi::xml_node &);
-  void loadNANDPower(pugi::xml_node &);
-  void storeNANDStructure(pugi::xml_node &);
-  void storeNANDTiming(pugi::xml_node &);
-  void storeNANDPower(pugi::xml_node &);
+  void loadNANDStructure(pugi::xml_node &) noexcept;
+  void loadNANDTiming(pugi::xml_node &) noexcept;
+  void loadNANDPower(pugi::xml_node &) noexcept;
+  void storeNANDStructure(pugi::xml_node &) noexcept;
+  void storeNANDTiming(pugi::xml_node &) noexcept;
+  void storeNANDPower(pugi::xml_node &) noexcept;
 
  public:
   Config();
 
-  const char *getSectionName() override { return "fil"; }
+  const char *getSectionName() noexcept override { return "fil"; }
 
-  void loadFrom(pugi::xml_node &) override;
-  void storeTo(pugi::xml_node &) override;
-  void update() override;
+  void loadFrom(pugi::xml_node &) noexcept override;
+  void storeTo(pugi::xml_node &) noexcept override;
+  void update() noexcept override;
 
-  uint64_t readUint(uint32_t) override;
-  bool writeUint(uint32_t, uint64_t) override;
+  uint64_t readUint(uint32_t) const noexcept override;
+  bool writeUint(uint32_t, uint64_t) noexcept override;
 
-  NANDStructure *getNANDStructure();
-  NANDTiming *getNANDTiming();
-  NANDPower *getNANDPower();
+  NANDStructure *getNANDStructure() noexcept;
+  NANDTiming *getNANDTiming() noexcept;
+  NANDPower *getNANDPower() noexcept;
 };
 
 }  // namespace SimpleSSD::FIL

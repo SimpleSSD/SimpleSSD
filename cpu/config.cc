@@ -24,7 +24,7 @@ Config::Config() {
   ftlCore = 1;
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT(node, NAME_CLOCK, clock);
     LOAD_NAME_BOOLEAN(node, NAME_USE_DEDICATED, useDedicatedCore);
@@ -34,7 +34,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_CLOCK, clock);
   STORE_NAME_BOOLEAN(section, NAME_USE_DEDICATED, useDedicatedCore);
   STORE_NAME_UINT(section, NAME_CORE_HIL, hilCore);
@@ -42,14 +42,14 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_CORE_FTL, ftlCore);
 }
 
-void Config::update() {
+void Config::update() noexcept {
   panic_if(clock == 0, "Invalid clock speed");
 
   panic_if(hilCore + iclCore + ftlCore == 0,
            "We need at-least one core for function scheduling.");
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   uint64_t ret = 0;
 
   switch (idx) {
@@ -70,7 +70,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return ret;
 }
 
-bool Config::readBoolean(uint32_t idx) {
+bool Config::readBoolean(uint32_t idx) const noexcept {
   bool ret = false;
 
   switch (idx) {
@@ -82,7 +82,7 @@ bool Config::readBoolean(uint32_t idx) {
   return ret;
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -106,7 +106,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-bool Config::writeBoolean(uint32_t idx, bool value) {
+bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
   bool ret = true;
 
   switch (idx) {

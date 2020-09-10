@@ -147,37 +147,36 @@ class Config : public BaseConfig {
 
   Model dramModel;
 
-  void loadCache(pugi::xml_node &, CacheConfig &);
-  void loadSRAM(pugi::xml_node &);
-  void loadDRAMStructure(pugi::xml_node &);
-  void loadDRAMTiming(pugi::xml_node &);
-  void loadDRAMPower(pugi::xml_node &);
-  void loadTimingDRAM(pugi::xml_node &);
-  void storeCache(pugi::xml_node &, CacheConfig &);
-  void storeSRAM(pugi::xml_node &);
-  void storeDRAMStructure(pugi::xml_node &);
-  void storeDRAMTiming(pugi::xml_node &);
-  void storeDRAMPower(pugi::xml_node &);
-  void storeTimingDRAM(pugi::xml_node &);
+  void loadCache(pugi::xml_node &, CacheConfig &) noexcept;
+  void loadSRAM(pugi::xml_node &) noexcept;
+  void loadDRAMStructure(pugi::xml_node &) noexcept;
+  void loadDRAMTiming(pugi::xml_node &) noexcept;
+  void loadDRAMPower(pugi::xml_node &) noexcept;
+  void loadTimingDRAM(pugi::xml_node &) noexcept;
+  void storeCache(pugi::xml_node &, CacheConfig &) noexcept;
+  void storeSRAM(pugi::xml_node &) noexcept;
+  void storeDRAMStructure(pugi::xml_node &) noexcept;
+  void storeDRAMTiming(pugi::xml_node &) noexcept;
+  void storeDRAMPower(pugi::xml_node &) noexcept;
+  void storeTimingDRAM(pugi::xml_node &) noexcept;
 
  public:
   Config();
 
-  const char *getSectionName() override { return "memory"; }
+  const char *getSectionName() noexcept override { return "memory"; }
 
-  void loadFrom(pugi::xml_node &) override;
-  void storeTo(pugi::xml_node &) override;
-  void update() override;
+  void loadFrom(pugi::xml_node &) noexcept override;
+  void storeTo(pugi::xml_node &) noexcept override;
 
-  uint64_t readUint(uint32_t) override;
-  bool writeUint(uint32_t, uint64_t) override;
+  uint64_t readUint(uint32_t) const noexcept override;
+  bool writeUint(uint32_t, uint64_t) noexcept override;
 
-  CacheConfig *getLLC();
-  SRAMStructure *getSRAM();
-  DRAMStructure *getDRAM();
-  DRAMTiming *getDRAMTiming();
-  DRAMPower *getDRAMPower();
-  DRAMController *getDRAMController();
+  CacheConfig *getLLC() noexcept;
+  SRAMStructure *getSRAM() noexcept;
+  DRAMStructure *getDRAM() noexcept;
+  DRAMTiming *getDRAMTiming() noexcept;
+  DRAMPower *getDRAMPower() noexcept;
+  DRAMController *getDRAMController() noexcept;
 };
 
 }  // namespace SimpleSSD::Memory

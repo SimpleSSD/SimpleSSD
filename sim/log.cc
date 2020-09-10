@@ -80,7 +80,7 @@ void Log::deinit() noexcept {
 }
 
 //! Print log and terminate program
-void Log::print(LogID id, const char *format, va_list args) noexcept {
+void Log::print(LogID id, const char *format, va_list args) const noexcept {
   std::ostream *stream = nullptr;
 
   if (UNLIKELY(!inited)) {
@@ -129,7 +129,8 @@ void Log::print(LogID id, const char *format, va_list args) noexcept {
   }
 }
 
-void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
+void Log::debugprint(DebugID id, const char *format, va_list args) const
+    noexcept {
   if (UNLIKELY(!inited)) {
     std::cerr << "panic: Log system not initialized" << std::endl;
 
@@ -161,7 +162,8 @@ void Log::debugprint(DebugID id, const char *format, va_list args) noexcept {
  * \param[in]  format Format string
  * \param[in]  args   Argument list
  */
-void Log::print(std::ostream *os, const char *format, va_list args) noexcept {
+void Log::print(std::ostream *os, const char *format, va_list args) const
+    noexcept {
   va_list copy;
   std::vector<char> str;
 

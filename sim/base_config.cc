@@ -23,7 +23,7 @@ const std::regex regexTime("(\\d+)([munp]?s?)",
 //! A constructor
 BaseConfig::BaseConfig() {}
 
-int64_t BaseConfig::convertInt(const char *value, bool *valid) {
+int64_t BaseConfig::convertInt(const char *value, bool *valid) noexcept {
   int64_t ret = 0;
   std::cmatch match;
 
@@ -71,7 +71,7 @@ int64_t BaseConfig::convertInt(const char *value, bool *valid) {
   return ret;
 }
 
-uint64_t BaseConfig::convertUint(const char *value, bool *valid) {
+uint64_t BaseConfig::convertUint(const char *value, bool *valid) noexcept {
   uint64_t ret = 0;
   std::cmatch match;
 
@@ -119,7 +119,7 @@ uint64_t BaseConfig::convertUint(const char *value, bool *valid) {
   return ret;
 }
 
-uint64_t BaseConfig::convertTime(const char *value, bool *valid) {
+uint64_t BaseConfig::convertTime(const char *value, bool *valid) noexcept {
   uint64_t ret = 0;
   std::cmatch match;
 
@@ -158,15 +158,15 @@ uint64_t BaseConfig::convertTime(const char *value, bool *valid) {
   return ret;
 }
 
-bool BaseConfig::isSection(pugi::xml_node &node) {
+bool BaseConfig::isSection(pugi::xml_node &node) noexcept {
   return strcmp(node.name(), CONFIG_SECTION_NAME) == 0;
 }
 
-bool BaseConfig::isKey(pugi::xml_node &node) {
+bool BaseConfig::isKey(pugi::xml_node &node) noexcept {
   return strcmp(node.name(), CONFIG_KEY_NAME) == 0;
 }
 
-void BaseConfig::panic_if(bool eval, const char *format, ...) {
+void BaseConfig::panic_if(bool eval, const char *format, ...) noexcept {
 #ifndef EXCLUDE_CPU
   if (eval) {
     va_list copy, args;
@@ -185,7 +185,7 @@ void BaseConfig::panic_if(bool eval, const char *format, ...) {
 #endif
 }
 
-void BaseConfig::warn_if(bool eval, const char *format, ...) {
+void BaseConfig::warn_if(bool eval, const char *format, ...) noexcept {
 #ifndef EXCLUDE_CPU
   if (eval) {
     va_list copy, args;

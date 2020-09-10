@@ -147,36 +147,38 @@ namespace SimpleSSD {
  */
 class BaseConfig {
  protected:
-  int64_t convertInt(const char *, bool * = nullptr);
-  uint64_t convertUint(const char *, bool * = nullptr);
-  uint64_t convertTime(const char *, bool * = nullptr);
+  int64_t convertInt(const char *, bool * = nullptr) noexcept;
+  uint64_t convertUint(const char *, bool * = nullptr) noexcept;
+  uint64_t convertTime(const char *, bool * = nullptr) noexcept;
 
-  static bool isSection(pugi::xml_node &);
-  static bool isKey(pugi::xml_node &);
+  static bool isSection(pugi::xml_node &) noexcept;
+  static bool isKey(pugi::xml_node &) noexcept;
 
-  static void panic_if(bool, const char *, ...);
-  static void warn_if(bool, const char *, ...);
+  static void panic_if(bool, const char *, ...) noexcept;
+  static void warn_if(bool, const char *, ...) noexcept;
 
  public:
   BaseConfig();
 
-  virtual const char *getSectionName() = 0;
+  virtual const char *getSectionName() noexcept = 0;
 
-  virtual void loadFrom(pugi::xml_node &) = 0;
-  virtual void storeTo(pugi::xml_node &) = 0;
-  virtual void update() {}
+  virtual void loadFrom(pugi::xml_node &) noexcept = 0;
+  virtual void storeTo(pugi::xml_node &) noexcept = 0;
+  virtual void update() noexcept {}
 
-  virtual int64_t readInt(uint32_t) { return 0; }
-  virtual uint64_t readUint(uint32_t) { return 0; }
-  virtual float readFloat(uint32_t) { return 0.f; }
-  virtual std::string readString(uint32_t) { return std::string(); }
-  virtual bool readBoolean(uint32_t) { return false; }
+  virtual int64_t readInt(uint32_t) const noexcept { return 0; }
+  virtual uint64_t readUint(uint32_t) const noexcept { return 0; }
+  virtual float readFloat(uint32_t) const noexcept { return 0.f; }
+  virtual std::string readString(uint32_t) const noexcept {
+    return std::string();
+  }
+  virtual bool readBoolean(uint32_t) const noexcept { return false; }
 
-  virtual bool writeInt(uint32_t, int64_t) { return false; }
-  virtual bool writeUint(uint32_t, uint64_t) { return false; }
-  virtual bool writeFloat(uint32_t, float) { return false; }
-  virtual bool writeString(uint32_t, std::string &) { return false; }
-  virtual bool writeBoolean(uint32_t, bool) { return false; }
+  virtual bool writeInt(uint32_t, int64_t) noexcept { return false; }
+  virtual bool writeUint(uint32_t, uint64_t) noexcept { return false; }
+  virtual bool writeFloat(uint32_t, float) noexcept { return false; }
+  virtual bool writeString(uint32_t, std::string &) noexcept { return false; }
+  virtual bool writeBoolean(uint32_t, bool) noexcept { return false; }
 };
 
 }  // namespace SimpleSSD
