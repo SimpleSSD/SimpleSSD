@@ -15,16 +15,6 @@
 
 namespace SimpleSSD::ICL::Cache {
 
-struct WritebackRequest {
-  uint64_t tag;       // Tag of flush request
-  uint64_t drainTag;  // Last tag of drain FTL request
-  bool flush;         // True if tag is valid
-
-  std::unordered_map<LPN, CacheTag *> lpnList;
-
-  WritebackRequest() : tag(0), drainTag(0), flush(false) {}
-};
-
 struct CacheTag {
   union {
     uint8_t data;
@@ -62,6 +52,16 @@ struct CacheTag {
 
     validbits.restoreCheckpoint(in);
   }
+};
+
+struct WritebackRequest {
+  uint64_t tag;       // Tag of flush request
+  uint64_t drainTag;  // Last tag of drain FTL request
+  bool flush;         // True if tag is valid
+
+  std::unordered_map<LPN, CacheTag *> lpnList;
+
+  WritebackRequest() : tag(0), drainTag(0), flush(false) {}
 };
 
 class AbstractTagArray : public Object {

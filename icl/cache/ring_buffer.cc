@@ -254,7 +254,7 @@ void RingBuffer::collectEvictable(LPN, WritebackRequest &wbreq) {
     auto &line = cacheline.at(iter.second);
 
     if (line.valid && line.dirty && !line.dmaPending && !line.nvmPending) {
-      uint32_t offset = line.tag % pagesToEvict;
+      uint32_t offset = static_cast<uint64_t>(line.tag) % pagesToEvict;
 
       auto &idx = collected.at(offset);
 
@@ -283,17 +283,13 @@ void RingBuffer::collectEvictable(LPN, WritebackRequest &wbreq) {
 
 void RingBuffer::collectFlushable(LPN slpn, uint32_t nlp,
                                   WritebackRequest &wbreq) {
-  uint64_t i;
-
   for (auto &iter : cacheline) {
     if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
         slpn <= iter.tag && iter.tag < slpn + nlp) {
       iter.nvmPending = true;
 
-      wbreq.lpnList.emplace(iter.tag, i);
+      wbreq.lpnList.emplace(iter.tag, &iter);
     }
-
-    i++;
   }
 }
 

@@ -25,7 +25,7 @@ namespace HIL::NVMe {
 class Subsystem;
 
 //!< LPN Range. first = slpn, second = nlp.
-using LPNRange = std::pair<uint64_t, uint64_t>;
+using LPNRange = std::pair<LPN, uint64_t>;
 
 class NamespaceInformation {
  public:

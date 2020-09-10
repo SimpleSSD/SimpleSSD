@@ -70,7 +70,9 @@ ConvertFunction Convert::getConvertion() {
     sum += popcount32(maskBlock);
     shiftPage = sum;
 
-    return [this](PPN ppn, ::CPDPBP &addr) {
+    return [this](PPN _ppn, ::CPDPBP &addr) {
+      uint64_t ppn = static_cast<uint64_t>(_ppn);
+
       addr.Channel = (uint32_t)((ppn >> shiftChannel) & maskChannel);
       addr.Package = (uint32_t)((ppn >> shiftWay) & maskWay);
       addr.Die = (uint32_t)((ppn >> shiftDie) & maskDie);
@@ -111,7 +113,8 @@ ConvertFunction Convert::getConvertion() {
     }
 
     return [level, ppnIndex, block = this->block, page = this->page](
-               PPN ppn, ::CPDPBP &addr) {
+               PPN _ppn, ::CPDPBP &addr) {
+      uint64_t ppn = static_cast<uint64_t>(_ppn);
       uint32_t *values = (uint32_t *)&addr;
 
       values[ppnIndex[0]] = (uint32_t)(ppn % level[0]);
@@ -133,12 +136,12 @@ void Convert::getBlockAlignedPPN(PPN &ppn) {
   if (isPowerOfTwo) {
     uint64_t mask = std::numeric_limits<uint64_t>::max() << shiftPage;
 
-    ppn &= ~mask;
+    ppn = static_cast<uint64_t>(ppn) & ~mask;
   }
   else {
     uint64_t div = channel * way * die * plane * block;
 
-    ppn = ppn / div * div;
+    ppn = static_cast<uint64_t>(ppn) / div * div;
   }
 }
 

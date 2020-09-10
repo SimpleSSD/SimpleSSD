@@ -299,7 +299,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 
     if (dirtyLines >= evictThreshold + pendingEviction) {
       evict = true;
-      lpn = InvalidLPN;
+      lpn = INVALID_NUMBER64;
     }
   }
 

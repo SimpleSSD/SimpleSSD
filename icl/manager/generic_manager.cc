@@ -25,9 +25,10 @@ GenericDetector::GenericDetector(uint32_t p, uint64_t c, uint64_t r)
 
 void GenericDetector::submitSubRequest(HIL::SubRequest *req) {
   uint64_t tag = req->getParentTag();
+  uint64_t lpn = static_cast<uint64_t>(req->getLPN());
 
   if (lastRequestTag != tag) {
-    if (offset + length == req->getLPN() * pageSize + req->getSkipFront()) {
+    if (offset + length == lpn * pageSize + req->getSkipFront()) {
       if (!enabled) {
         hitCounter++;
         accessCounter += reqLength;
@@ -48,7 +49,7 @@ void GenericDetector::submitSubRequest(HIL::SubRequest *req) {
     lastRequestTag = tag;
   }
 
-  offset = req->getLPN() * pageSize + req->getSkipFront();
+  offset = lpn * pageSize + req->getSkipFront();
   length = req->getLength();
   reqLength += length;
 }

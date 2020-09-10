@@ -126,7 +126,6 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
 SubRequest::SubRequest()
     : requestTag(0),
       request(nullptr),
-      lpn(InvalidLPN),
       offset(0),
       length(0),
       allocate(false),
@@ -138,7 +137,6 @@ SubRequest::SubRequest()
 SubRequest::SubRequest(uint64_t t, Request *r)
     : requestTag(t),
       request(r),
-      lpn(InvalidLPN),
       offset(0),
       length(0),
       allocate(false),

@@ -293,7 +293,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
     auto &iter = cacheline.at(i);
 
     if (iter.valid && iter.dirty && !iter.dmaPending && !iter.nvmPending) {
-      uint32_t offset = iter.tag % pagesToEvict;
+      uint32_t offset = static_cast<uint64_t>(iter.tag) % pagesToEvict;
 
       auto &line = collected.at(offset);
 
@@ -307,7 +307,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
   }
 
   // Check curSet exists
-  if (lpn != InvalidLPN) {
+  if (lpn) {
     uint32_t curSet = getSetIdx(lpn);
     bool found = false;
 
@@ -344,7 +344,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
         if (way != waySize) {
           uint64_t i = curSet * waySize + way;
           auto &line = cacheline.at(i);
-          uint32_t offset = line.tag % pagesToEvict;
+          uint32_t offset = static_cast<uint64_t>(line.tag) % pagesToEvict;
 
           collected.at(offset) = i;
         }
@@ -358,8 +358,6 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
   for (auto &i : collected) {
     if (i < size) {
       auto &line = cacheline.at(i);
-      uint32_t set = i / waySize;
-      uint32_t way = i % waySize;
 
       line.nvmPending = true;
 
@@ -370,17 +368,13 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
 
 void SetAssociative::collectFlushable(LPN slpn, uint32_t nlp,
                                       WritebackRequest &wbreq) {
-  uint64_t i = 0;
-
   for (auto &iter : cacheline) {
     if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
         slpn <= iter.tag && iter.tag < slpn + nlp) {
       iter.nvmPending = true;
 
-      wbreq.lpnList.emplace(iter.tag, LineInfo(i / waySize, i % waySize));
+      wbreq.lpnList.emplace(iter.tag, &iter);
     }
-
-    i++;
   }
 }
 

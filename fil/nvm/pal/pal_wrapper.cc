@@ -134,7 +134,8 @@ void PALOLD::submit(Request *req) {
 
   req->setLPN(lpn);
 
-  ::Command pcmd(cplt.beginAt, cplt.ppn, cplt.oper, param->pageSize);
+  ::Command pcmd(cplt.beginAt, static_cast<uint64_t>(cplt.ppn), cplt.oper,
+                 param->pageSize);
 
   debugprint(Log::DebugID::FIL_PALOLD, "%-5s | PPN %" PRIx64 "h",
              OPER_STRINFO2[cplt.oper], cplt.ppn);

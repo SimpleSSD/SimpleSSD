@@ -11,6 +11,7 @@
 #define __SIMPLESSD_TYPES_HH__
 
 #include <cinttypes>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <utility>
@@ -90,6 +91,24 @@ static void assertNumber(uint32_t v) noexcept {
     friend classname &operator-(classname lhs, const classname &rhs) {         \
       return lhs -= rhs;                                                       \
     }                                                                          \
+    friend bool operator<(const classname &lhs, const classname &rhs) {        \
+      return lhs.value < rhs.value;                                            \
+    }                                                                          \
+    friend bool operator>(const classname &lhs, const classname &rhs) {        \
+      return lhs.value > rhs.value;                                            \
+    }                                                                          \
+    friend bool operator<=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value <= rhs.value;                                           \
+    }                                                                          \
+    friend bool operator>=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value >= rhs.value;                                           \
+    }                                                                          \
+    friend bool operator==(const classname &lhs, const classname &rhs) {       \
+      return lhs.value == rhs.value;                                           \
+    }                                                                          \
+    friend bool operator!=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value != rhs.value;                                           \
+    }                                                                          \
     explicit operator bool() const { return value != INVALID_NUMBER64; }       \
     explicit operator uint64_t() const { return value; }                       \
   }
@@ -136,6 +155,24 @@ static void assertNumber(uint32_t v) noexcept {
     friend classname &operator-(classname lhs, const classname &rhs) {         \
       return lhs -= rhs;                                                       \
     }                                                                          \
+    friend bool operator<(const classname &lhs, const classname &rhs) {        \
+      return lhs.value < rhs.value;                                            \
+    }                                                                          \
+    friend bool operator>(const classname &lhs, const classname &rhs) {        \
+      return lhs.value > rhs.value;                                            \
+    }                                                                          \
+    friend bool operator<=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value <= rhs.value;                                           \
+    }                                                                          \
+    friend bool operator>=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value >= rhs.value;                                           \
+    }                                                                          \
+    friend bool operator==(const classname &lhs, const classname &rhs) {       \
+      return lhs.value == rhs.value;                                           \
+    }                                                                          \
+    friend bool operator!=(const classname &lhs, const classname &rhs) {       \
+      return lhs.value != rhs.value;                                           \
+    }                                                                          \
     explicit operator bool() const { return value != INVALID_NUMBER32; }       \
     explicit operator uint32_t() const { return value; }                       \
   }
@@ -159,5 +196,24 @@ DEFINE_NUMBER32(PBN);
 DEFINE_NUMBER32(PSBN);
 
 }  // namespace SimpleSSD
+
+//! Template specialization of std::hash for LPN
+namespace std {
+
+template <>
+struct hash<SimpleSSD::LPN> {
+  std::size_t operator()(SimpleSSD::LPN const &s) const noexcept {
+    return std::hash<uint64_t>{}(static_cast<uint64_t>(s));
+  }
+};
+
+template <>
+struct hash<SimpleSSD::PPN> {
+  std::size_t operator()(SimpleSSD::PPN const &s) const noexcept {
+    return std::hash<uint64_t>{}(static_cast<uint64_t>(s));
+  }
+};
+
+}  // namespace std
 
 #endif

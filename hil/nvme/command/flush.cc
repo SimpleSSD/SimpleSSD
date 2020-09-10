@@ -45,7 +45,7 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
   auto pHIL = subsystem->getHIL();
 
   LPN offset = 0;
-  LPN length = 0;
+  uint64_t length = 0;
 
   if (nsid == NSID_ALL) {
     auto last = subsystem->getTotalPages();
@@ -71,6 +71,10 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
     offset = range.first;
     length = range.second;
   }
+
+  // TODO: Fix this
+  warn_if(length > std::numeric_limits<uint32_t>::max(),
+          "NSSIZE > 4GB * Pagesize.");
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(offset, length, pHIL->getLPNSize());
