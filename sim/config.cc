@@ -26,7 +26,7 @@ Config::Config() {
   mode = Mode::None;
 }
 
-void Config::loadFrom(pugi::xml_node &section) {
+void Config::loadFrom(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_STRING(node, NAME_OUTPUT_DIRECTORY, outputDirectory);
     LOAD_NAME_STRING(node, NAME_OUTPUT_FILE, outputFile);
@@ -36,7 +36,7 @@ void Config::loadFrom(pugi::xml_node &section) {
   }
 }
 
-void Config::storeTo(pugi::xml_node &section) {
+void Config::storeTo(pugi::xml_node &section) noexcept {
   // Assume section node is empty
   STORE_NAME_STRING(section, NAME_OUTPUT_DIRECTORY, outputDirectory);
   STORE_NAME_STRING(section, NAME_OUTPUT_FILE, outputFile);
@@ -45,7 +45,7 @@ void Config::storeTo(pugi::xml_node &section) {
   STORE_NAME_UINT(section, NAME_CONTROLLER, mode);
 }
 
-uint64_t Config::readUint(uint32_t idx) {
+uint64_t Config::readUint(uint32_t idx) const noexcept {
   switch (idx) {
     case Controller:
       return (uint64_t)mode;
@@ -54,7 +54,7 @@ uint64_t Config::readUint(uint32_t idx) {
   return 0;
 }
 
-std::string Config::readString(uint32_t idx) {
+std::string Config::readString(uint32_t idx) const noexcept {
   switch (idx) {
     case OutputDirectory:
       return outputDirectory;
@@ -69,7 +69,7 @@ std::string Config::readString(uint32_t idx) {
   return "";
 }
 
-bool Config::writeUint(uint32_t idx, uint64_t value) {
+bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
   switch (idx) {
@@ -84,7 +84,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) {
   return ret;
 }
 
-bool Config::writeString(uint32_t idx, std::string &value) {
+bool Config::writeString(uint32_t idx, std::string &value) noexcept {
   bool ret = true;
 
   switch (idx) {
