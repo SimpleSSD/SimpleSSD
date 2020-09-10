@@ -49,27 +49,27 @@ static void assertNumber(uint32_t v) noexcept {
   }
 }
 
-#define DEFINE_NUMBER64(classname)                                             \
+#define DEFINE_NUMBER(bits, classname)                                         \
   class classname {                                                            \
    private:                                                                    \
-    uint64_t value;                                                            \
+    uint##bits##_t value;                                                      \
                                                                                \
    public:                                                                     \
-    classname() : value(INVALID_NUMBER64) {}                                   \
+    classname() : value(INVALID_NUMBER##bits) {}                               \
     classname(const classname &rhs) : value(rhs.value) {}                      \
     classname(classname &&rhs) noexcept { *this = std::move(rhs); }            \
-    classname(uint64_t rhs) : value(rhs) {}                                    \
+    classname(uint##bits##_t rhs) : value(rhs) {}                              \
     classname &operator=(const classname &rhs) {                               \
       value = rhs.value;                                                       \
       return *this;                                                            \
     }                                                                          \
     classname &operator=(classname &&rhs) {                                    \
       if (this != &rhs) {                                                      \
-        value = std::exchange(rhs.value, INVALID_NUMBER64);                    \
+        value = std::exchange(rhs.value, INVALID_NUMBER##bits);                \
       }                                                                        \
       return *this;                                                            \
     }                                                                          \
-    classname &operator=(uint64_t rhs) {                                       \
+    classname &operator=(uint##bits##_t rhs) {                                 \
       value = rhs;                                                             \
       return *this;                                                            \
     }                                                                          \
@@ -109,73 +109,12 @@ static void assertNumber(uint32_t v) noexcept {
     friend bool operator!=(const classname &lhs, const classname &rhs) {       \
       return lhs.value != rhs.value;                                           \
     }                                                                          \
-    explicit operator bool() const { return value != INVALID_NUMBER64; }       \
+    explicit operator bool() const { return value != INVALID_NUMBER##bits; }   \
     explicit operator uint64_t() const { return value; }                       \
   }
 
-#define DEFINE_NUMBER32(classname)                                             \
-  class classname {                                                            \
-   private:                                                                    \
-    uint32_t value;                                                            \
-                                                                               \
-   public:                                                                     \
-    classname() : value(INVALID_NUMBER32) {}                                   \
-    classname(const classname &rhs) : value(rhs.value) {}                      \
-    classname(classname &&rhs) noexcept { *this = std::move(rhs); }            \
-    classname(uint64_t rhs) : value(rhs) {}                                    \
-    classname &operator=(const classname &rhs) {                               \
-      value = rhs.value;                                                       \
-      return *this;                                                            \
-    }                                                                          \
-    classname &operator=(classname &&rhs) {                                    \
-      if (this != &rhs) {                                                      \
-        value = std::exchange(rhs.value, INVALID_NUMBER32);                    \
-      }                                                                        \
-      return *this;                                                            \
-    }                                                                          \
-    classname &operator=(uint32_t rhs) {                                       \
-      value = rhs;                                                             \
-      return *this;                                                            \
-    }                                                                          \
-    classname &operator+=(const classname &rhs) {                              \
-      assertNumber(value);                                                     \
-      assertNumber(rhs.value);                                                 \
-      value += rhs.value;                                                      \
-      return *this;                                                            \
-    }                                                                          \
-    classname &operator-=(const classname &rhs) {                              \
-      assertNumber(value);                                                     \
-      assertNumber(rhs.value);                                                 \
-      value -= rhs.value;                                                      \
-      return *this;                                                            \
-    }                                                                          \
-    friend classname &operator+(classname lhs, const classname &rhs) {         \
-      return lhs += rhs;                                                       \
-    }                                                                          \
-    friend classname &operator-(classname lhs, const classname &rhs) {         \
-      return lhs -= rhs;                                                       \
-    }                                                                          \
-    friend bool operator<(const classname &lhs, const classname &rhs) {        \
-      return lhs.value < rhs.value;                                            \
-    }                                                                          \
-    friend bool operator>(const classname &lhs, const classname &rhs) {        \
-      return lhs.value > rhs.value;                                            \
-    }                                                                          \
-    friend bool operator<=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value <= rhs.value;                                           \
-    }                                                                          \
-    friend bool operator>=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value >= rhs.value;                                           \
-    }                                                                          \
-    friend bool operator==(const classname &lhs, const classname &rhs) {       \
-      return lhs.value == rhs.value;                                           \
-    }                                                                          \
-    friend bool operator!=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value != rhs.value;                                           \
-    }                                                                          \
-    explicit operator bool() const { return value != INVALID_NUMBER32; }       \
-    explicit operator uint32_t() const { return value; }                       \
-  }
+#define DEFINE_NUMBER32(classname) DEFINE_NUMBER(32, classname)
+#define DEFINE_NUMBER64(classname) DEFINE_NUMBER(64, classname)
 
 //! Logical Page Number
 DEFINE_NUMBER64(LPN);
@@ -197,7 +136,7 @@ DEFINE_NUMBER32(PSBN);
 
 }  // namespace SimpleSSD
 
-//! Template specialization of std::hash for LPN
+//! Template specialization of std::hash
 namespace std {
 
 template <>
