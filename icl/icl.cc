@@ -8,8 +8,7 @@
 #include "icl/icl.hh"
 
 #include "hil/hil.hh"
-#include "icl/cache/ring_buffer.hh"
-#include "icl/cache/set_associative.hh"
+#include "icl/cache/generic_cache.hh"
 #include "icl/manager/basic.hh"
 #include "util/algorithm.hh"
 
@@ -41,18 +40,15 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
 
   // Create cache structure
   switch (mode) {
-    case Config::Mode::SetAssociative:
-      pCache = new Cache::SetAssociative(object, pManager, param);
-
-      break;
     case Config::Mode::None:
       // Create very small - two superpage size - ring buffer.
       writeConfigUint(Section::InternalCache, Config::Key::CacheSize,
                       param->parallelismLevel[0] * param->pageSize * 2);
 
       /* fallthrough */
+    case Config::Mode::SetAssociative:
     case Config::Mode::RingBuffer:
-      pCache = new Cache::RingBuffer(object, pManager, param);
+      pCache = new Cache::GenericCache(object, pManager, param);
 
       break;
     default:

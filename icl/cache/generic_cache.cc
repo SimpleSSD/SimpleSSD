@@ -7,6 +7,8 @@
 
 #include "icl/cache/generic_cache.hh"
 
+#include "icl/cache/ring_buffer.hh"
+#include "icl/cache/set_associative.hh"
 #include "icl/manager/abstract_manager.hh"
 #include "util/algorithm.hh"
 
@@ -20,10 +22,16 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
 
   switch (mode) {
     case Config::Mode::SetAssociative:
+      tagArray = new SetAssociative(o, m, p);
+
+      break;
     case Config::Mode::RingBuffer:
+      tagArray = new RingBuffer(o, m, p);
+
       break;
     default:
       panic("Unexpected tag array for generic cache.");
+
       break;
   }
 
