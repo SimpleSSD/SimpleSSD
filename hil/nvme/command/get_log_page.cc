@@ -25,7 +25,8 @@ void GetLogPage::dmaInitDone(uint64_t gcid) {
 
   // Write buffer to host
   tag->dmaEngine->write(tag->request.getDMA(), 0, (uint32_t)tag->buffer.size(),
-                        tag->buffer.data(), dmaCompleteEvent, gcid);
+                        tag->buffer.data(), NoMemoryAccess, dmaCompleteEvent,
+                        gcid);
 }
 
 void GetLogPage::dmaComplete(uint64_t gcid) {

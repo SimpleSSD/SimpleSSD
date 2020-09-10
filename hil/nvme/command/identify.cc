@@ -646,7 +646,7 @@ void Identify::dmaInitDone(uint64_t gcid) {
 
   // Write buffer to host
   tag->dmaEngine->write(tag->request.getDMA(), 0, 4096, tag->buffer.data(),
-                        dmaCompleteEvent, gcid);
+                        NoMemoryAccess, dmaCompleteEvent, gcid);
 }
 
 void Identify::dmaComplete(uint64_t gcid) {

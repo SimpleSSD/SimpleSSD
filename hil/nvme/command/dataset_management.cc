@@ -28,7 +28,8 @@ void DatasetManagement::dmaInitDone(uint64_t gcid) {
   auto tag = findTag(gcid);
 
   tag->dmaEngine->read(tag->request.getDMA(), 0, (uint32_t)tag->buffer.size(),
-                       tag->buffer.data(), dmaCompleteEvent, gcid);
+                       tag->buffer.data(), NoMemoryAccess, dmaCompleteEvent,
+                       gcid);
 }
 
 void DatasetManagement::dmaComplete(uint64_t gcid) {

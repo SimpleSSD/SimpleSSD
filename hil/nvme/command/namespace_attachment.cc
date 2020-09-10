@@ -25,7 +25,7 @@ void NamespaceAttachment::dmaInitDone(uint64_t gcid) {
   auto tag = findTag(gcid);
 
   tag->dmaEngine->read(tag->request.getDMA(), 0, 4096, tag->buffer.data(),
-                       dmaCompleteEvent, gcid);
+                       NoMemoryAccess, dmaCompleteEvent, gcid);
 }
 
 void NamespaceAttachment::dmaComplete(uint64_t gcid) {

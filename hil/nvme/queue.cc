@@ -119,7 +119,8 @@ void CQueue::setData(CQEntry *entry, Event eid) {
     entry->dword3.status |= (phase ? 0x0001 : 0x0000);
 
     // Write entry
-    dmaEngine->write(dmaTag, tail * stride, 0x10, entry->data, eid);
+    dmaEngine->write(dmaTag, tail * stride, 0x10, entry->data, NoMemoryAccess,
+                     eid);
 
     // Increase tail
     tail++;
@@ -189,7 +190,8 @@ void SQueue::setTail(uint16_t newTail) {
 void SQueue::getData(SQEntry *entry, Event eid) {
   if (entry && head != tail) {
     // Read entry
-    dmaEngine->read(dmaTag, head * stride, 0x40, entry->data, eid);
+    dmaEngine->read(dmaTag, head * stride, 0x40, entry->data, NoMemoryAccess,
+                    eid);
 
     // Increase head
     head++;

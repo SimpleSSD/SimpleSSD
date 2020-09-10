@@ -52,6 +52,7 @@ class DMAData {
 using DMATag = DMAData *;
 
 const DMATag InvalidDMATag = nullptr;
+const uint64_t NoMemoryAccess = std::numeric_limits<uint64_t>::max();
 
 union SGLDescriptor;
 
