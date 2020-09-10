@@ -23,6 +23,23 @@ namespace SimpleSSD::FTL {
 
 class FTL;
 
+//! Logical Superpage Number definition
+using LSPN = uint64_t;
+const LSPN InvalidLSPN = std::numeric_limits<LSPN>::max();
+
+//! Physical Superpage Number definition
+using PSPN = uint64_t;
+const PSPN InvalidPSPN = std::numeric_limits<PSPN>::max();
+
+//! Physical Block Number definition
+using PBN = uint32_t;
+const PBN InvalidPBN = std::numeric_limits<PBN>::max();
+
+//! Physical Superblock Number definition
+using PSBN = uint32_t;
+const PSBN InvalidPSBN = std::numeric_limits<PSBN>::max();
+
+//! FTL parameter
 typedef struct {
   uint64_t totalPhysicalBlocks;
   uint64_t totalPhysicalPages;
@@ -30,10 +47,69 @@ typedef struct {
   uint64_t totalLogicalPages;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
   uint64_t parallelism;
-  uint64_t block;      // (super)pages per block
-  uint64_t superpage;  // pages per superpage
+  uint32_t superpage;  // pages per superpage
   uint32_t pageSize;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
+
+  /*
+   * Utility functions
+   *
+   * Conventions:
+   *  PBN: Physical Block Number (Same as PPN, but page index field is zero)
+   *  PSBN: Physical Superblock Number (Same as PSPN, but superpage index field
+   *        is zero)
+   *  PageIndex: Index of page in physical block
+   *  SuperpageIndex: Index of page in SUPERPAGE (not superblock. Because Index
+   *                  of superpage in superblock is same as PageIndex)
+   *  ParallelismIndex: Index of parallelism (See homepage)
+   */
+
+  //! Get PBN from PPN
+  inline PBN getPBNFromPPN(PPN ppn) const { return ppn % totalPhysicalBlocks; }
+
+  //! Get PageIndex from PPN
+  inline uint32_t getPageIndexFromPPN(PPN ppn) const {
+    return ppn / totalPhysicalBlocks;
+  }
+
+  //! Make PPN from PBN and PageIndex
+  inline PPN makePPN(PBN pbn, uint32_t pageIndex) const {
+    return pbn + pageIndex * totalPhysicalBlocks;
+  }
+
+  //! Get Superpage Number from Page Number
+  inline PSPN getSPNFromPN(PPN pn) const { return pn / superpage; }
+
+  //! Get SuperpageIndex from Page Number
+  inline uint32_t getSuperpageIndexFromPN(PPN pn) const {
+    return pn % superpage;
+  }
+
+  //! Get PSBN from PSPN
+  inline PSBN getPSBNFromPSPN(PSPN pspn) const {
+    return pspn % (totalPhysicalBlocks / superpage);
+  }
+
+  //! Get PageIndex from PSPN
+  inline uint32_t getPageIndexFromPSPN(PSPN pspn) const {
+    return pspn / (totalPhysicalBlocks / superpage);
+  }
+
+  //! Make PSPN from PSBN and PageIndex
+  inline PSPN makePSPN(PSBN psbn, uint32_t pageIndex) const {
+    return psbn + pageIndex * (totalPhysicalBlocks / superpage);
+  }
+
+  //! Make PPN from PSBN, SuperpageIndex and PageIndex
+  inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
+                     uint32_t pageIndex) const {
+    return psbn * superpage + superpageIndex + pageIndex * totalPhysicalBlocks;
+  }
+
+  //! Get parallelism index from PPN
+  inline uint64_t getParallelismIndexFromPPN(PPN ppn) const {
+    return ppn % parallelism;
+  }
 } Parameter;
 
 enum class Operation : uint8_t {
