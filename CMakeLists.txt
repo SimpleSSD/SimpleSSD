@@ -144,26 +144,27 @@ set(SRC_ICL
 )
 set(SRC_ICL_CACHE
   icl/cache/abstract_cache.cc
+  icl/cache/generic_cache.cc
   icl/cache/ring_buffer.cc
   icl/cache/set_associative.cc
 )
 set(SRC_ICL_MANAGER
-  icl/manager/basic.cc
+  icl/manager/generic_manager.cc
 )
 set(SRC_FTL
   ftl/def.cc
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
-  ftl/allocator/basic_allocator.cc
+  ftl/allocator/generic_allocator.cc
 )
 set(SRC_FTL_BASE
   ftl/base/abstract_ftl.cc
-  ftl/base/basic_ftl.cc
+  ftl/base/page_level_ftl.cc
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
-  ftl/mapping/page_level.cc
+  ftl/mapping/page_level_mapping.cc
 )
 set(SRC_FIL
   fil/fil.cc
