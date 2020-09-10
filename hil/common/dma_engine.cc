@@ -355,7 +355,7 @@ DMATag DMAEngine::initFromPRDT(uint64_t base, uint32_t size, Event eid,
   size *= sizeof(PRDT);
 
   // Prepare for PRDT read
-  auto &siter = createSession(ret, eid, data, size, nullptr);
+  auto &siter = createSession(ret, eid, data, size);
   auto &session = siter.second;
 
   session.allocateBuffer(size);
@@ -376,7 +376,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
   uint32_t prp1Size = getPRPSize(prp1);
   uint32_t prp2Size = getPRPSize(prp2);
 
-  auto &siter = createSession(ret, eid, data, size, nullptr);
+  auto &siter = createSession(ret, eid, data, size);
   auto &session = siter.second;
 
   // Determine PRP1 and PRP2
@@ -457,7 +457,7 @@ DMATag DMAEngine::initFromSGL(uint64_t dptr1, uint64_t dptr2, uint32_t size,
 
   SGLDescriptor desc;
 
-  auto &siter = createSession(ret, eid, data, size, nullptr);
+  auto &siter = createSession(ret, eid, data, size);
   auto &session = siter.second;
 
   // Create first SGL descriptor from PRP pointers
@@ -511,11 +511,14 @@ void DMAEngine::readNext(DMASession &session) noexcept {
   if (!iter.ignore) {
     submit = true;
 
-    object.memory->write(session.memoryAddress + session.handled, read,
-                         eventReadDMADone, session.tag, false);
     interface->read(iter.address, read,
                     session.buffer ? session.buffer + session.handled : nullptr,
                     eventReadDMADone, session.tag);
+
+    if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      object.memory->write(session.memoryAddress + session.handled, read,
+                           eventReadDMADone, session.tag, false);
+    }
   }
 
   session.handled += read;
@@ -547,12 +550,16 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
       read = MIN(iter.size - session.handled, size);
 
       if (!iter.ignore) {
-        object.memory->write(session.memoryAddress + session.handled, read,
-                             eventReadDMADone, siter.first, false);
+        submit = true;
+
         interface->read(iter.address + session.handled, read, session.buffer,
                         eventReadDMADone, siter.first);
 
-        submit = true;
+        if (LIKELY(session.memoryAddress !=
+                   std::numeric_limits<uint64_t>::max())) {
+          object.memory->write(session.memoryAddress + session.handled, read,
+                               eventReadDMADone, siter.first, false);
+        }
       }
 
       session.handled = read;
@@ -579,12 +586,15 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
   if (!iter.ignore) {
     submit = true;
 
-    object.memory->read(session.memoryAddress + session.handled, written,
-                        eventWriteDMADone, session.tag, false);
     interface->write(
         iter.address, written,
         session.buffer ? session.buffer + session.handled : nullptr,
         eventWriteDMADone, session.tag);
+
+    if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      object.memory->read(session.memoryAddress + session.handled, written,
+                          eventWriteDMADone, session.tag, false);
+    }
   }
 
   session.handled += written;
@@ -618,10 +628,14 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
       if (!iter.ignore) {
         submit = true;
 
-        object.memory->read(session.memoryAddress + session.handled, written,
-                            eventWriteDMADone, siter.first, false);
         interface->write(iter.address + session.handled, written,
                          session.buffer, eventWriteDMADone, siter.first);
+
+        if (LIKELY(session.memoryAddress !=
+                   std::numeric_limits<uint64_t>::max())) {
+          object.memory->read(session.memoryAddress + session.handled, written,
+                              eventWriteDMADone, siter.first, false);
+        }
       }
 
       session.handled = written;
@@ -646,8 +660,7 @@ DMAEngine::DMASession &DMAEngine::findSession(uint64_t tag) {
 }
 
 std::pair<const uint64_t, DMAEngine::DMASession> &DMAEngine::createSession(
-    DMATag t, Event e, uint64_t d = 0, uint64_t s = 0, uint8_t *b = nullptr,
-    uint64_t a = 0) {
+    DMATag t, Event e, uint64_t d, uint64_t s, uint8_t *b, uint64_t a) {
   uint64_t tag = sessionID++;
   auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, s, b, a));
 
