@@ -34,7 +34,12 @@ struct FlushContext {
   uint64_t flushedAt;  // For logging
 
   FlushContext(LPN l, uint64_t a)
-      : lpn(l), address(a), offset(0), length(0), buffer(nullptr) {}
+      : lpn(l),
+        address(a),
+        offset(0),
+        length(0),
+        buffer(nullptr),
+        flushedAt(0) {}
 
   static bool compare(FlushContext &a, FlushContext &b) {
     return a.lpn < b.lpn;

@@ -471,7 +471,6 @@ void GenericCache::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void GenericCache::restoreCheckpoint(std::istream &in) noexcept {
-  uint32_t tmp32;
   Config::Mode mode;
 
   AbstractCache::restoreCheckpoint(in);
