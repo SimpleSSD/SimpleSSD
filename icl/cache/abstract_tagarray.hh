@@ -68,27 +68,53 @@ class AbstractTagArray : public Object {
  protected:
   Manager::AbstractManager *manager;
 
+  uint32_t pagesToEvict;
+  const uint32_t sectorsInPage;
+  const uint64_t cacheTagSize;
+  const uint64_t cacheDataSize;
+
+  inline HIL::SubRequest *getSubRequest(uint64_t tag) {
+    return manager->getSubRequest(tag);
+  }
+
+  Event eventLookupDone;
+  Event eventCacheDone;
+
  public:
-  AbstractTagArray(ObjectData &o, Manager::AbstractManager *m)
-      : Object(o), manager(m) {}
+  AbstractTagArray(ObjectData &o, Manager::AbstractManager *m, uint64_t t,
+                   uint64_t d)
+      : Object(o),
+        manager(m),
+        pagesToEvict(0),
+        sectorsInPage(MAX(d / AbstractCache::minIO, 1)),
+        cacheTagSize(t),
+        cacheDataSize(d) {}
   virtual ~AbstractTagArray() {}
 
-  virtual void init() = 0;
+  //! Initialize
+  void init(uint32_t p, Event el, Event ed) noexcept {
+    pagesToEvict = p;
+    eventLookupDone = el;
+    eventCacheDone = ed;
+  }
+
+  //! Return TagArray size
   virtual uint64_t getArraySize() = 0;
 
+  //! Return memory address of cacheline data
   virtual uint64_t getDataAddress(CacheTag *) = 0;
 
   //! Return event should be called when lookup is completed
-  virtual Event getLookupMemoryEvent(Event) = 0;
+  virtual Event getLookupMemoryEvent() = 0;
 
   //! Return event should be called when all tag array has been read
-  virtual Event getReadAllMemoryEvent(Event) = 0;
+  virtual Event getReadAllMemoryEvent() = 0;
 
   //! Return event should be called when allocate is completed
-  virtual Event getWriteOneMemoryEvent(Event) = 0;
+  virtual Event getWriteOneMemoryEvent() = 0;
 
   //! Clear all flags of cachelines in range
-  virtual void erase(LPN slpn, uint32_t nlp) = 0;
+  virtual CPU::Function erase(LPN slpn, uint32_t nlp) = 0;
 
   /**
    * \brief Check new cacheline can be allocated
@@ -112,7 +138,9 @@ class AbstractTagArray : public Object {
    * \param[in] ctag  Pointer to cacheline
    * \return  Return truenwhen cacheline has pending operation
    */
-  virtual bool checkPending(CacheTag *ctag) = 0;
+  virtual bool checkPending(CacheTag *ctag) {
+    return ctag->dmaPending || ctag->nvmPending;
+  }
 
   /**
    * \brief Collect evictable cachelines
@@ -147,10 +175,10 @@ class AbstractTagArray : public Object {
    * Find cacheline corresponding to provided LPN. If no cacheline exists,
    * return nullptr.
    *
-   * \param[in] lpn LPN to check
-   * \return  Pointer to valid cacheline or nullptr
+   * \param[in]  lpn  LPN to check
+   * \param[out] ctag Pointer to valid cacheline or nullptr
    */
-  virtual CacheTag *getValidLine(LPN lpn) = 0;
+  virtual CPU::Function getValidLine(LPN lpn, CacheTag **ctag) = 0;
 
   // void getCleanWay(uint32_t, uint32_t &);
 
@@ -160,10 +188,10 @@ class AbstractTagArray : public Object {
    * Find empty or clean cachline to allocate new cacheline. If no cacheline is
    * allocatable, return nullptr.
    *
-   * \param[in] lpn LPN should be allocated
-   * \return  Pointer to allocated cacheline or nullptr
+   * \param[in]  lpn  LPN should be allocated
+   * \param[out] ctag Pointer to allocated cacheline or nullptr
    */
-  virtual CacheTag *getAllocatableLine(LPN lpn) = 0;
+  virtual CPU::Function getAllocatableLine(LPN lpn, CacheTag **ctag) = 0;
 
   /**
    * \brief Return string representation of CacheTag

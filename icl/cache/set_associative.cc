@@ -13,12 +13,10 @@
 namespace SimpleSSD::ICL::Cache {
 
 SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
-                               FTL::Parameter *p)
-    : AbstractCache(o, m, p), dirtyLines(0) {
+                               uint64_t t, uint64_t d)
+    : AbstractTagArray(o, m, t, d) {
   auto policy = (Config::EvictPolicyType)readConfigUint(
       Section::InternalCache, Config::Key::EvictPolicy);
-
-  cacheDataSize = parameter->pageSize;
 
   // Allocate cachelines
   setSize = 0;
@@ -40,7 +38,7 @@ SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
   cacheline.reserve(setSize * waySize);
 
   for (uint64_t i = 0; i < (uint64_t)setSize * waySize; i++) {
-    cacheline.emplace_back(CacheLine(sectorsInPage));
+    cacheline.emplace_back(CacheTag(sectorsInPage));
   }
 
   cacheSize = (uint64_t)setSize * waySize * cacheDataSize;
@@ -50,17 +48,9 @@ SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
       "CREATE | Set size %u | Way size %u | Line size %u | Capacity %" PRIu64,
       setSize, waySize, cacheDataSize, cacheSize);
 
-  // Dirty pages threshold
-  evictThreshold =
-      readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold) *
-      (setSize * waySize);
-
   // Allocate memory
   cacheDataBaseAddress = object.memory->allocate(
       cacheSize, Memory::MemoryType::DRAM, "ICL::SetAssociative::Data");
-
-  // Omit insertedAt and accessedAt
-  cacheTagSize = 8 + DIVCEIL(sectorsInPage, 8);
 
   uint64_t totalTagSize = cacheTagSize * setSize * waySize;
 
@@ -116,18 +106,28 @@ SetAssociative::SetAssociative(ObjectData &o, Manager::AbstractManager *m,
   }
 
   // Create events
-  eventLookupMemory =
+  eventReadSet =
       createEvent([this](uint64_t, uint64_t d) { readSet(d, eventLookupDone); },
                   "ICL::SetAssociative::eventLookupMemory");
-  eventLookupDone =
-      createEvent([this](uint64_t, uint64_t d) { manager->lookupDone(d); },
-                  "ICL::SetAssociative::eventLookupDone");
-  eventReadTag =
+  eventReadAll =
       createEvent([this](uint64_t, uint64_t d) { readAll(d, eventCacheDone); },
                   "ICL::SetAssociative::eventReadTag");
-  eventCacheDone =
-      createEvent([this](uint64_t, uint64_t d) { manager->cacheDone(d); },
-                  "ICL::SetAssociative::eventCacheDone");
+  eventWriteOne = createEvent(
+      [this](uint64_t, uint64_t d) {
+        uint32_t set, way;
+        auto sreq = getSubRequest(d);
+
+        CacheTag *ctag;
+
+        getValidLine(sreq->getLPN(), &ctag);
+
+        panic_if(ctag == nullptr, "Unexpected LPN.");
+
+        tagToLine(ctag, set, way);
+
+        writeLine(d, set, way, eventCacheDone);
+      },
+      "ICL::SetAssociative::eventWriteOne");
 }
 
 SetAssociative::~SetAssociative() {}
@@ -240,39 +240,49 @@ void SetAssociative::writeLine(uint64_t tag, uint32_t set, uint32_t way,
   object.memory->write(makeTagAddress(set, way), cacheTagSize, eid, tag);
 }
 
-void SetAssociative::tryLookup(LPN lpn, bool flush) {
-  auto iter = lookupList.find(lpn);
+uint64_t SetAssociative::getArraySize() {
+  return cacheline.size();
+}
 
-  if (iter != lookupList.end()) {
-    if (flush) {
-      // This was flush -> cacheline looked up was invalidated
-      auto req = getSubRequest(iter->second);
+uint64_t SetAssociative::getDataAddress(CacheTag *ctag) {
+  uint32_t set, way;
 
-      req->setAllocate();
-      req->setMiss();
+  tagToLine(ctag, set, way);
+
+  return makeDataAddress(set, way);
+}
+
+Event SetAssociative::getLookupMemoryEvent() {
+  return eventReadSet;
+}
+
+Event SetAssociative::getReadAllMemoryEvent() {
+  return eventReadAll;
+}
+
+Event SetAssociative::getWriteOneMemoryEvent() {
+  return eventWriteOne;
+}
+
+CPU::Function SetAssociative::erase(LPN slpn, uint32_t nlp) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  for (auto &iter : cacheline) {
+    if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
+      iter.data = 0;
+      iter.validbits.reset();
     }
-
-    manager->lookupDone(iter->second);
-    lookupList.erase(iter);
   }
+
+  return fstat;
 }
 
-void SetAssociative::tryAllocate(LPN lpn) {
-  auto iter = allocateList.find(getSetIdx(lpn));
-
-  if (iter != allocateList.end()) {
-    // Try allocate again
-    auto req = getSubRequest(iter->second);
-
-    // Must erase first
-    allocateList.erase(iter);
-
-    allocate(req);
-  }
+bool SetAssociative::checkAllocatable(LPN lpn, HIL::SubRequest *sreq) {
+  return getSetIdx(lpn) == getSetIdx(sreq->getLPN());
 }
 
-void SetAssociative::collect(uint32_t curSet,
-                             std::vector<Manager::FlushContext> &list) {
+void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
   uint64_t size = cacheline.size();
   std::vector<uint64_t> collected(pagesToEvict, size);
 
@@ -294,7 +304,8 @@ void SetAssociative::collect(uint32_t curSet,
   }
 
   // Check curSet exists
-  if (curSet < setSize) {
+  if (lpn != InvalidLPN) {
+    uint32_t curSet = getSetIdx(lpn);
     bool found = false;
 
     for (auto &i : collected) {
@@ -339,7 +350,7 @@ void SetAssociative::collect(uint32_t curSet,
   }
 
   // Prepare list
-  list.reserve(collected.size());
+  wbreq.lpnList.reserve(collected.size());
 
   for (auto &i : collected) {
     if (i < size) {
@@ -349,445 +360,107 @@ void SetAssociative::collect(uint32_t curSet,
 
       line.nvmPending = true;
 
-      evictList.emplace(line.tag, LineInfo(set, way));
-      list.emplace_back(
-          Manager::FlushContext(line.tag, makeDataAddress(set, way)));
+      wbreq.lpnList.emplace(line.tag, &line);
     }
   }
 }
 
-void SetAssociative::lookup(HIL::SubRequest *sreq) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  LPN lpn = sreq->getLPN();
-  uint32_t set = getSetIdx(lpn);
-  uint32_t way;
-
-  fstat += getValidWay(lpn, way);
-
-  if (way == waySize) {
-    // Check pending miss
-    auto iter = missList.find(lpn);
-
-    // Miss, we need allocation
-    if (iter == missList.end()) {
-      debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Not found",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
-
-      sreq->setAllocate();
-      sreq->setMiss();
-
-      missList.emplace(lpn);
-    }
-    else {
-      // Oh, we need to wait
-      debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64
-                 " | Miss conflict",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
-
-      // Don't add to pending list when read-ahead/prefetch
-      if (UNLIKELY(sreq->isICLRequest())) {
-        // Call completion
-        manager->cacheDone(sreq->getTag());
-      }
-      else {
-        missConflictList.emplace(lpn, sreq->getTag());
-      }
-
-      return;
-    }
-  }
-  else {
-    debugprint(Log::DebugID::ICL_SetAssociative,
-               "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | (%u, %u)",
-               sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
-
-    sreq->setDRAMAddress(makeDataAddress(set, way));
-
-    // Check NAND/DMA is pending
-    auto &line = cacheline.at(set * waySize + way);
-    auto opcode = sreq->getOpcode();
-
-    if (line.dmaPending || line.nvmPending) {
-      debugprint(Log::DebugID::ICL_SetAssociative,
-                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
-
-      // We need to stall this lookup
-      lookupList.emplace(line.tag, sreq->getTag());
-
-      // TODO: This is not a solution
-      return;
-    }
-
-    // Check valid bits
-    Bitset test(sectorsInPage);
-
-    updateSkip(test, sreq);
-
-    // Update
-    line.accessedAt = getTick();
-
-    if (opcode == HIL::Operation::Write ||
-        opcode == HIL::Operation::WriteZeroes) {
-      line.validbits |= test;
-    }
-    else {
-      test &= line.validbits;
-
-      if (test.none()) {
-        sreq->setMiss();
-      }
-    }
-  }
-
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventLookupMemory,
-                   sreq->getTag(), fstat);
-}
-
-void SetAssociative::flush(HIL::SubRequest *sreq) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  std::vector<Manager::FlushContext> list;
-  std::unordered_map<LPN, LineInfo> lpnList;
-
-  LPN slpn = sreq->getOffset();
-  uint32_t nlp = sreq->getLength();
+void SetAssociative::collectFlushable(LPN slpn, uint32_t nlp,
+                                      WritebackRequest &wbreq) {
   uint64_t i = 0;
-
-  debugprint(Log::DebugID::ICL_SetAssociative,
-             "FLUSH  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
-             sreq->getParentTag(), sreq->getTagForLog(), slpn, nlp);
 
   for (auto &iter : cacheline) {
     if (iter.valid && !iter.nvmPending && !iter.dmaPending &&
         slpn <= iter.tag && iter.tag < slpn + nlp) {
       iter.nvmPending = true;
 
-      auto ret =
-          list.emplace_back(iter.tag, cacheDataBaseAddress + cacheDataSize * i);
-
-      ret.offset = iter.validbits.ctz() * minIO;
-      ret.length = cacheDataSize - iter.validbits.clz() * minIO - ret.offset;
-
-      lpnList.emplace(iter.tag, LineInfo(i / waySize, i % waySize));
+      wbreq.lpnList.emplace(iter.tag, LineInfo(i / waySize, i % waySize));
     }
 
     i++;
   }
-
-  auto ret = flushList.emplace_back(sreq->getTag());
-
-  ret.lpnList = std::move(lpnList);
-
-  manager->drain(list);
-
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventReadTag, sreq->getTag(),
-                   fstat);
 }
 
-void SetAssociative::erase(HIL::SubRequest *sreq) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  LPN slpn = sreq->getOffset();
-  uint32_t nlp = sreq->getLength();
-
-  debugprint(Log::DebugID::ICL_SetAssociative,
-             "ERASE  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
-             sreq->getParentTag(), sreq->getTagForLog(), slpn, nlp);
-
-  for (auto &iter : cacheline) {
-    if (iter.valid && slpn <= iter.tag && iter.tag < slpn + nlp) {
-      iter.data = 0;
-      iter.validbits.reset();
-    }
-  }
-
-  scheduleFunction(CPU::CPUGroup::InternalCache, eventReadTag, sreq->getTag(),
-                   fstat);
-}
-
-void SetAssociative::allocate(HIL::SubRequest *sreq) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  LPN lpn = sreq->getLPN();
+CPU::Function SetAssociative::getValidLine(LPN lpn, CacheTag **ctag) {
   uint32_t set = getSetIdx(lpn);
   uint32_t way;
-  bool evict = false;
-  Event eid = eventCacheDone;
 
-  // Try allocate
-  fstat += getEmptyWay(set, way);
+  auto fstat = getValidWay(set, way);
+
+  if (way < waySize) {
+    *ctag = lineToTag(set, way);
+  }
+  else {
+    *ctag = nullptr;
+  }
+
+  return fstat;
+}
+
+CPU::Function SetAssociative::getAllocatableLine(LPN lpn, CacheTag **ctag) {
+  uint32_t set = getSetIdx(lpn);
+  uint32_t way;
+
+  auto fstat = getEmptyWay(set, way);
 
   if (way == waySize) {
-    // Double-check with clean line
     getCleanWay(set, way);
   }
 
-  if (way == waySize) {
-    debugprint(Log::DebugID::ICL_SetAssociative,
-               "ALLOC  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
-               sreq->getParentTag(), sreq->getTagForLog(), lpn);
-
-    // Insert into pending queue
-    allocateList.emplace(set, sreq->getTag());
-
-    evict = true;
-    eid = InvalidEventID;
-  }
-  else {
-    debugprint(Log::DebugID::ICL_SetAssociative,
-               "ALLOC  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | (%u, %u)",
-               sreq->getParentTag(), sreq->getTagForLog(), lpn, set, way);
-
-    // Set DRAM address
-    sreq->setDRAMAddress(makeDataAddress(set, way));
-
-    // Fill cacheline
-    auto &line = cacheline.at(set * waySize + way);
-
-    line.data = 0;  // Clear other bits
-    line.valid = true;
-    line.tag = lpn;
-    line.insertedAt = getTick();
-    line.accessedAt = getTick();
-
-    // Partial update only if write
-    auto opcode = sreq->getOpcode();
-
-    if (opcode == HIL::Operation::Write ||
-        opcode == HIL::Operation::WriteZeroes) {
-      dirtyLines++;
-
-      line.dirty = true;
-
-      updateSkip(line.validbits, sreq);
-    }
-    else if (opcode == HIL::Operation::Read) {
-      line.nvmPending = true;  // Read is triggered immediately
-      line.validbits.set();
-    }
-
-    // TODO: Fix me
-    writeLine(sreq->getTag(), set, way, InvalidEventID);
-
-    if (dirtyLines >= evictThreshold + evictList.size()) {
-      evict = true;
-      set = setSize;
-    }
-
-    // Remove lpn from miss list
-    auto iter = missList.find(lpn);
-
-    if (iter != missList.end()) {
-      // Check miss conflict list
-      auto range = missConflictList.equal_range(lpn);
-
-      for (auto iter = range.first; iter != range.second;) {
-        auto req = getSubRequest(iter->second);
-
-        // Retry lookup (must be hit)
-        lookup(req);
-
-        iter = missConflictList.erase(iter);
-      }
-
-      missList.erase(iter);
-    }
-  }
-
-  if (evict && (evictList.size() < pagesToEvict || eid == InvalidEventID)) {
-    // Perform eviction
-    std::vector<Manager::FlushContext> list;
-
-    collect(set, list);
-
-    if (!list.empty()) {
-      manager->drain(list);
-    }
-  }
-
-  // No memory access because we already do that in lookup phase
-  scheduleFunction(CPU::CPUGroup::InternalCache, eid, sreq->getTag(), fstat);
-}
-
-void SetAssociative::dmaDone(LPN lpn) {
-  uint32_t set = getSetIdx(lpn);
-  uint32_t way;
-
-  getValidWay(lpn, way);
-
   if (way < waySize) {
-    auto &line = cacheline.at(set * waySize + way);
-
-    line.dmaPending = false;
-
-    // Lookup
-    tryLookup(lpn);
-
-    // Allocate
-    tryAllocate(lpn);
-  }
-}
-
-void SetAssociative::nvmDone(LPN lpn, bool drain) {
-  bool found = false;
-
-  if (drain) {
-    // Flush
-    for (auto iter = flushList.begin(); iter != flushList.end(); iter++) {
-      auto fr = iter->lpnList.find(lpn);
-
-      if (fr != iter->lpnList.end()) {
-        auto &line = cacheline.at(fr->second.set * waySize + fr->second.way);
-
-        // Not dirty now
-        dirtyLines--;
-
-        line.dirty = false;
-        line.nvmPending = false;
-
-        // Erase
-        iter->lpnList.erase(fr);
-
-        if (iter->lpnList.size() == 0) {
-          manager->cacheDone(iter->tag);
-
-          flushList.erase(iter);
-        }
-
-        found = true;
-
-        break;
-      }
-    }
-
-    // Eviction
-    if (!found) {
-      auto iter = evictList.find(lpn);
-
-      if (iter != evictList.end()) {
-        auto &line =
-            cacheline.at(iter->second.set * waySize + iter->second.way);
-
-        dirtyLines--;
-
-        line.dirty = false;
-        line.nvmPending = false;
-
-        evictList.erase(iter);
-
-        found = true;
-      }
-    }
+    *ctag = lineToTag(set, way);
   }
   else {
-    // Read
-    uint32_t set = getSetIdx(lpn);
-
-    for (uint32_t way = 0; way < waySize; way++) {
-      auto &line = cacheline.at(set * waySize + way);
-
-      if (line.tag == lpn) {
-        line.nvmPending = false;
-        line.validbits.set();
-
-        break;
-      }
-    }
+    *ctag = nullptr;
   }
 
-  // Lookup
-  tryLookup(lpn, found);
-
-  // Allocate
-  tryAllocate(lpn);
+  return fstat;
 }
 
-void SetAssociative::getStatList(std::vector<Stat> &list,
-                                 std::string prefix) noexcept {
-  list.emplace_back(prefix + "dirty.count", "Total dirty cachelines");
-  list.emplace_back(prefix + "dirty.ratio", "Total dirty cacheline ratio");
+std::string SetAssociative::print(CacheTag *ctag) noexcept {
+  uint32_t set, way;
+  std::string ret;
+
+  tagToLine(ctag, set, way);
+
+  ret += '(';
+  ret += std::to_string(set);
+  ret += ", ";
+  ret += std::to_string(way);
+  ret += ')';
+
+  return ret;
 }
 
-void SetAssociative::getStatValues(std::vector<double> &values) noexcept {
-  values.emplace_back((double)dirtyLines);
-  values.emplace_back((double)dirtyLines / setSize / waySize);
+uint64_t SetAssociative::getOffset(CacheTag *ctag) const noexcept {
+  return ctag - cacheline.data();
 }
 
-void SetAssociative::resetStatValues() noexcept {
-  // MUST NOT RESET dirtyLines
+CacheTag *SetAssociative::getTag(uint64_t offset) noexcept {
+  return cacheline.data() + offset;
 }
+
+void SetAssociative::getStatList(std::vector<Stat> &, std::string) noexcept {}
+
+void SetAssociative::getStatValues(std::vector<double> &) noexcept {}
+
+void SetAssociative::resetStatValues() noexcept {}
 
 void SetAssociative::createCheckpoint(std::ostream &out) const noexcept {
-  AbstractCache::createCheckpoint(out);
-
   BACKUP_SCALAR(out, setSize);
   BACKUP_SCALAR(out, waySize);
-  BACKUP_SCALAR(out, dirtyLines);
-
-  uint64_t size = cacheline.size();
-  BACKUP_SCALAR(out, size);
 
   for (auto &iter : cacheline) {
     iter.createCheckpoint(out);
   }
 
-  size = lookupList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : lookupList) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
-  size = flushList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : flushList) {
-    BACKUP_SCALAR(out, iter.tag);
-
-    size = iter.lpnList.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iiter : iter.lpnList) {
-      BACKUP_SCALAR(out, iiter.first);
-      BACKUP_SCALAR(out, iiter.second);
-    }
-  }
-
-  size = evictList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : evictList) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
-  size = allocateList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : allocateList) {
-    BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second);
-  }
-
-  BACKUP_EVENT(out, eventLookupMemory);
-  BACKUP_EVENT(out, eventLookupDone);
-  BACKUP_EVENT(out, eventReadTag);
-  BACKUP_EVENT(out, eventCacheDone);
+  BACKUP_EVENT(out, eventReadAll);
+  BACKUP_EVENT(out, eventReadSet);
+  BACKUP_EVENT(out, eventWriteOne);
 }
 
 void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   uint32_t tmp32;
-
-  AbstractCache::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, tmp32);
   panic_if(tmp32 != setSize, "Set size mismatch.");
@@ -795,78 +468,13 @@ void SetAssociative::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, tmp32);
   panic_if(tmp32 != waySize, "Way size mismatch.");
 
-  RESTORE_SCALAR(in, dirtyLines);
-
-  uint64_t size;
-  CacheLine line(sectorsInPage);
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    line.restoreCheckpoint(in);
+  for (auto &iter : cacheline) {
+    iter.restoreCheckpoint(in);
   }
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    LPN lpn;
-    uint64_t tag;
-
-    RESTORE_SCALAR(in, lpn);
-    RESTORE_SCALAR(in, tag);
-
-    lookupList.emplace(lpn, tag);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    FlushRequest req;
-
-    uint64_t ssize;
-    LineInfo info;
-    LPN lpn;
-
-    RESTORE_SCALAR(in, req.tag);
-    RESTORE_SCALAR(in, ssize);
-
-    for (uint64_t j = 0; j < ssize; j++) {
-      RESTORE_SCALAR(in, lpn);
-      RESTORE_SCALAR(in, info);
-
-      req.lpnList.emplace(lpn, info);
-    }
-
-    flushList.emplace_back(req);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    LPN lpn;
-    LineInfo info;
-
-    RESTORE_SCALAR(in, lpn);
-    RESTORE_SCALAR(in, info);
-
-    evictList.emplace(lpn, info);
-  }
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t tag;
-
-    RESTORE_SCALAR(in, tmp32);
-    RESTORE_SCALAR(in, tag);
-
-    allocateList.emplace(tmp32, tag);
-  }
-
-  RESTORE_EVENT(in, eventLookupMemory);
-  RESTORE_EVENT(in, eventLookupDone);
-  RESTORE_EVENT(in, eventReadTag);
-  RESTORE_EVENT(in, eventCacheDone);
+  RESTORE_EVENT(in, eventReadAll);
+  RESTORE_EVENT(in, eventReadSet);
+  RESTORE_EVENT(in, eventWriteOne);
 }
 
 }  // namespace SimpleSSD::ICL::Cache

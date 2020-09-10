@@ -30,8 +30,6 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
       break;
   }
 
-  tagArray->init();
-
   totalTags = tagArray->getArraySize();
   logid = tagArray->getLogID();
 
@@ -47,6 +45,8 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
   eventCacheDone =
       createEvent([this](uint64_t, uint64_t d) { manager->cacheDone(d); },
                   "ICL::GenericCache::eventCacheDone");
+
+  tagArray->init(pagesToEvict, eventLookupDone, eventCacheDone);
 }
 
 GenericCache::~GenericCache() {
@@ -89,7 +89,9 @@ void GenericCache::lookup(HIL::SubRequest *sreq) {
   CPU::markFunction(fstat);
 
   LPN lpn = sreq->getLPN();
-  auto ctag = tagArray->getValidLine(lpn);
+  CacheTag *ctag;
+
+  fstat += tagArray->getValidLine(lpn, &ctag);
 
   if (ctag == nullptr) {
     // Check pending miss
@@ -169,8 +171,7 @@ void GenericCache::lookup(HIL::SubRequest *sreq) {
   }
 
   scheduleFunction(CPU::CPUGroup::InternalCache,
-                   tagArray->getLookupMemoryEvent(eventLookupDone),
-                   sreq->getTag(), fstat);
+                   tagArray->getLookupMemoryEvent(), sreq->getTag(), fstat);
 }
 
 void GenericCache::flush(HIL::SubRequest *sreq) {
@@ -197,8 +198,7 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
   ret.flush = true;
 
   scheduleFunction(CPU::CPUGroup::InternalCache,
-                   tagArray->getReadAllMemoryEvent(eventCacheDone), ret.tag,
-                   fstat);
+                   tagArray->getReadAllMemoryEvent(), ret.tag, fstat);
 }
 
 void GenericCache::erase(HIL::SubRequest *sreq) {
@@ -211,11 +211,10 @@ void GenericCache::erase(HIL::SubRequest *sreq) {
   debugprint(logid, "ERASE  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
              sreq->getParentTag(), sreq->getTagForLog(), slpn, nlp);
 
-  tagArray->erase(slpn, nlp);
+  fstat += tagArray->erase(slpn, nlp);
 
   scheduleFunction(CPU::CPUGroup::InternalCache,
-                   tagArray->getReadAllMemoryEvent(eventCacheDone),
-                   sreq->getTag(), fstat);
+                   tagArray->getReadAllMemoryEvent(), sreq->getTag(), fstat);
 }
 
 void GenericCache::allocate(HIL::SubRequest *sreq) {
@@ -223,8 +222,10 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
   CPU::markFunction(fstat);
 
   LPN lpn = sreq->getLPN();
-  auto ctag = tagArray->getAllocatableLine(lpn);
   bool evict = false;
+  CacheTag *ctag;
+
+  fstat += tagArray->getAllocatableLine(lpn, &ctag);
 
   Event eid = eventCacheDone;
 
@@ -270,12 +271,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
       ctag->validbits.set();
     }
 
-    // TODO: Fix me
-    eid = tagArray->getWriteOneMemoryEvent(eventCacheDone);
-
-    if (dirtyLines >= evictThreshold + pendingEviction) {
-      evict = true;
-    }
+    eid = tagArray->getWriteOneMemoryEvent();
 
     // Remove lpn from miss list
     auto iter = missList.find(lpn);
@@ -295,6 +291,11 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 
       missList.erase(iter);
     }
+
+    if (dirtyLines >= evictThreshold + pendingEviction) {
+      evict = true;
+      lpn = InvalidLPN;
+    }
   }
 
   if (evict && (pendingEviction < pagesToEvict || eid == InvalidEventID)) {
@@ -305,7 +306,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
     tagArray->collectEvictable(lpn, wbreq);
 
     if (wbreq.lpnList.size() > 0) {
-      eid = tagArray->getReadAllMemoryEvent(eventCacheDone);
+      eid = tagArray->getReadAllMemoryEvent();
 
       auto ret = writebackList.emplace_back(std::move(wbreq));
 
@@ -322,7 +323,9 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 }
 
 void GenericCache::dmaDone(LPN lpn) {
-  auto ctag = tagArray->getValidLine(lpn);
+  CacheTag *ctag;
+
+  tagArray->getValidLine(lpn, &ctag);
 
   if (ctag) {
     ctag->dmaPending = false;
@@ -375,7 +378,9 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
   }
   else {
     // Read
-    auto ctag = tagArray->getValidLine(lpn);
+    CacheTag *ctag;
+
+    tagArray->getValidLine(lpn, &ctag);
 
     panic_if(ctag == nullptr, "Cache corrupted.");
 

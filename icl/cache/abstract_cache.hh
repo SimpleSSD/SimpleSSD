@@ -24,8 +24,10 @@ class AbstractManager;
 namespace Cache {
 
 class AbstractCache : public Object {
- protected:
+ public:
   static const uint64_t minIO = 512;
+
+ protected:
   const uint32_t sectorsInPage;
 
   uint32_t pagesToEvict;

@@ -12,26 +12,21 @@
 
 #include <random>
 
-#include "icl/cache/abstract_cache.hh"
+#include "icl/cache/abstract_tagarray.hh"
 #include "icl/manager/abstract_manager.hh"
 #include "util/bitset.hh"
 
 namespace SimpleSSD::ICL::Cache {
 
-class SetAssociative : public AbstractCache {
+class SetAssociative : public AbstractTagArray {
  protected:
   uint32_t setSize;
   uint32_t waySize;
 
-  uint32_t cacheTagSize;
-  uint32_t cacheDataSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 
-  uint64_t evictThreshold;
-  uint64_t dirtyLines;
-
-  std::vector<CacheLine> cacheline;
+  std::vector<CacheTag> cacheline;
   std::function<CPU::Function(uint32_t, uint32_t &)> evictFunction;
   std::function<uint64_t(uint64_t, uint64_t)> compareFunction;
 
@@ -42,31 +37,6 @@ class SetAssociative : public AbstractCache {
     LineInfo() {}
     LineInfo(uint32_t s, uint32_t w) : set(s), way(w) {}
   };
-
-  // Lookup pending
-  std::unordered_multimap<LPN, uint64_t> lookupList;
-
-  // Pending (missed, but not allocated yet) list -- simillar to MSHR
-  std::unordered_set<LPN> missList;
-  std::unordered_multimap<LPN, uint64_t> missConflictList;
-
-  // Flush
-  struct FlushRequest {
-    uint64_t tag;
-
-    std::unordered_map<LPN, LineInfo> lpnList;
-
-    FlushRequest() {}
-    FlushRequest(uint64_t t) : tag(t) {}
-  };
-
-  std::list<FlushRequest> flushList;
-
-  // Eviction
-  std::unordered_map<LPN, LineInfo> evictList;
-
-  // Allocation pending
-  std::unordered_multimap<uint32_t, uint64_t> allocateList;
 
   // Victim selection
   CPU::Function fifoEviction(uint32_t, uint32_t &);
@@ -93,32 +63,54 @@ class SetAssociative : public AbstractCache {
     return cacheDataBaseAddress + cacheDataSize * (waySize * set + way);
   }
 
+  inline void tagToLine(CacheTag *ctag, uint32_t &set, uint32_t &way) {
+    uint64_t offset = getOffset(ctag);
+
+    set = offset / waySize;
+    way = offset % waySize;
+  }
+
+  inline CacheTag *lineToTag(uint32_t set, uint32_t way) {
+    return cacheline.data() + set * waySize + way;
+  }
+
   void readAll(uint64_t, Event);
   void readSet(uint64_t, Event);
   void writeLine(uint64_t, uint32_t, uint32_t, Event);
 
-  void tryLookup(LPN, bool = false);
-  void tryAllocate(LPN);
-
-  void collect(uint32_t, std::vector<Manager::FlushContext> &);
-
-  Event eventLookupMemory;
-  Event eventLookupDone;
-
-  Event eventReadTag;
-
-  Event eventCacheDone;
+  Event eventReadAll;
+  Event eventReadSet;
+  Event eventWriteOne;
 
  public:
-  SetAssociative(ObjectData &, Manager::AbstractManager *, FTL::Parameter *);
+  SetAssociative(ObjectData &, Manager::AbstractManager *, uint64_t, uint64_t);
   ~SetAssociative();
 
-  void lookup(HIL::SubRequest *) override;
-  void flush(HIL::SubRequest *) override;
-  void erase(HIL::SubRequest *) override;
-  void allocate(HIL::SubRequest *) override;
-  void dmaDone(LPN) override;
-  void nvmDone(LPN, bool) override;
+  uint64_t getArraySize() override;
+
+  uint64_t getDataAddress(CacheTag *) override;
+
+  Event getLookupMemoryEvent() override;
+  Event getReadAllMemoryEvent() override;
+  Event getWriteOneMemoryEvent() override;
+
+  CPU::Function erase(LPN, uint32_t) override;
+
+  bool checkAllocatable(LPN, HIL::SubRequest *) override;
+
+  void collectEvictable(LPN, WritebackRequest &) override;
+  void collectFlushable(LPN, uint32_t, WritebackRequest &) override;
+
+  CPU::Function getValidLine(LPN, CacheTag **) override;
+  CPU::Function getAllocatableLine(LPN, CacheTag **) override;
+
+  std::string print(CacheTag *) noexcept override;
+  Log::DebugID getLogID() noexcept override {
+    return Log::DebugID::ICL_SetAssociative;
+  }
+
+  uint64_t getOffset(CacheTag *) const noexcept override;
+  CacheTag *getTag(uint64_t) noexcept override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
