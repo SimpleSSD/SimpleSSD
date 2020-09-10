@@ -15,7 +15,7 @@
 namespace SimpleSSD::ICL {
 
 ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
-  pFTL = new FTL::FTL(object);
+  pFTL = new FTL::FTL(object, this);
   auto *param = pFTL->getInfo();
 
   totalLogicalPages = param->totalLogicalPages;
@@ -132,6 +132,10 @@ uint32_t ICL::getLPNSize() {
 
 HIL::SubRequest *ICL::getSubRequest(uint64_t tag) {
   return pHIL->getSubRequest(tag);
+}
+
+void ICL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
+  pHIL->getQueueStatus(nw, nh);
 }
 
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

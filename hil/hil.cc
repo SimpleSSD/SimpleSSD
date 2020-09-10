@@ -391,6 +391,10 @@ SubRequest *HIL::getSubRequest(uint64_t tag) {
   return &iter->second;
 }
 
+void HIL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
+  parent->getQueueStatus(nw, nh);
+}
+
 void HIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
   icl.getStatList(list, prefix);
 }

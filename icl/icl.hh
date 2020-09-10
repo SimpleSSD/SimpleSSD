@@ -101,7 +101,10 @@ class ICL : public Object {
   //! Get bytesize of one logical page.
   uint32_t getLPNSize();
 
+  /* To HIL */
+
   HIL::SubRequest *getSubRequest(uint64_t);
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

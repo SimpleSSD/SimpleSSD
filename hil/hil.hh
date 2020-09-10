@@ -132,6 +132,9 @@ class HIL : public Object {
   //! Get SubRequest from tag
   SubRequest *getSubRequest(uint64_t);
 
+  //! Get queue status
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
