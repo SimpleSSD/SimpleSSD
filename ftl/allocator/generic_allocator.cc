@@ -251,10 +251,10 @@ CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
 
   PPN idx = lastAllocated;
 
-  if (LIKELY(blockUsed != InvalidPPN)) {
+  if (LIKELY(blockUsed)) {
     blockUsed /= np;
 
-    idx = getParallelismFromSPPN(blockUsed);
+    idx = param->getParallelismIndexFromPSPN(blockUsed);
 
     panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
 
@@ -343,7 +343,7 @@ void GenericAllocator::reclaimBlocks(PPN blockID, Event eid) {
   panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
   // Insert PPN to free block list
-  PPN idx = getParallelismFromSPPN(blockID);
+  PPN idx = param->getParallelismIndexFromPSPN(blockID);
   uint32_t erased = ++eraseCountList[blockID];
   auto iter = freeBlocks[idx].begin();
 

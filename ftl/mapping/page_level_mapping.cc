@@ -6,11 +6,12 @@
  *         Junhyeok Jang <jhjang@camelab.org>
  */
 
+#include "ftl/mapping/page_level_mapping.hh"
+
 #include <random>
 
 #include "ftl/allocator/abstract_allocator.hh"
 #include "ftl/base/abstract_ftl.hh"
-#include "ftl/mapping/page_level_mapping.hh"
 
 namespace SimpleSSD::FTL::Mapping {
 
@@ -369,8 +370,8 @@ void PageLevelMapping::initialize(AbstractFTL *f,
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization finished");
 }
 
-LPN PageLevelMapping::getPageUsage(LPN slpn, LPN nlp) {
-  LPN count = 0;
+uint64_t PageLevelMapping::getPageUsage(LPN slpn, uint64_t nlp) {
+  uint64_t count = 0;
 
   // Convert to SLPN
   slpn /= param.superpage;

@@ -202,7 +202,7 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
       unallocated.emplace_back(
           LPNRange(iter.first + iter.second,
                    last.first + last.second - iter.first - iter.second));
-      last.second = static_cast<uint64_t>(iter.first - last.first);
+      last.second = iter.first - last.first;
     }
     else {
       panic("BUG");

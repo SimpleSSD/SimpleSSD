@@ -126,7 +126,7 @@ void HIL::submit(Operation opcode, Request *req) {
 
     panic_if(!sreq.second, "SubRequest ID conflict.");
 
-    sreq.first->second.offset = static_cast<uint64_t>(slpn);
+    sreq.first->second.offset = slpn;
     sreq.first->second.length = nlp;
 
     subrequestList.emplace_back(&sreq.first->second);

@@ -49,84 +49,63 @@ struct Parameter {
    */
 
   //! Get PBN from PPN
-  inline PBN getPBNFromPPN(PPN ppn) const {
-    assertNumber(static_cast<uint64_t>(ppn));
-    return static_cast<uint64_t>(ppn) % totalPhysicalBlocks;
-  }
+  inline PBN getPBNFromPPN(PPN ppn) const { return ppn % totalPhysicalBlocks; }
 
   //! Get PageIndex from PPN
   inline uint32_t getPageIndexFromPPN(PPN ppn) const {
-    assertNumber(static_cast<uint64_t>(ppn));
-    return static_cast<uint64_t>(ppn) / totalPhysicalBlocks;
+    return ppn / totalPhysicalBlocks;
   }
 
   //! Make PPN from PBN and PageIndex
   inline PPN makePPN(PBN pbn, uint32_t pageIndex) const {
-    assertNumber(static_cast<uint32_t>(pbn));
-    return static_cast<uint32_t>(pbn) + pageIndex * totalPhysicalBlocks;
+    return pbn + pageIndex * totalPhysicalBlocks;
   }
 
   //! Get Physical Superpage Number from Physical Page Number
-  inline PSPN getPSPNFromPPN(PPN ppn) const {
-    assertNumber(static_cast<uint64_t>(ppn));
-    return static_cast<uint64_t>(ppn) / superpage;
-  }
+  inline PSPN getPSPNFromPPN(PPN ppn) const { return ppn / superpage; }
 
   //! Get Logical Superpage Number from Logical Page Number
-  inline LSPN getPSPNFromLPN(LPN lpn) const {
-    assertNumber(static_cast<uint64_t>(lpn));
-    return static_cast<uint64_t>(lpn) / superpage;
-  }
+  inline LSPN getPSPNFromLPN(LPN lpn) const { return lpn / superpage; }
 
   //! Get SuperpageIndex from Physical Page Number
   inline uint32_t getSuperpageIndexFromPPN(PPN ppn) const {
-    assertNumber(static_cast<uint64_t>(ppn));
-    return static_cast<uint64_t>(ppn) % superpage;
+    return ppn % superpage;
   }
 
   //! Get SuperpageIndex from Logical Page Number
   inline uint32_t getSuperpageIndexFromLPN(LPN lpn) const {
-    assertNumber(static_cast<uint64_t>(lpn));
-    return static_cast<uint64_t>(lpn) % superpage;
+    return lpn % superpage;
   }
 
   //! Get PSBN from PSPN
   inline PSBN getPSBNFromPSPN(PSPN pspn) const {
-    assertNumber(static_cast<uint64_t>(pspn));
-    return static_cast<uint64_t>(pspn) % (totalPhysicalBlocks / superpage);
+    return pspn % (totalPhysicalBlocks / superpage);
   }
 
   //! Get PageIndex from PSPN
   inline uint32_t getPageIndexFromPSPN(PSPN pspn) const {
-    assertNumber(static_cast<uint64_t>(pspn));
-    return static_cast<uint64_t>(pspn) / (totalPhysicalBlocks / superpage);
+    return pspn / (totalPhysicalBlocks / superpage);
   }
 
   //! Make PSPN from PSBN and PageIndex
   inline PSPN makePSPN(PSBN psbn, uint32_t pageIndex) const {
-    assertNumber(static_cast<uint32_t>(psbn));
-    return static_cast<uint32_t>(psbn) +
-           pageIndex * (totalPhysicalBlocks / superpage);
+    return psbn + pageIndex * (totalPhysicalBlocks / superpage);
   }
 
   //! Make PPN from PSBN, SuperpageIndex and PageIndex
   inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
                      uint32_t pageIndex) const {
-    assertNumber(static_cast<uint32_t>(psbn));
-    return static_cast<uint32_t>(psbn) * superpage + superpageIndex +
-           pageIndex * totalPhysicalBlocks;
+    return psbn * superpage + superpageIndex + pageIndex * totalPhysicalBlocks;
   }
 
   //! Get parallelism index from PPN
   inline uint64_t getParallelismIndexFromPPN(PPN ppn) const {
-    assertNumber(static_cast<uint64_t>(ppn));
-    return static_cast<uint64_t>(ppn) % parallelism;
+    return ppn % parallelism;
   }
 
   //! Get parallelism index from PSPN
   inline uint64_t getParallelismIndexFromPSPN(PSPN pspn) const {
-    assertNumber(static_cast<uint64_t>(pspn));
-    return static_cast<uint64_t>(pspn) % (parallelism / superpage);
+    return pspn % (parallelism / superpage);
   }
 };
 

@@ -25,7 +25,7 @@ GenericDetector::GenericDetector(uint32_t p, uint64_t c, uint64_t r)
 
 void GenericDetector::submitSubRequest(HIL::SubRequest *req) {
   uint64_t tag = req->getParentTag();
-  uint64_t lpn = static_cast<uint64_t>(req->getLPN());
+  auto lpn = req->getLPN();
 
   if (lastRequestTag != tag) {
     if (offset + length == lpn * pageSize + req->getSkipFront()) {

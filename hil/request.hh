@@ -127,11 +127,6 @@ class Request {
     offset = slba * lbaSize;
     length = nlb * lbaSize;
   }
-  inline void setAddress(LPN slpn, uint32_t nlp, uint32_t lps) {
-    lbaSize = lps;
-    offset = static_cast<uint64_t>(slpn) * lbaSize;
-    length = nlp * lbaSize;
-  }
 
   inline void setDMA(DMAEngine *engine, DMATag tag) {
     dmaEngine = engine;

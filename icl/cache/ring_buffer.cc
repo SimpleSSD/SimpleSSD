@@ -254,7 +254,7 @@ void RingBuffer::collectEvictable(LPN, WritebackRequest &wbreq) {
     auto &line = cacheline.at(iter.second);
 
     if (line.valid && line.dirty && !line.dmaPending && !line.nvmPending) {
-      uint32_t offset = static_cast<uint64_t>(line.tag) % pagesToEvict;
+      uint32_t offset = line.tag % pagesToEvict;
 
       auto &idx = collected.at(offset);
 

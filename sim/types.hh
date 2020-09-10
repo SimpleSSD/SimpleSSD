@@ -26,36 +26,20 @@ struct Parameter;
 
 }
 
-#define INVALID_NUMBER64 std::numeric_limits<uint64_t>::max()
-#define INVALID_NUMBER32 std::numeric_limits<uint32_t>::max()
-
-static void assertNumber(uint64_t v) noexcept {
-  if (UNLIKELY(v == INVALID_NUMBER64)) {
-#ifdef SIMPLESSD_DEBUG
-    std::cerr << "TypeError: Operation performed on invalid number."
-              << std::endl;
-#endif
-    abort();
-  }
-}
-
-static void assertNumber(uint32_t v) noexcept {
-  if (UNLIKELY(v == INVALID_NUMBER32)) {
-#ifdef SIMPLESSD_DEBUG
-    std::cerr << "TypeError: Operation performed on invalid number."
-              << std::endl;
-#endif
-    abort();
-  }
-}
-
 #define DEFINE_NUMBER(bits, classname)                                         \
   class classname {                                                            \
    private:                                                                    \
     uint##bits##_t value;                                                      \
+    static void assertNumber(uint##bits##_t v) noexcept {                      \
+      if (UNLIKELY(v == std::numeric_limits<uint##bits##_t>::max())) {         \
+        std::cerr << "TypeError: Operation performed on invalid number."       \
+                  << std::endl;                                                \
+        abort();                                                               \
+      }                                                                        \
+    }                                                                          \
                                                                                \
    public:                                                                     \
-    classname() : value(INVALID_NUMBER##bits) {}                               \
+    classname() : value(std::numeric_limits<uint##bits##_t>::max()) {}         \
     classname(const classname &rhs) : value(rhs.value) {}                      \
     classname(classname &&rhs) noexcept { *this = std::move(rhs); }            \
     classname(uint##bits##_t rhs) : value(rhs) {}                              \
@@ -65,7 +49,8 @@ static void assertNumber(uint32_t v) noexcept {
     }                                                                          \
     classname &operator=(classname &&rhs) {                                    \
       if (this != &rhs) {                                                      \
-        value = std::exchange(rhs.value, INVALID_NUMBER##bits);                \
+        value = std::exchange(rhs.value,                                       \
+                              std::numeric_limits<uint##bits##_t>::max());     \
       }                                                                        \
       return *this;                                                            \
     }                                                                          \
@@ -111,78 +96,22 @@ static void assertNumber(uint32_t v) noexcept {
       return *this;                                                            \
     }                                                                          \
     classname &operator&=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
       value &= rhs;                                                            \
       return *this;                                                            \
     }                                                                          \
     classname &operator|=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
       value |= rhs;                                                            \
       return *this;                                                            \
     }                                                                          \
-    friend classname &operator+(classname lhs, const classname &rhs) {         \
-      return lhs += rhs;                                                       \
+    inline operator uint##bits##_t() const { return value; }                   \
+    inline bool isValid() const {                                              \
+      return value != std::numeric_limits<uint##bits##_t>::max();              \
     }                                                                          \
-    friend classname &operator+(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs += rhs;                                                       \
+    inline void invalidate() {                                                 \
+      value = std::numeric_limits<uint##bits##_t>::max();                      \
     }                                                                          \
-    friend classname &operator-(classname lhs, const classname &rhs) {         \
-      return lhs -= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator-(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs -= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator*(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs *= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator/(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs /= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator%(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs %= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator&(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs &= rhs;                                                       \
-    }                                                                          \
-    friend classname &operator|(classname lhs, const uint##bits##_t &rhs) {    \
-      return lhs |= rhs;                                                       \
-    }                                                                          \
-    friend bool operator<(const classname &lhs, const classname &rhs) {        \
-      return lhs.value < rhs.value;                                            \
-    }                                                                          \
-    friend bool operator<(const classname &lhs, const uint##bits##_t &rhs) {   \
-      return lhs.value < rhs;                                                  \
-    }                                                                          \
-    friend bool operator>(const classname &lhs, const classname &rhs) {        \
-      return lhs.value > rhs.value;                                            \
-    }                                                                          \
-    friend bool operator>(const classname &lhs, const uint##bits##_t &rhs) {   \
-      return lhs.value > rhs;                                                  \
-    }                                                                          \
-    friend bool operator<=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value <= rhs.value;                                           \
-    }                                                                          \
-    friend bool operator<=(const classname &lhs, const uint##bits##_t &rhs) {  \
-      return lhs.value <= rhs;                                                 \
-    }                                                                          \
-    friend bool operator>=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value >= rhs.value;                                           \
-    }                                                                          \
-    friend bool operator>=(const classname &lhs, const uint##bits##_t &rhs) {  \
-      return lhs.value >= rhs;                                                 \
-    }                                                                          \
-    friend bool operator==(const classname &lhs, const classname &rhs) {       \
-      return lhs.value == rhs.value;                                           \
-    }                                                                          \
-    friend bool operator==(const classname &lhs, const uint##bits##_t &rhs) {  \
-      return lhs.value == rhs;                                                 \
-    }                                                                          \
-    friend bool operator!=(const classname &lhs, const classname &rhs) {       \
-      return lhs.value != rhs.value;                                           \
-    }                                                                          \
-    friend bool operator!=(const classname &lhs, const uint##bits##_t &rhs) {  \
-      return lhs.value != rhs;                                                 \
-    }                                                                          \
-    explicit operator bool() const { return value != INVALID_NUMBER##bits; }   \
-    explicit operator uint64_t() const { return value; }                       \
   }
 
 #define DEFINE_NUMBER32(classname) DEFINE_NUMBER(32, classname)

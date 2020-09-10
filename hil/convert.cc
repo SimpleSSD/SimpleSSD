@@ -21,11 +21,9 @@ ConvertFunction Convert::getConvertion() {
              uint64_t offset, uint32_t length, LPN &slpn, uint32_t &nlp,
              uint32_t &skipFirst, uint32_t &skipLast) {
     slpn = offset >> shift;
-    nlp = (uint32_t)(((offset + length - 1) >> shift) + 1 -
-                     static_cast<uint64_t>(slpn));
+    nlp = (uint32_t)(((offset + length - 1) >> shift) + 1 - slpn);
     skipFirst = (uint32_t)(offset & mask);
-    skipLast = (uint32_t)((static_cast<uint64_t>(slpn + nlp) << shift) -
-                          offset - length);
+    skipLast = (uint32_t)(((slpn + nlp) << shift) - offset - length);
   };
 }
 

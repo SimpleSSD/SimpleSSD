@@ -41,12 +41,11 @@ class PageLevelMapping : public AbstractMapping {
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   inline uint64_t makeTableAddress(LPN lpn) {
-    return tableBaseAddress + static_cast<uint64_t>(lpn) * entrySize;
+    return tableBaseAddress + lpn * entrySize;
   }
 
   inline uint64_t makeMetadataAddress(PBN block) {
-    return metadataBaseAddress +
-           static_cast<uint32_t>(block) * metadataEntrySize;
+    return metadataBaseAddress + block * metadataEntrySize;
   }
 
  public:

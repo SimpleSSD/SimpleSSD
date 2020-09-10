@@ -44,9 +44,7 @@ class SetAssociative : public AbstractTagArray {
   CPU::Function fifoEviction(uint32_t, uint32_t &);
   CPU::Function lruEviction(uint32_t, uint32_t &);
 
-  inline uint32_t getSetIdx(LPN addr) {
-    return static_cast<uint64_t>(addr) % setSize;
-  }
+  inline uint32_t getSetIdx(LPN addr) { return addr % setSize; }
   CPU::Function getEmptyWay(uint32_t, uint32_t &);
   CPU::Function getValidWay(LPN, uint32_t &);
   void getCleanWay(uint32_t, uint32_t &);

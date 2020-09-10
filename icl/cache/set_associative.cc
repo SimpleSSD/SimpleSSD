@@ -293,7 +293,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
     auto &iter = cacheline.at(i);
 
     if (iter.valid && iter.dirty && !iter.dmaPending && !iter.nvmPending) {
-      uint32_t offset = static_cast<uint64_t>(iter.tag) % pagesToEvict;
+      uint32_t offset = iter.tag % pagesToEvict;
 
       auto &line = collected.at(offset);
 
@@ -344,7 +344,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
         if (way != waySize) {
           uint64_t i = curSet * waySize + way;
           auto &line = cacheline.at(i);
-          uint32_t offset = static_cast<uint64_t>(line.tag) % pagesToEvict;
+          uint32_t offset = line.tag % pagesToEvict;
 
           collected.at(offset) = i;
         }
