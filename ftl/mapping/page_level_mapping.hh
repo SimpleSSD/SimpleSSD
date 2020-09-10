@@ -41,24 +41,12 @@ class PageLevelMapping : public AbstractMapping {
   CPU::Function invalidateMappingInternal(LPN, PPN &);
 
   inline uint64_t makeTableAddress(LPN lpn) {
-    return tableBaseAddress + lpn * entrySize;
+    return tableBaseAddress + static_cast<uint64_t>(lpn) * entrySize;
   }
 
-  inline uint64_t makeMetadataAddress(PPN block) {
-    return metadataBaseAddress + block * metadataEntrySize;
-  }
-
-  /* Superpage/block related helper APIs */
-  inline PPN getSuperblockFromSPPN(PPN sppn) {
-    return sppn % totalPhysicalSuperBlocks;
-  }
-
-  inline PPN getSuperpageFromSPPN(PPN sppn) {
-    return sppn / totalPhysicalSuperBlocks;
-  }
-
-  inline PPN makeSPPN(PPN sblk, PPN sp) {
-    return sblk + sp * totalPhysicalSuperBlocks;
+  inline uint64_t makeMetadataAddress(PBN block) {
+    return metadataBaseAddress +
+           static_cast<uint32_t>(block) * metadataEntrySize;
   }
 
  public:
@@ -67,7 +55,7 @@ class PageLevelMapping : public AbstractMapping {
 
   void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *) override;
 
-  LPN getPageUsage(LPN, LPN) override;
+  uint64_t getPageUsage(LPN, uint64_t) override;
 
   uint32_t getValidPages(PPN, uint64_t) override;
   uint64_t getAge(PPN, uint64_t) override;

@@ -46,17 +46,13 @@ class PageLevelFTL : public AbstractFTL {
     uint64_t beginAt;
 
     ReadModifyWriteContext()
-        : alignedBegin(InvalidLPN),
-          chunkBegin(InvalidLPN),
-          next(nullptr),
+        : next(nullptr),
           last(nullptr),
           writePending(false),
           counter(0),
           beginAt(0) {}
     ReadModifyWriteContext(uint64_t size)
-        : alignedBegin(InvalidLPN),
-          chunkBegin(InvalidLPN),
-          list(size, nullptr),
+        : list(size, nullptr),
           next(nullptr),
           last(nullptr),
           writePending(false),
@@ -104,7 +100,7 @@ class PageLevelFTL : public AbstractFTL {
       uint64_t);
 
   inline LPN getAlignedLPN(LPN lpn) {
-    return lpn / minMappingSize * minMappingSize;
+    return static_cast<uint64_t>(lpn) / minMappingSize * minMappingSize;
   }
 
   // Statistics

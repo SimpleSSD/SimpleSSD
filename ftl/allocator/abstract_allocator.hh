@@ -26,12 +26,12 @@ namespace BlockAllocator {
 
 class AbstractAllocator : public Object {
  protected:
-  Parameter *param;
+  const Parameter *param;
   Mapping::AbstractMapping *pMapper;
 
  public:
   AbstractAllocator(ObjectData &o, Mapping::AbstractMapping *m)
-      : Object(o), pMapper(m) {}
+      : Object(o), param(nullptr), pMapper(m) {}
   virtual ~AbstractAllocator() {}
 
   /* Functions for AbstractMapping */
@@ -74,7 +74,7 @@ class AbstractAllocator : public Object {
    * }
    * \endcode
    */
-  virtual void initialize(Parameter *p) { param = p; };
+  virtual void initialize(const Parameter *p) { param = p; };
 
   /**
    * Check GC trigger threshold.
@@ -107,9 +107,6 @@ class AbstractAllocator : public Object {
    * fatal: Operation not defined yet.
    */
   virtual void reclaimBlocks(PPN, Event) = 0;
-
-  //! Get parallelism index from physical page address.
-  inline PPN getParallelismFromPPN(PPN ppn) { return ppn % param->parallelism; }
 };
 
 }  // namespace BlockAllocator
