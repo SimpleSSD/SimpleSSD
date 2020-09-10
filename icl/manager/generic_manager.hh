@@ -8,8 +8,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_ICL_MANAGER_BASIC_HH__
-#define __SIMPLESSD_ICL_MANAGER_BASIC_HH__
+#ifndef __SIMPLESSD_ICL_MANAGER_GENERIC_MANAGER_HH__
+#define __SIMPLESSD_ICL_MANAGER_GENERIC_MANAGER_HH__
 
 #include <unordered_map>
 
@@ -25,7 +25,7 @@ namespace SimpleSSD::ICL::Manager {
                req->getTagForLog(), ##__VA_ARGS__);                            \
   }
 
-class BasicDetector : public SequentialDetector {
+class GenericDetector : public SequentialDetector {
  private:
   uint64_t lastRequestTag;
   uint64_t offset;
@@ -39,7 +39,7 @@ class BasicDetector : public SequentialDetector {
   const uint64_t triggerRatio;
 
  public:
-  BasicDetector(uint32_t, uint64_t, uint64_t);
+  GenericDetector(uint32_t, uint64_t, uint64_t);
 
   void submitSubRequest(HIL::SubRequest *) override;
 
@@ -47,7 +47,7 @@ class BasicDetector : public SequentialDetector {
   void restoreCheckpoint(std::istream &, ObjectData &) noexcept override;
 };
 
-class BasicManager : public AbstractManager {
+class GenericManager : public AbstractManager {
  protected:
   SequentialDetector *detector;
 
@@ -77,8 +77,8 @@ class BasicManager : public AbstractManager {
   } stat;
 
  public:
-  BasicManager(ObjectData &, ICL *, FTL::FTL *);
-  ~BasicManager();
+  GenericManager(ObjectData &, ICL *, FTL::FTL *);
+  ~GenericManager();
 
   void read(HIL::SubRequest *) override;
   void write(HIL::SubRequest *) override;

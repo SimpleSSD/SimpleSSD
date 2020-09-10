@@ -9,7 +9,7 @@
 
 #include "hil/hil.hh"
 #include "icl/cache/generic_cache.hh"
-#include "icl/manager/basic.hh"
+#include "icl/manager/generic_manager.hh"
 #include "util/algorithm.hh"
 
 namespace SimpleSSD::ICL {
@@ -29,7 +29,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
     case Config::Mode::None:
     case Config::Mode::SetAssociative:
     case Config::Mode::RingBuffer:
-      pManager = new Manager::BasicManager(object, this, pFTL);
+      pManager = new Manager::GenericManager(object, this, pFTL);
 
       break;
     default:

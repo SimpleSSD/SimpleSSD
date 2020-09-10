@@ -6,13 +6,13 @@
  *         Junhyeok Jang <jhjang@camelab.org>
  */
 
-#include "icl/manager/basic.hh"
+#include "icl/manager/generic_manager.hh"
 
 #include "icl/cache/abstract_cache.hh"
 
 namespace SimpleSSD::ICL::Manager {
 
-BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
+GenericDetector::GenericDetector(uint32_t p, uint64_t c, uint64_t r)
     : SequentialDetector(p),
       lastRequestTag(1),
       offset(std::numeric_limits<uint64_t>::max()),
@@ -23,7 +23,7 @@ BasicDetector::BasicDetector(uint32_t p, uint64_t c, uint64_t r)
       triggerCount(c),
       triggerRatio(r) {}
 
-void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
+void GenericDetector::submitSubRequest(HIL::SubRequest *req) {
   uint64_t tag = req->getParentTag();
 
   if (lastRequestTag != tag) {
@@ -53,7 +53,7 @@ void BasicDetector::submitSubRequest(HIL::SubRequest *req) {
   reqLength += length;
 }
 
-void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
+void GenericDetector::createCheckpoint(std::ostream &out) const noexcept {
   SequentialDetector::createCheckpoint(out);
 
   BACKUP_SCALAR(out, lastRequestTag);
@@ -63,8 +63,8 @@ void BasicDetector::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, accessCounter);
 }
 
-void BasicDetector::restoreCheckpoint(std::istream &in,
-                                      ObjectData &object) noexcept {
+void GenericDetector::restoreCheckpoint(std::istream &in,
+                                        ObjectData &object) noexcept {
   SequentialDetector::restoreCheckpoint(in, object);
 
   RESTORE_SCALAR(in, lastRequestTag);
@@ -74,7 +74,7 @@ void BasicDetector::restoreCheckpoint(std::istream &in,
   RESTORE_SCALAR(in, accessCounter);
 }
 
-BasicManager::BasicManager(ObjectData &o, ICL *p, FTL::FTL *f)
+GenericManager::GenericManager(ObjectData &o, ICL *p, FTL::FTL *f)
     : AbstractManager(o, p, f), detector(nullptr), drainCounter(0) {
   auto ftlparam = f->getInfo();
   bool enable =
@@ -87,7 +87,7 @@ BasicManager::BasicManager(ObjectData &o, ICL *p, FTL::FTL *f)
     auto ratio =
         readConfigUint(Section::InternalCache, Config::Key::PrefetchRatio);
 
-    detector = new BasicDetector(ftlparam->pageSize, count, ratio);
+    detector = new GenericDetector(ftlparam->pageSize, count, ratio);
   }
 
   auto prefetchMode = (Config::Granularity)readConfigUint(
@@ -120,13 +120,13 @@ BasicManager::BasicManager(ObjectData &o, ICL *p, FTL::FTL *f)
                               "ICL::BasicManager::eventReadDone");
 }
 
-BasicManager::~BasicManager() {
+GenericManager::~GenericManager() {
   if (detector) {
     delete detector;
   }
 }
 
-void BasicManager::read(HIL::SubRequest *req) {
+void GenericManager::read(HIL::SubRequest *req) {
   cache->lookup(req);
 
   if (detector && !req->isICLRequest()) {
@@ -166,23 +166,23 @@ void BasicManager::read(HIL::SubRequest *req) {
   }
 }
 
-void BasicManager::write(HIL::SubRequest *req) {
+void GenericManager::write(HIL::SubRequest *req) {
   cache->lookup(req);
 }
 
-void BasicManager::flush(HIL::SubRequest *req) {
+void GenericManager::flush(HIL::SubRequest *req) {
   cache->flush(req);
 }
 
-void BasicManager::erase(HIL::SubRequest *req) {
+void GenericManager::erase(HIL::SubRequest *req) {
   cache->erase(req);
 }
 
-void BasicManager::dmaDone(HIL::SubRequest *req) {
+void GenericManager::dmaDone(HIL::SubRequest *req) {
   cache->dmaDone(req->getLPN());
 }
 
-void BasicManager::lookupDone(uint64_t tag) {
+void GenericManager::lookupDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   if (req->getMiss()) {
@@ -203,7 +203,7 @@ void BasicManager::lookupDone(uint64_t tag) {
   }
 }
 
-void BasicManager::cacheDone(uint64_t tag) {
+void GenericManager::cacheDone(uint64_t tag) {
   auto req = getSubRequest(tag);
   auto opcode = req->getOpcode();
 
@@ -219,7 +219,7 @@ void BasicManager::cacheDone(uint64_t tag) {
   }
 }
 
-uint64_t BasicManager::drain(std::vector<FlushContext> &list) {
+uint64_t GenericManager::drain(std::vector<FlushContext> &list) {
   uint64_t now = getTick();
   uint64_t size = list.size();
 
@@ -256,8 +256,8 @@ uint64_t BasicManager::drain(std::vector<FlushContext> &list) {
   return drainCounter;
 }
 
-void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
-                              std::vector<FlushContext>::iterator end) {
+void GenericManager::drainRange(std::vector<FlushContext>::iterator begin,
+                                std::vector<FlushContext>::iterator end) {
   uint32_t nlp = std::distance(begin, end);
 
   debugprint(Log::DebugID::ICL_BasicManager, "DRAIN | LPN %" PRIu64 " + %u",
@@ -279,7 +279,7 @@ void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
   stat.drained += nlp;
 }
 
-void BasicManager::drainDone(uint64_t now, uint64_t tag) {
+void GenericManager::drainDone(uint64_t now, uint64_t tag) {
   auto iter = drainQueue.find(tag);
 
   panic_if(iter == drainQueue.end(), "Unexpected drain ID %" PRIu64 ".", tag);
@@ -295,7 +295,7 @@ void BasicManager::drainDone(uint64_t now, uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void BasicManager::readDone(uint64_t tag) {
+void GenericManager::readDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   cache->nvmDone(req->getLPN(), tag, false);
@@ -303,8 +303,8 @@ void BasicManager::readDone(uint64_t tag) {
   scheduleNow(eventICLCompletion, tag);
 }
 
-void BasicManager::getStatList(std::vector<Stat> &list,
-                               std::string prefix) noexcept {
+void GenericManager::getStatList(std::vector<Stat> &list,
+                                 std::string prefix) noexcept {
   list.emplace_back(prefix + "prefetched", "Prefetched pages");
   list.emplace_back(prefix + "drained", "Written pages");
   list.emplace_back(prefix + "hit", "Number of cache hit");
@@ -312,7 +312,7 @@ void BasicManager::getStatList(std::vector<Stat> &list,
   list.emplace_back(prefix + "eviction", "Number of cache eviction");
 }
 
-void BasicManager::getStatValues(std::vector<double> &values) noexcept {
+void GenericManager::getStatValues(std::vector<double> &values) noexcept {
   values.emplace_back((double)stat.prefetched);
   values.emplace_back((double)stat.drained);
   values.emplace_back((double)stat.hit);
@@ -320,11 +320,11 @@ void BasicManager::getStatValues(std::vector<double> &values) noexcept {
   values.emplace_back((double)stat.eviction);
 }
 
-void BasicManager::resetStatValues() noexcept {
+void GenericManager::resetStatValues() noexcept {
   memset(&stat, 0, sizeof(stat));
 }
 
-void BasicManager::createCheckpoint(std::ostream &out) const noexcept {
+void GenericManager::createCheckpoint(std::ostream &out) const noexcept {
   bool exist = detector != nullptr;
 
   BACKUP_SCALAR(out, exist);
@@ -354,7 +354,7 @@ void BasicManager::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventReadDone);
 }
 
-void BasicManager::restoreCheckpoint(std::istream &in) noexcept {
+void GenericManager::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
 
   RESTORE_SCALAR(in, exist);
