@@ -28,14 +28,14 @@ class AbstractAllocator;
 namespace Mapping {
 
 struct BlockMetadata {
-  PPN blockID;
+  PBN blockID;
 
   uint32_t nextPageToWrite;
   uint64_t insertedAt;
   Bitset validPages;
 
-  BlockMetadata() : blockID(InvalidPPN), nextPageToWrite(0), insertedAt(0) {}
-  BlockMetadata(PPN id, uint32_t s)
+  BlockMetadata() : nextPageToWrite(0), insertedAt(0) {}
+  BlockMetadata(PBN id, uint32_t s)
       : blockID(id), nextPageToWrite(0), insertedAt(0), validPages(s) {}
 };
 
@@ -343,19 +343,6 @@ class AbstractMapping : public Object {
    * fatal: Operation is not defined yet.
    */
   virtual void markBlockErased(PPN) = 0;
-
-  //! Convert physical page address to physical block number
-  inline PPN getBlockFromPPN(PPN ppn) {
-    return ppn % param.totalPhysicalBlocks;
-  }
-
-  //! Convert physical page address to page index
-  inline PPN getPageFromPPN(PPN ppn) { return ppn / param.totalPhysicalBlocks; }
-
-  //! Makge physical page address from physical block number and page index
-  inline PPN makePPN(PPN block, PPN page) {
-    return block + page * param.totalPhysicalBlocks;
-  }
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
