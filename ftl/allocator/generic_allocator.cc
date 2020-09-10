@@ -22,7 +22,7 @@ GenericAllocator::GenericAllocator(ObjectData &o, Mapping::AbstractMapping *m)
   dchoice =
       readConfigUint(Section::FlashTranslation, Config::Key::DChoiceParam);
   gcThreshold =
-      readConfigFloat(Section::FlashTranslation, Config::Key::GCThreshold);
+      readConfigFloat(Section::FlashTranslation, Config::Key::FGCThreshold);
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
