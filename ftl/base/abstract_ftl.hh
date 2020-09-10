@@ -40,6 +40,7 @@ class AbstractFTL : public Object {
   virtual ~AbstractFTL() {}
 
   Request *getRequest(uint64_t);
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
 
   virtual void initialize() {}
 
