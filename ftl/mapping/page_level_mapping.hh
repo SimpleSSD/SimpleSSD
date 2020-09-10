@@ -8,14 +8,14 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_FTL_MAPPING_PAGE_LEVEL_HH__
-#define __SIMPLESSD_FTL_MAPPING_PAGE_LEVEL_HH__
+#ifndef __SIMPLESSD_FTL_MAPPING_PAGE_LEVEL_MAPPING_HH__
+#define __SIMPLESSD_FTL_MAPPING_PAGE_LEVEL_MAPPING_HH__
 
 #include "ftl/mapping/abstract_mapping.hh"
 
 namespace SimpleSSD::FTL::Mapping {
 
-class PageLevel : public AbstractMapping {
+class PageLevelMapping : public AbstractMapping {
  private:
   const uint64_t totalPhysicalSuperPages;
   const uint64_t totalPhysicalSuperBlocks;
@@ -62,8 +62,8 @@ class PageLevel : public AbstractMapping {
   }
 
  public:
-  PageLevel(ObjectData &);
-  ~PageLevel();
+  PageLevelMapping(ObjectData &);
+  ~PageLevelMapping();
 
   void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *) override;
 

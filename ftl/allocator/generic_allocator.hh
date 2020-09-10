@@ -8,8 +8,8 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_FTL_ALLOCATOR_BASIC_ALLOCATOR_HH__
-#define __SIMPLESSD_FTL_ALLOCATOR_BASIC_ALLOCATOR_HH__
+#ifndef __SIMPLESSD_FTL_ALLOCATOR_GENERIC_ALLOCATOR_HH__
+#define __SIMPLESSD_FTL_ALLOCATOR_GENERIC_ALLOCATOR_HH__
 
 #include <list>
 #include <random>
@@ -18,7 +18,7 @@
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
-class BasicAllocator : public AbstractAllocator {
+class GenericAllocator : public AbstractAllocator {
  protected:
   using BlockSelection =
       std::function<CPU::Function(uint64_t, std::vector<PPN> &)>;
@@ -47,8 +47,8 @@ class BasicAllocator : public AbstractAllocator {
   BlockSelection victimSelectionFunction;
 
  public:
-  BasicAllocator(ObjectData &, Mapping::AbstractMapping *);
-  virtual ~BasicAllocator();
+  GenericAllocator(ObjectData &, Mapping::AbstractMapping *);
+  virtual ~GenericAllocator();
 
   void initialize(Parameter *) override;
 

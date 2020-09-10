@@ -8,14 +8,14 @@
 
 #pragma once
 
-#ifndef __SIMPLESSD_FTL_BASE_BASIC_FTL_HH__
-#define __SIMPLESSD_FTL_BASE_BASIC_FTL_HH__
+#ifndef __SIMPLESSD_FTL_BASE_PAGE_LEVEL_FTL_HH__
+#define __SIMPLESSD_FTL_BASE_PAGE_LEVEL_FTL_HH__
 
 #include "ftl/base/abstract_ftl.hh"
 
 namespace SimpleSSD::FTL {
 
-class BasicFTL : public AbstractFTL {
+class PageLevelFTL : public AbstractFTL {
  protected:
   uint32_t pageSize;
 
@@ -183,9 +183,9 @@ class BasicFTL : public AbstractFTL {
   void restore(std::istream &, SuperRequest &) noexcept;
 
  public:
-  BasicFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
-           BlockAllocator::AbstractAllocator *);
-  virtual ~BasicFTL();
+  PageLevelFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
+               BlockAllocator::AbstractAllocator *);
+  virtual ~PageLevelFTL();
 
   void read(Request *) override;
   void write(Request *) override;

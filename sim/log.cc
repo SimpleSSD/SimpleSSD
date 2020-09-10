@@ -30,7 +30,7 @@ const std::string idPrefix[] = {
     "ICL::RingBuffer",
     "ICL::SetAssociative",
     "FTL",
-    "FTL::Mapping::PageLevel",
+    "FTL::Mapping::PageLevelMapping",
     "FTL::VLFTL",
     "FIL",
     "FIL::PALOLD",

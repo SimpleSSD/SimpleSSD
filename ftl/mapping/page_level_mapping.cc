@@ -6,16 +6,15 @@
  *         Junhyeok Jang <jhjang@camelab.org>
  */
 
-#include "ftl/mapping/page_level.hh"
-
 #include <random>
 
 #include "ftl/allocator/abstract_allocator.hh"
 #include "ftl/base/abstract_ftl.hh"
+#include "ftl/mapping/page_level_mapping.hh"
 
 namespace SimpleSSD::FTL::Mapping {
 
-PageLevel::PageLevel(ObjectData &o)
+PageLevelMapping::PageLevelMapping(ObjectData &o)
     : AbstractMapping(o),
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
@@ -26,12 +25,13 @@ PageLevel::PageLevel(ObjectData &o)
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
 }
 
-PageLevel::~PageLevel() {
+PageLevelMapping::~PageLevelMapping() {
   free(table);
   delete[] blockMetadata;
 }
 
-void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
+void PageLevelMapping::physicalSuperPageStats(uint64_t &valid,
+                                              uint64_t &invalid) {
   valid = 0;
   invalid = 0;
 
@@ -50,7 +50,7 @@ void PageLevel::physicalSuperPageStats(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn) {
+CPU::Function PageLevelMapping::readMappingInternal(LPN lspn, PPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -78,7 +78,8 @@ CPU::Function PageLevel::readMappingInternal(LPN lspn, PPN &pspn) {
   return fstat;
 }
 
-CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool init) {
+CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
+                                                     bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -138,7 +139,7 @@ CPU::Function PageLevel::writeMappingInternal(LPN lspn, PPN &pspn, bool init) {
   return fstat;
 }
 
-CPU::Function PageLevel::invalidateMappingInternal(LPN lspn, PPN &pspn) {
+CPU::Function PageLevelMapping::invalidateMappingInternal(LPN lspn, PPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -169,8 +170,8 @@ CPU::Function PageLevel::invalidateMappingInternal(LPN lspn, PPN &pspn) {
   return fstat;
 }
 
-void PageLevel::initialize(AbstractFTL *f,
-                           BlockAllocator::AbstractAllocator *a) {
+void PageLevelMapping::initialize(AbstractFTL *f,
+                                  BlockAllocator::AbstractAllocator *a) {
   AbstractMapping::initialize(f, a);
 
   // Initialize memory
@@ -190,16 +191,16 @@ void PageLevel::initialize(AbstractFTL *f,
 
     metadataBaseAddress = object.memory->allocate(
         totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevel::BlockMeta");
+        "FTL::Mapping::PageLevelMapping::BlockMeta");
 
     tableBaseAddress = object.memory->allocate(
         totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevel::Table", true);
+        "FTL::Mapping::PageLevelMapping::Table", true);
 
     // Retry allocation
     tableBaseAddress = object.memory->allocate(
         totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevel::Table");
+        "FTL::Mapping::PageLevelMapping::Table");
 
     // Fill metadata
     for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
@@ -368,7 +369,7 @@ void PageLevel::initialize(AbstractFTL *f,
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization finished");
 }
 
-LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
+LPN PageLevelMapping::getPageUsage(LPN slpn, LPN nlp) {
   LPN count = 0;
 
   // Convert to SLPN
@@ -390,7 +391,7 @@ LPN PageLevel::getPageUsage(LPN slpn, LPN nlp) {
   return count * param.superpage;
 }
 
-uint32_t PageLevel::getValidPages(PPN ppn, uint64_t np) {
+uint32_t PageLevelMapping::getValidPages(PPN ppn, uint64_t np) {
   panic_if(np != param.superpage, "Invalid access from block allocator.");
 
   ppn /= np;
@@ -398,7 +399,7 @@ uint32_t PageLevel::getValidPages(PPN ppn, uint64_t np) {
   return (uint32_t)blockMetadata[getSuperblockFromSPPN(ppn)].validPages.count();
 }
 
-uint64_t PageLevel::getAge(PPN ppn, uint64_t np) {
+uint64_t PageLevelMapping::getAge(PPN ppn, uint64_t np) {
   panic_if(np != param.superpage, "Invalid access from block allocator.");
 
   ppn /= np;
@@ -406,7 +407,7 @@ uint64_t PageLevel::getAge(PPN ppn, uint64_t np) {
   return blockMetadata[getSuperblockFromSPPN(ppn)].insertedAt;
 }
 
-void PageLevel::readMapping(Request *cmd, Event eid) {
+void PageLevelMapping::readMapping(Request *cmd, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -436,7 +437,7 @@ void PageLevel::readMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
-void PageLevel::writeMapping(Request *cmd, Event eid) {
+void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -460,7 +461,7 @@ void PageLevel::writeMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
-void PageLevel::invalidateMapping(Request *cmd, Event eid) {
+void PageLevelMapping::invalidateMapping(Request *cmd, Event eid) {
   // TODO: consider fullsize of request -- if fullsize is smaller than superpage
   // we should not erase mapping
   panic("Trim/Format not implemented");
@@ -468,7 +469,7 @@ void PageLevel::invalidateMapping(Request *cmd, Event eid) {
   scheduleNow(eid, cmd->getTag());
 }
 
-void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
+void PageLevelMapping::getMappingSize(uint64_t *min, uint64_t *pre) {
   if (min) {
     *min = param.superpage;
   }
@@ -477,7 +478,7 @@ void PageLevel::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
+void PageLevelMapping::getCopyContext(CopyContext &copyctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -509,25 +510,25 @@ void PageLevel::getCopyContext(CopyContext &copyctx, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void PageLevel::markBlockErased(PPN blockId) {
+void PageLevelMapping::markBlockErased(PPN blockId) {
   blockMetadata[blockId].nextPageToWrite = 0;
   blockMetadata[blockId].validPages.reset();
 }
 
-void PageLevel::getStatList(std::vector<Stat> &list,
-                            std::string prefix) noexcept {
+void PageLevelMapping::getStatList(std::vector<Stat> &list,
+                                   std::string prefix) noexcept {
   AbstractMapping::getStatList(list, prefix);
 }
 
-void PageLevel::getStatValues(std::vector<double> &values) noexcept {
+void PageLevelMapping::getStatValues(std::vector<double> &values) noexcept {
   AbstractMapping::getStatValues(values);
 }
 
-void PageLevel::resetStatValues() noexcept {
+void PageLevelMapping::resetStatValues() noexcept {
   AbstractMapping::resetStatValues();
 }
 
-void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
+void PageLevelMapping::createCheckpoint(std::ostream &out) const noexcept {
   AbstractMapping::createCheckpoint(out);
 
   BACKUP_SCALAR(out, totalPhysicalSuperPages);
@@ -544,7 +545,7 @@ void PageLevel::createCheckpoint(std::ostream &out) const noexcept {
   }
 }
 
-void PageLevel::restoreCheckpoint(std::istream &in) noexcept {
+void PageLevelMapping::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t tmp64;
 
   AbstractMapping::restoreCheckpoint(in);

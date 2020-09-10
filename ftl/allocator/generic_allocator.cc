@@ -6,13 +6,13 @@
  *         Junhyeok Jang <jhjang@camelab.org>
  */
 
-#include "ftl/allocator/basic_allocator.hh"
+#include "ftl/allocator/generic_allocator.hh"
 
 #include "ftl/mapping/abstract_mapping.hh"
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
-BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
+GenericAllocator::GenericAllocator(ObjectData &o, Mapping::AbstractMapping *m)
     : AbstractAllocator(o, m),
       inUseBlockMap(nullptr),
       freeBlocks(nullptr),
@@ -203,14 +203,14 @@ BasicAllocator::BasicAllocator(ObjectData &o, Mapping::AbstractMapping *m)
   }
 }
 
-BasicAllocator::~BasicAllocator() {
+GenericAllocator::~GenericAllocator() {
   free(eraseCountList);
   free(inUseBlockMap);
   delete[] freeBlocks;
   delete[] fullBlocks;
 }
 
-void BasicAllocator::initialize(Parameter *p) {
+void GenericAllocator::initialize(Parameter *p) {
   AbstractAllocator::initialize(p);
 
   superpage = param->superpage;
@@ -243,7 +243,7 @@ void BasicAllocator::initialize(Parameter *p) {
   }
 }
 
-CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
+CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -292,7 +292,7 @@ CPU::Function BasicAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
   return fstat;
 }
 
-PPN BasicAllocator::getBlockAt(PPN idx, uint64_t np) {
+PPN GenericAllocator::getBlockAt(PPN idx, uint64_t np) {
   panic_if(np != superpage, "Invalid access from mapping.");
 
   if (idx == InvalidPPN) {
@@ -312,15 +312,16 @@ PPN BasicAllocator::getBlockAt(PPN idx, uint64_t np) {
   return inUseBlockMap[idx] * np;
 }
 
-bool BasicAllocator::checkGCThreshold() {
+bool GenericAllocator::checkGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < gcThreshold;
 }
 
-bool BasicAllocator::checkFreeBlockExist() {
+bool GenericAllocator::checkFreeBlockExist() {
   return freeBlockCount > parallelism;
 }
 
-void BasicAllocator::getVictimBlocks(std::vector<PPN> &victimList, Event eid) {
+void GenericAllocator::getVictimBlocks(std::vector<PPN> &victimList,
+                                       Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -335,7 +336,7 @@ void BasicAllocator::getVictimBlocks(std::vector<PPN> &victimList, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
+void GenericAllocator::reclaimBlocks(PPN blockID, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -358,12 +359,12 @@ void BasicAllocator::reclaimBlocks(PPN blockID, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void BasicAllocator::getStatList(std::vector<Stat> &list,
-                                 std::string prefix) noexcept {
+void GenericAllocator::getStatList(std::vector<Stat> &list,
+                                   std::string prefix) noexcept {
   list.emplace_back(prefix + "wear_leveling", "Wear-leveling factor");
 }
 
-void BasicAllocator::getStatValues(std::vector<double> &values) noexcept {
+void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
   double total = 0.;
   double square = 0.;
   double result = 0.;
@@ -380,9 +381,9 @@ void BasicAllocator::getStatValues(std::vector<double> &values) noexcept {
   values.push_back(result);
 }
 
-void BasicAllocator::resetStatValues() noexcept {}
+void GenericAllocator::resetStatValues() noexcept {}
 
-void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
+void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, totalSuperblock);
   BACKUP_SCALAR(out, lastAllocated);
@@ -415,7 +416,7 @@ void BasicAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, dchoice);
 }
 
-void BasicAllocator::restoreCheckpoint(std::istream &in) noexcept {
+void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t tmp64;
 
   RESTORE_SCALAR(in, tmp64);

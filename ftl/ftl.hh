@@ -14,7 +14,6 @@
 #include <deque>
 
 #include "ftl/base/abstract_ftl.hh"
-#include "ftl/base/basic_ftl.hh"
 #include "ftl/def.hh"
 #include "hil/request.hh"
 

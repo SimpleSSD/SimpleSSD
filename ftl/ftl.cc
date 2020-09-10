@@ -8,9 +8,9 @@
 
 #include "ftl/ftl.hh"
 
-#include "ftl/allocator/basic_allocator.hh"
-#include "ftl/base/basic_ftl.hh"
-#include "ftl/mapping/page_level.hh"
+#include "ftl/allocator/generic_allocator.hh"
+#include "ftl/base/page_level_ftl.hh"
+#include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
 
 namespace SimpleSSD {
@@ -26,7 +26,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Mapping algorithm
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
-      pMapper = new Mapping::PageLevel(object);
+      pMapper = new Mapping::PageLevelMapping(object);
 
       break;
     // case Config::MappingType::BlockLevelFTL:
@@ -42,7 +42,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Block allocator
   switch (mapping) {
     default:
-      pAllocator = new BlockAllocator::BasicAllocator(object, pMapper);
+      pAllocator = new BlockAllocator::GenericAllocator(object, pMapper);
 
       break;
   }
@@ -50,7 +50,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Base FTL routine
   switch (mapping) {
     default:
-      pFTL = new BasicFTL(object, this, pFIL, pMapper, pAllocator);
+      pFTL = new PageLevelFTL(object, this, pFIL, pMapper, pAllocator);
 
       break;
   }
