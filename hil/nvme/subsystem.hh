@@ -141,6 +141,8 @@ class Subsystem : public AbstractSubsystem {
   ControllerID createController(Interface *) noexcept override;
   AbstractController *getController(ControllerID) noexcept override;
 
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept override;
+
   // Command interface
   HIL *getHIL() const;
   const std::map<uint32_t, Namespace *> &getNamespaceList() const;

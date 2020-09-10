@@ -54,6 +54,20 @@ class AbstractSubsystem : public Object {
   virtual ControllerID createController(Interface *) noexcept = 0;
   virtual AbstractController *getController(ControllerID) noexcept = 0;
 
+  /**
+   * \brief Get internal I/O queue status
+   *
+   * This function used for implementing advanced garbage collection algorithm
+   * which uses request idle-time to schedule GC operation. Return two values:
+   * one for # of not-handled, pending I/O requests, other for # of in-progress
+   * I/O requests.
+   *
+   * \param[out] waitingRequests  # of I/O requests in waiting
+   * \param[out] handlingRequests # of I/O requests in handling
+   */
+  virtual void getQueueStatus(uint64_t &waitingRequests,
+                              uint64_t &handlingRequests) noexcept = 0;
+
   virtual HIL::Request *restoreRequest(uint64_t) noexcept = 0;
 };
 
