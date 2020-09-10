@@ -51,7 +51,7 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
       createEvent([this](uint64_t, uint64_t d) { manager->cacheDone(d); },
                   "ICL::GenericCache::eventCacheDone");
 
-  tagArray->init(pagesToEvict, eventLookupDone, eventCacheDone);
+  tagArray->initialize(pagesToEvict, eventLookupDone, eventCacheDone);
 }
 
 GenericCache::~GenericCache() {

@@ -88,7 +88,7 @@ class AbstractTagArray : public Object {
   virtual ~AbstractTagArray() {}
 
   //! Initialize
-  void init(uint32_t p, Event el, Event ed) noexcept {
+  void initialize(uint32_t p, Event el, Event ed) noexcept {
     pagesToEvict = p;
     eventLookupDone = el;
     eventCacheDone = ed;
