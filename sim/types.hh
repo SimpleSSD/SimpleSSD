@@ -79,35 +79,107 @@ static void assertNumber(uint32_t v) noexcept {
       value += rhs.value;                                                      \
       return *this;                                                            \
     }                                                                          \
+    classname &operator+=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
+      value += rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
     classname &operator-=(const classname &rhs) {                              \
       assertNumber(value);                                                     \
       assertNumber(rhs.value);                                                 \
       value -= rhs.value;                                                      \
       return *this;                                                            \
     }                                                                          \
+    classname &operator-=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
+      value -= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator*=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
+      value *= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator/=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
+      value /= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator%=(const uint##bits##_t &rhs) {                         \
+      assertNumber(value);                                                     \
+      value %= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator&=(const uint##bits##_t &rhs) {                         \
+      value &= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator|=(const uint##bits##_t &rhs) {                         \
+      value |= rhs;                                                            \
+      return *this;                                                            \
+    }                                                                          \
     friend classname &operator+(classname lhs, const classname &rhs) {         \
+      return lhs += rhs;                                                       \
+    }                                                                          \
+    friend classname &operator+(classname lhs, const uint##bits##_t &rhs) {    \
       return lhs += rhs;                                                       \
     }                                                                          \
     friend classname &operator-(classname lhs, const classname &rhs) {         \
       return lhs -= rhs;                                                       \
     }                                                                          \
+    friend classname &operator-(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs -= rhs;                                                       \
+    }                                                                          \
+    friend classname &operator*(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs *= rhs;                                                       \
+    }                                                                          \
+    friend classname &operator/(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs /= rhs;                                                       \
+    }                                                                          \
+    friend classname &operator%(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs %= rhs;                                                       \
+    }                                                                          \
+    friend classname &operator&(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs &= rhs;                                                       \
+    }                                                                          \
+    friend classname &operator|(classname lhs, const uint##bits##_t &rhs) {    \
+      return lhs |= rhs;                                                       \
+    }                                                                          \
     friend bool operator<(const classname &lhs, const classname &rhs) {        \
       return lhs.value < rhs.value;                                            \
+    }                                                                          \
+    friend bool operator<(const classname &lhs, const uint##bits##_t &rhs) {   \
+      return lhs.value < rhs;                                                  \
     }                                                                          \
     friend bool operator>(const classname &lhs, const classname &rhs) {        \
       return lhs.value > rhs.value;                                            \
     }                                                                          \
+    friend bool operator>(const classname &lhs, const uint##bits##_t &rhs) {   \
+      return lhs.value > rhs;                                                  \
+    }                                                                          \
     friend bool operator<=(const classname &lhs, const classname &rhs) {       \
       return lhs.value <= rhs.value;                                           \
+    }                                                                          \
+    friend bool operator<=(const classname &lhs, const uint##bits##_t &rhs) {  \
+      return lhs.value <= rhs;                                                 \
     }                                                                          \
     friend bool operator>=(const classname &lhs, const classname &rhs) {       \
       return lhs.value >= rhs.value;                                           \
     }                                                                          \
+    friend bool operator>=(const classname &lhs, const uint##bits##_t &rhs) {  \
+      return lhs.value >= rhs;                                                 \
+    }                                                                          \
     friend bool operator==(const classname &lhs, const classname &rhs) {       \
       return lhs.value == rhs.value;                                           \
     }                                                                          \
+    friend bool operator==(const classname &lhs, const uint##bits##_t &rhs) {  \
+      return lhs.value == rhs;                                                 \
+    }                                                                          \
     friend bool operator!=(const classname &lhs, const classname &rhs) {       \
       return lhs.value != rhs.value;                                           \
+    }                                                                          \
+    friend bool operator!=(const classname &lhs, const uint##bits##_t &rhs) {  \
+      return lhs.value != rhs;                                                 \
     }                                                                          \
     explicit operator bool() const { return value != INVALID_NUMBER##bits; }   \
     explicit operator uint64_t() const { return value; }                       \
