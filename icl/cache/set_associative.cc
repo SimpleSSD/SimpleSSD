@@ -307,7 +307,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
   }
 
   // Check curSet exists
-  if (lpn) {
+  if (lpn.isValid()) {
     uint32_t curSet = getSetIdx(lpn);
     bool found = false;
 

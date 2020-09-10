@@ -251,7 +251,7 @@ CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
 
   PPN idx = lastAllocated;
 
-  if (LIKELY(blockUsed)) {
+  if (LIKELY(blockUsed.isValid())) {
     blockUsed /= np;
 
     idx = param->getParallelismIndexFromPSPN(blockUsed);
