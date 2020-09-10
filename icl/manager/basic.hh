@@ -88,7 +88,8 @@ class BasicManager : public AbstractManager {
 
   void lookupDone(uint64_t) override;
   void cacheDone(uint64_t) override;
-  void drain(std::vector<FlushContext> &) override;
+
+  uint64_t drain(std::vector<FlushContext> &) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

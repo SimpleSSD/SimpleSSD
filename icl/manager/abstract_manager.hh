@@ -121,7 +121,17 @@ class AbstractManager : public Object {
   virtual void cacheDone(uint64_t tag) = 0;
 
   //! Cache write-back requester
-  virtual void drain(std::vector<FlushContext> &) = 0;
+  /**
+   * \brief Cache write-back request
+   *
+   * Request write-back of cachelines. Return FTL request id which will be
+   * supplied to AbstractCache::nvmDone().
+   *
+   * \param[in] list  Vector of write-back context
+   * \return  Return last request id. You need to reconstruct issued request id
+   * using [retval - list.size() + 1, retval + 1).
+   */
+  virtual uint64_t drain(std::vector<FlushContext> &list) = 0;
 };
 
 }  // namespace Manager

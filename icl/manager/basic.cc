@@ -219,7 +219,7 @@ void BasicManager::cacheDone(uint64_t tag) {
   }
 }
 
-void BasicManager::drain(std::vector<FlushContext> &list) {
+uint64_t BasicManager::drain(std::vector<FlushContext> &list) {
   uint64_t now = getTick();
   uint64_t size = list.size();
 
@@ -252,6 +252,8 @@ void BasicManager::drain(std::vector<FlushContext> &list) {
   drainRange(begin, list.end());
 
   stat.eviction++;
+
+  return drainCounter;
 }
 
 void BasicManager::drainRange(std::vector<FlushContext>::iterator begin,
@@ -288,7 +290,7 @@ void BasicManager::drainDone(uint64_t now, uint64_t tag) {
              iter->second.lpn, iter->second.flushedAt, now,
              now - iter->second.flushedAt);
 
-  cache->nvmDone(iter->second.lpn, true);
+  cache->nvmDone(iter->second.lpn, tag, true);
 
   drainQueue.erase(iter);
 }
@@ -296,7 +298,7 @@ void BasicManager::drainDone(uint64_t now, uint64_t tag) {
 void BasicManager::readDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
-  cache->nvmDone(req->getLPN(), false);
+  cache->nvmDone(req->getLPN(), tag, false);
 
   scheduleNow(eventICLCompletion, tag);
 }

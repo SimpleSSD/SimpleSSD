@@ -23,45 +23,6 @@ class AbstractManager;
 
 namespace Cache {
 
-struct CacheTag {
-  union {
-    uint8_t data;
-    struct {
-      uint8_t valid : 1;       //!< Entry is valid
-      uint8_t dirty : 1;       //!< Entry is dirty - should be written back
-      uint8_t nvmPending : 1;  //!< Currently in reading/writing to NVM
-      uint8_t dmaPending : 1;  //!< Currently in reading/writing to Host
-      uint8_t rsvd : 4;
-    };
-  };
-
-  LPN tag;              //!< LPN address of this cacheline
-  uint64_t insertedAt;  //!< Inserted time
-  uint64_t accessedAt;  //!< Created time
-  Bitset validbits;     //!< Valid sector bits
-
-  CacheTag(uint64_t size)
-      : data(0), tag(0), insertedAt(0), accessedAt(0), validbits(size) {}
-
-  void createCheckpoint(std::ostream &out) const noexcept {
-    BACKUP_SCALAR(out, data);
-    BACKUP_SCALAR(out, tag);
-    BACKUP_SCALAR(out, insertedAt);
-    BACKUP_SCALAR(out, accessedAt);
-
-    validbits.createCheckpoint(out);
-  }
-
-  void restoreCheckpoint(std::istream &in) noexcept {
-    RESTORE_SCALAR(in, data);
-    RESTORE_SCALAR(in, tag);
-    RESTORE_SCALAR(in, insertedAt);
-    RESTORE_SCALAR(in, accessedAt);
-
-    validbits.restoreCheckpoint(in);
-  }
-};
-
 class AbstractCache : public Object {
  protected:
   static const uint64_t minIO = 512;
@@ -149,12 +110,14 @@ class AbstractCache : public Object {
   /**
    * \brief NVM done callback
    *
-   * Called when DMA operation (DRAM <-> NVM) has been completed.
+   * Called when DMA operation (DRAM <-> NVM) has been completed. If lpn is
+   * InvalidLPN, write-back has been completed. If not, read has been completed.
    *
    * \param[in] lpn   LPN address than completed
+   * \param[in] tag   Tag of completed request
    * \param[in] drain True when drain (write)
    */
-  virtual void nvmDone(LPN lpn, bool drain) = 0;
+  virtual void nvmDone(LPN lpn, uint64_t tag, bool drain) = 0;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
