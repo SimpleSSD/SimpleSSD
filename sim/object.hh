@@ -17,6 +17,7 @@
 #include "sim/checkpoint.hh"
 #include "sim/config_reader.hh"
 #include "sim/log.hh"
+#include "sim/types.hh"
 
 namespace SimpleSSD {
 
@@ -85,14 +86,6 @@ struct ObjectData {
   ObjectData(CPU::CPU *e, Memory::System *s, ConfigReader *c, Log *l)
       : cpu(e), memory(s), config(c), log(l) {}
 };
-
-//! Logical Page Number definition
-using LPN = uint64_t;
-const LPN InvalidLPN = std::numeric_limits<LPN>::max();
-
-//! Physical Page Number definition
-using PPN = uint64_t;
-const PPN InvalidPPN = std::numeric_limits<PPN>::max();
 
 /**
  * \brief Object object declaration
