@@ -210,7 +210,7 @@ GenericAllocator::~GenericAllocator() {
   delete[] fullBlocks;
 }
 
-void GenericAllocator::initialize(Parameter *p) {
+void GenericAllocator::initialize(const Parameter *p) {
   AbstractAllocator::initialize(p);
 
   superpage = param->superpage;

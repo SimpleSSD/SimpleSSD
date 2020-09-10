@@ -50,7 +50,7 @@ class GenericAllocator : public AbstractAllocator {
   GenericAllocator(ObjectData &, Mapping::AbstractMapping *);
   virtual ~GenericAllocator();
 
-  void initialize(Parameter *) override;
+  void initialize(const Parameter *) override;
 
   CPU::Function allocateBlock(PPN &, uint64_t) override;
   PPN getBlockAt(PPN, uint64_t) override;
@@ -59,8 +59,6 @@ class GenericAllocator : public AbstractAllocator {
   bool checkFreeBlockExist() override;
   void getVictimBlocks(std::vector<PPN> &, Event) override;
   void reclaimBlocks(PPN, Event) override;
-
-  inline PPN getParallelismFromSPPN(PPN sppn) { return sppn % parallelism; }
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
