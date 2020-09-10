@@ -190,15 +190,11 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
 
   auto ret = writebackList.emplace_back(std::move(wbreq));
 
-  list.reserve(wbreq.lpnList.size());
-
-  for (auto &iter : wbreq.lpnList) {
-    list.emplace_back(Manager::FlushContext(
-        iter.second->tag, tagArray->getDataAddress(iter.second)));
-  }
+  makeFlushContext(ret, list);
 
   ret.tag = sreq->getTag();
   ret.drainTag = manager->drain(list);
+  ret.flush = true;
 
   scheduleFunction(CPU::CPUGroup::InternalCache,
                    tagArray->getReadAllMemoryEvent(eventCacheDone), ret.tag,
@@ -313,12 +309,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 
       auto ret = writebackList.emplace_back(std::move(wbreq));
 
-      list.reserve(wbreq.lpnList.size());
-
-      for (auto &iter : wbreq.lpnList) {
-        list.emplace_back(Manager::FlushContext(
-            iter.second->tag, tagArray->getDataAddress(iter.second)));
-      }
+      makeFlushContext(ret, list);
 
       pendingEviction += list.size();
 

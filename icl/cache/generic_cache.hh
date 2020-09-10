@@ -49,6 +49,21 @@ class GenericCache : public AbstractCache {
   void tryLookup(LPN, bool = false);
   void tryAllocate(LPN);
 
+  inline void makeFlushContext(WritebackRequest &wbreq,
+                               std::vector<Manager::FlushContext> &list) {
+    list.reserve(wbreq.lpnList.size());
+
+    for (auto &iter : wbreq.lpnList) {
+      auto ctag = iter.second;
+      auto item = list.emplace_back(
+          Manager::FlushContext(ctag->tag, tagArray->getDataAddress(ctag)));
+
+      item.offset = ctag->validbits.ctz() * AbstractCache::minIO;
+      item.length = cacheDataSize -
+                    ctag->validbits.clz() * AbstractCache::minIO - item.offset;
+    }
+  }
+
   Event eventLookupDone;
   Event eventCacheDone;
 
