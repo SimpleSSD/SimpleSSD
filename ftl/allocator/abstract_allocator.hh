@@ -42,11 +42,10 @@ class AbstractAllocator : public Object {
    * Return new freeblock at parallelism index of provided physical page
    * address. Return next freeblock if ppn is invalid.
    *
-   * \param[in] ppn Physical page address.
-   * \param[in] np  Number of pages in mapping granularity.
+   * \param[in] pspn Physical Superpage Number.
    * \return Return CPU firmware execution information.
    */
-  virtual CPU::Function allocateBlock(PPN &ppn, uint64_t np = 1) = 0;
+  virtual CPU::Function allocateBlock(PSPN &pspn) = 0;
 
   /**
    * \brief Get previously allocated free block
@@ -54,10 +53,9 @@ class AbstractAllocator : public Object {
    * Return currently allocated free block at parallelism index of provided
    * physical page address.
    *
-   * \param[in] ppn Physical page address.
-   * \param[in] np  Number of pages in mapping granularity.
+   * \param[in] pspn Physical Superpage Number.
    */
-  virtual PPN getBlockAt(PPN ppn, uint64_t np = 1) = 0;
+  virtual PSBN getBlockAt(PSPN pspn) = 0;
 
   /* Functions for AbstractFTL */
 
@@ -77,11 +75,18 @@ class AbstractAllocator : public Object {
   virtual void initialize(const Parameter *p) { param = p; };
 
   /**
-   * Check GC trigger threshold.
+   * Check Foreground GC trigger threshold.
    *
-   * \return True if GC should be invoked.
+   * \return True if Foreground GC should be invoked.
    */
-  virtual bool checkGCThreshold() = 0;
+  virtual bool checkForegroundGCThreshold() = 0;
+
+  /**
+   * Check Background GC trigger threshold.
+   *
+   * \return True if Background GC should be invoked.
+   */
+  virtual bool checkBackgroundGCThreshold() = 0;
 
   /**
    * Check if there is a free block.
@@ -97,16 +102,18 @@ class AbstractAllocator : public Object {
    * Return physical block address to erase. This function may return multiple
    * blocks.
    *
-   * fatal: Operation not defined yet.
+   * \param[in] list  List of Physical Superblock Number
+   * \param[in] eid   Callback event
    */
-  virtual void getVictimBlocks(std::vector<PPN> &, Event) = 0;
+  virtual void getVictimBlocks(std::vector<PSBN> &list, Event eid) = 0;
 
   /**
    * \brief Mark block as erased
    *
-   * fatal: Operation not defined yet.
+   * \param[in] psbn  Physical Superblock Number
+   * \param[in] eid   Callback event
    */
-  virtual void reclaimBlocks(PPN, Event) = 0;
+  virtual void reclaimBlocks(PSBN psbn, Event eid) = 0;
 };
 
 }  // namespace BlockAllocator
