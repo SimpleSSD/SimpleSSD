@@ -73,8 +73,8 @@
         <int:u64> Bus clock speed in Hz
 
         This simple system bus can transfer 64bytes in one cycle. All memory
-        access (object->memory) packet transmitted to memory controller via this
-        system bus.
+        access (object.memory) packets are transmitted to memory controller via
+        this system bus.
        -->
       <config name="BusClock">400m</config>
     </section>
@@ -484,47 +484,78 @@
     <!-- Garbage Collection configuration -->
     <section name="gc">
       <!--
-        <int:u8> Victim block selection algorithm
+        <int> GC algorithm
+
+        Select GC algorithm
 
         Possible values:
-          0: Greedy: Choose leaset utilized block (leaset number of valid pages)
-          1: Random: Choose random block
-          2: Cost-benefit: Choose block with lowest following value:
-            utilization / ((1 - utilization) * age)
-          3: D-Choice: Choose leaset utilized block in randomly sampled blocks
+          0: Naive GC (Only performs foreground GC)
+          1: Advanced GC (Performs both foreground & background GC)
+          2: Preemptible GC (Advanced GC + stop GC when request arrives)
        -->
-      <config name="VictimSelectionPolicy">0</config>
-      <!--
-        <int:u64> D-Choice parameter
+      <config name="GCMode">0</config>
+      <!-- GC trigger configuration -->
+      <section name="trigger">
+        <!--
+          <float> Foreground GC triggering threshold
 
-        Sampling factor. (blocks to erase) * (this config value) blocks will
-        randomly sampled.
-       -->
-      <config name="DChoiceParam">3</config>
-      <!--
-        <float> Foreground GC triggering threshold
+          If the number of free blocks left < [ForegroundThreshold] *
+          (total blocks), On-demand GC (Foreground GC) will triggered.
+         -->
+        <config name="ForegroundThreshold">0.05</config>
+        <!--
+          <float> Background GC triggering threshold
 
-        If the number of free blocks left < [FGCThreshold] * (total blocks),
-        On-demand GC (Foreground GC) will triggered.
-       -->
-      <config name="FGCThreshold">0.05</config>
-      <!--
-        <float> Background GC triggering threshold
+          If the number of free blocks left < [BackgroundThreshold] *
+          (total blocks) and request does not issued in [IdletimeThreshold]
+          time, Background GC will be triggered.
 
-        If the number of free blocks left < [BGCThreshold] * (total blocks) and
-        request does not issued in [BGCIdleTime] time, Background GC will be
-        triggered.
+          This value should be larger than ForegroundThreshold.
+         -->
+        <config name="BackgroundThreshold">0.1</config>
+        <!--
+          <time> Background GC trigger option - Idle time
 
-        This value should be larger than FGCThreshold.
-       -->
-      <config name="BGCThreshold">0.1</config>
-      <!--
-        <time> Background GC trigger option - Idle time
+          If no requests are issued by host, SSD assumes that request will not
+          submitted in near-future, triggers Background GC.
+         -->
+        <config name="IdletimeThreshold">5s</config>
+        <!--
+          <int> Use advanced idle time detection
 
-        If no requests are issued by host, SSD assumes that request will not
-        submitted in near-future, triggers Background GC.
-       -->
-      <config name="BGCIdleTime">5s</config>
+          Possible values:
+            0: No advanced idle time detection
+            1: Queue-based advanced  idle time detection
+               FTL can use HIL's queue information to predict future idle time
+               information. See [USENIX Middleware'12] Taking Garbage Collection
+               Overheads off the Critical Path in SSDs.
+         -->
+        <config name="AdvancedIdletimeDetection">0</config>
+      </section>
+      <!-- Victim block selection configuration -->
+      <section name="blockselection">
+        <!--
+          <int:u8> Victim block selection algorithm
+
+          Possible values:
+            0: Greedy: Choose least utilized block (least number of valid pages)
+            1: Random: Choose random block
+            2: Cost-benefit: Choose block with lowest following value:
+              utilization / ((1 - utilization) * age)
+            3: D-Choice: Choose least utilized block in randomly sampled blocks
+               See [SIGMETRICS'13] Stochastic Modeling of Large-Scale
+               Solid-State Storage Systems: Analysis, Design Tradeoffs and
+               Optimization.
+         -->
+        <config name="VictimSelectionPolicy">0</config>
+        <!--
+          <int:u64> D-Choice (Randomized Greedy Algorithm) sampling factor
+
+          Sampling factor. (blocks to erase) * (this config value) blocks will
+          randomly sampled.
+         -->
+        <config name="SamplingFactor">3</config>
+      </section>
     </section>
     <!--
       Common FTL algorithm configurations
@@ -563,51 +594,44 @@
         is false, BasicFTL will not perform merge operation.
        -->
       <config name="MergeReadModifyWrite">false</config>
+    </section>
+    <!-- Filling/Warm-up configuration -->
+    <section name="warmup">
       <!--
-        <bool> Enable demand paging
+        <int:u8> Filling Mode
 
-        If demand paging is diabled and memory is too small for mapping table,
-        simulation will be terminated with out-of-memory.
+        Here, we have two-pass filling algorithm to invoke GC in very beginning
+        of simulation. In first pass, FTL fills mapping - clean write. In second
+        pass, FTL overwrites pages written in first pass which makes invalid
+        pages.
+
+        Possible values:
+          0: Sequential filling + Sequential invalidation
+          1: Sequential filling + Random invalidation
+          2: Random filling + Random invalidation
        -->
-      <config name="DemandPaging">false</config>
-      <!-- Filling/Warm-up configuration -->
-      <section name="warmup">
-        <!--
-          <int:u8> Filling Mode
+      <config name="FillingMode">0</config>
+      <!--
+        <float> Range to fill in first pass
 
-          Here, we have two-pass filling algorithm to invoke GC in very beginning
-          of simulation. In first pass, FTL fills mapping - clean write. In second
-          pass, FTL overwrites pages written in first pass which makes invalid
-          pages.
+        In sequential filling, LPN from 0 to (this config value) * (SSD size)
+        will be filled.
+        In random filling, (this config value) * (total physical page count)
+        physical pages will be filled in random fashion. Because of memory
+        requirement, we does not ensure unique random address - overwritten can
+        be occur in first pass.
+       -->
+      <config name="FillRatio">1.0</config>
+      <!--
+        <float> Range to fill in second pass
 
-          Possible values:
-            0: Sequential filling + Sequential invalidation
-            1: Sequential filling + Random invalidation
-            2: Random filling + Random invalidation
-         -->
-        <config name="FillingMode">0</config>
-        <!--
-          <float> Range to fill in first pass
+        Try to overwrite page written in first pass. If you use random address,
+        some pages will not overwritten as we don't remember what addresses are
+        written.
 
-          In sequential filling, LPN from 0 to (this config value) * (SSD size)
-          will be filled.
-          In random filling, (this config value) * (total physical page count)
-          physical pages will be filled in random fashion. Because of memory
-          requirement, we does not ensure unique random address - overwritten can
-          be occur in first pass.
-         -->
-        <config name="FillRatio">1.0</config>
-        <!--
-          <float> Range to fill in second pass
-
-          Try to overwrite page written in first pass. If you use random address,
-          some pages will not overwritten as we don't remember what addresses are
-          written.
-
-          This valud will clipped to make GC not occured in warm-up phase.
-         -->
-        <config name="InvalidFillRatio">0.0</config>
-      </section>
+        This value will be clipped to make GC not occured in warm-up phase.
+       -->
+      <config name="InvalidFillRatio">0.0</config>
     </section>
   </section>
   <!--
@@ -691,9 +715,10 @@
         FIL::Config::NANDStructure::pageAllocation[4], [0] is first-level
         parallelism group (FIL::PageAllocation::Channel if CWDP).
 
-        See following paper for more details and impacts:
-        M. Jung and M. Kandemir, "An Evaluation of Different Page Allocation
-        Strateges on High-Speed SSDs," HotStorage 2012
+        See [IEEE TPDS'17 Vol. 28 No. 3] Exploring Parallel Data Access Methods
+        in Emerging Non-Volatile Memory Systems.
+        And [HotStorage'12] An Evaluation of Different Page Allocation
+        Strateges on High-Speed SSDs
        -->
       <config name="PageAllocation">CWDP</config>
       <!--
