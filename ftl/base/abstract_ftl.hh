@@ -14,6 +14,7 @@
 #include "fil/fil.hh"
 #include "ftl/allocator/abstract_allocator.hh"
 #include "ftl/def.hh"
+#include "ftl/gc/abstract_gc.hh"
 #include "ftl/mapping/abstract_mapping.hh"
 #include "sim/object.hh"
 
@@ -30,13 +31,14 @@ class AbstractFTL : public Object {
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
+  GC::AbstractGC *pGC;
 
   void completeRequest(Request *);
   uint64_t generateFTLTag();
 
  public:
   AbstractFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
-              BlockAllocator::AbstractAllocator *);
+              BlockAllocator::AbstractAllocator *, GC::AbstractGC *);
   virtual ~AbstractFTL() {}
 
   Request *getRequest(uint64_t);

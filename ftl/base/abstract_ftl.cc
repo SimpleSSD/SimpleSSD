@@ -14,8 +14,9 @@ namespace SimpleSSD::FTL {
 
 AbstractFTL::AbstractFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                          Mapping::AbstractMapping *m,
-                         BlockAllocator::AbstractAllocator *a)
-    : Object(o), pFTL(p), pFIL(f), pMapper(m), pAllocator(a) {}
+                         BlockAllocator::AbstractAllocator *a,
+                         GC::AbstractGC *g)
+    : Object(o), pFTL(p), pFIL(f), pMapper(m), pAllocator(a), pGC(g) {}
 
 Request *AbstractFTL::getRequest(uint64_t tag) {
   return pFTL->getRequest(tag);

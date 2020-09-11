@@ -23,6 +23,8 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
                                                      Config::Key::MappingMode);
+  auto gcmode = (Config::GCType)readConfigUint(Section::FlashTranslation,
+                                               Config::Key::GCMode);
 
   // Mapping algorithm
   switch (mapping) {
@@ -48,6 +50,18 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
       break;
   }
 
+  // GC algorithm
+  switch (gcmode) {
+    case Config::GCType::Naive:
+      pGC = nullptr;
+
+      break;
+    default:
+      panic("Unsupported GC type.");
+
+      break;
+  }
+
   // Base FTL routine
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
@@ -65,6 +79,7 @@ FTL::~FTL() {
   delete pFIL;
   delete pMapper;
   delete pAllocator;
+  delete pGC;
   delete pFTL;
 }
 
@@ -80,8 +95,9 @@ Request *FTL::insertRequest(Request &&req) {
 
 void FTL::initialize() {
   // Initialize all
-  pAllocator->initialize(pMapper->getInfo());
   pMapper->initialize(pFTL, pAllocator);
+  pAllocator->initialize(pMapper->getInfo());
+  pGC->initialize(pFTL, pMapper->getInfo());
 
   pFTL->initialize();
 

@@ -180,7 +180,7 @@ class PageLevelFTL : public AbstractFTL {
 
  public:
   PageLevelFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
-               BlockAllocator::AbstractAllocator *);
+               BlockAllocator::AbstractAllocator *, GC::AbstractGC *);
   virtual ~PageLevelFTL();
 
   void read(Request *) override;

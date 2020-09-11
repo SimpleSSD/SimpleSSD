@@ -12,8 +12,9 @@ namespace SimpleSSD::FTL {
 
 PageLevelFTL::PageLevelFTL(ObjectData &o, FTL *p, FIL::FIL *f,
                            Mapping::AbstractMapping *m,
-                           BlockAllocator::AbstractAllocator *a)
-    : AbstractFTL(o, p, f, m, a) {
+                           BlockAllocator::AbstractAllocator *a,
+                           GC::AbstractGC *g)
+    : AbstractFTL(o, p, f, m, a, g) {
   memset(&stat, 0, sizeof(stat));
 
   auto pagesInBlock = object.config->getNANDStructure()->page;

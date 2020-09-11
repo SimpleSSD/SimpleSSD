@@ -40,6 +40,7 @@ class FTL : public Object {
 
   Mapping::AbstractMapping *pMapper;
   BlockAllocator::AbstractAllocator *pAllocator;
+  GC::AbstractGC *pGC;
   AbstractFTL *pFTL;
 
   uint64_t requestCounter;
