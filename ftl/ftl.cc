@@ -49,8 +49,12 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
 
   // Base FTL routine
   switch (mapping) {
-    default:
+    case Config::MappingType::PageLevelFTL:
       pFTL = new PageLevelFTL(object, this, pFIL, pMapper, pAllocator);
+
+      break;
+    default:
+      panic("Unsupported mapping type.");
 
       break;
   }
