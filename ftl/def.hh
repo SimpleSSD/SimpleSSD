@@ -46,6 +46,9 @@ struct Parameter {
    *  SuperpageIndex: Index of page in SUPERPAGE (not superblock. Because Index
    *                  of superpage in superblock is same as PageIndex)
    *  ParallelismIndex: Index of parallelism (See homepage)
+   *
+   * Note:
+   *  PPN == PSPN and PBN == PSBN when Parameter::superpage = 1.
    */
 
   //! Get PBN from PPN
