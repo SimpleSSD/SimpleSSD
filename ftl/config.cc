@@ -10,19 +10,29 @@
 namespace SimpleSSD::FTL {
 
 const char NAME_MAPPING_MODE[] = "MappingMode";
+
+// gc section
+const char NAME_GC_MODE[] = "GCMode";
+
+// gc > trigger section
+const char NAME_FGC_THRESHOLD[] = "ForegroundThreshold";
+const char NAME_BGC_THRESHOLD[] = "BackgroundThreshold";
+const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
+const char NAME_IDLETIME_DETECTION[] = "AdvancedIdletimeDetection";
+
+// gc > blockselection section
+const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
+const char NAME_GC_D_CHOICE_PARAM[] = "SamplingFactor";
+
+// common section
 const char NAME_OVERPROVISION_RATIO[] = "OverProvisioningRatio";
+const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
+const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
+
+// warmup section
 const char NAME_FILLING_MODE[] = "FillingMode";
 const char NAME_FILL_RATIO[] = "FillRatio";
 const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
-const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
-const char NAME_GC_D_CHOICE_PARAM[] = "DChoiceParam";
-const char NAME_FGC_THRESHOLD[] = "FGCThreshold";
-const char NAME_BGC_THRESHOLD[] = "BGCThreshold";
-const char NAME_BGC_IDLETIME[] = "BGCIdleTime";
-const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
-const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
-const char NAME_MERGE_THRESHOLD[] = "MergeThreshold";
-const char NAME_DEMAND_PAGING[] = "DemandPaging";
 
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
@@ -31,14 +41,17 @@ Config::Config() {
   fillRatio = 1.f;
   invalidFillRatio = 0.f;
 
-  mergeRMW = false;
-  demandPaging = false;
+  gcMode = GCType::Naive;
+  idletime = IdletimeDetection::Timebased;
 
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
   fgcThreshold = 0.05f;
   bgcThreshold = 0.1f;
   bgcIdletime = 5000000000000ul;
+
+  mergeRMW = false;
+
   superpageAllocation = FIL::PageAllocation::None;
 }
 
@@ -51,12 +64,28 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
     if (strcmp(name, "gc") == 0 && isSection(node)) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
-        LOAD_NAME_UINT_TYPE(node2, NAME_GC_EVICT_POLICY, VictimSelectionMode,
-                            gcBlockSelection);
-        LOAD_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-        LOAD_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
-        LOAD_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
-        LOAD_NAME_FLOAT(node2, NAME_BGC_IDLETIME, bgcIdletime);
+        auto name2 = node2.attribute("name").value();
+
+        LOAD_NAME_UINT_TYPE(node2, NAME_GC_MODE, GCType, gcMode);
+
+        if (strcmp(name2, "trigger") == 0 && isSection(node2)) {
+          for (auto node3 = node2.first_child(); node3;
+               node3 = node3.next_sibling()) {
+            LOAD_NAME_FLOAT(node3, NAME_FGC_THRESHOLD, fgcThreshold);
+            LOAD_NAME_FLOAT(node3, NAME_BGC_THRESHOLD, bgcThreshold);
+            LOAD_NAME_FLOAT(node3, NAME_BGC_IDLETIME, bgcIdletime);
+            LOAD_NAME_UINT_TYPE(node3, NAME_IDLETIME_DETECTION,
+                                IdletimeDetection, idletime);
+          }
+        }
+        else if (strcmp(name2, "blockselection") == 0 && isSection(node2)) {
+          for (auto node3 = node2.first_child(); node3;
+               node3 = node3.next_sibling()) {
+            LOAD_NAME_UINT_TYPE(node3, NAME_GC_EVICT_POLICY,
+                                VictimSelectionMode, gcBlockSelection);
+            LOAD_NAME_UINT(node3, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
+          }
+        }
       }
     }
     else if (strcmp(name, "common") == 0 && isSection(node)) {
@@ -67,17 +96,14 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
         LOAD_NAME_FLOAT(node2, NAME_OVERPROVISION_RATIO, overProvision);
         LOAD_NAME_STRING(node2, NAME_SUPERPAGE_ALLOCATION, superpage);
         LOAD_NAME_BOOLEAN(node2, NAME_MERGE_RMW, mergeRMW);
-        LOAD_NAME_BOOLEAN(node2, NAME_DEMAND_PAGING, demandPaging);
-
-        if (strcmp(name2, "warmup") == 0 && isSection(node)) {
-          for (auto node3 = node2.first_child(); node3;
-               node3 = node3.next_sibling()) {
-            LOAD_NAME_UINT_TYPE(node3, NAME_FILLING_MODE, FillingType,
-                                fillingMode);
-            LOAD_NAME_FLOAT(node3, NAME_FILL_RATIO, fillRatio);
-            LOAD_NAME_FLOAT(node3, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
-          }
-        }
+      }
+    }
+    else if (strcmp(name, "warmup") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT_TYPE(node2, NAME_FILLING_MODE, FillingType, fillingMode);
+        LOAD_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
+        LOAD_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
       }
     }
   }
@@ -103,27 +129,34 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_MAPPING_MODE, mappingMode);
 
   STORE_SECTION(section, "gc", node);
-  STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
-  STORE_NAME_UINT(node, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-  STORE_NAME_FLOAT(node, NAME_FGC_THRESHOLD, fgcThreshold);
-  STORE_NAME_FLOAT(node, NAME_BGC_THRESHOLD, bgcThreshold);
-  STORE_NAME_FLOAT(node, NAME_BGC_IDLETIME, bgcIdletime);
+  STORE_NAME_UINT(node, NAME_GC_MODE, gcMode);
+
+  STORE_SECTION(node, "trigger", node2);
+  STORE_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
+  STORE_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
+  STORE_NAME_FLOAT(node2, NAME_BGC_IDLETIME, bgcIdletime);
+  STORE_NAME_UINT(node2, NAME_IDLETIME_DETECTION, idletime);
+
+  STORE_SECTION(node, "blockselection", node2);
+  STORE_NAME_UINT(node2, NAME_GC_EVICT_POLICY, gcBlockSelection);
+  STORE_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
 
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
   STORE_NAME_BOOLEAN(node, NAME_MERGE_RMW, mergeRMW);
-  STORE_NAME_BOOLEAN(node, NAME_DEMAND_PAGING, demandPaging);
 
-  STORE_SECTION(node, "warmup", node2);
-  STORE_NAME_UINT(node2, NAME_FILLING_MODE, fillingMode);
-  STORE_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
-  STORE_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
+  STORE_SECTION(section, "warmup", node);
+  STORE_NAME_UINT(node, NAME_FILLING_MODE, fillingMode);
+  STORE_NAME_FLOAT(node, NAME_FILL_RATIO, fillRatio);
+  STORE_NAME_FLOAT(node, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
 }
 
 void Config::update() noexcept {
-  panic_if((uint8_t)mappingMode > 2, "Invalid MappingMode.");
+  panic_if((uint8_t)mappingMode > 1, "Invalid MappingMode.");
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
+  panic_if((uint8_t)gcMode > 2, "Invalid GCMode.");
+  panic_if((uint8_t)idletime > 1, "Invalid AdvancedIdletimeDetection.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
 
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
@@ -164,10 +197,16 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
     case FillingMode:
       ret = (uint64_t)fillingMode;
       break;
+    case GCMode:
+      ret = (uint64_t)gcMode;
+      break;
+    case BGCAdvancedDetection:
+      ret = (uint64_t)idletime;
+      break;
     case VictimSelectionPolicy:
       ret = (uint64_t)gcBlockSelection;
       break;
-    case DChoiceParam:
+    case SamplingFactor:
       ret = dChoiceParam;
       break;
     case SuperpageAllocation:
@@ -210,9 +249,6 @@ bool Config::readBoolean(uint32_t idx) const noexcept {
     case MergeReadModifyWrite:
       return mergeRMW;
       break;
-    case DemandPaging:
-      return demandPaging;
-      break;
   }
 
   return false;
@@ -228,10 +264,16 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
     case FillingMode:
       fillingMode = (FillingType)value;
       break;
+    case GCMode:
+      gcMode = (GCType)value;
+      break;
+    case BGCAdvancedDetection:
+      idletime = (IdletimeDetection)value;
+      break;
     case VictimSelectionPolicy:
       gcBlockSelection = (VictimSelectionMode)value;
       break;
-    case DChoiceParam:
+    case SamplingFactor:
       dChoiceParam = value;
       break;
     case SuperpageAllocation:
@@ -281,9 +323,6 @@ bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
   switch (idx) {
     case MergeReadModifyWrite:
       mergeRMW = value;
-      break;
-    case DemandPaging:
-      demandPaging = value;
       break;
     default:
       ret = false;

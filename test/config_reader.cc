@@ -192,6 +192,10 @@ TEST_CASE("ConfigReader") {
                        utest);
       reader.writeUint(Section::FlashTranslation, FTL::Config::Key::FillingMode,
                        utest);
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::GCMode,
+                       utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::BGCAdvancedDetection, utest);
       reader.writeFloat(Section::FlashTranslation, FTL::Config::Key::FillRatio,
                         ftest);
       reader.writeFloat(Section::FlashTranslation,
@@ -199,7 +203,7 @@ TEST_CASE("ConfigReader") {
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::VictimSelectionPolicy, utest);
       reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::DChoiceParam, utest);
+                       FTL::Config::Key::SamplingFactor, utest);
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::FGCThreshold, ftest);
       reader.writeFloat(Section::FlashTranslation,
@@ -213,8 +217,6 @@ TEST_CASE("ConfigReader") {
                        FIL::PageAllocation::Way | FIL::PageAllocation::Die);
       reader.writeBoolean(Section::FlashTranslation,
                           FTL::Config::Key::MergeReadModifyWrite, btest);
-      reader.writeBoolean(Section::FlashTranslation,
-                          FTL::Config::Key::DemandPaging, btest);
 
       // Section::FlashInterface
       reader.writeUint(Section::FlashInterface, FIL::Config::Key::Channel,
@@ -461,6 +463,10 @@ TEST_CASE("ConfigReader") {
                               FTL::Config::Key::MappingMode) == utest);
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::FillingMode) == utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::GCMode) == utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::BGCAdvancedDetection) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::FillRatio) == ftest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
@@ -469,7 +475,7 @@ TEST_CASE("ConfigReader") {
                               FTL::Config::Key::VictimSelectionPolicy) ==
               utest);
       REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::DChoiceParam) == utest);
+                              FTL::Config::Key::SamplingFactor) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::FGCThreshold) == ftest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
@@ -486,8 +492,6 @@ TEST_CASE("ConfigReader") {
       REQUIRE(reader.readBoolean(Section::FlashTranslation,
                                  FTL::Config::Key::MergeReadModifyWrite) ==
               btest);
-      REQUIRE(reader.readBoolean(Section::FlashTranslation,
-                                 FTL::Config::Key::DemandPaging) == btest);
 
       // Section::FlashInterface
       REQUIRE(reader.readUint(Section::FlashInterface,

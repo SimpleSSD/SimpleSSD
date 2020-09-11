@@ -26,17 +26,18 @@ class Config : public BaseConfig {
     InvalidFillRatio,
 
     // Garbage Collection
-    VictimSelectionPolicy,
-    DChoiceParam,
+    GCMode,
     FGCThreshold,
     BGCThreshold,
     BGCIdleTime,
+    BGCAdvancedDetection,
+    VictimSelectionPolicy,
+    SamplingFactor,
 
     // Common FTL setting
     OverProvisioningRatio,
     SuperpageAllocation,
     MergeReadModifyWrite,
-    DemandPaging,
   };
 
   enum class MappingType : uint8_t {
@@ -48,6 +49,17 @@ class Config : public BaseConfig {
     SequentialSequential,
     SequentialRandom,
     RandomRandom,
+  };
+
+  enum class GCType : uint8_t {
+    Naive,
+    Advanced,
+    Preemptible,
+  };
+
+  enum class IdletimeDetection : uint8_t {
+    Timebased,
+    Queuebased,  // Time-based + Queue-based
   };
 
   enum class VictimSelectionMode : uint8_t {
@@ -64,15 +76,17 @@ class Config : public BaseConfig {
 
   MappingType mappingMode;
   FillingType fillingMode;
-  bool mergeRMW;
-  bool demandPaging;
+  GCType gcMode;
+  IdletimeDetection idletime;
 
-  uint64_t dChoiceParam;
-  uint64_t bgcIdletime;
   float fgcThreshold;
   float bgcThreshold;
+  uint64_t bgcIdletime;
+  uint64_t dChoiceParam;
+
   VictimSelectionMode gcBlockSelection;
   uint8_t superpageAllocation;
+  bool mergeRMW;
 
   std::string superpage;
 
