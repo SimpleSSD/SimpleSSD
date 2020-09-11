@@ -307,7 +307,7 @@ void SetAssociative::collectEvictable(LPN lpn, WritebackRequest &wbreq) {
   }
 
   // Check curSet exists
-  if (lpn.isValid()) {
+  if (lpn) {
     uint32_t curSet = getSetIdx(lpn);
     bool found = false;
 
@@ -382,7 +382,7 @@ CPU::Function SetAssociative::getValidLine(LPN lpn, CacheTag **ctag) {
   uint32_t set = getSetIdx(lpn);
   uint32_t way;
 
-  auto fstat = getValidWay(set, way);
+  auto fstat = getValidWay(lpn, way);
 
   if (way < waySize) {
     *ctag = lineToTag(set, way);

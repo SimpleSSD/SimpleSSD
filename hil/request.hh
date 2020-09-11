@@ -112,7 +112,7 @@ class Request {
       this->nvmBeginAt = std::exchange(rhs.nvmBeginAt, 0);
       this->requestTag = std::exchange(rhs.requestTag, 0);
       this->hostTag = std::exchange(rhs.hostTag, 0);
-      this->slpn = std::exchange(rhs.slpn, 0);
+      this->slpn = std::move(rhs.slpn);
       this->firstSubRequestTag = std::exchange(rhs.firstSubRequestTag, 0);
       this->buffer = std::exchange(rhs.buffer, nullptr);
     }
@@ -194,7 +194,7 @@ class SubRequest {
     if (this != &rhs) {
       this->requestTag = std::exchange(rhs.requestTag, 0);
       this->request = std::exchange(rhs.request, nullptr);
-      this->lpn = std::exchange(rhs.lpn, 0);
+      this->lpn = std::move(rhs.lpn);
       this->offset = std::exchange(rhs.offset, 0);
       this->length = std::exchange(rhs.length, 0);
       this->allocate = std::exchange(rhs.allocate, false);

@@ -49,7 +49,9 @@ struct Parameter {
    */
 
   //! Get PBN from PPN
-  inline PBN getPBNFromPPN(PPN ppn) const { return ppn % totalPhysicalBlocks; }
+  inline PBN getPBNFromPPN(PPN ppn) const {
+    return static_cast<PBN>(ppn % totalPhysicalBlocks);
+  }
 
   //! Get PageIndex from PPN
   inline uint32_t getPageIndexFromPPN(PPN ppn) const {
@@ -58,14 +60,18 @@ struct Parameter {
 
   //! Make PPN from PBN and PageIndex
   inline PPN makePPN(PBN pbn, uint32_t pageIndex) const {
-    return pbn + pageIndex * totalPhysicalBlocks;
+    return static_cast<PPN>(pbn + pageIndex * totalPhysicalBlocks);
   }
 
   //! Get Physical Superpage Number from Physical Page Number
-  inline PSPN getPSPNFromPPN(PPN ppn) const { return ppn / superpage; }
+  inline PSPN getPSPNFromPPN(PPN ppn) const {
+    return static_cast<PSPN>(ppn / superpage);
+  }
 
   //! Get Logical Superpage Number from Logical Page Number
-  inline LSPN getPSPNFromLPN(LPN lpn) const { return lpn / superpage; }
+  inline LSPN getPSPNFromLPN(LPN lpn) const {
+    return static_cast<LSPN>(lpn / superpage);
+  }
 
   //! Get SuperpageIndex from Physical Page Number
   inline uint32_t getSuperpageIndexFromPPN(PPN ppn) const {
@@ -79,7 +85,7 @@ struct Parameter {
 
   //! Get PSBN from PSPN
   inline PSBN getPSBNFromPSPN(PSPN pspn) const {
-    return pspn % (totalPhysicalBlocks / superpage);
+    return static_cast<PSBN>(pspn % (totalPhysicalBlocks / superpage));
   }
 
   //! Get PageIndex from PSPN
@@ -89,13 +95,15 @@ struct Parameter {
 
   //! Make PSPN from PSBN and PageIndex
   inline PSPN makePSPN(PSBN psbn, uint32_t pageIndex) const {
-    return psbn + pageIndex * (totalPhysicalBlocks / superpage);
+    return static_cast<PSPN>(psbn +
+                             pageIndex * (totalPhysicalBlocks / superpage));
   }
 
   //! Make PPN from PSBN, SuperpageIndex and PageIndex
   inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
                      uint32_t pageIndex) const {
-    return psbn * superpage + superpageIndex + pageIndex * totalPhysicalBlocks;
+    return static_cast<PPN>(psbn * superpage + superpageIndex +
+                            pageIndex * totalPhysicalBlocks);
   }
 
   //! Get parallelism index from PPN

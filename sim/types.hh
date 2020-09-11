@@ -42,7 +42,7 @@ struct Parameter;
     classname() : value(std::numeric_limits<uint##bits##_t>::max()) {}         \
     classname(const classname &rhs) : value(rhs.value) {}                      \
     classname(classname &&rhs) noexcept { *this = std::move(rhs); }            \
-    classname(uint##bits##_t rhs) : value(rhs) {}                              \
+    explicit classname(uint##bits##_t rhs) : value(rhs) {}                     \
     classname &operator=(const classname &rhs) {                               \
       value = rhs.value;                                                       \
       return *this;                                                            \
@@ -52,10 +52,6 @@ struct Parameter;
         value = std::exchange(rhs.value,                                       \
                               std::numeric_limits<uint##bits##_t>::max());     \
       }                                                                        \
-      return *this;                                                            \
-    }                                                                          \
-    classname &operator=(uint##bits##_t rhs) {                                 \
-      value = rhs;                                                             \
       return *this;                                                            \
     }                                                                          \
     classname &operator+=(const classname &rhs) {                              \

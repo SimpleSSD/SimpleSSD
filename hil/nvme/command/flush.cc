@@ -44,13 +44,13 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
   // Make command
   auto pHIL = subsystem->getHIL();
 
-  LPN offset = 0;
+  LPN offset = static_cast<LPN>(0);
   uint64_t length = 0;
 
   if (nsid == NSID_ALL) {
     auto last = subsystem->getTotalPages();
 
-    offset = 0;
+    offset = static_cast<LPN>(0);
     length = last;
   }
   else {

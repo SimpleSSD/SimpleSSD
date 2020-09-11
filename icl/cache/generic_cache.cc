@@ -186,7 +186,7 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
   WritebackRequest wbreq;
   std::vector<Manager::FlushContext> list;
 
-  LPN slpn = sreq->getOffset();
+  LPN slpn = static_cast<LPN>(sreq->getOffset());
   uint32_t nlp = sreq->getLength();
 
   debugprint(logid, "FLUSH  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",
@@ -210,7 +210,7 @@ void GenericCache::erase(HIL::SubRequest *sreq) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  LPN slpn = sreq->getOffset();
+  LPN slpn = static_cast<LPN>(sreq->getOffset());
   uint32_t nlp = sreq->getLength();
 
   debugprint(logid, "ERASE  | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " + %u",

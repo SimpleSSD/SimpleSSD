@@ -100,7 +100,7 @@ class PageLevelFTL : public AbstractFTL {
       uint64_t);
 
   inline LPN getAlignedLPN(LPN lpn) {
-    return lpn / minMappingSize * minMappingSize;
+    return static_cast<LPN>(lpn / minMappingSize * minMappingSize);
   }
 
   // Statistics

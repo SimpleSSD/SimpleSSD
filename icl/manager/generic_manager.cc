@@ -95,7 +95,7 @@ GenericManager::GenericManager(ObjectData &o, ICL *p, FTL::FTL *f)
       Section::InternalCache, Config::Key::PrefetchMode);
 
   prefetchTrigger = std::numeric_limits<LPN>::max();
-  lastPrefetched = 0;
+  lastPrefetched = static_cast<LPN>(0);
 
   prefetchCount = 1;
 
@@ -136,7 +136,7 @@ void GenericManager::read(HIL::SubRequest *req) {
     detector->submitSubRequest(req);
 
     if (detector->isEnabled()) {
-      LPN nextlpn = req->getSLPN() + req->getNLP();
+      LPN nextlpn = static_cast<LPN>(req->getSLPN() + req->getNLP());
 
       if (old) {
         // Continued - prefetch
@@ -157,8 +157,8 @@ void GenericManager::read(HIL::SubRequest *req) {
       // Make prefetch request
       LPN begin = nextlpn;
 
-      prefetchTrigger = begin + prefetchCount / 2;
-      lastPrefetched = begin + prefetchCount;
+      prefetchTrigger = static_cast<LPN>(begin + prefetchCount / 2);
+      lastPrefetched = static_cast<LPN>(begin + prefetchCount);
 
       stat.prefetched += prefetchCount;
 
@@ -374,7 +374,7 @@ void GenericManager::restoreCheckpoint(std::istream &in) noexcept {
 
   uint64_t size;
   uint64_t tag;
-  FlushContext ctx(0, 0);
+  FlushContext ctx(static_cast<LPN>(0), 0);
 
   RESTORE_SCALAR(in, size);
 

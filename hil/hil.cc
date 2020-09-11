@@ -105,7 +105,8 @@ void HIL::submit(Operation opcode, Request *req) {
 
       auto sreq = subrequestQueue.emplace(
           subrequestCounter,
-          SubRequest(subrequestCounter, req, slpn + i, offset, length));
+          SubRequest(subrequestCounter, req, static_cast<LPN>(slpn + i), offset,
+                     length));
 
       panic_if(!sreq.second, "SubRequest ID conflict.");
 
