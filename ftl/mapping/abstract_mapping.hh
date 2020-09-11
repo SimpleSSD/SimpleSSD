@@ -306,10 +306,13 @@ class AbstractMapping : public Object {
    * This function allocates new page to store new data. Old mapping is
    * invalidated. Store address of allocated page with req->setPPN().
    *
-   * \param[in] req Pointer to FTL::Request.
-   * \param[in] eid Callback event. Event context should be req->getTag().
+   * \param[in] req   Pointer to FTL::Request.
+   * \param[in] eid   Callback event. Event context should be req->getTag().
    */
   virtual void writeMapping(Request *req, Event eid) = 0;
+
+  //! Filling-phase only function
+  virtual void writeMapping(LSPN, PSPN &) = 0;
 
   /**
    * \brief Perform FTL invalidation
@@ -331,6 +334,16 @@ class AbstractMapping : public Object {
    * \param[out]  prefer  Preferred mapping granularity
    */
   virtual void getMappingSize(uint64_t *min, uint64_t *prefer = nullptr) = 0;
+
+  /**
+   * \brief Get physical page status (Only for filling phase)
+   *
+   * Return # of valid pages and # of invalid pages in underlying NAND flash.
+   *
+   * \param[out] valid    Return # of valid physical (super)pages
+   * \param[out] invalid  Return # of invalid physical (super)pages
+   */
+  virtual void getPageStatistics(uint64_t &valid, uint64_t &invalid) = 0;
 
   /**
    * \brief Retrive page copy list
