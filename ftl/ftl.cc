@@ -10,6 +10,7 @@
 
 #include "ftl/allocator/generic_allocator.hh"
 #include "ftl/base/page_level_ftl.hh"
+#include "ftl/filling.hh"
 #include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
 
@@ -83,6 +84,11 @@ void FTL::initialize() {
   pMapper->initialize(pFTL, pAllocator);
 
   pFTL->initialize();
+
+  // Filling
+  Filling filler(object, pFTL, pMapper);
+
+  filler.start();
 }
 
 const Parameter *FTL::getInfo() {
