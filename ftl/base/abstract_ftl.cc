@@ -22,8 +22,8 @@ Request *AbstractFTL::getRequest(uint64_t tag) {
   return pFTL->getRequest(tag);
 }
 
-void AbstractFTL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
-  pFTL->getQueueStatus(nw, nh);
+void AbstractFTL::getGCHint(GC::HintContext &ctx) noexcept {
+  pFTL->getGCHint(ctx);
 }
 
 void AbstractFTL::completeRequest(Request *req) {

@@ -122,6 +122,19 @@ class AbstractCache : public Object {
    */
   virtual void nvmDone(LPN lpn, uint64_t tag, bool drain) = 0;
 
+  /**
+   * \brief Return cache status for GC
+   *
+   * Called when speculates cache status. Fill two variables, allocatableBytes
+   * and evictPendingBytes.
+   *
+   * allocatableBytes = total empty or clean lines * line size
+   * evictPendingBytes = (total dirty lines - eviction threshold) * line size
+   *
+   * \param[out] hint GC HintContext structure
+   */
+  virtual void getGCHint(FTL::GC::HintContext &hint) noexcept = 0;
+
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
 };

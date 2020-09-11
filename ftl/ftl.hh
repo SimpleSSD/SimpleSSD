@@ -65,7 +65,7 @@ class FTL : public Object {
   void write(Request &&);
   void invalidate(Request &&);
 
-  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
+  void getGCHint(GC::HintContext &ctx) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

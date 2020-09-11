@@ -79,6 +79,8 @@ class GenericCache : public AbstractCache {
   void dmaDone(LPN) override;
   void nvmDone(LPN, uint64_t, bool) override;
 
+  void getGCHint(FTL::GC::HintContext &) noexcept override;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

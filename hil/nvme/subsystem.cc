@@ -527,13 +527,9 @@ AbstractController *Subsystem::getController(ControllerID ctrlid) noexcept {
   return nullptr;
 }
 
-void Subsystem::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
-  nw = 0;
-  nh = 0;
-
+void Subsystem::getGCHint(FTL::GC::HintContext &hint) noexcept {
   for (auto &iter : controllerList) {
-    nw += iter.second->arbitrator->getPendingRequests();
-    nh += iter.second->arbitrator->getDispatchedRequests();
+    iter.second->arbitrator->getHint(hint);
   }
 }
 

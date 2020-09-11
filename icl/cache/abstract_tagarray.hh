@@ -204,6 +204,9 @@ class AbstractTagArray : public Object {
 
   //! For restoreCheckpoint
   virtual CacheTag *getTag(uint64_t) noexcept = 0;
+
+  //! For getGCHint
+  virtual void getGCHint(FTL::GC::HintContext &) noexcept = 0;
 };
 
 }  // namespace SimpleSSD::ICL::Cache

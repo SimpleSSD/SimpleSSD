@@ -13,6 +13,7 @@
 #include <map>
 #include <set>
 
+#include "ftl/gc/hint.hh"
 #include "hil/request.hh"
 #include "sim/interface.hh"
 #include "sim/object.hh"
@@ -62,11 +63,9 @@ class AbstractSubsystem : public Object {
    * one for # of not-handled, pending I/O requests, other for # of in-progress
    * I/O requests.
    *
-   * \param[out] waitingRequests  # of I/O requests in waiting
-   * \param[out] handlingRequests # of I/O requests in handling
+   * \param[out] ctx  GC Hint structure
    */
-  virtual void getQueueStatus(uint64_t &waitingRequests,
-                              uint64_t &handlingRequests) noexcept = 0;
+  virtual void getGCHint(FTL::GC::HintContext &ctx) noexcept = 0;
 
   virtual HIL::Request *restoreRequest(uint64_t) noexcept = 0;
 };

@@ -400,6 +400,16 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
   tryAllocate(lpn);
 }
 
+void GenericCache::getGCHint(FTL::GC::HintContext &ctx) noexcept {
+  // This will fill allocatableBytes
+  tagArray->getGCHint(ctx);
+
+  // Not accurate, but this should be sufficient
+  if (dirtyLines >= evictThreshold + pendingEviction) {
+    ctx.evictPendingBytes = pagesToEvict * cacheDataSize;
+  }
+}
+
 void GenericCache::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
   list.emplace_back(prefix + "dirty.count", "Total dirty cachelines");

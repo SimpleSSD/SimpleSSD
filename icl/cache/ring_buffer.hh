@@ -80,6 +80,8 @@ class RingBuffer : public AbstractTagArray {
   uint64_t getOffset(CacheTag *) const noexcept override;
   CacheTag *getTag(uint64_t) noexcept override;
 
+  void getGCHint(FTL::GC::HintContext &) noexcept override;
+
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;

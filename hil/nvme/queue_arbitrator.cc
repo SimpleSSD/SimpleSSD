@@ -483,6 +483,47 @@ uint8_t Arbitrator::abortCommand(uint16_t sqid, uint16_t cid, Event eid,
   }
 }
 
+void Arbitrator::getHint(FTL::GC::HintContext &ctx) noexcept {
+  ctx.pendingRequests += requestQueue.size();
+  ctx.handlingRequests += dispatchedQueue.size();
+
+  for (auto &iter : requestQueue) {
+    if (iter.second->sqID != 0) {
+      switch ((NVMCommand)iter.second->entry.dword0.opcode) {
+        case NVMCommand::Read:
+        case NVMCommand::Compare:
+          // Don't add Verify. It does not makes Host DMA operation.
+          ctx.pendingReadBytes += LOW16(iter.second->entry.dword12) + 1;
+
+          break;
+        case NVMCommand::Write:
+          // Don't add WriteZero. It does not makes Host DMA operation.
+          ctx.pendingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
+
+          break;
+      }
+    }
+  }
+
+  for (auto &iter : dispatchedQueue) {
+    if (iter.second->sqID != 0) {
+      switch ((NVMCommand)iter.second->entry.dword0.opcode) {
+        case NVMCommand::Read:
+        case NVMCommand::Compare:
+          // Don't add Verify. It does not makes Host DMA operation.
+          ctx.handlingReadBytes += LOW16(iter.second->entry.dword12) + 1;
+
+          break;
+        case NVMCommand::Write:
+          // Don't add WriteZero. It does not makes Host DMA operation.
+          ctx.handlingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
+
+          break;
+      }
+    }
+  }
+}
+
 void Arbitrator::complete(CQContext *cqe, bool ignore) {
   auto cq = cqList[cqe->getCQID()];
 

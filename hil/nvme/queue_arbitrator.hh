@@ -13,6 +13,7 @@
 #include <functional>
 #include <list>
 
+#include "ftl/gc/hint.hh"
 #include "hil/nvme/queue.hh"
 #include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
@@ -220,8 +221,7 @@ class Arbitrator : public Object {
   uint8_t abortCommand(uint16_t, uint16_t, Event, uint64_t);
 
   // Subsystem
-  uint64_t getPendingRequests() noexcept { return requestQueue.size(); }
-  uint64_t getDispatchedRequests() noexcept { return dispatchedQueue.size(); }
+  void getHint(FTL::GC::HintContext &) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
