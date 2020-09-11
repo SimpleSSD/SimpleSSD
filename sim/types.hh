@@ -30,8 +30,11 @@ struct Parameter;
   class classname {                                                            \
    private:                                                                    \
     uint##bits##_t value;                                                      \
-    static void assertNumber(uint##bits##_t v) noexcept {                      \
-      if (UNLIKELY(v == std::numeric_limits<uint##bits##_t>::max())) {         \
+    static void assertNumber(                                                  \
+        uint##bits##_t v,                                                      \
+        uint##bits##_t c =                                                     \
+            std::numeric_limits<uint##bits##_t>::max()) noexcept {             \
+      if (UNLIKELY(v == c)) {                                                  \
         std::cerr << "TypeError: Operation performed on invalid number."       \
                   << std::endl;                                                \
         abort();                                                               \
@@ -101,6 +104,17 @@ struct Parameter;
       value |= rhs;                                                            \
       return *this;                                                            \
     }                                                                          \
+    classname &operator++() {                                                  \
+      assertNumber(value);                                                     \
+      value++;                                                                 \
+      return *this;                                                            \
+    }                                                                          \
+    classname &operator--() {                                                  \
+      assertNumber(value);                                                     \
+      assertNumber(value, 0);                                                  \
+      value--;                                                                 \
+      return *this;                                                            \
+    }                                                                          \
     inline operator uint##bits##_t() const { return value; }                   \
     inline bool isValid() const {                                              \
       return value != std::numeric_limits<uint##bits##_t>::max();              \
@@ -110,7 +124,6 @@ struct Parameter;
     }                                                                          \
   }
 
-#define DEFINE_NUMBER32(classname) DEFINE_NUMBER(32, classname)
 #define DEFINE_NUMBER64(classname) DEFINE_NUMBER(64, classname)
 
 //! Logical Page Number
@@ -126,10 +139,10 @@ DEFINE_NUMBER64(PPN);
 DEFINE_NUMBER64(PSPN);
 
 //! Physical Block Number
-DEFINE_NUMBER32(PBN);
+DEFINE_NUMBER64(PBN);
 
 //! Physical Superblock Number
-DEFINE_NUMBER32(PSBN);
+DEFINE_NUMBER64(PSBN);
 
 }  // namespace SimpleSSD
 

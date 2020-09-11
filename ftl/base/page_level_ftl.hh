@@ -78,7 +78,7 @@ class PageLevelFTL : public AbstractFTL {
 
   struct GCContext {
     bool inProgress;
-    std::vector<PPN> victimSBlockList;
+    std::vector<PSBN> victimSBlockList;
     CopyContext copyctx;
     uint64_t bufferBaseAddress;
 
@@ -114,8 +114,8 @@ class PageLevelFTL : public AbstractFTL {
     uint64_t gcCopiedPages;    // Copied pages
   } stat;
 
-  virtual inline void triggerGC() {
-    if (pAllocator->checkGCThreshold() && !gcctx.inProgress) {
+  inline void triggerGC() {
+    if (pAllocator->checkForegroundGCThreshold() && !gcctx.inProgress) {
       gcctx.inProgress = true;
       scheduleNow(eventGCTrigger);
     }

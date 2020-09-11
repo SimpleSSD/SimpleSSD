@@ -26,7 +26,7 @@ class PageLevelMapping : public AbstractMapping {
   uint64_t tableBaseAddress;
   uint8_t *table;
 
-  BlockMetadata *blockMetadata;
+  BlockMetadata<PSBN> *blockMetadata;
   uint64_t metadataBaseAddress;
   uint64_t metadataEntrySize;
 
@@ -36,15 +36,15 @@ class PageLevelMapping : public AbstractMapping {
   MakeEntryFunction makeTableEntry;
 
   void physicalSuperPageStats(uint64_t &, uint64_t &);
-  CPU::Function readMappingInternal(LPN, PPN &);
-  CPU::Function writeMappingInternal(LPN, PPN &, bool = false);
-  CPU::Function invalidateMappingInternal(LPN, PPN &);
+  CPU::Function readMappingInternal(LSPN, PSPN &);
+  CPU::Function writeMappingInternal(LSPN, PSPN &, bool = false);
+  CPU::Function invalidateMappingInternal(LSPN, PSPN &);
 
-  inline uint64_t makeTableAddress(LPN lpn) {
-    return tableBaseAddress + lpn * entrySize;
+  inline uint64_t makeTableAddress(LSPN lspn) {
+    return tableBaseAddress + lspn * entrySize;
   }
 
-  inline uint64_t makeMetadataAddress(PBN block) {
+  inline uint64_t makeMetadataAddress(PSBN block) {
     return metadataBaseAddress + block * metadataEntrySize;
   }
 
@@ -56,8 +56,8 @@ class PageLevelMapping : public AbstractMapping {
 
   uint64_t getPageUsage(LPN, uint64_t) override;
 
-  uint32_t getValidPages(PPN, uint64_t) override;
-  uint64_t getAge(PPN, uint64_t) override;
+  uint32_t getValidPages(PSBN) override;
+  uint64_t getAge(PSBN) override;
 
   void readMapping(Request *, Event) override;
   void writeMapping(Request *, Event) override;
@@ -66,7 +66,7 @@ class PageLevelMapping : public AbstractMapping {
   void getMappingSize(uint64_t *, uint64_t * = nullptr) override;
 
   void getCopyContext(CopyContext &, Event) override;
-  void markBlockErased(PPN) override;
+  void markBlockErased(PSBN) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

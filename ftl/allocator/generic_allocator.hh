@@ -21,24 +21,25 @@ namespace SimpleSSD::FTL::BlockAllocator {
 class GenericAllocator : public AbstractAllocator {
  protected:
   using BlockSelection =
-      std::function<CPU::Function(uint64_t, std::vector<PPN> &)>;
+      std::function<CPU::Function(uint64_t, std::vector<PSBN> &)>;
 
-  uint64_t superpage;
-  uint64_t parallelism;
   uint64_t totalSuperblock;
+  uint32_t superpage;
+  uint32_t parallelism;
 
   uint32_t *eraseCountList;
 
-  PPN lastAllocated;   // Used for pMapper->initialize
-  PPN *inUseBlockMap;  // Allocated free blocks
+  uint64_t lastAllocated;  // Used for pMapper->initialize
+  PSBN *inUseBlockMap;     // Allocated free blocks
 
-  uint64_t freeBlockCount;     // Free block count shortcut
-  uint64_t fullBlockCount;     // Full block count shortcut
-  std::list<PPN> *freeBlocks;  // Free blocks sorted in erased count
-  std::list<PPN> *fullBlocks;  // Full blocks sorted in erased count
+  uint64_t freeBlockCount;      // Free block count shortcut
+  uint64_t fullBlockCount;      // Full block count shortcut
+  std::list<PSBN> *freeBlocks;  // Free blocks sorted in erased count
+  std::list<PSBN> *fullBlocks;  // Full blocks sorted in erased count
 
   Config::VictimSelectionMode selectionMode;
-  float gcThreshold;
+  float fgcThreshold;
+  float bgcThreshold;
   uint64_t dchoice;
 
   std::random_device rd;
@@ -46,19 +47,25 @@ class GenericAllocator : public AbstractAllocator {
 
   BlockSelection victimSelectionFunction;
 
+  CPU::Function randomVictimSelection(uint64_t, std::vector<PSBN> &);
+  CPU::Function greedyVictimSelection(uint64_t, std::vector<PSBN> &);
+  CPU::Function costbenefitVictimSelection(uint64_t, std::vector<PSBN> &);
+  CPU::Function dchoiceVictimSelection(uint64_t, std::vector<PSBN> &);
+
  public:
   GenericAllocator(ObjectData &, Mapping::AbstractMapping *);
   virtual ~GenericAllocator();
 
   void initialize(const Parameter *) override;
 
-  CPU::Function allocateBlock(PPN &, uint64_t) override;
-  PPN getBlockAt(PPN, uint64_t) override;
+  CPU::Function allocateBlock(PSBN &) override;
+  PSBN getBlockAt(uint32_t) override;
 
-  bool checkGCThreshold() override;
+  bool checkForegroundGCThreshold() override;
+  bool checkBackgroundGCThreshold() override;
   bool checkFreeBlockExist() override;
-  void getVictimBlocks(std::vector<PPN> &, Event) override;
-  void reclaimBlocks(PPN, Event) override;
+  void getVictimBlocks(std::vector<PSBN> &, Event) override;
+  void reclaimBlocks(PSBN, Event) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

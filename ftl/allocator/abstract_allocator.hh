@@ -42,10 +42,10 @@ class AbstractAllocator : public Object {
    * Return new freeblock at parallelism index of provided physical page
    * address. Return next freeblock if ppn is invalid.
    *
-   * \param[in] pspn Physical Superpage Number.
+   * \param[in] psbn  Physical Superblock Number.
    * \return Return CPU firmware execution information.
    */
-  virtual CPU::Function allocateBlock(PSPN &pspn) = 0;
+  virtual CPU::Function allocateBlock(PSBN &psbn) = 0;
 
   /**
    * \brief Get previously allocated free block
@@ -53,9 +53,9 @@ class AbstractAllocator : public Object {
    * Return currently allocated free block at parallelism index of provided
    * physical page address.
    *
-   * \param[in] pspn Physical Superpage Number.
+   * \param[in] pidx  Parallelism Index
    */
-  virtual PSBN getBlockAt(PSPN pspn) = 0;
+  virtual PSBN getBlockAt(uint32_t psbn) = 0;
 
   /* Functions for AbstractFTL */
 

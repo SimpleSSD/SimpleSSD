@@ -16,9 +16,9 @@ PageLevelFTL::PageLevelFTL(ObjectData &o, FTL *p, FIL::FIL *f,
     : AbstractFTL(o, p, f, m, a) {
   memset(&stat, 0, sizeof(stat));
 
+  auto pagesInBlock = object.config->getNANDStructure()->page;
   auto param = pMapper->getInfo();
   pageSize = param->pageSize;
-  uint64_t pagesInBlock = param->block;
 
   pMapper->getMappingSize(&minMappingSize);
 
@@ -165,10 +165,10 @@ void PageLevelFTL::write(Request *cmd) {
   uint32_t nlp = cmd->getNLP();
 
   LPN alignedBegin = getAlignedLPN(lpn);
-  LPN alignedEnd = alignedBegin + minMappingSize;
+  LPN alignedEnd = static_cast<LPN>(alignedBegin + minMappingSize);
 
   LPN chunkBegin = MAX(slpn, alignedBegin);
-  LPN chunkEnd = MIN(slpn + nlp, alignedEnd);
+  LPN chunkEnd = MIN(static_cast<LPN>(slpn + nlp), alignedEnd);
 
   // Store to pending list
   pendingList.at(lpn - alignedBegin) = cmd;
@@ -240,12 +240,13 @@ void PageLevelFTL::write_submit(uint64_t tag) {
   auto list = getWriteContext(tag);
 
   PPN ppn = list->front()->getPPN();
-  PPN offset = 0;
+  uint32_t offset = 0;
 
   for (auto &req : *list) {
     if (LIKELY(req->getResponse() == Response::Success)) {
-      pFIL->program(FIL::Request(ppn + offset, req->getDRAMAddress(),
-                                 eventWriteDone, req->getTag()));
+      pFIL->program(FIL::Request(static_cast<PPN>(ppn + offset),
+                                 req->getDRAMAddress(), eventWriteDone,
+                                 req->getTag()));
     }
     else {
       completeRequest(req);
@@ -281,7 +282,7 @@ void PageLevelFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
 
   if (LIKELY(cmd->getResponse() == Response::Success)) {
     // Convert PPN to aligned
-    PPN ppnBegin = cmd->getPPN() - diff;
+    PPN ppnBegin = static_cast<PPN>(cmd->getPPN() - diff);
     uint64_t offset = 0;
 
     for (auto &cmd : ctx.list) {
@@ -293,7 +294,7 @@ void PageLevelFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
         ctx.counter++;
       }
 
-      ppnBegin++;
+      ++ppnBegin;
       offset++;
     }
 
@@ -344,7 +345,7 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 
   if (LIKELY(cmd->getResponse() == Response::Success)) {
     // Convert PPN to aligned
-    PPN ppnBegin = cmd->getPPN() - diff;
+    PPN ppnBegin = static_cast<PPN>(cmd->getPPN() - diff);
     uint64_t offset = 0;
 
     for (auto &cmd : ctx.list) {
@@ -360,7 +361,7 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 
       ctx.counter++;
 
-      ppnBegin++;
+      ++ppnBegin;
       offset++;
     }
 
@@ -442,10 +443,11 @@ void PageLevelFTL::gc_trigger(uint64_t now) {
 
 void PageLevelFTL::gc_setNextVictimBlock(uint64_t now) {
   if (LIKELY(gcctx.victimSBlockList.size() > 0)) {
-    PPN nextVictimBlock = gcctx.victimSBlockList.back();
+    auto nextVictimBlock = gcctx.victimSBlockList.back();
     gcctx.victimSBlockList.pop_back();
 
     debugprint(Log::DebugID::FTL_PageLevel,
+
                "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
     gcctx.copyctx.sblockID = nextVictimBlock;
     gcctx.copyctx.beginAt = now;
@@ -501,7 +503,8 @@ void PageLevelFTL::gc_readDone(uint64_t now) {
   copyctx.readCounter--;
 
   if (copyctx.isReadDone()) {
-    LPN ppnBegin = copyctx.iter->front()->getPPN();
+    PPN ppnBegin = copyctx.iter->front()->getPPN();
+
     debugprint(Log::DebugID::FTL_PageLevel,
                "GC | READDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
                " - %" PRIu64 " (%" PRIu64 ")",
@@ -542,11 +545,10 @@ void PageLevelFTL::gc_writeSubmit(uint64_t tag) {
 
   for (auto req : sReq) {
     // update to new PPN
-    req->setPPN(ppnBegin + offset);
+    req->setPPN(static_cast<PPN>(ppnBegin + offset));
 
     // submit
-    object.memory->read(spBufferBaseAddr + offset * pageSize, pageSize,
-                        InvalidEventID, false);
+    req->setDRAMAddress(spBufferBaseAddr + offset * pageSize);
     pFIL->program(FIL::Request(req, eventGCWriteDone));
     copyctx.writeCounter.at(listIndex)++;
     offset++;
@@ -582,14 +584,16 @@ void PageLevelFTL::gc_writeDone(uint64_t now, uint64_t tag) {
 }
 
 void PageLevelFTL::gc_eraseSubmit() {
-  PPN blockId = gcctx.copyctx.sblockID;
+  PSBN blockId = gcctx.copyctx.sblockID;
+
   panic_if(pMapper->getValidPages(blockId) > 0, "valid page copy not done");
 
   debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
              blockId);
-  for (uint i = 0; i < minMappingSize; i++) {
-    pFIL->erase(FIL::Request(pMapper->getBlockFromSuperblock(blockId, i),
-                             eventGCEraseDone, 0));
+
+  for (uint32_t i = 0; i < minMappingSize; i++) {
+    pFIL->erase(FIL::Request(pMapper->getInfo()->makePPN(blockId, 0, i),
+                             HIL::NoMemoryAccess, eventGCEraseDone, 0));
     gcctx.copyctx.eraseCounter++;
   }
 }

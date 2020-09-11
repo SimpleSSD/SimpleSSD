@@ -21,178 +21,33 @@ GenericAllocator::GenericAllocator(ObjectData &o, Mapping::AbstractMapping *m)
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
   dchoice =
       readConfigUint(Section::FlashTranslation, Config::Key::DChoiceParam);
-  gcThreshold =
+  fgcThreshold =
       readConfigFloat(Section::FlashTranslation, Config::Key::FGCThreshold);
+  bgcThreshold =
+      readConfigFloat(Section::FlashTranslation, Config::Key::BGCThreshold);
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
-        CPU::Function fstat;
-        CPU::markFunction(fstat);
-
-        auto &currentList = fullBlocks[idx];
-        std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
-
-        // Select one block from current full block list
-        uint64_t ridx = dist(mtengine);
-
-        // Get block ID from list
-        auto iter = currentList.begin();
-
-        // O(n)
-        std::advance(iter, ridx);
-
-        list.emplace_back(*iter);
-        currentList.erase(iter);
-        fullBlockCount--;
-
-        return fstat;
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+        return randomVictimSelection(idx, list);
       };
 
       break;
     case Config::VictimSelectionMode::Greedy:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
-        CPU::Function fstat;
-        CPU::markFunction(fstat);
-
-        auto &currentList = fullBlocks[idx];
-        std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
-
-        // Collect valid pages
-        for (auto iter = currentList.begin(); iter != currentList.end();
-             ++iter) {
-          valid.emplace_back(iter, pMapper->getValidPages(*iter, superpage));
-        }
-
-        // Find min value
-        auto minIndex = currentList.end();
-        uint32_t min = std::numeric_limits<uint32_t>::max();
-
-        for (auto &iter : valid) {
-          if (min > iter.second) {
-            min = iter.second;
-            minIndex = iter.first;
-          }
-        }
-
-        // Get block ID from sorted list
-        list.emplace_back(*minIndex);
-        currentList.erase(minIndex);
-        fullBlockCount--;
-
-        return fstat;
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+        return greedyVictimSelection(idx, list);
       };
 
       break;
     case Config::VictimSelectionMode::CostBenefit:
-      victimSelectionFunction =
-          [this, pageCount = object.config->getNANDStructure()->page](
-              uint64_t idx, std::vector<PPN> &list) {
-            CPU::Function fstat;
-            CPU::markFunction(fstat);
-
-            auto &currentList = fullBlocks[idx];
-            std::vector<std::pair<std::list<PPN>::iterator, float>> valid;
-
-            // Collect valid pages
-            for (auto iter = currentList.begin(); iter != currentList.end();
-                 ++iter) {
-              float util = pMapper->getValidPages(*iter, superpage) / pageCount;
-
-              util = util / ((1.f - util) * pMapper->getAge(*iter, superpage));
-
-              valid.emplace_back(iter, util);
-            }
-
-            // Find min value
-            auto minIndex = currentList.end();
-            float min = std::numeric_limits<float>::max();
-
-            for (auto &iter : valid) {
-              if (min > iter.second) {
-                min = iter.second;
-                minIndex = iter.first;
-              }
-            }
-
-            // Get block ID from sorted list
-            list.emplace_back(*minIndex);
-            currentList.erase(minIndex);
-            fullBlockCount--;
-
-            return fstat;
-          };
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+        return costbenefitVictimSelection(idx, list);
+      };
 
       break;
     case Config::VictimSelectionMode::DChoice:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PPN> &list) {
-        CPU::Function fstat;
-        CPU::markFunction(fstat);
-
-        auto &currentList = fullBlocks[idx];
-
-        if (UNLIKELY(currentList.size() <= dchoice)) {
-          // Just return least erased blocks
-          list.emplace_back(currentList.front());
-
-          currentList.pop_front();
-          fullBlockCount--;
-        }
-
-        std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
-        std::vector<uint64_t> offsets;
-        std::vector<std::pair<std::list<PPN>::iterator, uint32_t>> valid;
-
-        // Select dchoice number of blocks from current full block list
-        offsets.reserve(dchoice);
-
-        while (offsets.size() < dchoice) {
-          uint64_t ridx = dist(mtengine);
-          bool unique = true;
-
-          for (auto &iter : offsets) {
-            if (iter == ridx) {
-              unique = false;
-
-              break;
-            }
-          }
-
-          if (unique) {
-            offsets.emplace_back(ridx);
-          }
-        }
-
-        std::sort(offsets.begin(), offsets.end());
-
-        // Get block ID
-        auto iter = currentList.begin();
-
-        for (uint64_t i = 0; i < currentList.size(); i++) {
-          if (i == offsets.at(valid.size())) {
-            valid.emplace_back(iter, pMapper->getValidPages(*iter, superpage));
-          }
-
-          ++iter;
-        }
-
-        // Greedy
-        auto minIndex = currentList.end();
-        uint32_t min = std::numeric_limits<uint32_t>::max();
-
-        for (auto &iter : valid) {
-          if (min > iter.second) {
-            min = iter.second;
-            minIndex = iter.first;
-          }
-        }
-
-        // Get block ID from sorted list
-        list.emplace_back(*minIndex);
-        currentList.erase(minIndex);
-        fullBlockCount--;
-
-        return fstat;
+      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+        return dchoiceVictimSelection(idx, list);
       };
 
       break;
@@ -204,10 +59,175 @@ GenericAllocator::GenericAllocator(ObjectData &o, Mapping::AbstractMapping *m)
 }
 
 GenericAllocator::~GenericAllocator() {
-  free(eraseCountList);
-  free(inUseBlockMap);
+  delete[] eraseCountList;
+  delete[] inUseBlockMap;
   delete[] freeBlocks;
   delete[] fullBlocks;
+}
+
+CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
+                                                      std::vector<PSBN> &list) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  auto &currentList = fullBlocks[idx];
+  std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
+
+  // Select one block from current full block list
+  uint64_t ridx = dist(mtengine);
+
+  // Get block ID from list
+  auto iter = currentList.begin();
+
+  // O(n)
+  std::advance(iter, ridx);
+
+  list.emplace_back(*iter);
+  currentList.erase(iter);
+  fullBlockCount--;
+
+  return fstat;
+}
+
+CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
+                                                      std::vector<PSBN> &list) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  auto &currentList = fullBlocks[idx];
+  std::vector<std::pair<std::list<PSBN>::iterator, uint32_t>> valid;
+
+  // Collect valid pages
+  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
+    valid.emplace_back(iter, pMapper->getValidPages(*iter));
+  }
+
+  // Find min value
+  auto minIndex = currentList.end();
+  uint32_t min = std::numeric_limits<uint32_t>::max();
+
+  for (auto &iter : valid) {
+    if (min > iter.second) {
+      min = iter.second;
+      minIndex = iter.first;
+    }
+  }
+
+  // Get block ID from sorted list
+  list.emplace_back(*minIndex);
+  currentList.erase(minIndex);
+  fullBlockCount--;
+
+  return fstat;
+}
+
+CPU::Function GenericAllocator::costbenefitVictimSelection(
+    uint64_t idx, std::vector<PSBN> &list) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  const uint32_t pageCount = object.config->getNANDStructure()->page;
+
+  auto &currentList = fullBlocks[idx];
+  std::vector<std::pair<std::list<PSBN>::iterator, float>> valid;
+
+  // Collect valid pages
+  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
+    float util = pMapper->getValidPages(*iter) / pageCount;
+
+    util = util / ((1.f - util) * pMapper->getAge(*iter));
+
+    valid.emplace_back(iter, util);
+  }
+
+  // Find min value
+  auto minIndex = currentList.end();
+  float min = std::numeric_limits<float>::max();
+
+  for (auto &iter : valid) {
+    if (min > iter.second) {
+      min = iter.second;
+      minIndex = iter.first;
+    }
+  }
+
+  // Get block ID from sorted list
+  list.emplace_back(*minIndex);
+  currentList.erase(minIndex);
+  fullBlockCount--;
+
+  return fstat;
+}
+
+CPU::Function GenericAllocator::dchoiceVictimSelection(
+    uint64_t idx, std::vector<PSBN> &list) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  auto &currentList = fullBlocks[idx];
+
+  if (UNLIKELY(currentList.size() <= dchoice)) {
+    // Just return least erased blocks
+    list.emplace_back(currentList.front());
+
+    currentList.pop_front();
+    fullBlockCount--;
+  }
+
+  std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
+  std::vector<uint64_t> offsets;
+  std::vector<std::pair<std::list<PSBN>::iterator, uint32_t>> valid;
+
+  // Select dchoice number of blocks from current full block list
+  offsets.reserve(dchoice);
+
+  while (offsets.size() < dchoice) {
+    uint64_t ridx = dist(mtengine);
+    bool unique = true;
+
+    for (auto &iter : offsets) {
+      if (iter == ridx) {
+        unique = false;
+
+        break;
+      }
+    }
+
+    if (unique) {
+      offsets.emplace_back(ridx);
+    }
+  }
+
+  std::sort(offsets.begin(), offsets.end());
+
+  // Get block ID
+  auto iter = currentList.begin();
+
+  for (uint64_t i = 0; i < currentList.size(); i++) {
+    if (i == offsets.at(valid.size())) {
+      valid.emplace_back(iter, pMapper->getValidPages(*iter));
+    }
+
+    ++iter;
+  }
+
+  // Greedy
+  auto minIndex = currentList.end();
+  uint32_t min = std::numeric_limits<uint32_t>::max();
+
+  for (auto &iter : valid) {
+    if (min > iter.second) {
+      min = iter.second;
+      minIndex = iter.first;
+    }
+  }
+
+  // Get block ID from sorted list
+  list.emplace_back(*minIndex);
+  currentList.erase(minIndex);
+  fullBlockCount--;
+
+  return fstat;
 }
 
 void GenericAllocator::initialize(const Parameter *p) {
@@ -219,17 +239,17 @@ void GenericAllocator::initialize(const Parameter *p) {
   freeBlockCount = totalSuperblock;
   fullBlockCount = 0;
 
-  if ((float)parallelism / totalSuperblock * 2.f >= gcThreshold) {
+  if ((float)parallelism / totalSuperblock * 2.f >= fgcThreshold) {
     warn("GC threshold cannot hold minimum blocks. Adjust threshold.");
 
-    gcThreshold = (float)(parallelism + 1) / totalSuperblock * 2.f;
+    fgcThreshold = (float)(parallelism + 1) / totalSuperblock * 2.f;
   }
 
   // Allocate data
-  eraseCountList = (uint32_t *)calloc(totalSuperblock, sizeof(uint32_t));
-  inUseBlockMap = (PPN *)calloc(parallelism, sizeof(PPN));
-  freeBlocks = new std::list<PPN>[parallelism]();
-  fullBlocks = new std::list<PPN>[parallelism]();
+  eraseCountList = new uint32_t[totalSuperblock]();
+  inUseBlockMap = new PSBN[parallelism]();
+  freeBlocks = new std::list<PSBN>[parallelism]();
+  fullBlocks = new std::list<PSBN>[parallelism]();
 
   lastAllocated = 0;
 
@@ -243,18 +263,14 @@ void GenericAllocator::initialize(const Parameter *p) {
   }
 }
 
-CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
+CPU::Function GenericAllocator::allocateBlock(PSBN &blockUsed) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  panic_if(np != superpage, "Invalid access from mapping.");
-
-  PPN idx = lastAllocated;
+  uint64_t idx = lastAllocated;
 
   if (LIKELY(blockUsed.isValid())) {
-    blockUsed /= np;
-
-    idx = param->getParallelismIndexFromPSPN(blockUsed);
+    idx = param->getParallelismIndexFromPSBN(blockUsed);
 
     panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
 
@@ -284,7 +300,7 @@ CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
 
   // Allocate new block
   inUseBlockMap[idx] = freeBlocks[idx].front();
-  blockUsed = inUseBlockMap[idx] * np;
+  blockUsed = inUseBlockMap[idx];
 
   freeBlocks[idx].pop_front();
   freeBlockCount--;
@@ -292,35 +308,35 @@ CPU::Function GenericAllocator::allocateBlock(PPN &blockUsed, uint64_t np) {
   return fstat;
 }
 
-PPN GenericAllocator::getBlockAt(PPN idx, uint64_t np) {
-  panic_if(np != superpage, "Invalid access from mapping.");
-
-  if (idx == InvalidPPN) {
-    PPN ppn = inUseBlockMap[lastAllocated++];
+PSBN GenericAllocator::getBlockAt(uint32_t idx) {
+  if (idx >= parallelism) {
+    auto psbn = inUseBlockMap[lastAllocated++];
 
     if (lastAllocated == parallelism) {
       lastAllocated = 0;
     }
 
-    return ppn * np;
+    return psbn;
   }
-
-  idx /= np;
 
   panic_if(idx >= parallelism, "Invalid parallelism index.");
 
-  return inUseBlockMap[idx] * np;
+  return inUseBlockMap[idx];
 }
 
-bool GenericAllocator::checkGCThreshold() {
-  return (float)freeBlockCount / totalSuperblock < gcThreshold;
+bool GenericAllocator::checkForegroundGCThreshold() {
+  return (float)freeBlockCount / totalSuperblock < fgcThreshold;
+}
+
+bool GenericAllocator::checkBackgroundGCThreshold() {
+  return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
 bool GenericAllocator::checkFreeBlockExist() {
   return freeBlockCount > parallelism;
 }
 
-void GenericAllocator::getVictimBlocks(std::vector<PPN> &victimList,
+void GenericAllocator::getVictimBlocks(std::vector<PSBN> &victimList,
                                        Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -336,14 +352,14 @@ void GenericAllocator::getVictimBlocks(std::vector<PPN> &victimList,
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void GenericAllocator::reclaimBlocks(PPN blockID, Event eid) {
+void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
   panic_if(blockID >= totalSuperblock, "Invalid block ID.");
 
   // Insert PPN to free block list
-  PPN idx = param->getParallelismIndexFromPSPN(blockID);
+  uint32_t idx = param->getParallelismIndexFromPSBN(blockID);
   uint32_t erased = ++eraseCountList[blockID];
   auto iter = freeBlocks[idx].begin();
 
@@ -412,7 +428,8 @@ void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_SCALAR(out, selectionMode);
-  BACKUP_SCALAR(out, gcThreshold);
+  BACKUP_SCALAR(out, fgcThreshold);
+  BACKUP_SCALAR(out, bgcThreshold);
   BACKUP_SCALAR(out, dchoice);
 }
 
@@ -457,7 +474,8 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_SCALAR(in, selectionMode);
-  RESTORE_SCALAR(in, gcThreshold);
+  RESTORE_SCALAR(in, fgcThreshold);
+  RESTORE_SCALAR(in, bgcThreshold);
   RESTORE_SCALAR(in, dchoice);
 }
 

@@ -51,7 +51,7 @@ void PageLevelMapping::physicalSuperPageStats(uint64_t &valid,
   }
 }
 
-CPU::Function PageLevelMapping::readMappingInternal(LPN lspn, PPN &pspn) {
+CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -64,22 +64,22 @@ CPU::Function PageLevelMapping::readMappingInternal(LPN lspn, PPN &pspn) {
   insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
 
   if (valid) {
-    pspn = entry;
+    pspn = static_cast<PSPN>(entry);
 
     // Update accessed time
-    PPN block = getSuperblockFromSPPN(pspn);
+    PSBN block = param.getPSBNFromPSPN(pspn);
     blockMetadata[block].insertedAt = getTick();
 
     insertMemoryAddress(false, makeMetadataAddress(block), 2);
   }
   else {
-    pspn = InvalidPPN;
+    pspn.invalidate();
   }
 
   return fstat;
 }
 
-CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
+CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
                                                      bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -93,10 +93,10 @@ CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
 
   if (valid) {
     // This is valid entry, invalidate block
-    PPN old = entry;
+    PSPN old = static_cast<PSPN>(entry);
 
-    PPN block = getSuperblockFromSPPN(old);
-    PPN page = getSuperpageFromSPPN(old);
+    PSBN block = param.getPSBNFromPSPN(old);
+    PSBN page = param.getPSBNFromPSPN(old);
 
     blockMetadata[block].validPages.reset(page);
 
@@ -106,17 +106,15 @@ CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
   }
 
   // Get block from allocated block pool
-  // Caution!! idx is physical page address, not superpage address
-  PPN idx = allocator->getBlockAt(InvalidPPN, param.superpage);
-
-  auto block = &blockMetadata[idx / param.superpage];
+  PSBN blockID = allocator->getBlockAt(std::numeric_limits<uint32_t>::max());
+  auto block = &blockMetadata[blockID];
 
   // Check we have to get new block
   if (block->nextPageToWrite == filparam->page) {
     // Get a new block
-    fstat += allocator->allocateBlock(idx, param.superpage);
+    fstat += allocator->allocateBlock(blockID);
 
-    block = &blockMetadata[idx / param.superpage];
+    block = &blockMetadata[blockID];
   }
 
   // Get new page
@@ -126,7 +124,7 @@ CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
       makeMetadataAddress(block->blockID) + 4 + block->nextPageToWrite / 8, 1,
       !init);
 
-  pspn = makeSPPN(block->blockID, block->nextPageToWrite++);
+  pspn = param.makePSPN(block->blockID, block->nextPageToWrite++);
 
   block->insertedAt = getTick();
   insertMemoryAddress(false, makeMetadataAddress(block->blockID), 4, !init);
@@ -140,7 +138,8 @@ CPU::Function PageLevelMapping::writeMappingInternal(LPN lspn, PPN &pspn,
   return fstat;
 }
 
-CPU::Function PageLevelMapping::invalidateMappingInternal(LPN lspn, PPN &pspn) {
+CPU::Function PageLevelMapping::invalidateMappingInternal(LSPN lspn,
+                                                          PSPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -153,19 +152,19 @@ CPU::Function PageLevelMapping::invalidateMappingInternal(LPN lspn, PPN &pspn) {
     // Hack: Prevent multiple memory accesses when using superpage
     insertMemoryAddress(true, makeTableAddress(lspn), entrySize);
 
-    // Invalidate entry
-    pspn = entry;
-
-    writeTableEntry(table, lspn, 0);
-
     // Invalidate block
-    PPN block = getSuperblockFromSPPN(pspn);
-    PPN page = getSuperpageFromSPPN(pspn);
+    PSBN block = param.getPSBNFromPSPN(pspn);
+    PSBN page = param.getPSBNFromPSPN(pspn);
 
     blockMetadata[block].validPages.reset(page);
     insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1);
 
     insertMemoryAddress(false, makeTableAddress(lspn), entrySize);
+
+    // Invalidate entry
+    pspn.invalidate();
+
+    writeTableEntry(table, lspn, 0);
   }
 
   return fstat;
@@ -182,7 +181,7 @@ void PageLevelMapping::initialize(AbstractFTL *f,
                               writeTableEntry, parseTableEntry, makeTableEntry);
 
     table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
-    blockMetadata = new BlockMetadata[totalPhysicalSuperBlocks]();
+    blockMetadata = new BlockMetadata<PSBN>[totalPhysicalSuperBlocks]();
 
     panic_if(!table, "Memory mapping for mapping table failed.");
     panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
@@ -205,7 +204,8 @@ void PageLevelMapping::initialize(AbstractFTL *f,
 
     // Fill metadata
     for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-      blockMetadata[i] = BlockMetadata(i, filparam->page);
+      blockMetadata[i] =
+          BlockMetadata<PSBN>(static_cast<PSBN>(i), filparam->page);
     }
 
     // Memory usage information
@@ -218,9 +218,9 @@ void PageLevelMapping::initialize(AbstractFTL *f,
 
   // Make free block pool in allocator
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
-    PPN tmp = InvalidPPN;
+    PSBN tmp;
 
-    allocator->allocateBlock(tmp, param.superpage);
+    allocator->allocateBlock(tmp);
   }
 
   // Perform filling
@@ -230,8 +230,7 @@ void PageLevelMapping::initialize(AbstractFTL *f,
   uint64_t valid;
   uint64_t invalid;
   Config::FillingType mode;
-  LPN _lpn;
-  PPN ppn;
+  PSPN pspn;
   std::vector<uint8_t> spare;
 
   debugprint(Log::DebugID::FTL_PageLevel, "Initialization started");
@@ -269,13 +268,13 @@ void PageLevelMapping::initialize(AbstractFTL *f,
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(i, ppn, true);
+      writeMappingInternal(static_cast<LSPN>(i), pspn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
-        _lpn = i * param.superpage + j;
+        auto _ppn = param.makePPN(pspn, j);
+        auto _lpn = i * param.superpage + j;
 
-        pFTL->writeSpare(ppn * param.superpage + j, (uint8_t *)&_lpn,
-                         sizeof(LPN));
+        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -286,15 +285,15 @@ void PageLevelMapping::initialize(AbstractFTL *f,
     std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
 
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      LPN lpn = dist(gen);
+      LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      writeMappingInternal(lpn, ppn, true);
+      writeMappingInternal(lspn, pspn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
-        _lpn = lpn * param.superpage + j;
+        auto _ppn = param.makePPN(pspn, j);
+        auto _lpn = i * param.superpage + j;
 
-        pFTL->writeSpare(ppn * param.superpage + j, (uint8_t *)&_lpn,
-                         sizeof(LPN));
+        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -303,13 +302,13 @@ void PageLevelMapping::initialize(AbstractFTL *f,
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(i, ppn, true);
+      writeMappingInternal(static_cast<LSPN>(i), pspn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
-        _lpn = i * param.superpage + j;
+        auto _ppn = param.makePPN(pspn, j);
+        auto _lpn = i * param.superpage + j;
 
-        pFTL->writeSpare(ppn * param.superpage + j, (uint8_t *)&_lpn,
-                         sizeof(LPN));
+        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -322,15 +321,15 @@ void PageLevelMapping::initialize(AbstractFTL *f,
     std::uniform_int_distribution<uint64_t> dist(0, nPagesToWarmup - 1);
 
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      LPN lpn = dist(gen);
+      LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      writeMappingInternal(lpn, ppn, true);
+      writeMappingInternal(lspn, pspn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
-        _lpn = lpn * param.superpage + j;
+        auto _ppn = param.makePPN(pspn, j);
+        auto _lpn = i * param.superpage + j;
 
-        pFTL->writeSpare(ppn * param.superpage + j, (uint8_t *)&_lpn,
-                         sizeof(LPN));
+        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -341,15 +340,15 @@ void PageLevelMapping::initialize(AbstractFTL *f,
     std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
 
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      LPN lpn = dist(gen);
+      LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      writeMappingInternal(lpn, ppn, true);
+      writeMappingInternal(lspn, pspn, true);
 
       for (uint32_t j = 0; j < param.superpage; j++) {
-        _lpn = lpn * param.superpage + j;
+        auto _ppn = param.makePPN(pspn, j);
+        auto _lpn = i * param.superpage + j;
 
-        pFTL->writeSpare(ppn * param.superpage + j, (uint8_t *)&_lpn,
-                         sizeof(LPN));
+        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -379,7 +378,7 @@ uint64_t PageLevelMapping::getPageUsage(LPN slpn, uint64_t nlp) {
 
   panic_if(slpn + nlp > totalLogicalSuperPages, "LPN out of range.");
 
-  for (LPN i = slpn; i < nlp; i++) {
+  for (uint64_t i = slpn; i < nlp; i++) {
     auto entry = readTableEntry(table, i);
     auto valid = parseTableEntry(entry);
 
@@ -392,20 +391,12 @@ uint64_t PageLevelMapping::getPageUsage(LPN slpn, uint64_t nlp) {
   return count * param.superpage;
 }
 
-uint32_t PageLevelMapping::getValidPages(PPN ppn, uint64_t np) {
-  panic_if(np != param.superpage, "Invalid access from block allocator.");
-
-  ppn /= np;
-
-  return (uint32_t)blockMetadata[getSuperblockFromSPPN(ppn)].validPages.count();
+uint32_t PageLevelMapping::getValidPages(PSBN psbn) {
+  return (uint32_t)blockMetadata[psbn].validPages.count();
 }
 
-uint64_t PageLevelMapping::getAge(PPN ppn, uint64_t np) {
-  panic_if(np != param.superpage, "Invalid access from block allocator.");
-
-  ppn /= np;
-
-  return blockMetadata[getSuperblockFromSPPN(ppn)].insertedAt;
+uint64_t PageLevelMapping::getAge(PSBN psbn) {
+  return blockMetadata[psbn].insertedAt;
 }
 
 void PageLevelMapping::readMapping(Request *cmd, Event eid) {
@@ -414,22 +405,24 @@ void PageLevelMapping::readMapping(Request *cmd, Event eid) {
 
   // Perform read translation
   LPN lpn = cmd->getLPN();
-  LPN lspn = lpn / param.superpage;
-  LPN superpageIndex = lpn % param.superpage;
-  PPN pspn = InvalidPPN;
+  LSPN lspn = param.getLSPNFromLPN(lpn);
+  uint32_t superpageIndex = param.getSuperpageIndexFromLPN(lpn);
+  PPN ppn;
+  PSPN pspn;
 
   requestedReadCount++;
   readLPNCount += param.superpage;
 
   fstat += readMappingInternal(lspn, pspn);
 
-  if (UNLIKELY(pspn == InvalidPPN)) {
+  if (UNLIKELY(!pspn.isValid())) {
     cmd->setResponse(Response::Unwritten);
-    cmd->setPPN(InvalidPPN);
   }
   else {
-    cmd->setPPN(pspn * param.superpage + superpageIndex);
+    ppn = param.makePPN(pspn, superpageIndex);
   }
+
+  cmd->setPPN(ppn);
 
   debugprint(Log::DebugID::FTL_PageLevel,
              "Read  | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
@@ -444,16 +437,16 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
 
   // Perform write translation
   LPN lpn = cmd->getLPN();
-  LPN lspn = lpn / param.superpage;
-  LPN superpageIndex = lpn % param.superpage;
-  PPN pspn = InvalidPPN;
+  LSPN lspn = param.getLSPNFromLPN(lpn);
+  uint32_t superpageIndex = param.getSuperpageIndexFromLPN(lpn);
+  PSPN pspn;
 
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
   fstat += writeMappingInternal(lspn, pspn);
 
-  cmd->setPPN(pspn * param.superpage + superpageIndex);
+  cmd->setPPN(param.makePPN(pspn, superpageIndex));
 
   debugprint(Log::DebugID::FTL_PageLevel,
              "Write | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
@@ -496,8 +489,7 @@ void PageLevelMapping::getCopyContext(CopyContext &copyctx, Event eid) {
       Request *req;
 
       for (uint j = 0; j < param.superpage; j++) {
-        PPN blockID = getBlockFromSuperblock(copyctx.sblockID, j);
-        req = new Request(makePPN(blockID, i));
+        req = new Request(param.makePPN(copyctx.sblockID, i, j));
         sReq.emplace_back(req);
       }
       copyctx.list.emplace_back(std::move(sReq));
@@ -511,7 +503,7 @@ void PageLevelMapping::getCopyContext(CopyContext &copyctx, Event eid) {
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
-void PageLevelMapping::markBlockErased(PPN blockId) {
+void PageLevelMapping::markBlockErased(PSBN blockId) {
   blockMetadata[blockId].nextPageToWrite = 0;
   blockMetadata[blockId].validPages.reset();
 }

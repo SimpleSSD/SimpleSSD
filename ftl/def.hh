@@ -30,7 +30,7 @@ struct Parameter {
   uint64_t totalLogicalBlocks;
   uint64_t totalLogicalPages;
   uint32_t parallelismLevel[4];  //!< Parallelism group list
-  uint64_t parallelism;
+  uint32_t parallelism;
   uint32_t superpage;  // pages per superpage
   uint32_t pageSize;
   uint8_t superpageLevel;  //!< Number of levels (1~N) included in superpage
@@ -72,7 +72,7 @@ struct Parameter {
   }
 
   //! Get Logical Superpage Number from Logical Page Number
-  inline LSPN getPSPNFromLPN(LPN lpn) const {
+  inline LSPN getLSPNFromLPN(LPN lpn) const {
     return static_cast<LSPN>(lpn / superpage);
   }
 
@@ -103,20 +103,25 @@ struct Parameter {
   }
 
   //! Make PPN from PSBN, SuperpageIndex and PageIndex
-  inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
-                     uint32_t pageIndex) const {
-    return static_cast<PPN>(psbn * superpage + superpageIndex +
-                            pageIndex * totalPhysicalBlocks);
+  inline PPN makePPN(PSBN psbn, uint32_t pageIndex,
+                     uint32_t superpageIndex) const {
+    return static_cast<PPN>(psbn * superpage + pageIndex * totalPhysicalBlocks +
+                            superpageIndex);
   }
 
-  //! Get parallelism index from PPN
-  inline uint64_t getParallelismIndexFromPPN(PPN ppn) const {
-    return ppn % parallelism;
+  //! Make PPN from PSPN and SuperpageIndex
+  inline PPN makePPN(PSPN pspn, uint32_t superpageIndex) const {
+    return static_cast<PPN>(pspn * superpage + superpageIndex);
   }
 
-  //! Get parallelism index from PSPN
-  inline uint64_t getParallelismIndexFromPSPN(PSPN pspn) const {
-    return pspn % (parallelism / superpage);
+  //! Get parallelism index from PBN
+  inline uint32_t getParallelismIndexFromPBN(PBN pbn) const {
+    return pbn % parallelism;
+  }
+
+  //! Get parallelism index from PSBN
+  inline uint32_t getParallelismIndexFromPSBN(PSBN psbn) const {
+    return psbn % (parallelism / superpage);
   }
 };
 
@@ -199,11 +204,12 @@ class Request {
   void createCheckpoint(std::ostream &out) const noexcept;
   void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
 };
+
 // list of request targeting same superpage
 using SuperRequest = std::vector<Request *>;
 
 struct CopyContext {
-  PPN sblockID;  // superblockID
+  PSBN sblockID;
 
   std::vector<SuperRequest> list;
   std::vector<SuperRequest>::iterator iter;

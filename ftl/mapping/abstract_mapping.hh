@@ -27,16 +27,20 @@ class AbstractAllocator;
 
 namespace Mapping {
 
+template <class T>
 struct BlockMetadata {
-  PBN blockID;
+  T blockID;
 
   uint32_t nextPageToWrite;
   uint64_t insertedAt;
   Bitset validPages;
 
   BlockMetadata() : nextPageToWrite(0), insertedAt(0) {}
-  BlockMetadata(PBN id, uint32_t s)
-      : blockID(id), nextPageToWrite(0), insertedAt(0), validPages(s) {}
+  BlockMetadata(T id, uint32_t s)
+      : blockID(std::forward<T>(id)),
+        nextPageToWrite(0),
+        insertedAt(0),
+        validPages(s) {}
 };
 
 class AbstractMapping : public Object {
@@ -235,18 +239,16 @@ class AbstractMapping : public Object {
   /**
    * Return valid page count of specific block.
    *
-   * \param[in] ppn Physical page address.
-   * \param[in] np  Number of pages in mapping granularity.
+   * \param[in] psbn  Physical Superblock Number.
    */
-  virtual uint32_t getValidPages(PPN ppn, uint64_t np = 1) = 0;
+  virtual uint32_t getValidPages(PSBN psbn) = 0;
 
   /**
    * Return age (inserted time) of specific block.
    *
-   * \param[in] ppn Physical page address.
-   * \param[in] np  Number of pages in mapping granularity.
+   * \param[in] psbn  Physical Superblock Number.
    */
-  virtual uint64_t getAge(PPN ppn, uint64_t np = 1) = 0;
+  virtual uint64_t getAge(PSBN psbn) = 0;
 
   /* Functions for AbstractFTL */
 
@@ -342,7 +344,7 @@ class AbstractMapping : public Object {
    *
    * fatal: Operation is not defined yet.
    */
-  virtual void markBlockErased(PPN) = 0;
+  virtual void markBlockErased(PSBN) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
