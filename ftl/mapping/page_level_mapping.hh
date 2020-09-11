@@ -35,7 +35,6 @@ class PageLevelMapping : public AbstractMapping {
   ParseEntryFunction parseTableEntry;
   MakeEntryFunction makeTableEntry;
 
-  void physicalSuperPageStats(uint64_t &, uint64_t &);
   CPU::Function readMappingInternal(LSPN, PSPN &);
   CPU::Function writeMappingInternal(LSPN, PSPN &, bool = false);
   CPU::Function invalidateMappingInternal(LSPN, PSPN &);
@@ -61,9 +60,12 @@ class PageLevelMapping : public AbstractMapping {
 
   void readMapping(Request *, Event) override;
   void writeMapping(Request *, Event) override;
+  void writeMapping(LSPN, PSPN &) override;
   void invalidateMapping(Request *, Event) override;
 
   void getMappingSize(uint64_t *, uint64_t * = nullptr) override;
+
+  void getPageStatistics(uint64_t &, uint64_t &) override;
 
   void getCopyContext(CopyContext &, Event) override;
   void markBlockErased(PSBN) override;

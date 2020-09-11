@@ -31,26 +31,6 @@ PageLevelMapping::~PageLevelMapping() {
   delete[] blockMetadata;
 }
 
-void PageLevelMapping::physicalSuperPageStats(uint64_t &valid,
-                                              uint64_t &invalid) {
-  valid = 0;
-  invalid = 0;
-
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    auto &block = blockMetadata[i];
-
-    if (block.nextPageToWrite > 0) {
-      valid += block.validPages.count();
-
-      for (uint32_t i = 0; i < block.nextPageToWrite; i++) {
-        if (!block.validPages.test(i)) {
-          ++invalid;
-        }
-      }
-    }
-  }
-}
-
 CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -174,47 +154,44 @@ void PageLevelMapping::initialize(AbstractFTL *f,
                                   BlockAllocator::AbstractAllocator *a) {
   AbstractMapping::initialize(f, a);
 
-  // Initialize memory
-  {
-    // Allocate table and block metadata
-    entrySize = makeEntrySize(totalLogicalSuperPages, 1, readTableEntry,
-                              writeTableEntry, parseTableEntry, makeTableEntry);
+  // Allocate table and block metadata
+  entrySize = makeEntrySize(totalLogicalSuperPages, 1, readTableEntry,
+                            writeTableEntry, parseTableEntry, makeTableEntry);
 
-    table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
-    blockMetadata = new BlockMetadata<PSBN>[totalPhysicalSuperBlocks]();
+  table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
+  blockMetadata = new BlockMetadata<PSBN>[totalPhysicalSuperBlocks]();
 
-    panic_if(!table, "Memory mapping for mapping table failed.");
-    panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
+  panic_if(!table, "Memory mapping for mapping table failed.");
+  panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
 
-    // Valid page bits (packed) + 2byte clock + 2byte page offset
-    metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
+  // Valid page bits (packed) + 2byte clock + 2byte page offset
+  metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
 
-    metadataBaseAddress = object.memory->allocate(
-        totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevelMapping::BlockMeta");
+  metadataBaseAddress = object.memory->allocate(
+      totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
+      "FTL::Mapping::PageLevelMapping::BlockMeta");
 
-    tableBaseAddress = object.memory->allocate(
-        totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevelMapping::Table", true);
+  tableBaseAddress = object.memory->allocate(
+      totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
+      "FTL::Mapping::PageLevelMapping::Table", true);
 
-    // Retry allocation
-    tableBaseAddress = object.memory->allocate(
-        totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
-        "FTL::Mapping::PageLevelMapping::Table");
+  // Retry allocation
+  tableBaseAddress = object.memory->allocate(
+      totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
+      "FTL::Mapping::PageLevelMapping::Table");
 
-    // Fill metadata
-    for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-      blockMetadata[i] =
-          BlockMetadata<PSBN>(static_cast<PSBN>(i), filparam->page);
-    }
-
-    // Memory usage information
-    debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
-    debugprint(Log::DebugID::FTL_PageLevel, " Mapping table: %" PRIu64,
-               totalLogicalSuperPages * entrySize);
-    debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
-               totalPhysicalSuperBlocks * metadataEntrySize);
+  // Fill metadata
+  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
+    blockMetadata[i] =
+        BlockMetadata<PSBN>(static_cast<PSBN>(i), filparam->page);
   }
+
+  // Memory usage information
+  debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
+  debugprint(Log::DebugID::FTL_PageLevel, " Mapping table: %" PRIu64,
+             totalLogicalSuperPages * entrySize);
+  debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
+             totalPhysicalSuperBlocks * metadataEntrySize);
 
   // Make free block pool in allocator
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
@@ -222,151 +199,6 @@ void PageLevelMapping::initialize(AbstractFTL *f,
 
     allocator->allocateBlock(tmp);
   }
-
-  // Perform filling
-  uint64_t nPagesToWarmup;
-  uint64_t nPagesToInvalidate;
-  uint64_t maxPagesBeforeGC;
-  uint64_t valid;
-  uint64_t invalid;
-  Config::FillingType mode;
-  PSPN pspn;
-  std::vector<uint8_t> spare;
-
-  debugprint(Log::DebugID::FTL_PageLevel, "Initialization started");
-
-  nPagesToWarmup = (uint64_t)(
-      totalLogicalSuperPages *
-      readConfigFloat(Section::FlashTranslation, Config::Key::FillRatio));
-  nPagesToInvalidate = (uint64_t)(
-      totalLogicalSuperPages * readConfigFloat(Section::FlashTranslation,
-                                               Config::Key::InvalidFillRatio));
-  mode = (Config::FillingType)readConfigUint(Section::FlashTranslation,
-                                             Config::Key::FillingMode);
-  maxPagesBeforeGC = (uint64_t)(
-      filparam->page * (totalPhysicalSuperBlocks *
-                        (1.f - readConfigFloat(Section::FlashTranslation,
-                                               Config::Key::GCThreshold))));
-
-  if (nPagesToWarmup + nPagesToInvalidate > maxPagesBeforeGC) {
-    warn("ftl: Too high filling ratio. Adjusting invalidPageRatio.");
-    nPagesToInvalidate = maxPagesBeforeGC - nPagesToWarmup;
-  }
-
-  debugprint(Log::DebugID::FTL_PageLevel, "Total logical pages: %" PRIu64,
-             totalLogicalSuperPages);
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "Total logical pages to fill: %" PRIu64 " (%.2f %%)",
-             nPagesToWarmup, nPagesToWarmup * 100.f / totalLogicalSuperPages);
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "Total invalidated pages to create: %" PRIu64 " (%.2f %%)",
-             nPagesToInvalidate,
-             nPagesToInvalidate * 100.f / totalLogicalSuperPages);
-
-  // Step 1. Filling
-  if (mode == Config::FillingType::SequentialSequential ||
-      mode == Config::FillingType::SequentialRandom) {
-    // Sequential
-    for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      writeMappingInternal(static_cast<LSPN>(i), pspn, true);
-
-      for (uint32_t j = 0; j < param.superpage; j++) {
-        auto _ppn = param.makePPN(pspn, j);
-        auto _lpn = i * param.superpage + j;
-
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
-      }
-    }
-  }
-  else {
-    // Random
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
-
-    for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      LSPN lspn = static_cast<LSPN>(dist(gen));
-
-      writeMappingInternal(lspn, pspn, true);
-
-      for (uint32_t j = 0; j < param.superpage; j++) {
-        auto _ppn = param.makePPN(pspn, j);
-        auto _lpn = i * param.superpage + j;
-
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
-      }
-    }
-  }
-
-  // Step 2. Invalidating
-  if (mode == Config::FillingType::SequentialSequential) {
-    // Sequential
-    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      writeMappingInternal(static_cast<LSPN>(i), pspn, true);
-
-      for (uint32_t j = 0; j < param.superpage; j++) {
-        auto _ppn = param.makePPN(pspn, j);
-        auto _lpn = i * param.superpage + j;
-
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
-      }
-    }
-  }
-  else if (mode == Config::FillingType::SequentialRandom) {
-    // Random
-    // We can successfully restrict range of LPN to create exact number of
-    // invalid pages because we wrote in sequential mannor in step 1.
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist(0, nPagesToWarmup - 1);
-
-    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      LSPN lspn = static_cast<LSPN>(dist(gen));
-
-      writeMappingInternal(lspn, pspn, true);
-
-      for (uint32_t j = 0; j < param.superpage; j++) {
-        auto _ppn = param.makePPN(pspn, j);
-        auto _lpn = i * param.superpage + j;
-
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
-      }
-    }
-  }
-  else {
-    // Random
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dist(0, totalLogicalSuperPages - 1);
-
-    for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      LSPN lspn = static_cast<LSPN>(dist(gen));
-
-      writeMappingInternal(lspn, pspn, true);
-
-      for (uint32_t j = 0; j < param.superpage; j++) {
-        auto _ppn = param.makePPN(pspn, j);
-        auto _lpn = i * param.superpage + j;
-
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
-      }
-    }
-  }
-
-  // Report
-  physicalSuperPageStats(valid, invalid);
-  debugprint(Log::DebugID::FTL_PageLevel, "Filling finished. Page status:");
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "  Total valid physical pages: %" PRIu64
-             " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
-             valid, valid * 100.f / totalLogicalSuperPages, nPagesToWarmup,
-             (int64_t)(valid - nPagesToWarmup));
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "  Total invalid physical pages: %" PRIu64
-             " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
-             invalid, invalid * 100.f / totalLogicalSuperPages,
-             nPagesToInvalidate, (int64_t)(invalid - nPagesToInvalidate));
-  debugprint(Log::DebugID::FTL_PageLevel, "Initialization finished");
 }
 
 uint64_t PageLevelMapping::getPageUsage(LPN slpn, uint64_t nlp) {
@@ -455,6 +287,10 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
+void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn) {
+  writeMappingInternal(lspn, pspn, true);
+}
+
 void PageLevelMapping::invalidateMapping(Request *cmd, Event eid) {
   // TODO: consider fullsize of request -- if fullsize is smaller than superpage
   // we should not erase mapping
@@ -469,6 +305,25 @@ void PageLevelMapping::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
   if (pre) {
     *pre = param.superpage;
+  }
+}
+
+void PageLevelMapping::getPageStatistics(uint64_t &valid, uint64_t &invalid) {
+  valid = 0;
+  invalid = 0;
+
+  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
+    auto &block = blockMetadata[i];
+
+    if (block.nextPageToWrite > 0) {
+      valid += block.validPages.count();
+
+      for (uint32_t i = 0; i < block.nextPageToWrite; i++) {
+        if (!block.validPages.test(i)) {
+          ++invalid;
+        }
+      }
+    }
   }
 }
 
