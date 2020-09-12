@@ -92,10 +92,14 @@ void AdvancedGC::requestArrived(bool isread, uint32_t bytes) {
 
 void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
   NaiveGC::createCheckpoint(out);
+
+  BACKUP_EVENT(out, eventBackgroundGC);
 }
 
 void AdvancedGC::restoreCheckpoint(std::istream &in) noexcept {
   NaiveGC::restoreCheckpoint(in);
+
+  RESTORE_EVENT(in, eventBackgroundGC);
 }
 
 }  // namespace SimpleSSD::FTL::GC
