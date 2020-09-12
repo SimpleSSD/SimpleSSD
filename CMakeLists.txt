@@ -167,6 +167,7 @@ set(SRC_FTL_BASE
 set(SRC_FTL_GC
   ftl/gc/abstract_gc.cc
   ftl/gc/naive.cc
+  ftl/gc/advanced.cc
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
