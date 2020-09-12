@@ -116,7 +116,7 @@ bool PageLevelFTL::write(Request *cmd) {
     debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
                cmd->getTag());
 
-    stalledRequestList.push_back(cmd);
+    stalledRequestList.emplace_back(cmd);
 
     ftlobject.pGC->triggerForeground();
 
@@ -474,11 +474,24 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
+  size = stalledRequestList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : stalledRequestList) {
+    auto tag = iter->getTag();
+
+    BACKUP_SCALAR(out, tag);
+  }
+
   BACKUP_SCALAR(out, stat);
   BACKUP_EVENT(out, eventReadSubmit);
   BACKUP_EVENT(out, eventReadDone);
   BACKUP_EVENT(out, eventWriteSubmit);
   BACKUP_EVENT(out, eventWriteDone);
+  BACKUP_EVENT(out, eventPartialReadSubmit);
+  BACKUP_EVENT(out, eventPartialReadDone);
+  BACKUP_EVENT(out, eventPartialWriteSubmit);
+  BACKUP_EVENT(out, eventPartialWriteDone);
   BACKUP_EVENT(out, eventInvalidateSubmit);
 }
 
@@ -527,11 +540,25 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
     rmwList.emplace(tag, cur);
   }
 
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    uint64_t tag;
+
+    RESTORE_SCALAR(in, tag);
+
+    stalledRequestList.emplace_back(getRequest(tag));
+  }
+
   RESTORE_SCALAR(in, stat);
   RESTORE_EVENT(in, eventReadSubmit);
   RESTORE_EVENT(in, eventReadDone);
   RESTORE_EVENT(in, eventWriteSubmit);
   RESTORE_EVENT(in, eventWriteDone);
+  RESTORE_EVENT(in, eventPartialReadSubmit);
+  RESTORE_EVENT(in, eventPartialReadDone);
+  RESTORE_EVENT(in, eventPartialWriteSubmit);
+  RESTORE_EVENT(in, eventPartialWriteDone);
   RESTORE_EVENT(in, eventInvalidateSubmit);
 }
 
