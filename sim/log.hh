@@ -45,6 +45,7 @@ class Log {
     FTL_PageLevel,
     FTL_NaiveGC,
     FTL_AdvancedGC,
+    FTL_PreemptibleGC,
     FIL,
     FIL_PALOLD,
   };
