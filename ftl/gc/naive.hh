@@ -49,6 +49,7 @@ class NaiveGC : public AbstractGC {
     uint64_t min_penalty;
     uint64_t max_penalty;
     uint64_t penalty_count;
+    uint64_t affected_requests;
   } stat;
 
   // For penalty calculation

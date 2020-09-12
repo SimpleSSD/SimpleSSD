@@ -82,6 +82,7 @@ void NaiveGC::requestArrived(bool, uint32_t) {
   if (state >= State::Foreground) {
     // GC in-progress
     firstRequestArrival = MIN(firstRequestArrival, getTick());
+    stat.affected_requests++;
   }
 }
 
