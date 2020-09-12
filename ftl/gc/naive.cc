@@ -117,12 +117,7 @@ void NaiveGC::gc_start(uint64_t now) {
     }
   }
   else {
-    // Triggered GC completed
-    debugprint(logid,
-               "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-               beginAt, now, now - beginAt);
-
-    state = State::Idle;
+    gc_checkDone(now);
 
     // Calculate penalty
     if (firstRequestArrival < now) {
@@ -136,14 +131,23 @@ void NaiveGC::gc_start(uint64_t now) {
       firstRequestArrival = std::numeric_limits<uint64_t>::max();
     }
 
-    // Check threshold
-    triggerForeground();
-
     if (state == State::Idle) {
       // Not triggered
       ftlobject.pFTL->restartStalledRequests();
     }
   }
+}
+
+void NaiveGC::gc_checkDone(uint64_t now) {
+  // Triggered GC completed
+  debugprint(logid,
+             "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+             beginAt, now, now - beginAt);
+
+  state = State::Idle;
+
+  // Check threshold
+  triggerForeground();
 }
 
 void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {

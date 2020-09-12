@@ -17,8 +17,8 @@ namespace SimpleSSD::FTL::GC {
 
 enum class State : uint32_t {
   /* Idle states */
-  Idle,        // GC is not triggered
-  Pauesd,      // GC has been suepended
+  Idle,    // GC is not triggered
+  Pauesd,  // GC has been suepended
 
   /* Active states */
   Foreground,  // GC triggered as foreground
@@ -66,6 +66,7 @@ class NaiveGC : public AbstractGC {
 
   Event eventStart;
   virtual void gc_start(uint64_t);
+  virtual void gc_checkDone(uint64_t);
 
   Event eventDoRead;
   virtual void gc_doRead(uint64_t, uint64_t);

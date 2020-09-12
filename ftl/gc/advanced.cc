@@ -60,58 +60,23 @@ void AdvancedGC::gc_trigger() {
   }
 }
 
-void AdvancedGC::gc_start(uint64_t now) {
-  if (LIKELY(blockList.size() > 0)) {
-    // Parallel submission
-    int32_t n =
-        param->parallelismLevel[0] / param->superpage - getSessionCount();
-
-    panic_if(n < 0, "Copy session list corrupted");
-
-    for (int32_t count = 0; count < n && blockList.size() > 0; count++) {
-      // Start session
-      auto tag = startCopySession(std::move(blockList.front()));
-      blockList.pop_front();
-
-      // Do read
-      scheduleNow(eventDoRead, tag);
-    }
+void AdvancedGC::gc_checkDone(uint64_t now) {
+  // Triggered GC completed
+  if (state == State::Foreground) {
+    debugprint(logid,
+               "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+               beginAt, now, now - beginAt);
   }
-  else {
-    // Triggered GC completed
-    if (state == State::Foreground) {
-      debugprint(logid,
-                 "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 beginAt, now, now - beginAt);
-    }
-    else if (state == State::Background) {
-      debugprint(logid,
-                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 beginAt, now, now - beginAt);
-    }
-
-    state = State::Idle;
-
-    // Calculate penalty
-    if (firstRequestArrival < now) {
-      auto penalty = now - firstRequestArrival;
-
-      stat.penalty_count++;
-      stat.avg_penalty += penalty;
-      stat.min_penalty = MIN(stat.min_penalty, penalty);
-      stat.max_penalty = MAX(stat.max_penalty, penalty);
-
-      firstRequestArrival = std::numeric_limits<uint64_t>::max();
-    }
-
-    // Check threshold
-    triggerBackground(now);
-
-    if (state == State::Idle) {
-      // Not triggered
-      ftlobject.pFTL->restartStalledRequests();
-    }
+  else if (state == State::Background) {
+    debugprint(logid,
+               "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+               beginAt, now, now - beginAt);
   }
+
+  state = State::Idle;
+
+  // Check threshold
+  triggerBackground(now);
 }
 
 void AdvancedGC::requestArrived(bool isread, uint32_t bytes) {

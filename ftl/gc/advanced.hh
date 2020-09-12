@@ -22,7 +22,8 @@ class AdvancedGC : public NaiveGC {
   void triggerBackground(uint64_t);
 
   void gc_trigger() override;
-  void gc_start(uint64_t) override;
+  // void gc_start(uint64_t) override;
+  void gc_checkDone(uint64_t) override;
   // void gc_doRead(uint64_t, uint64_t) override;
   // void gc_doTranslate(uint64_t, uint64_t) override;
   // void gc_doWrite(uint64_t, uint64_t) override;
