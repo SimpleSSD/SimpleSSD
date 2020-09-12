@@ -25,13 +25,11 @@ class AbstractGC : public Object {
 
   const Parameter *param;
 
- private:
   uint64_t requestCounter;
   std::unordered_map<uint64_t, CopyContext> ongoingCopy;
 
   inline uint64_t getGCTag() noexcept { return requestCounter++; }
 
- protected:
   inline uint64_t startCopySession(CopyContext &&ctx) noexcept {
     auto ret = ongoingCopy.emplace(getGCTag(), std::move(ctx));
 

@@ -19,7 +19,7 @@ class AdvancedGC : public NaiveGC {
   uint64_t idletime;
 
   Event eventBackgroundGC;
-  void triggerBackground(uint64_t);
+  virtual void triggerBackground(uint64_t);
 
   void gc_trigger() override;
   void gc_checkDone(uint64_t) override;

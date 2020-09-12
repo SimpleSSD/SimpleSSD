@@ -120,16 +120,7 @@ void NaiveGC::gc_start(uint64_t now) {
     gc_checkDone(now);
 
     // Calculate penalty
-    if (firstRequestArrival < now) {
-      auto penalty = now - firstRequestArrival;
-
-      stat.penalty_count++;
-      stat.avg_penalty += penalty;
-      stat.min_penalty = MIN(stat.min_penalty, penalty);
-      stat.max_penalty = MAX(stat.max_penalty, penalty);
-
-      firstRequestArrival = std::numeric_limits<uint64_t>::max();
-    }
+    updatePenalty(now);
 
     if (state == State::Idle) {
       // Not triggered

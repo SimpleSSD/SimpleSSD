@@ -18,7 +18,7 @@ namespace SimpleSSD::FTL::GC {
 enum class State : uint32_t {
   /* Idle states */
   Idle,    // GC is not triggered
-  Pauesd,  // GC has been suepended
+  Paused,  // GC has been suepended
 
   /* Active states */
   Foreground,  // GC triggered as foreground
@@ -59,6 +59,19 @@ class NaiveGC : public AbstractGC {
                                     uint32_t pageIndex) {
     return bufferBaseAddress +
            (superpageIndex * superpage + pageIndex) * pageSize;
+  }
+
+  inline void updatePenalty(uint64_t now) {
+    if (firstRequestArrival < now) {
+      auto penalty = now - firstRequestArrival;
+
+      stat.penalty_count++;
+      stat.avg_penalty += penalty;
+      stat.min_penalty = MIN(stat.min_penalty, penalty);
+      stat.max_penalty = MAX(stat.max_penalty, penalty);
+
+      firstRequestArrival = std::numeric_limits<uint64_t>::max();
+    }
   }
 
   Event eventTrigger;

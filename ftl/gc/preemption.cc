@@ -13,11 +13,129 @@
 namespace SimpleSSD::FTL::GC {
 
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : AdvancedGC(o, fo, f) {
+    : AdvancedGC(o, fo, f),
+      pendingFIL(0),
+      preemptRequestedAt(std::numeric_limits<uint64_t>::max()) {
   logid = Log::DebugID::FTL_PreemptibleGC;
 }
 
 PreemptibleGC::~PreemptibleGC() {}
+
+void PreemptibleGC::triggerBackground(uint64_t now) {
+  if (ftlobject.pAllocator->checkBackgroundGCThreshold() &&
+      state < State::Foreground) {
+    if (state == State::Paused) {
+      resumePaused();
+    }
+    else {
+      scheduleNow(eventTrigger);
+    }
+
+    state = State::Background;
+    beginAt = now;
+  }
+}
+
+void PreemptibleGC::triggerForeground() {
+  if (ftlobject.pAllocator->checkForegroundGCThreshold() &&
+      state < State::Foreground) {
+    if (state == State::Paused) {
+      resumePaused();
+    }
+    else {
+      scheduleNow(eventTrigger);
+    }
+
+    state = State::Foreground;
+    beginAt = getTick();
+  }
+}
+
+void PreemptibleGC::resumePaused() {
+  debugprint(logid, "GC    | Resume from preempted state");
+
+  for (auto &iter : ongoingCopy) {
+    auto &block = iter.second;
+
+    panic_if(block.writeCounter != 0 || block.readCounter != 0,
+             "Unexpected GC preemption state");
+
+    if (block.pageWriteIndex == block.copyList.size()) {
+      // Preempted before erase
+      scheduleNow(eventDoErase, iter.first);
+    }
+    else if (block.pageWriteIndex == block.pageReadIndex) {
+      // Preempted before read
+      scheduleNow(eventDoRead, iter.first);
+    }
+    else {
+      panic("Unexpected GC preemption state");
+    }
+  }
+}
+
+void PreemptibleGC::gc_checkDone(uint64_t now) {
+  // Maybe GC is completed while waiting for pending requests
+  checkPreemptible();
+
+  AdvancedGC::gc_checkDone(now);
+}
+
+void PreemptibleGC::gc_doRead(uint64_t now, uint64_t tag) {
+  if (LIKELY(!preemptRequested())) {
+    AdvancedGC::gc_doRead(now, tag);
+
+    increasePendingFIL();
+  }
+}
+
+void PreemptibleGC::gc_doTranslate(uint64_t now, uint64_t tag) {
+  decreasePendingFIL();
+
+  AdvancedGC::gc_doTranslate(now, tag);
+}
+
+void PreemptibleGC::gc_doWrite(uint64_t now, uint64_t tag) {
+  AdvancedGC::gc_doWrite(now, tag);
+
+  increasePendingFIL();
+}
+
+void PreemptibleGC::gc_doErase(uint64_t now, uint64_t tag) {
+  decreasePendingFIL();
+
+  auto &block = findCopySession(tag);
+
+  if (UNLIKELY(preemptRequested() && block.writeCounter == 1)) {
+    block.writeCounter = 0;
+
+    return;
+  }
+
+  AdvancedGC::gc_doErase(now, tag);
+
+  if (block.writeCounter == 0) {
+    increasePendingFIL();
+  }
+}
+
+void PreemptibleGC::gc_done(uint64_t now, uint64_t tag) {
+  decreasePendingFIL();
+
+  AdvancedGC::gc_done(now, tag);
+}
+
+void PreemptibleGC::requestArrived(bool isread, uint32_t bytes) {
+  // Penalty calculation & Background GC invocation
+  PreemptibleGC::requestArrived(isread, bytes);
+
+  // Request preemption
+  if (state >= State::Foreground && !preemptRequested()) {
+    preemptRequestedAt = getTick();
+
+    debugprint(logid, "GC    | Preemption requested");
+  }
+}
 
 void PreemptibleGC::createCheckpoint(std::ostream &out) const noexcept {
   AdvancedGC::createCheckpoint(out);
