@@ -47,9 +47,10 @@ void Filling::start() noexcept {
   mode = (Config::FillingType)readConfigUint(Section::FlashTranslation,
                                              Config::Key::FillingMode);
   maxPagesBeforeGC = (uint64_t)(
-      filparam->page * (totalPhysicalSuperBlocks *
-                        (1.f - readConfigFloat(Section::FlashTranslation,
-                                               Config::Key::FGCThreshold))));
+      totalPhysicalSuperBlocks *
+      readConfigFloat(Section::FlashTranslation, Config::Key::BGCThreshold));
+  maxPagesBeforeGC = totalPhysicalSuperBlocks - maxPagesBeforeGC;
+  maxPagesBeforeGC *= filparam->page;
 
   if (nPagesToWarmup + nPagesToInvalidate > maxPagesBeforeGC) {
     warn("ftl: Too high filling ratio. Adjusting invalidPageRatio.");
