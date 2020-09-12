@@ -15,7 +15,9 @@
 namespace SimpleSSD::FTL::GC {
 
 NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : AbstractGC(o, fo, f), beginAt(std::numeric_limits<uint64_t>::max()) {
+    : AbstractGC(o, fo, f),
+      beginAt(std::numeric_limits<uint64_t>::max()),
+      firstRequestArrival(std::numeric_limits<uint64_t>::max()) {
   auto pagesInBlock = object.config->getNANDStructure()->page;
   auto param = ftlobject.pMapping->getInfo();
 
@@ -73,6 +75,7 @@ void NaiveGC::triggerForeground() {
 
 void NaiveGC::requestArrived(bool, uint32_t) {
   // Naive GC algorithm does not perform background GC. Ignore.
+  firstRequestArrival = MIN(firstRequestArrival, getTick());
 }
 
 bool NaiveGC::checkWriteStall() {
@@ -113,6 +116,18 @@ void NaiveGC::gc_start(uint64_t now) {
                beginAt, now, now - beginAt);
 
     beginAt = std::numeric_limits<uint64_t>::max();
+
+    // Calculate penalty
+    if (firstRequestArrival < now) {
+      auto penalty = now - firstRequestArrival;
+
+      stat.penalty_count++;
+      stat.avg_penalty += penalty;
+      stat.min_penalty = MIN(stat.min_penalty, penalty);
+      stat.max_penalty = MAX(stat.max_penalty, penalty);
+
+      firstRequestArrival = std::numeric_limits<uint64_t>::max();
+    }
 
     // Check threshold
     triggerForeground();
@@ -293,12 +308,20 @@ void NaiveGC::getStatList(std::vector<Stat> &list,
   list.emplace_back(prefix + "foreground", "Total Foreground GC count");
   list.emplace_back(prefix + "block", "Total reclaimed blocks in GC");
   list.emplace_back(prefix + "copy", "Total valid page copy");
+  list.emplace_back(prefix + "penalty.average", "Averagy penalty / GC");
+  list.emplace_back(prefix + "penalty.min", "Minimum penalty");
+  list.emplace_back(prefix + "penalty.max", "Maximum penalty");
+  list.emplace_back(prefix + "penalty.count", "# penalty calculation");
 }
 
 void NaiveGC::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)stat.fgcCount);
   values.push_back((double)stat.gcErasedBlocks);
   values.push_back((double)stat.gcCopiedPages);
+  values.push_back((double)stat.avg_penalty / stat.penalty_count);
+  values.push_back((double)stat.min_penalty);
+  values.push_back((double)stat.max_penalty);
+  values.push_back((double)stat.penalty_count);
 }
 
 void NaiveGC::resetStatValues() noexcept {
@@ -316,6 +339,8 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_SCALAR(out, stat);
+  BACKUP_SCALAR(out, firstRequestArrival);
+
   BACKUP_EVENT(out, eventTrigger);
   BACKUP_EVENT(out, eventStart);
   BACKUP_EVENT(out, eventDoRead);
@@ -340,6 +365,8 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_SCALAR(in, stat);
+  RESTORE_SCALAR(in, firstRequestArrival);
+
   RESTORE_EVENT(in, eventTrigger);
   RESTORE_EVENT(in, eventStart);
   RESTORE_EVENT(in, eventDoRead);

@@ -26,9 +26,20 @@ class NaiveGC : public AbstractGC {
 
   struct {
     uint64_t fgcCount;        // Foreground GC invoked count
+    uint64_t bgcCount;        // Background GC invoked count
     uint64_t gcErasedBlocks;  // Erased blocks
     uint64_t gcCopiedPages;   // Copied pages
+
+    // User-visible GC time
+
+    uint64_t avg_penalty;
+    uint64_t min_penalty;
+    uint64_t max_penalty;
+    uint64_t penalty_count;
   } stat;
+
+  // For penalty calculation
+  uint64_t firstRequestArrival;
 
   inline uint64_t makeBufferAddress(uint32_t superpageIndex,
                                     uint32_t pageIndex) {
