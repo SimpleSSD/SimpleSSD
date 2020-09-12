@@ -16,8 +16,8 @@ AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
     : NaiveGC(o, fo, f) {
   logid = Log::DebugID::FTL_AdvancedGC;
 
-  idletime =
-      readConfigUint(Section::FlashTranslation, Config::Key::BGCIdleTime);
+  idletime = readConfigUint(Section::FlashTranslation,
+                            Config::Key::IdleTimeForBackgroundGC);
 
   // Create event
   eventBackgroundGC =

@@ -201,7 +201,7 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
     case SuperpageAllocation:
       ret = superpageAllocation;
       break;
-    case BGCIdleTime:
+    case IdleTimeForBackgroundGC:
       ret = bgcIdletime;
       break;
   }
@@ -222,10 +222,10 @@ float Config::readFloat(uint32_t idx) const noexcept {
     case InvalidFillRatio:
       ret = invalidFillRatio;
       break;
-    case FGCThreshold:
+    case ForegroundGCThreshold:
       ret = fgcThreshold;
       break;
-    case BGCThreshold:
+    case BackgroundGCThreshold:
       ret = bgcThreshold;
       break;
   }
@@ -265,7 +265,7 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
     case SuperpageAllocation:
       superpageAllocation = (uint8_t)value;
       break;
-    case BGCIdleTime:
+    case IdleTimeForBackgroundGC:
       bgcIdletime = value;
       break;
     default:
@@ -289,10 +289,10 @@ bool Config::writeFloat(uint32_t idx, float value) noexcept {
     case InvalidFillRatio:
       invalidFillRatio = value;
       break;
-    case FGCThreshold:
+    case ForegroundGCThreshold:
       fgcThreshold = value;
       break;
-    case BGCThreshold:
+    case BackgroundGCThreshold:
       bgcThreshold = value;
       break;
     default:

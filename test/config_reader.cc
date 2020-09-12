@@ -203,11 +203,11 @@ TEST_CASE("ConfigReader") {
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::SamplingFactor, utest);
       reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::FGCThreshold, ftest);
+                        FTL::Config::Key::ForegroundGCThreshold, ftest);
       reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::BGCThreshold, ftest * 2.f);
-      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::BGCIdleTime,
-                       utest);
+                        FTL::Config::Key::BackgroundGCThreshold, ftest * 2.f);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::IdleTimeForBackgroundGC, utest);
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::OverProvisioningRatio, ftest);
       reader.writeUint(Section::FlashTranslation,
@@ -473,11 +473,14 @@ TEST_CASE("ConfigReader") {
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::SamplingFactor) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::FGCThreshold) == ftest);
+                               FTL::Config::Key::ForegroundGCThreshold) ==
+              ftest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::BGCThreshold) == ftest * 2.f);
+                               FTL::Config::Key::BackgroundGCThreshold) ==
+              ftest * 2.f);
       REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::BGCIdleTime) == utest);
+                              FTL::Config::Key::IdleTimeForBackgroundGC) ==
+              utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::OverProvisioningRatio) ==
               ftest);

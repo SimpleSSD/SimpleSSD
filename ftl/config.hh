@@ -27,9 +27,9 @@ class Config : public BaseConfig {
 
     // Garbage Collection
     GCMode,
-    FGCThreshold,
-    BGCThreshold,
-    BGCIdleTime,
+    ForegroundGCThreshold,
+    BackgroundGCThreshold,
+    IdleTimeForBackgroundGC,
     VictimSelectionPolicy,
     SamplingFactor,
 

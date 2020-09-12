@@ -21,10 +21,10 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
   dchoice =
       readConfigUint(Section::FlashTranslation, Config::Key::SamplingFactor);
-  fgcThreshold =
-      readConfigFloat(Section::FlashTranslation, Config::Key::FGCThreshold);
-  bgcThreshold =
-      readConfigFloat(Section::FlashTranslation, Config::Key::BGCThreshold);
+  fgcThreshold = readConfigFloat(Section::FlashTranslation,
+                                 Config::Key::ForegroundGCThreshold);
+  bgcThreshold = readConfigFloat(Section::FlashTranslation,
+                                 Config::Key::BackgroundGCThreshold);
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:

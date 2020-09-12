@@ -46,9 +46,10 @@ void Filling::start() noexcept {
                                                Config::Key::InvalidFillRatio));
   mode = (Config::FillingType)readConfigUint(Section::FlashTranslation,
                                              Config::Key::FillingMode);
-  maxPagesBeforeGC = (uint64_t)(
-      totalPhysicalSuperBlocks *
-      readConfigFloat(Section::FlashTranslation, Config::Key::BGCThreshold));
+  maxPagesBeforeGC =
+      (uint64_t)(totalPhysicalSuperBlocks *
+                 readConfigFloat(Section::FlashTranslation,
+                                 Config::Key::BackgroundGCThreshold));
   maxPagesBeforeGC = totalPhysicalSuperBlocks - maxPagesBeforeGC;
   maxPagesBeforeGC *= filparam->page;
 
