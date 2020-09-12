@@ -153,9 +153,11 @@ set(SRC_ICL_MANAGER
 )
 set(SRC_FTL
   ftl/def.cc
+  ftl/filling.cc
   ftl/ftl.cc
 )
 set(SRC_FTL_ALLOC
+  ftl/allocator/abstract_allocator.cc
   ftl/allocator/generic_allocator.cc
 )
 set(SRC_FTL_BASE
