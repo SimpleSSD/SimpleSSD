@@ -107,8 +107,8 @@ Request *FTL::insertRequest(Request &&req) {
 
 void FTL::initialize() {
   // Initialize all
-  ftlobject.pMapping->initialize();
   ftlobject.pAllocator->initialize();
+  ftlobject.pMapping->initialize();
   ftlobject.pGC->initialize();
 
   ftlobject.pFTL->initialize();
