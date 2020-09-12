@@ -50,8 +50,6 @@ class PreemptibleGC : public AdvancedGC {
 
   void resumePaused();
 
-  // void gc_trigger() override;
-  // void gc_start(uint64_t) override;
   void gc_checkDone(uint64_t) override;
   void gc_doRead(uint64_t, uint64_t) override;
   void gc_doTranslate(uint64_t, uint64_t) override;
