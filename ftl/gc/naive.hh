@@ -37,25 +37,25 @@ class NaiveGC : public AbstractGC {
   }
 
   Event eventTrigger;
-  void gc_trigger();
+  virtual void gc_trigger();
 
   Event eventStart;
-  void gc_start(uint64_t);
+  virtual void gc_start(uint64_t);
 
   Event eventDoRead;
-  void gc_doRead(uint64_t, uint64_t);
+  virtual void gc_doRead(uint64_t, uint64_t);
 
   Event eventDoTranslate;
-  void gc_doTranslate(uint64_t, uint64_t);
+  virtual void gc_doTranslate(uint64_t, uint64_t);
 
   Event eventDoWrite;
-  void gc_doWrite(uint64_t, uint64_t);
+  virtual void gc_doWrite(uint64_t, uint64_t);
 
   Event eventDoErase;
-  void gc_doErase(uint64_t, uint64_t);
+  virtual void gc_doErase(uint64_t, uint64_t);
 
   Event eventDone;
-  void gc_done(uint64_t, uint64_t);
+  virtual void gc_done(uint64_t, uint64_t);
 
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);
