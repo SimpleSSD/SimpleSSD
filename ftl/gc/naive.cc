@@ -114,7 +114,13 @@ void NaiveGC::gc_start(uint64_t now) {
 
     beginAt = std::numeric_limits<uint64_t>::max();
 
-    ftlobject.pFTL->restartStalledRequests();
+    // Check threshold
+    triggerForeground();
+
+    if (beginAt == std::numeric_limits<uint64_t>::max()) {
+      // Not triggered
+      ftlobject.pFTL->restartStalledRequests();
+    }
   }
 }
 
