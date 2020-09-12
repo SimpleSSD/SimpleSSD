@@ -8,6 +8,7 @@
 #include "ftl/gc/advanced.hh"
 
 #include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/base/abstract_ftl.hh"
 
 namespace SimpleSSD::FTL::GC {
 
@@ -31,7 +32,8 @@ AdvancedGC::~AdvancedGC() {}
 
 void AdvancedGC::triggerBackground(uint64_t now) {
   if (ftlobject.pAllocator->checkBackgroundGCThreshold() &&
-      beginAt == std::numeric_limits<uint64_t>::max()) {
+      state == State::Idle) {
+    state = State::Background;
     beginAt = now;
 
     scheduleNow(eventTrigger);
@@ -39,12 +41,23 @@ void AdvancedGC::triggerBackground(uint64_t now) {
 }
 
 void AdvancedGC::gc_trigger() {
-  stat.bgcCount++;
-
   // Get blocks to erase
   ftlobject.pAllocator->getVictimBlocks(blockList, eventStart);
 
-  debugprint(logid, "GC    | Background | %u (super)blocks", blockList.size());
+  if (ftlobject.pAllocator->checkForegroundGCThreshold()) {
+    stat.fgcCount++;
+    state = State::Foreground;
+
+    debugprint(logid, "GC    | Foreground | %u (super)blocks",
+               blockList.size());
+  }
+  else if (state == State::Background) {
+    stat.bgcCount++;
+    state = State::Background;
+
+    debugprint(logid, "GC    | Background | %u (super)blocks",
+               blockList.size());
+  }
 }
 
 void AdvancedGC::gc_start(uint64_t now) {
@@ -66,11 +79,18 @@ void AdvancedGC::gc_start(uint64_t now) {
   }
   else {
     // Triggered GC completed
-    debugprint(logid,
-               "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-               beginAt, now, now - beginAt);
+    if (state == State::Foreground) {
+      debugprint(logid,
+                 "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+    else if (state == State::Background) {
+      debugprint(logid,
+                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
 
-    beginAt = std::numeric_limits<uint64_t>::max();
+    state = State::Idle;
 
     // Calculate penalty
     if (firstRequestArrival < now) {
@@ -86,6 +106,11 @@ void AdvancedGC::gc_start(uint64_t now) {
 
     // Check threshold
     triggerBackground(now);
+
+    if (state == State::Idle) {
+      // Not triggered
+      ftlobject.pFTL->restartStalledRequests();
+    }
   }
 }
 

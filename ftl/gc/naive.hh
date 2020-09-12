@@ -15,9 +15,20 @@
 
 namespace SimpleSSD::FTL::GC {
 
+enum class State : uint32_t {
+  /* Idle states */
+  Idle,        // GC is not triggered
+  Pauesd,      // GC has been suepended
+
+  /* Active states */
+  Foreground,  // GC triggered as foreground
+  Background,  // GC triggered as background
+};
+
 class NaiveGC : public AbstractGC {
  protected:
   Log::DebugID logid;
+  State state;
 
   uint32_t superpage;
   uint32_t pageSize;

@@ -16,9 +16,10 @@ namespace SimpleSSD::FTL::GC {
 
 NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
     : AbstractGC(o, fo, f),
-      beginAt(std::numeric_limits<uint64_t>::max()),
+      beginAt(0),
       firstRequestArrival(std::numeric_limits<uint64_t>::max()) {
   logid = Log::DebugID::FTL_NaiveGC;
+  state = State::Idle;
 
   auto pagesInBlock = object.config->getNANDStructure()->page;
   auto param = ftlobject.pMapping->getInfo();
@@ -68,7 +69,8 @@ void NaiveGC::initialize() {
 
 void NaiveGC::triggerForeground() {
   if (ftlobject.pAllocator->checkForegroundGCThreshold() &&
-      beginAt == std::numeric_limits<uint64_t>::max()) {
+      state == State::Idle) {
+    state = State::Foreground;
     beginAt = getTick();
 
     scheduleNow(eventTrigger);
@@ -77,7 +79,7 @@ void NaiveGC::triggerForeground() {
 
 void NaiveGC::requestArrived(bool, uint32_t) {
   // Save tick for penalty calculation
-  if (beginAt < std::numeric_limits<uint64_t>::max()) {
+  if (state >= State::Foreground) {
     // GC in-progress
     firstRequestArrival = MIN(firstRequestArrival, getTick());
   }
@@ -119,7 +121,7 @@ void NaiveGC::gc_start(uint64_t now) {
                "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                beginAt, now, now - beginAt);
 
-    beginAt = std::numeric_limits<uint64_t>::max();
+    state = State::Idle;
 
     // Calculate penalty
     if (firstRequestArrival < now) {
@@ -136,7 +138,7 @@ void NaiveGC::gc_start(uint64_t now) {
     // Check threshold
     triggerForeground();
 
-    if (beginAt == std::numeric_limits<uint64_t>::max()) {
+    if (state == State::Idle) {
       // Not triggered
       ftlobject.pFTL->restartStalledRequests();
     }
