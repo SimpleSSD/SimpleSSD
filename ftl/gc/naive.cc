@@ -73,6 +73,10 @@ void NaiveGC::requestArrived(bool, uint32_t) {
   // Naive GC algorithm does not perform background GC. Ignore.
 }
 
+bool NaiveGC::checkWriteStall() {
+  return ftlobject.pAllocator->checkForegroundGCThreshold();
+}
+
 void NaiveGC::gc_trigger(uint64_t now) {
   stat.fgcCount++;
 
