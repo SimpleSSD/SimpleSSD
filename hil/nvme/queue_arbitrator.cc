@@ -501,6 +501,9 @@ void Arbitrator::getHint(FTL::GC::HintContext &ctx) noexcept {
           ctx.pendingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
 
           break;
+        default:
+          // Ignore
+          break;
       }
     }
   }
@@ -518,6 +521,9 @@ void Arbitrator::getHint(FTL::GC::HintContext &ctx) noexcept {
           // Don't add WriteZero. It does not makes Host DMA operation.
           ctx.handlingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
 
+          break;
+        default:
+          // Ignore
           break;
       }
     }

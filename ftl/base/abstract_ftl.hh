@@ -29,6 +29,9 @@ class AbstractFTL : public Object {
 
   FIL::FIL *pFIL;
 
+  /**
+   * \brief Completion callback of FTL::Request
+   */
   void completeRequest(Request *);
 
  public:
@@ -36,17 +39,9 @@ class AbstractFTL : public Object {
   virtual ~AbstractFTL();
 
   /**
-   * \brief Generate FTL command tag (ID)
-   *
-   * If FTL generates additional I/O (e.g., GC), they require unique tag id.
-   * This function will generate unique tag id.
-   *
-   * \return Tag ID
-   */
-  uint64_t generateFTLTag();
-
-  /**
    * \brief Get FTL::Request from tag id
+   *
+   * This functino is public because of ReadModifyWriteContext
    *
    * \return Pointer to FTL::Request
    */

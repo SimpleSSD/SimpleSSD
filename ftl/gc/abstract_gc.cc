@@ -45,7 +45,7 @@ void AbstractGC::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, tag);
 
-    ctx.restoreCheckpoint(in, object);
+    ctx.restoreCheckpoint(in);
 
     ongoingCopy.emplace(tag, std::move(ctx));
   }

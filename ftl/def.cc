@@ -136,8 +136,8 @@ void backupSuperRequest(std::ostream &out, const SuperRequest &list) noexcept {
   }
 }
 
-void restoreSuperRequest(std::istream &in, ObjectData &object,
-                         SuperRequest &list, AbstractFTL *p) noexcept {
+void restoreSuperRequest(std::istream &in, SuperRequest &list,
+                         AbstractFTL *p) noexcept {
   bool exist;
   uint64_t size;
 
@@ -170,12 +170,11 @@ void ReadModifyWriteContext::createCheckpoint(std::ostream &out) const
 }
 
 void ReadModifyWriteContext::restoreCheckpoint(std::istream &in,
-                                               ObjectData &object,
                                                AbstractFTL *p) noexcept {
   RESTORE_SCALAR(in, alignedBegin);
   RESTORE_SCALAR(in, chunkBegin);
 
-  restoreSuperRequest(in, object, list, p);
+  restoreSuperRequest(in, list, p);
 
   RESTORE_SCALAR(in, writePending);
   RESTORE_SCALAR(in, counter);

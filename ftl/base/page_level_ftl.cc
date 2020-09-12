@@ -499,14 +499,14 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
   uint64_t size;
 
-  restoreSuperRequest(in, object, pendingList, this);
+  restoreSuperRequest(in, pendingList, this);
 
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
     SuperRequest list;
 
-    restoreSuperRequest(in, object, list, this);
+    restoreSuperRequest(in, list, this);
 
     writeList.emplace_back(std::move(list));
   }
@@ -520,7 +520,7 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, tag);
 
-    cur.restoreCheckpoint(in, object, this);
+    cur.restoreCheckpoint(in, this);
 
     while (true) {
       RESTORE_SCALAR(in, exist);
@@ -528,7 +528,7 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
       if (exist) {
         ReadModifyWriteContext *next = new ReadModifyWriteContext();
 
-        next->restoreCheckpoint(in, object, this);
+        next->restoreCheckpoint(in, this);
 
         cur.push_back(next);
       }

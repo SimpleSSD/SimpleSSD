@@ -324,7 +324,7 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   for (uint64_t i = 0; i < size; i++) {
     CopyContext ctx;
 
-    ctx.restoreCheckpoint(in, object);
+    ctx.restoreCheckpoint(in);
 
     blockList.emplace_back(std::move(ctx));
   }

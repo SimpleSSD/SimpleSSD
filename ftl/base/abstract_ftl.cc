@@ -16,6 +16,10 @@ AbstractFTL::AbstractFTL(ObjectData &o, FTLObjectData &fo, FTL *p, FIL::FIL *f)
 
 AbstractFTL::~AbstractFTL() {}
 
+void AbstractFTL::completeRequest(Request *req) {
+  pFTL->completeRequest(req);
+}
+
 Request *AbstractFTL::getRequest(uint64_t tag) {
   return pFTL->getRequest(tag);
 }
@@ -25,13 +29,5 @@ void AbstractFTL::getGCHint(GC::HintContext &ctx) noexcept {
 }
 
 void AbstractFTL::initialize() {}
-
-void AbstractFTL::completeRequest(Request *req) {
-  pFTL->completeRequest(req);
-}
-
-uint64_t AbstractFTL::generateFTLTag() {
-  return pFTL->generateFTLTag();
-}
 
 }  // namespace SimpleSSD::FTL

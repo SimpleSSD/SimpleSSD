@@ -212,7 +212,7 @@ class Request {
 using SuperRequest = std::vector<Request *>;
 
 void backupSuperRequest(std::ostream &, const SuperRequest &) noexcept;
-void restoreSuperRequest(std::istream &, ObjectData &, SuperRequest &,
+void restoreSuperRequest(std::istream &, SuperRequest &,
                          AbstractFTL *) noexcept;
 
 struct ReadModifyWriteContext {
@@ -255,7 +255,7 @@ struct ReadModifyWriteContext {
   }
 
   void createCheckpoint(std::ostream &) const noexcept;
-  void restoreCheckpoint(std::istream &, ObjectData &, AbstractFTL *) noexcept;
+  void restoreCheckpoint(std::istream &, AbstractFTL *) noexcept;
 };
 
 struct PageContext {
@@ -317,7 +317,7 @@ struct CopyContext {
     BACKUP_SCALAR(out, beginAt);
   }
 
-  void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
+  void restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, blockID);
 
     uint64_t size;
