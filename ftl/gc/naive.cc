@@ -298,8 +298,9 @@ void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
 
     closeCopySession(tag);
 
-    // Go to very beginning
-    scheduleNow(eventStart);
+    // Mark table/block as erased
+    ftlobject.pMapping->markBlockErased(psbn);
+    ftlobject.pAllocator->reclaimBlocks(psbn, eventStart);
   }
 }
 
