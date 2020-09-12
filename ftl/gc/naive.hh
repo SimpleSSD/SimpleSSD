@@ -17,6 +17,8 @@ namespace SimpleSSD::FTL::GC {
 
 class NaiveGC : public AbstractGC {
  protected:
+  Log::DebugID logid;
+
   uint32_t superpage;
   uint32_t pageSize;
   uint64_t bufferBaseAddress;

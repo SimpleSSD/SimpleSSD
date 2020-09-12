@@ -18,6 +18,8 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
     : AbstractGC(o, fo, f),
       beginAt(std::numeric_limits<uint64_t>::max()),
       firstRequestArrival(std::numeric_limits<uint64_t>::max()) {
+  logid = Log::DebugID::FTL_NaiveGC;
+
   auto pagesInBlock = object.config->getNANDStructure()->page;
   auto param = ftlobject.pMapping->getInfo();
 
@@ -91,8 +93,7 @@ void NaiveGC::gc_trigger() {
   // Get blocks to erase
   ftlobject.pAllocator->getVictimBlocks(blockList, eventStart);
 
-  debugprint(Log::DebugID::FTL_NaiveGC, "GC    | Foreground | %u (super)blocks",
-             blockList.size());
+  debugprint(logid, "GC    | Foreground | %u (super)blocks", blockList.size());
 }
 
 void NaiveGC::gc_start(uint64_t now) {
@@ -114,7 +115,7 @@ void NaiveGC::gc_start(uint64_t now) {
   }
   else {
     // Triggered GC completed
-    debugprint(Log::DebugID::FTL_NaiveGC,
+    debugprint(logid,
                "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                beginAt, now, now - beginAt);
 
@@ -150,12 +151,11 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
     auto ppn = param->makePPN(block.blockID, 0, ctx.pageIndex);
 
     if (superpage > 1) {
-      debugprint(Log::DebugID::FTL_NaiveGC, "GC | READ  | PSPN %" PRIx64 "h",
+      debugprint(logid, "GC | READ  | PSPN %" PRIx64 "h",
                  param->getPSPNFromPPN(ppn));
     }
     else {
-      debugprint(Log::DebugID::FTL_NaiveGC, "GC | READ  | PPN %" PRIx64 "h",
-                 ppn);
+      debugprint(logid, "GC | READ  | PPN %" PRIx64 "h", ppn);
     }
 
     for (uint32_t i = 0; i < superpage; i++) {
@@ -198,14 +198,14 @@ void NaiveGC::gc_doTranslate(uint64_t now, uint64_t tag) {
     panic_if(!lpn.isValid(), "Invalid LPN received.");
 
     if (superpage > 1) {
-      debugprint(Log::DebugID::FTL_NaiveGC,
+      debugprint(logid,
                  "GC | READ  | PSPN %" PRIx64 "h -> LSPN %" PRIx64
                  "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
                  ctx.beginAt, now, now - ctx.beginAt);
     }
     else {
-      debugprint(Log::DebugID::FTL_NaiveGC,
+      debugprint(logid,
                  "GC | READ  | PPN %" PRIx64 "h -> LPN %" PRIx64 "h | %" PRIu64
                  " - %" PRIu64 " (%" PRIu64 ")",
                  ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
@@ -222,13 +222,12 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
   auto ppn = ctx.request.getPPN();
 
   if (superpage > 1) {
-    debugprint(Log::DebugID::FTL_NaiveGC,
-               "GC | WRITE | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h",
+    debugprint(logid, "GC | WRITE | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h",
                param->getLSPNFromLPN(lpn), param->getPSPNFromPPN(ppn));
   }
   else {
-    debugprint(Log::DebugID::FTL_NaiveGC,
-               "GC | WRITE | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn, ppn);
+    debugprint(logid, "GC | WRITE | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
+               ppn);
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
@@ -251,18 +250,16 @@ void NaiveGC::gc_doErase(uint64_t now, uint64_t tag) {
     PSBN psbn = block.blockID;
 
     // Copy completed
-    debugprint(Log::DebugID::FTL_NaiveGC,
-               "GC | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+    debugprint(logid, "GC | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                block.copyList.front().beginAt, now,
                now - block.copyList.front().beginAt);
 
     // Erase
     if (superpage > 1) {
-      debugprint(Log::DebugID::FTL_NaiveGC, "GC | ERASE | PSBN %" PRIx64 "h",
-                 psbn);
+      debugprint(logid, "GC | ERASE | PSBN %" PRIx64 "h", psbn);
     }
     else {
-      debugprint(Log::DebugID::FTL_NaiveGC, "GC | ERASE | PBN %" PRIx64 "h",
+      debugprint(logid, "GC | ERASE | PBN %" PRIx64 "h",
                  psbn);  // PSBN == PBN when superpage == 1
     }
 
@@ -287,13 +284,13 @@ void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
 
     // Erase completed
     if (superpage > 1) {
-      debugprint(Log::DebugID::FTL_NaiveGC,
+      debugprint(logid,
                  "GC | ERASE | PSBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
                  psbn, beginAt, now, now - beginAt);
     }
     else {
-      debugprint(Log::DebugID::FTL_NaiveGC,
+      debugprint(logid,
                  "GC | ERASE | PBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
                  psbn, beginAt, now, now - beginAt);
