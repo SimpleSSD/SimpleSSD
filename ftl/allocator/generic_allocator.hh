@@ -21,7 +21,7 @@ namespace SimpleSSD::FTL::BlockAllocator {
 class GenericAllocator : public AbstractAllocator {
  protected:
   using BlockSelection =
-      std::function<CPU::Function(uint64_t, std::vector<PSBN> &)>;
+      std::function<CPU::Function(uint64_t, std::deque<CopyContext> &)>;
 
   uint64_t totalSuperblock;
   uint32_t superpage;
@@ -47,10 +47,10 @@ class GenericAllocator : public AbstractAllocator {
 
   BlockSelection victimSelectionFunction;
 
-  CPU::Function randomVictimSelection(uint64_t, std::vector<PSBN> &);
-  CPU::Function greedyVictimSelection(uint64_t, std::vector<PSBN> &);
-  CPU::Function costbenefitVictimSelection(uint64_t, std::vector<PSBN> &);
-  CPU::Function dchoiceVictimSelection(uint64_t, std::vector<PSBN> &);
+  CPU::Function randomVictimSelection(uint64_t, std::deque<CopyContext> &);
+  CPU::Function greedyVictimSelection(uint64_t, std::deque<CopyContext> &);
+  CPU::Function costbenefitVictimSelection(uint64_t, std::deque<CopyContext> &);
+  CPU::Function dchoiceVictimSelection(uint64_t, std::deque<CopyContext> &);
 
  public:
   GenericAllocator(ObjectData &, FTLObjectData &);
@@ -64,7 +64,7 @@ class GenericAllocator : public AbstractAllocator {
   bool checkForegroundGCThreshold() override;
   bool checkBackgroundGCThreshold() override;
   bool checkFreeBlockExist() override;
-  void getVictimBlocks(std::vector<PSBN> &, Event) override;
+  void getVictimBlocks(std::deque<CopyContext> &, Event) override;
   void reclaimBlocks(PSBN, Event) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

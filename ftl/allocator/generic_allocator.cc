@@ -28,25 +28,29 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+      victimSelectionFunction = [this](uint64_t idx,
+                                       std::deque<CopyContext> &list) {
         return randomVictimSelection(idx, list);
       };
 
       break;
     case Config::VictimSelectionMode::Greedy:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+      victimSelectionFunction = [this](uint64_t idx,
+                                       std::deque<CopyContext> &list) {
         return greedyVictimSelection(idx, list);
       };
 
       break;
     case Config::VictimSelectionMode::CostBenefit:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+      victimSelectionFunction = [this](uint64_t idx,
+                                       std::deque<CopyContext> &list) {
         return costbenefitVictimSelection(idx, list);
       };
 
       break;
     case Config::VictimSelectionMode::DChoice:
-      victimSelectionFunction = [this](uint64_t idx, std::vector<PSBN> &list) {
+      victimSelectionFunction = [this](uint64_t idx,
+                                       std::deque<CopyContext> &list) {
         return dchoiceVictimSelection(idx, list);
       };
 
@@ -65,8 +69,8 @@ GenericAllocator::~GenericAllocator() {
   delete[] fullBlocks;
 }
 
-CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
-                                                      std::vector<PSBN> &list) {
+CPU::Function GenericAllocator::randomVictimSelection(
+    uint64_t idx, std::deque<CopyContext> &list) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -89,8 +93,8 @@ CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
   return fstat;
 }
 
-CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
-                                                      std::vector<PSBN> &list) {
+CPU::Function GenericAllocator::greedyVictimSelection(
+    uint64_t idx, std::deque<CopyContext> &list) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -122,7 +126,7 @@ CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
 }
 
 CPU::Function GenericAllocator::costbenefitVictimSelection(
-    uint64_t idx, std::vector<PSBN> &list) {
+    uint64_t idx, std::deque<CopyContext> &list) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -160,7 +164,7 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(
 }
 
 CPU::Function GenericAllocator::dchoiceVictimSelection(
-    uint64_t idx, std::vector<PSBN> &list) {
+    uint64_t idx, std::deque<CopyContext> &list) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -336,14 +340,10 @@ bool GenericAllocator::checkFreeBlockExist() {
   return freeBlockCount > parallelism;
 }
 
-void GenericAllocator::getVictimBlocks(std::vector<PSBN> &victimList,
+void GenericAllocator::getVictimBlocks(std::deque<CopyContext> &victimList,
                                        Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
-
-  // Select victim blocks
-  victimList.clear();
-  victimList.reserve(parallelism);
 
   for (uint64_t i = 0; i < parallelism; i++) {
     fstat += victimSelectionFunction(i, victimList);

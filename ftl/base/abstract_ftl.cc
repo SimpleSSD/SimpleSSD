@@ -3,7 +3,6 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
- *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #include "ftl/base/abstract_ftl.hh"
@@ -12,8 +11,8 @@
 
 namespace SimpleSSD::FTL {
 
-AbstractFTL::AbstractFTL(ObjectData &o, FTLObjectData &fo, FTL *p)
-    : Object(o), pFTL(p), ftlobject(fo) {}
+AbstractFTL::AbstractFTL(ObjectData &o, FTLObjectData &fo, FTL *p, FIL::FIL *f)
+    : Object(o), pFTL(p), ftlobject(fo), pFIL(f) {}
 
 AbstractFTL::~AbstractFTL() {}
 

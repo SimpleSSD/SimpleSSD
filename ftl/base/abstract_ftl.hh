@@ -3,7 +3,6 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
- *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #pragma once
@@ -33,7 +32,7 @@ class AbstractFTL : public Object {
   void completeRequest(Request *);
 
  public:
-  AbstractFTL(ObjectData &, FTLObjectData &, FTL *);
+  AbstractFTL(ObjectData &, FTLObjectData &, FTL *, FIL::FIL *);
   virtual ~AbstractFTL();
 
   /**

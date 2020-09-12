@@ -23,6 +23,7 @@ namespace SimpleSSD::FTL {
 
 class FTL;
 class AbstractFTL;
+struct CopyContext;
 
 //! FTL parameter
 struct Parameter {
@@ -145,6 +146,7 @@ enum class Response : uint8_t {
 class Request {
  private:
   friend FTL;
+  friend CopyContext;
 
   uint64_t tag;
 
@@ -256,19 +258,46 @@ struct ReadModifyWriteContext {
   void restoreCheckpoint(std::istream &, ObjectData &, AbstractFTL *) noexcept;
 };
 
+struct PageContext {
+  Request request;  // We need LPN only, but just use full-sized Request struct
+
+  uint32_t pageIndex;
+  uint64_t beginAt;
+
+  PageContext() : request(PPN()), pageIndex(0), beginAt(0) {}
+  PageContext(uint32_t idx) : request(PPN()), pageIndex(idx), beginAt(0) {}
+  PageContext(LPN lpn, PPN ppn, uint32_t idx)
+      : request(ppn), pageIndex(idx), beginAt(0) {
+    request.setLPN(lpn);
+  }
+};
+
 struct CopyContext {
   PSBN blockID;
 
-  std::vector<std::pair<LPN, uint32_t>> copyList;
+  std::vector<PageContext> copyList;
 
   uint32_t pageReadIndex;
   uint32_t pageWriteIndex;
 
+  uint32_t readCounter;
+  uint32_t writeCounter;
+
   uint64_t beginAt;
 
-  CopyContext() : pageReadIndex(0), pageWriteIndex(0), beginAt(0) {}
+  CopyContext()
+      : pageReadIndex(0),
+        pageWriteIndex(0),
+        readCounter(0),
+        writeCounter(0),
+        beginAt(0) {}
   CopyContext(PSBN b)
-      : blockID(b), pageReadIndex(0), pageWriteIndex(0), beginAt(0) {}
+      : blockID(b),
+        pageReadIndex(0),
+        pageWriteIndex(0),
+        readCounter(0),
+        writeCounter(0),
+        beginAt(0) {}
 
   void createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, blockID);
@@ -277,10 +306,14 @@ struct CopyContext {
     BACKUP_SCALAR(out, size);
 
     for (auto &iter : copyList) {
-      BACKUP_SCALAR(out, iter.first);
-      BACKUP_SCALAR(out, iter.second);
+      BACKUP_SCALAR(out, iter.request.lpn);
+      BACKUP_SCALAR(out, iter.request.ppn);
+      BACKUP_SCALAR(out, iter.pageIndex);
+      BACKUP_SCALAR(out, iter.beginAt);
     }
 
+    BACKUP_SCALAR(out, readCounter);
+    BACKUP_SCALAR(out, writeCounter);
     BACKUP_SCALAR(out, beginAt);
   }
 
@@ -292,14 +325,20 @@ struct CopyContext {
 
     for (uint64_t i = 0; i < size; i++) {
       LPN lpn;
+      PPN ppn;
       uint32_t idx;
 
       RESTORE_SCALAR(in, lpn);
+      RESTORE_SCALAR(in, ppn);
       RESTORE_SCALAR(in, idx);
 
-      copyList.emplace_back(lpn, idx);
+      auto &ret = copyList.emplace_back(PageContext(lpn, ppn, idx));
+
+      RESTORE_SCALAR(in, ret.beginAt);
     }
 
+    RESTORE_SCALAR(in, readCounter);
+    RESTORE_SCALAR(in, writeCounter);
     RESTORE_SCALAR(in, beginAt);
   }
 };

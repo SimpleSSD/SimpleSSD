@@ -98,7 +98,7 @@ class AbstractAllocator : public Object {
    * \param[in] list  List of Physical Superblock Number
    * \param[in] eid   Callback event
    */
-  virtual void getVictimBlocks(std::vector<PSBN> &list, Event eid) = 0;
+  virtual void getVictimBlocks(std::deque<CopyContext> &list, Event eid) = 0;
 
   /**
    * \brief Mark block as erased

@@ -3,7 +3,6 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
- *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #include "ftl/mapping/page_level_mapping.hh"
@@ -327,40 +326,25 @@ void PageLevelMapping::getPageStatistics(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-void PageLevelMapping::getCopyContext(CopyContext &copyctx, Event eid) {
+void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  const auto block = &blockMetadata[copyctx.sblockID];  // superblock
+  const auto block = &blockMetadata[ctx.blockID];
 
-  copyctx.reset();
-  copyctx.list.reserve(block->validPages.count());
-
-  for (uint i = 0; i < filparam->page; i++) {
+  for (uint32_t i = 0; i < filparam->page; i++) {
     if (block->validPages.test(i)) {
-      // append valid page copy request
-      SuperRequest sReq;
-      sReq.reserve(param.superpage);
-      Request *req;
-
-      for (uint j = 0; j < param.superpage; j++) {
-        req = new Request(param.makePPN(copyctx.sblockID, i, j));
-        sReq.emplace_back(req);
-      }
-      copyctx.list.emplace_back(std::move(sReq));
+      ctx.copyList.emplace_back(i);
     }
   }
-
-  copyctx.writeCounter.resize(copyctx.list.size(), 0);
-  copyctx.copyCounter = copyctx.list.size();
-  copyctx.initIter();
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
 void PageLevelMapping::markBlockErased(PSBN blockId) {
-  blockMetadata[blockId].nextPageToWrite = 0;
   blockMetadata[blockId].validPages.reset();
+  blockMetadata[blockId].nextPageToWrite = 0;
+  blockMetadata[blockId].insertedAt = 0;
 }
 
 void PageLevelMapping::getStatList(std::vector<Stat> &list,

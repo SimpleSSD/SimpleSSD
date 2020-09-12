@@ -3,7 +3,6 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
- *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #pragma once
@@ -75,7 +74,7 @@ class PageLevelFTL : public AbstractFTL {
   void invalidate_submit(uint64_t, uint64_t);
 
  public:
-  PageLevelFTL(ObjectData &, FTLObjectData &, FTL *);
+  PageLevelFTL(ObjectData &, FTLObjectData &, FTL *, FIL::FIL *);
   virtual ~PageLevelFTL();
 
   void read(Request *) override;

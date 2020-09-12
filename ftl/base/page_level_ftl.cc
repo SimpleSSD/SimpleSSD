@@ -3,7 +3,6 @@
  * Copyright (C) 2019 CAMELab
  *
  * Author: Donghyun Gouk <kukdh1@camelab.org>
- *         Junhyeok Jang <jhjang@camelab.org>
  */
 
 #include "ftl/base/page_level_ftl.hh"
@@ -14,8 +13,9 @@
 
 namespace SimpleSSD::FTL {
 
-PageLevelFTL::PageLevelFTL(ObjectData &o, FTLObjectData &fo, FTL *p)
-    : AbstractFTL(o, fo, p) {
+PageLevelFTL::PageLevelFTL(ObjectData &o, FTLObjectData &fo, FTL *p,
+                           FIL::FIL *f)
+    : AbstractFTL(o, fo, p, f) {
   memset(&stat, 0, sizeof(stat));
 
   auto param = ftlobject.pMapping->getInfo();

@@ -337,16 +337,22 @@ class AbstractMapping : public Object {
   /**
    * \brief Retrive page copy list
    *
-   * fatal: Operation is not defined yet.
+   * Fill copyList of CopyContext. Each entry of copyList represents pair of
+   * LPN and pageIndex.
+   *
+   * \param[in] ctx CopyContext structure
+   * \param[in] eid Callback event
    */
-  virtual void getCopyContext(CopyContext &, Event) = 0;
+  virtual void getCopyContext(CopyContext &ctx, Event eid) = 0;
 
   /**
-   * \brief Free page copy list
+   * \brief Mark block as erased
    *
-   * fatal: Operation is not defined yet.
+   * Mark block as erased in block metadata.
+   *
+   * \param[in] psbn  Physical Superblock Number
    */
-  virtual void markBlockErased(PSBN) = 0;
+  virtual void markBlockErased(PSBN psbn) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

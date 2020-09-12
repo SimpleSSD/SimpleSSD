@@ -55,7 +55,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // GC algorithm
   switch (gcmode) {
     case Config::GCType::Naive:
-      ftlobject.pGC = new GC::NaiveGC(object, ftlobject);
+      ftlobject.pGC = new GC::NaiveGC(object, ftlobject, pFIL);
 
       break;
     default:
@@ -67,7 +67,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Base FTL routine
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
-      ftlobject.pFTL = new PageLevelFTL(object, ftlobject, this);
+      ftlobject.pFTL = new PageLevelFTL(object, ftlobject, this, pFIL);
 
       break;
     default:
