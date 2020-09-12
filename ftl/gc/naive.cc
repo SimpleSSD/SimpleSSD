@@ -74,8 +74,11 @@ void NaiveGC::triggerForeground() {
 }
 
 void NaiveGC::requestArrived(bool, uint32_t) {
-  // Naive GC algorithm does not perform background GC. Ignore.
-  firstRequestArrival = MIN(firstRequestArrival, getTick());
+  // Save tick for penalty calculation
+  if (beginAt < std::numeric_limits<uint64_t>::max()) {
+    // GC in-progress
+    firstRequestArrival = MIN(firstRequestArrival, getTick());
+  }
 }
 
 bool NaiveGC::checkWriteStall() {
