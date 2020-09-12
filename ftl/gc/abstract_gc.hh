@@ -27,6 +27,11 @@ class AbstractGC : public Object {
   AbstractGC(ObjectData &, FTLObjectData &);
   virtual ~AbstractGC();
 
+  /**
+   * \brief GC initialization function
+   *
+   * Immediately call AbstractGC::initialize() when you override this function.
+   */
   virtual void initialize();
 
   /**

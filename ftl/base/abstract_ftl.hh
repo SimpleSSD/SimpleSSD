@@ -36,19 +36,82 @@ class AbstractFTL : public Object {
   AbstractFTL(ObjectData &, FTLObjectData &, FTL *);
   virtual ~AbstractFTL();
 
-  // TODO: ADD COMMENTS HERE!
-
+  /**
+   * \brief Generate FTL command tag (ID)
+   *
+   * If FTL generates additional I/O (e.g., GC), they require unique tag id.
+   * This function will generate unique tag id.
+   *
+   * \return Tag ID
+   */
   uint64_t generateFTLTag();
+
+  /**
+   * \brief Get FTL::Request from tag id
+   *
+   * \return Pointer to FTL::Request
+   */
   Request *getRequest(uint64_t);
 
+  /**
+   * \brief Get hint data from HIL/ICL
+   *
+   * \param[out] ctx  GC::HintContext structure
+   */
   void getGCHint(GC::HintContext &ctx) noexcept;
 
+  /**
+   * \brief FTL initialization function
+   *
+   * Immediately call AbstractFTL::initialize() when you override this function.
+   */
   virtual void initialize();
 
-  virtual void read(Request *) = 0;
-  virtual bool write(Request *) = 0;
-  virtual void invalidate(Request *) = 0;
+  /**
+   * \brief Do Read I/O
+   *
+   * Handle Read I/O Request. FTL should translate LPN to PPN, submit NAND I/O
+   * to FTL.
+   *
+   * \param[in] req Pointer to FTL::Request
+   */
+  virtual void read(Request *req) = 0;
 
+  /**
+   * \brief Do Write I/O
+   *
+   * Handle Write I/O Request. FTL should translate LPN to PPN, submit NAND I/O
+   * to FTL.
+   *
+   * Caution:
+   *  - You must care about read-modify-write operation.
+   *  - You must stop handling write requests when there are no free blocks.
+   *  - You must care about small-sized sequential write request when mapping
+   *    granularity is larger than physical page size.
+   *
+   * \param[in] req Pointer to FTL::Request
+   * \return True when request is handled. False when stalled.
+   */
+  virtual bool write(Request *req) = 0;
+
+  /**
+   * \brief Do Trim/Format
+   *
+   * Remove existing mapping from the table.
+   *
+   * TODO: Maybe refined -- currently no TRIM implementation
+   *
+   * \param[in] req Pointer to FTL::Request
+   */
+  virtual void invalidate(Request *req) = 0;
+
+  /**
+   * \brief Restart write stalled requests
+   *
+   * Restart stalled write request. If GC module reclaims block, it will call
+   * this function to restart some write requests. You must stop submitting
+   * when AbstractGC::checkWriteStall returns true.
+   */
   virtual void restartStalledRequests() = 0;
 
   // In initialize phase of mapping, they may want to write spare area
