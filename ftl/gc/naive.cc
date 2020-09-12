@@ -32,11 +32,11 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   if (object.memory->allocate(sbsize, Memory::MemoryType::SRAM, "", true) ==
       0) {
     bufferBaseAddress = object.memory->allocate(
-        sbsize, Memory::MemoryType::SRAM, "FTL::NaiveGC::Buffer");
+        sbsize, Memory::MemoryType::SRAM, "FTL::GC::Buffer");
   }
   else {
     bufferBaseAddress = object.memory->allocate(
-        sbsize, Memory::MemoryType::DRAM, "FTL::NaiveGC::Buffer");
+        sbsize, Memory::MemoryType::DRAM, "FTL::GC::Buffer");
   }
 
   eventTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
