@@ -43,7 +43,7 @@ class Log {
     ICL_SetAssociative,
     FTL,
     FTL_PageLevel,
-    FTL_VLFTL,
+    FTL_NaiveGC,
     FIL,
     FIL_PALOLD,
   };

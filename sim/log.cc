@@ -31,7 +31,7 @@ const std::string idPrefix[] = {
     "ICL::SetAssociative",
     "FTL",
     "FTL::Mapping::PageLevelMapping",
-    "FTL::VLFTL",
+    "FTL::GC::NaiveGC",
     "FIL",
     "FIL::PALOLD",
 };
