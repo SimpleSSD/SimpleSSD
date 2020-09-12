@@ -104,8 +104,8 @@ struct Parameter {
   }
 
   //! Make PPN from PSBN, SuperpageIndex and PageIndex
-  inline PPN makePPN(PSBN psbn, uint32_t pageIndex,
-                     uint32_t superpageIndex) const {
+  inline PPN makePPN(PSBN psbn, uint32_t superpageIndex,
+                     uint32_t pageIndex) const {
     return static_cast<PPN>(psbn * superpage + pageIndex * totalPhysicalBlocks +
                             superpageIndex);
   }
@@ -257,43 +257,51 @@ struct ReadModifyWriteContext {
 };
 
 struct CopyContext {
-  PSBN sblockID;
+  PSBN blockID;
 
-  std::vector<SuperRequest> list;
-  std::vector<SuperRequest>::iterator iter;
+  std::vector<std::pair<LPN, uint32_t>> copyList;
 
-  std::unordered_map<uint64_t, uint64_t> tag2ListIdx;
-
-  uint64_t readCounter;  // count page read in progress
-  // count page write in progress (shares index with list)
-  std::vector<uint16_t> writeCounter;
-  uint64_t copyCounter;   // count superpage copy in progress
-  uint64_t eraseCounter;  // count block copy in progress
+  uint32_t pageReadIndex;
+  uint32_t pageWriteIndex;
 
   uint64_t beginAt;
 
-  CopyContext() = default;
-  ~CopyContext();
-  CopyContext(const CopyContext &) = delete;
-  CopyContext &operator=(const CopyContext &) = delete;
-  CopyContext(CopyContext &&rhs) noexcept : CopyContext() {
-    *this = std::move(rhs);
-  }
-  CopyContext &operator=(CopyContext &&);
+  CopyContext() : pageReadIndex(0), pageWriteIndex(0), beginAt(0) {}
+  CopyContext(PSBN b)
+      : blockID(b), pageReadIndex(0), pageWriteIndex(0), beginAt(0) {}
 
-  void reset();
-  inline void initIter() { iter = list.begin(); }
-  inline bool isReadSubmitDone() { return iter == list.end(); }
-  inline bool isReadDone() { return readCounter == 0; }
-  inline bool iswriteDone(uint64_t listIndex) {
-    return writeCounter.at(listIndex) == 0;
-  }
-  inline bool isEraseDone() { return eraseCounter == 0; }
-  inline bool isCopyDone() { return copyCounter == 0; }
-  void releaseList();
+  void createCheckpoint(std::ostream &out) const noexcept {
+    BACKUP_SCALAR(out, blockID);
 
-  void createCheckpoint(std::ostream &) const {}
-  void restoreCheckpoint(std::istream &) {}
+    uint64_t size = copyList.size();
+    BACKUP_SCALAR(out, size);
+
+    for (auto &iter : copyList) {
+      BACKUP_SCALAR(out, iter.first);
+      BACKUP_SCALAR(out, iter.second);
+    }
+
+    BACKUP_SCALAR(out, beginAt);
+  }
+
+  void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
+    RESTORE_SCALAR(in, blockID);
+
+    uint64_t size;
+    RESTORE_SCALAR(in, size);
+
+    for (uint64_t i = 0; i < size; i++) {
+      LPN lpn;
+      uint32_t idx;
+
+      RESTORE_SCALAR(in, lpn);
+      RESTORE_SCALAR(in, idx);
+
+      copyList.emplace_back(lpn, idx);
+    }
+
+    RESTORE_SCALAR(in, beginAt);
+  }
 };
 
 }  // namespace SimpleSSD::FTL

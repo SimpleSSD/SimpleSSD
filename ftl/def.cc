@@ -182,39 +182,4 @@ void ReadModifyWriteContext::restoreCheckpoint(std::istream &in,
   RESTORE_SCALAR(in, beginAt);
 }
 
-CopyContext::~CopyContext() {
-  releaseList();
-}
-
-void CopyContext::reset() {
-  releaseList();
-  list.clear();
-  tag2ListIdx.clear();
-  readCounter = 0;
-  writeCounter.clear();
-  copyCounter = 0;
-  eraseCounter = 0;
-  beginAt = 0;
-}
-
-void CopyContext::releaseList() {
-  for (auto sReq : list) {
-    for (auto req : sReq) {
-      delete req;
-    }
-  }
-}
-
-CopyContext &CopyContext::operator=(CopyContext &&rhs) {
-  sblockID = rhs.sblockID;
-  std::swap(list, rhs.list);
-  iter = std::move(rhs.iter);
-  tag2ListIdx = std::move(rhs.tag2ListIdx);
-  readCounter = rhs.readCounter;
-  writeCounter = std::move(rhs.writeCounter);
-  beginAt = rhs.beginAt;
-
-  return *this;
-}
-
 }  // namespace SimpleSSD::FTL
