@@ -13,6 +13,7 @@
 #include "ftl/filling.hh"
 #include "ftl/gc/advanced.hh"
 #include "ftl/gc/naive.hh"
+#include "ftl/gc/preemption.hh"
 #include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
 
@@ -61,6 +62,10 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
       break;
     case Config::GCType::Advanced:
       ftlobject.pGC = new GC::AdvancedGC(object, ftlobject, pFIL);
+
+      break;
+    case Config::GCType::Preemptible:
+      ftlobject.pGC = new GC::PreemptibleGC(object, ftlobject, pFIL);
 
       break;
     default:
