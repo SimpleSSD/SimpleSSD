@@ -10,9 +10,9 @@
 #ifndef __SIMPLESSD_MEM_DRAM_IDEAL_IDEAL_HH__
 #define __SIMPLESSD_MEM_DRAM_IDEAL_IDEAL_HH__
 
-#include "libdrampower/LibDRAMPower.h"
 #include "mem/def.hh"
 #include "mem/dram/abstract_dram.hh"
+#include "util/drampower.hh"
 #include "util/scheduler.hh"
 
 namespace SimpleSSD::Memory::DRAM {
@@ -30,8 +30,6 @@ class IdealDRAM : public AbstractDRAM {
 
   Data::MemorySpecification spec;
   libDRAMPower *dramPower;
-
-  void convertMemspec();
 
   double totalEnergy;  // Unit: pJ
   double totalPower;   // Unit: mW

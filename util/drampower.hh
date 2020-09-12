@@ -15,7 +15,8 @@
 
 namespace SimpleSSD {
 
-bool convertMemspec(ObjectData &object, Data::MemorySpecification &spec) {
+inline bool convertMemspec(ObjectData &object,
+                           Data::MemorySpecification &spec) {
   auto pStructure = object.config->getDRAM();
   auto pTiming = object.config->getDRAMTiming();
   auto pPower = object.config->getDRAMPower();
@@ -32,17 +33,20 @@ bool convertMemspec(ObjectData &object, Data::MemorySpecification &spec) {
   spec.memArchSpec.twoVoltageDomains = pPower->pVDD[1] != 0.f;
   spec.memArchSpec.termination = false;
 
-  spec.memTimingSpec.RC = DIVCEIL(pTiming->tRRD, pTiming->tCK);
+  spec.memTimingSpec.RC = DIVCEIL(pTiming->tRAS + pTiming->tRP, pTiming->tCK);
   spec.memTimingSpec.RCD = DIVCEIL(pTiming->tRCD, pTiming->tCK);
   spec.memTimingSpec.RL = DIVCEIL(pTiming->tRL, pTiming->tCK);
   spec.memTimingSpec.RP = DIVCEIL(pTiming->tRP, pTiming->tCK);
   spec.memTimingSpec.RFC = DIVCEIL(pTiming->tRFC, pTiming->tCK);
-  spec.memTimingSpec.RAS = spec.memTimingSpec.RRD - spec.memTimingSpec.RP;
+  spec.memTimingSpec.RAS = DIVCEIL(pTiming->tRAS, pTiming->tCK);
   spec.memTimingSpec.WL = DIVCEIL(pTiming->tWL, pTiming->tCK);
   spec.memTimingSpec.DQSCK = DIVCEIL(pTiming->tDQSCK, pTiming->tCK);
   spec.memTimingSpec.RTP = DIVCEIL(pTiming->tRTP, pTiming->tCK);
   spec.memTimingSpec.WR = DIVCEIL(pTiming->tWR, pTiming->tCK);
-  spec.memTimingSpec.XS = DIVCEIL(pTiming->tSR, pTiming->tCK);
+  spec.memTimingSpec.XP = 0;
+  spec.memTimingSpec.XPDLL = 0;
+  spec.memTimingSpec.XS = 0;
+  spec.memTimingSpec.XSDLL = 0;
   spec.memTimingSpec.clkPeriod = pTiming->tCK / 1000.;
 
   if (spec.memTimingSpec.clkPeriod == 0.) {
