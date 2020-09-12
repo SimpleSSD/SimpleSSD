@@ -28,54 +28,10 @@ class PageLevelFTL : public AbstractFTL {
   SuperRequest pendingList;
 
   std::list<SuperRequest> writeList;
+  std::unordered_map<uint64_t, ReadModifyWriteContext> rmwList;
+  std::deque<Request *> stalledRequestList;
 
   std::list<SuperRequest>::iterator getWriteContext(uint64_t);
-
-  struct ReadModifyWriteContext {
-    LPN alignedBegin;
-    LPN chunkBegin;
-
-    SuperRequest list;
-
-    ReadModifyWriteContext *next;
-    ReadModifyWriteContext *last;
-
-    bool writePending;
-    uint64_t counter;
-
-    uint64_t beginAt;
-
-    ReadModifyWriteContext()
-        : next(nullptr),
-          last(nullptr),
-          writePending(false),
-          counter(0),
-          beginAt(0) {}
-    ReadModifyWriteContext(uint64_t size)
-        : list(size, nullptr),
-          next(nullptr),
-          last(nullptr),
-          writePending(false),
-          counter(0),
-          beginAt(0) {}
-
-    void push_back(ReadModifyWriteContext *val) {
-      if (last == nullptr) {
-        next = val;
-        last = val;
-      }
-      else {
-        last->next = val;
-        last = val;
-      }
-    }
-  };
-
-  std::unordered_map<uint64_t, ReadModifyWriteContext> rmwList;
-
-  // list of stalled request <tag, writeRequestType>
-  std::deque<Request *> stalledRequests;
-
   std::unordered_map<uint64_t, ReadModifyWriteContext>::iterator getRMWContext(
       uint64_t);
 
@@ -126,8 +82,10 @@ class PageLevelFTL : public AbstractFTL {
   virtual ~PageLevelFTL();
 
   void read(Request *) override;
-  void write(Request *) override;
+  bool write(Request *) override;
   void invalidate(Request *) override;
+
+  void restartStalledRequests() override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

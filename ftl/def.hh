@@ -208,6 +208,46 @@ class Request {
 // list of request targeting same superpage
 using SuperRequest = std::vector<Request *>;
 
+struct ReadModifyWriteContext {
+  LPN alignedBegin;
+  LPN chunkBegin;
+
+  SuperRequest list;
+
+  ReadModifyWriteContext *next;
+  ReadModifyWriteContext *last;
+
+  bool writePending;
+  uint64_t counter;
+
+  uint64_t beginAt;
+
+  ReadModifyWriteContext()
+      : next(nullptr),
+        last(nullptr),
+        writePending(false),
+        counter(0),
+        beginAt(0) {}
+  ReadModifyWriteContext(uint64_t size)
+      : list(size, nullptr),
+        next(nullptr),
+        last(nullptr),
+        writePending(false),
+        counter(0),
+        beginAt(0) {}
+
+  void push_back(ReadModifyWriteContext *val) {
+    if (last == nullptr) {
+      next = val;
+      last = val;
+    }
+    else {
+      last->next = val;
+      last = val;
+    }
+  }
+};
+
 struct CopyContext {
   PSBN sblockID;
 

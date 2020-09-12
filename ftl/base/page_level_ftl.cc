@@ -9,6 +9,7 @@
 #include "ftl/base/page_level_ftl.hh"
 
 #include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/gc/abstract_gc.hh"
 #include "ftl/mapping/abstract_mapping.hh"
 
 namespace SimpleSSD::FTL {
@@ -76,7 +77,7 @@ std::list<SuperRequest>::iterator PageLevelFTL::getWriteContext(uint64_t tag) {
   return iter;
 }
 
-std::unordered_map<uint64_t, PageLevelFTL::ReadModifyWriteContext>::iterator
+std::unordered_map<uint64_t, ReadModifyWriteContext>::iterator
 PageLevelFTL::getRMWContext(uint64_t tag) {
   auto iter = rmwList.find(tag);
 
@@ -86,6 +87,7 @@ PageLevelFTL::getRMWContext(uint64_t tag) {
 }
 
 void PageLevelFTL::read(Request *cmd) {
+  ftlobject.pGC->requestArrived(false, cmd->getNLP());
   ftlobject.pMapping->readMapping(cmd, eventReadSubmit);
 }
 
@@ -107,16 +109,18 @@ void PageLevelFTL::read_done(uint64_t tag) {
   completeRequest(req);
 }
 
-void PageLevelFTL::write(Request *cmd) {
+bool PageLevelFTL::write(Request *cmd) {
   // if SSD is running out of free block, stall request.
   // Stalled requests will be continued after GC
-  if (!ftlobject.pAllocator->checkFreeBlockExist()) {
+  if (!ftlobject.pGC->checkWriteStall()) {
     debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
                cmd->getTag());
-    stalledRequests.push_back(cmd);
 
-    triggerGC();
-    return;
+    stalledRequestList.push_back(cmd);
+
+    ftlobject.pGC->triggerForeground();
+
+    return false;
   }
 
   CPU::Function fstat;
@@ -125,6 +129,8 @@ void PageLevelFTL::write(Request *cmd) {
   LPN lpn = cmd->getLPN();
   LPN slpn = cmd->getSLPN();
   uint32_t nlp = cmd->getNLP();
+
+  ftlobject.pGC->requestArrived(false, nlp);
 
   LPN alignedBegin = getAlignedLPN(lpn);
   LPN alignedEnd = static_cast<LPN>(alignedBegin + minMappingSize);
@@ -196,6 +202,8 @@ void PageLevelFTL::write(Request *cmd) {
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID, fstat);
+
+  return true;
 }
 
 void PageLevelFTL::write_submit(uint64_t tag) {
@@ -219,7 +227,7 @@ void PageLevelFTL::write_submit(uint64_t tag) {
 
   writeList.erase(list);
 
-  triggerGC();
+  ftlobject.pGC->triggerForeground();
 }
 
 void PageLevelFTL::write_done(uint64_t tag) {
@@ -335,7 +343,7 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
     rmw_writeDone(now, tag);
   }
 
-  triggerGC();
+  ftlobject.pGC->triggerForeground();
 }
 
 void PageLevelFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
@@ -388,6 +396,21 @@ void PageLevelFTL::invalidate_submit(uint64_t, uint64_t tag) {
   warn("Trim and Format not implemented.");
 
   completeRequest(req);
+}
+
+void PageLevelFTL::restartStalledRequests() {
+  while (!stalledRequestList.empty()) {
+    auto cmd = stalledRequestList.front();
+
+    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | CONTINUE | TAG : %" PRIu64,
+               cmd->getTag());
+
+    stalledRequestList.pop_front();
+
+    if (!write(cmd)) {
+      break;
+    }
+  }
 }
 
 void PageLevelFTL::backup(std::ostream &out, const SuperRequest &list) const

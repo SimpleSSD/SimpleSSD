@@ -36,6 +36,8 @@ class AbstractFTL : public Object {
   AbstractFTL(ObjectData &, FTLObjectData &, FTL *);
   virtual ~AbstractFTL();
 
+  // TODO: ADD COMMENTS HERE!
+
   uint64_t generateFTLTag();
   Request *getRequest(uint64_t);
 
@@ -44,8 +46,10 @@ class AbstractFTL : public Object {
   virtual void initialize();
 
   virtual void read(Request *) = 0;
-  virtual void write(Request *) = 0;
+  virtual bool write(Request *) = 0;
   virtual void invalidate(Request *) = 0;
+
+  virtual void restartStalledRequests() = 0;
 
   // In initialize phase of mapping, they may want to write spare area
   void writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {
