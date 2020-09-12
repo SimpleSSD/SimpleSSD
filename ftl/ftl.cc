@@ -11,6 +11,7 @@
 #include "ftl/allocator/generic_allocator.hh"
 #include "ftl/base/page_level_ftl.hh"
 #include "ftl/filling.hh"
+#include "ftl/gc/advanced.hh"
 #include "ftl/gc/naive.hh"
 #include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
@@ -56,6 +57,10 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   switch (gcmode) {
     case Config::GCType::Naive:
       ftlobject.pGC = new GC::NaiveGC(object, ftlobject, pFIL);
+
+      break;
+    case Config::GCType::Advanced:
+      ftlobject.pGC = new GC::AdvancedGC(object, ftlobject, pFIL);
 
       break;
     default:
