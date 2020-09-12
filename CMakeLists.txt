@@ -162,6 +162,10 @@ set(SRC_FTL_BASE
   ftl/base/abstract_ftl.cc
   ftl/base/page_level_ftl.cc
 )
+set(SRC_FTL_GC
+  ftl/gc/abstract_gc.cc
+  ftl/gc/naive.cc
+)
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
   ftl/mapping/page_level_mapping.cc
@@ -213,6 +217,7 @@ SOURCE_GROUP("Source Files\\icl\\manager" FILES ${SRC_ICL_MANAGER})
 SOURCE_GROUP("Source Files\\ftl" FILES ${SRC_FTL})
 SOURCE_GROUP("Source Files\\ftl\\allocator" FILES ${SRC_FTL_ALLOC})
 SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
+SOURCE_GROUP("Source Files\\ftl\\gc" FILES ${SRC_FTL_GC})
 SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
@@ -232,6 +237,7 @@ set(SRCS
   ${SRC_FTL}
   ${SRC_FTL_ALLOC}
   ${SRC_FTL_BASE}
+  ${SRC_FTL_GC}
   ${SRC_FTL_MAPPING}
   ${SRC_FIL}
   ${SRC_FIL_NVM_PAL}
