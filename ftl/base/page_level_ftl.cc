@@ -413,44 +413,6 @@ void PageLevelFTL::restartStalledRequests() {
   }
 }
 
-void PageLevelFTL::backup(std::ostream &out, const SuperRequest &list) const
-    noexcept {
-  bool exist;
-  uint64_t size = list.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : list) {
-    exist = iter != nullptr;
-
-    BACKUP_SCALAR(out, exist);
-
-    if (exist) {
-      uint64_t tag = iter->getTag();
-
-      BACKUP_SCALAR(out, tag);
-    }
-  }
-}
-
-void PageLevelFTL::restore(std::istream &in, SuperRequest &list) noexcept {
-  bool exist;
-  uint64_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  uint64_t tag;
-
-  for (uint64_t i = 0; i < size; i++) {
-    RESTORE_SCALAR(in, exist);
-
-    if (exist) {
-      RESTORE_SCALAR(in, tag);
-
-      list.emplace_back(getRequest(tag));
-    }
-  }
-}
-
 void PageLevelFTL::getStatList(std::vector<Stat> &list,
                                std::string prefix) noexcept {
   list.emplace_back(prefix + "rmw.count", "Total read-modify-write operations");
@@ -477,13 +439,13 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
   uint64_t size;
 
-  backup(out, pendingList);
+  backupSuperRequest(out, pendingList);
 
   size = writeList.size();
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : writeList) {
-    backup(out, iter);
+    backupSuperRequest(out, iter);
   }
 
   size = rmwList.size();
@@ -492,13 +454,7 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
   for (auto &iter : rmwList) {
     BACKUP_SCALAR(out, iter.first);
 
-    BACKUP_SCALAR(out, iter.second.alignedBegin);
-    BACKUP_SCALAR(out, iter.second.chunkBegin);
-
-    backup(out, iter.second.list);
-
-    BACKUP_SCALAR(out, iter.second.writePending);
-    BACKUP_SCALAR(out, iter.second.counter);
+    iter.second.createCheckpoint(out);
 
     exist = iter.second.next != nullptr;
     auto next = iter.second.next;
@@ -507,13 +463,7 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, exist);
 
       if (exist) {
-        BACKUP_SCALAR(out, next->alignedBegin);
-        BACKUP_SCALAR(out, next->chunkBegin);
-
-        backup(out, next->list);
-
-        BACKUP_SCALAR(out, next->writePending);
-        BACKUP_SCALAR(out, next->counter);
+        next->createCheckpoint(out);
 
         next = next->next;
         exist = next != nullptr;
@@ -536,14 +486,14 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
   uint64_t size;
 
-  restore(in, pendingList);
+  restoreSuperRequest(in, object, pendingList, this);
 
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
     SuperRequest list;
 
-    restore(in, list);
+    restoreSuperRequest(in, object, list, this);
 
     writeList.emplace_back(std::move(list));
   }
@@ -557,13 +507,7 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, tag);
 
-    RESTORE_SCALAR(in, cur.alignedBegin);
-    RESTORE_SCALAR(in, cur.chunkBegin);
-
-    restore(in, cur.list);
-
-    RESTORE_SCALAR(in, cur.writePending);
-    RESTORE_SCALAR(in, cur.counter);
+    cur.restoreCheckpoint(in, object, this);
 
     while (true) {
       RESTORE_SCALAR(in, exist);
@@ -571,13 +515,7 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
       if (exist) {
         ReadModifyWriteContext *next = new ReadModifyWriteContext();
 
-        RESTORE_SCALAR(in, next->alignedBegin);
-        RESTORE_SCALAR(in, next->chunkBegin);
-
-        restore(in, next->list);
-
-        RESTORE_SCALAR(in, next->writePending);
-        RESTORE_SCALAR(in, next->counter);
+        next->restoreCheckpoint(in, object, this);
 
         cur.push_back(next);
       }

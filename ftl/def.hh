@@ -22,6 +22,7 @@
 namespace SimpleSSD::FTL {
 
 class FTL;
+class AbstractFTL;
 
 //! FTL parameter
 struct Parameter {
@@ -201,12 +202,16 @@ class Request {
 
   uint32_t counter;
 
-  void createCheckpoint(std::ostream &out) const noexcept;
-  void restoreCheckpoint(std::istream &in, ObjectData &object) noexcept;
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &, ObjectData &) noexcept;
 };
 
 // list of request targeting same superpage
 using SuperRequest = std::vector<Request *>;
+
+void backupSuperRequest(std::ostream &, const SuperRequest &) noexcept;
+void restoreSuperRequest(std::istream &, ObjectData &, SuperRequest &,
+                         AbstractFTL *) noexcept;
 
 struct ReadModifyWriteContext {
   LPN alignedBegin;
@@ -236,7 +241,7 @@ struct ReadModifyWriteContext {
         counter(0),
         beginAt(0) {}
 
-  void push_back(ReadModifyWriteContext *val) {
+  inline void push_back(ReadModifyWriteContext *val) {
     if (last == nullptr) {
       next = val;
       last = val;
@@ -246,6 +251,9 @@ struct ReadModifyWriteContext {
       last = val;
     }
   }
+
+  void createCheckpoint(std::ostream &) const noexcept;
+  void restoreCheckpoint(std::istream &, ObjectData &, AbstractFTL *) noexcept;
 };
 
 struct CopyContext {

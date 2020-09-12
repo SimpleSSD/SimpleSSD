@@ -8,6 +8,8 @@
 
 #include "ftl/def.hh"
 
+#include "ftl/base/abstract_ftl.hh"
+
 namespace SimpleSSD::FTL {
 
 Request::Request(Event e, uint64_t d)
@@ -114,6 +116,70 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_SCALAR(in, data);
   RESTORE_SCALAR(in, address);
   RESTORE_SCALAR(in, counter);
+}
+
+void backupSuperRequest(std::ostream &out, const SuperRequest &list) noexcept {
+  bool exist;
+  uint64_t size = list.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : list) {
+    exist = iter != nullptr;
+
+    BACKUP_SCALAR(out, exist);
+
+    if (exist) {
+      uint64_t tag = iter->getTag();
+
+      BACKUP_SCALAR(out, tag);
+    }
+  }
+}
+
+void restoreSuperRequest(std::istream &in, ObjectData &object,
+                         SuperRequest &list, AbstractFTL *p) noexcept {
+  bool exist;
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  uint64_t tag;
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, exist);
+
+    if (exist) {
+      RESTORE_SCALAR(in, tag);
+
+      list.emplace_back(p->getRequest(tag));
+    }
+  }
+}
+
+void ReadModifyWriteContext::createCheckpoint(std::ostream &out) const
+    noexcept {
+  // next and last should be handled outside of this function
+  BACKUP_SCALAR(out, alignedBegin);
+  BACKUP_SCALAR(out, chunkBegin);
+
+  backupSuperRequest(out, list);
+
+  BACKUP_SCALAR(out, writePending);
+  BACKUP_SCALAR(out, counter);
+  BACKUP_SCALAR(out, beginAt);
+}
+
+void ReadModifyWriteContext::restoreCheckpoint(std::istream &in,
+                                               ObjectData &object,
+                                               AbstractFTL *p) noexcept {
+  RESTORE_SCALAR(in, alignedBegin);
+  RESTORE_SCALAR(in, chunkBegin);
+
+  restoreSuperRequest(in, object, list, p);
+
+  RESTORE_SCALAR(in, writePending);
+  RESTORE_SCALAR(in, counter);
+  RESTORE_SCALAR(in, beginAt);
 }
 
 CopyContext::~CopyContext() {

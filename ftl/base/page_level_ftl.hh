@@ -74,9 +74,6 @@ class PageLevelFTL : public AbstractFTL {
   Event eventInvalidateSubmit;
   void invalidate_submit(uint64_t, uint64_t);
 
-  void backup(std::ostream &, const SuperRequest &) const noexcept;
-  void restore(std::istream &, SuperRequest &) noexcept;
-
  public:
   PageLevelFTL(ObjectData &, FTLObjectData &, FTL *);
   virtual ~PageLevelFTL();
