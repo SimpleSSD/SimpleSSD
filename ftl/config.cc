@@ -18,7 +18,6 @@ const char NAME_GC_MODE[] = "GCMode";
 const char NAME_FGC_THRESHOLD[] = "ForegroundThreshold";
 const char NAME_BGC_THRESHOLD[] = "BackgroundThreshold";
 const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
-const char NAME_IDLETIME_DETECTION[] = "AdvancedIdletimeDetection";
 
 // gc > blockselection section
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
@@ -42,7 +41,6 @@ Config::Config() {
   invalidFillRatio = 0.f;
 
   gcMode = GCType::Naive;
-  idletime = IdletimeDetection::Timebased;
 
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
@@ -74,8 +72,6 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
             LOAD_NAME_FLOAT(node3, NAME_FGC_THRESHOLD, fgcThreshold);
             LOAD_NAME_FLOAT(node3, NAME_BGC_THRESHOLD, bgcThreshold);
             LOAD_NAME_FLOAT(node3, NAME_BGC_IDLETIME, bgcIdletime);
-            LOAD_NAME_UINT_TYPE(node3, NAME_IDLETIME_DETECTION,
-                                IdletimeDetection, idletime);
           }
         }
         else if (strcmp(name2, "blockselection") == 0 && isSection(node2)) {
@@ -133,7 +129,6 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
   STORE_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
   STORE_NAME_FLOAT(node2, NAME_BGC_IDLETIME, bgcIdletime);
-  STORE_NAME_UINT(node2, NAME_IDLETIME_DETECTION, idletime);
 
   STORE_SECTION(node, "blockselection", node2);
   STORE_NAME_UINT(node2, NAME_GC_EVICT_POLICY, gcBlockSelection);
@@ -154,7 +149,6 @@ void Config::update() noexcept {
   panic_if((uint8_t)mappingMode > 1, "Invalid MappingMode.");
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
   panic_if((uint8_t)gcMode > 2, "Invalid GCMode.");
-  panic_if((uint8_t)idletime > 1, "Invalid AdvancedIdletimeDetection.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
 
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
@@ -197,9 +191,6 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
       break;
     case GCMode:
       ret = (uint64_t)gcMode;
-      break;
-    case BGCAdvancedDetection:
-      ret = (uint64_t)idletime;
       break;
     case VictimSelectionPolicy:
       ret = (uint64_t)gcBlockSelection;
@@ -264,9 +255,6 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
       break;
     case GCMode:
       gcMode = (GCType)value;
-      break;
-    case BGCAdvancedDetection:
-      idletime = (IdletimeDetection)value;
       break;
     case VictimSelectionPolicy:
       gcBlockSelection = (VictimSelectionMode)value;

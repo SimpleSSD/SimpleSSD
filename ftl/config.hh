@@ -30,7 +30,6 @@ class Config : public BaseConfig {
     FGCThreshold,
     BGCThreshold,
     BGCIdleTime,
-    BGCAdvancedDetection,
     VictimSelectionPolicy,
     SamplingFactor,
 
@@ -55,11 +54,7 @@ class Config : public BaseConfig {
     Naive,
     Advanced,
     Preemptible,
-  };
-
-  enum class IdletimeDetection : uint8_t {
-    Timebased,
-    Queuebased,  // Time-based + Queue-based
+    PreemptibleIdleTime,
   };
 
   enum class VictimSelectionMode : uint8_t {
@@ -77,14 +72,13 @@ class Config : public BaseConfig {
   MappingType mappingMode;
   FillingType fillingMode;
   GCType gcMode;
-  IdletimeDetection idletime;
+  VictimSelectionMode gcBlockSelection;
 
   float fgcThreshold;
   float bgcThreshold;
   uint64_t bgcIdletime;
   uint64_t dChoiceParam;
 
-  VictimSelectionMode gcBlockSelection;
   uint8_t superpageAllocation;
   bool mergeRMW;
 

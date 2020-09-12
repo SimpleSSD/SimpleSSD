@@ -194,8 +194,6 @@ TEST_CASE("ConfigReader") {
                        utest);
       reader.writeUint(Section::FlashTranslation, FTL::Config::Key::GCMode,
                        utest);
-      reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::BGCAdvancedDetection, utest);
       reader.writeFloat(Section::FlashTranslation, FTL::Config::Key::FillRatio,
                         ftest);
       reader.writeFloat(Section::FlashTranslation,
@@ -465,8 +463,6 @@ TEST_CASE("ConfigReader") {
                               FTL::Config::Key::FillingMode) == utest);
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::GCMode) == utest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::BGCAdvancedDetection) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::FillRatio) == ftest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
