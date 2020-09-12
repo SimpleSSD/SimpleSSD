@@ -84,8 +84,7 @@ void AdvancedGC::requestArrived(bool isread, uint32_t bytes) {
   NaiveGC::requestArrived(isread, bytes);
 
   // Not scheduled and GC is not in progress
-  if (!isScheduled(eventBackgroundGC) &&
-      beginAt == std::numeric_limits<uint64_t>::max()) {
+  if (!isScheduled(eventBackgroundGC) && state < State::Foreground) {
     scheduleRel(eventBackgroundGC, 0, idletime);
   }
 }
