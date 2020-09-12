@@ -8,29 +8,25 @@
 
 #include "ftl/base/page_level_ftl.hh"
 
+#include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/mapping/abstract_mapping.hh"
+
 namespace SimpleSSD::FTL {
 
-PageLevelFTL::PageLevelFTL(ObjectData &o, FTL *p, FIL::FIL *f,
-                           Mapping::AbstractMapping *m,
-                           BlockAllocator::AbstractAllocator *a,
-                           GC::AbstractGC *g)
-    : AbstractFTL(o, p, f, m, a, g) {
+PageLevelFTL::PageLevelFTL(ObjectData &o, FTLObjectData &fo, FTL *p)
+    : AbstractFTL(o, fo, p) {
   memset(&stat, 0, sizeof(stat));
 
-  auto pagesInBlock = object.config->getNANDStructure()->page;
-  auto param = pMapper->getInfo();
+  auto param = ftlobject.pMapping->getInfo();
   pageSize = param->pageSize;
 
-  pMapper->getMappingSize(&minMappingSize);
+  ftlobject.pMapping->getMappingSize(&minMappingSize);
 
   pendingList = std::vector<Request *>(minMappingSize, nullptr);
 
   pendingListBaseAddress = object.memory->allocate(
       minMappingSize * pageSize, Memory::MemoryType::DRAM,
       "FTL::PageLevelFTL::PendingRMWData");
-  gcctx.bufferBaseAddress = object.memory->allocate(
-      pagesInBlock * minMappingSize * pageSize, Memory::MemoryType::DRAM,
-      "FTL::PageLevelFTL::GCBuffer");
 
   // Create events
   eventReadSubmit =
@@ -56,44 +52,9 @@ PageLevelFTL::PageLevelFTL(ObjectData &o, FTL *p, FIL::FIL *f,
   eventPartialWriteDone =
       createEvent([this](uint64_t t, uint64_t d) { rmw_writeDone(t, d); },
                   "FTL::PageLevelFTL::eventPartialWriteDone");
-
   eventInvalidateSubmit =
       createEvent([this](uint64_t t, uint64_t d) { invalidate_submit(t, d); },
                   "FTL::PageLevelFTL::eventInvalidateSubmit");
-
-  eventGCTrigger = createEvent([this](uint64_t t, uint64_t) { gc_trigger(t); },
-                               "FTL::PageLevelFTL::eventGCTrigger");
-
-  eventGCSetNextVictimBlock =
-      createEvent([this](uint64_t t, uint64_t) { gc_setNextVictimBlock(t); },
-                  "FTL::PageLevelFTL::eventGCSetNextVictimBlock");
-
-  eventGCReadSubmit =
-      createEvent([this](uint64_t, uint64_t) { gc_readSubmit(); },
-                  "FTL::PageLevelFTL::eventGCReadSubmit");
-
-  eventGCReadDone =
-      createEvent([this](uint64_t t, uint64_t) { gc_readDone(t); },
-                  "FTL::PageLevelFTL::eventGCReadDone");
-
-  eventGCWriteSubmit =
-      createEvent([this](uint64_t, uint64_t d) { gc_writeSubmit(d); },
-                  "FTL::PageLevelFTL::eventGCWriteSubmit");
-
-  eventGCWriteDone =
-      createEvent([this](uint64_t t, uint64_t d) { gc_writeDone(t, d); },
-                  "FTL::PageLevelFTL::eventGCWriteDone");
-
-  eventGCEraseSubmit =
-      createEvent([this](uint64_t, uint64_t) { gc_eraseSubmit(); },
-                  "FTL::PageLevelFTL::eventGCEraseSubmit");
-
-  eventGCEraseDone =
-      createEvent([this](uint64_t t, uint64_t) { gc_eraseDone(t); },
-                  "FTL::PageLevelFTL::eventGCEraseDone");
-
-  eventGCDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
-                            "FTL::PageLevelFTL::eventGCEraseDone");
 
   mergeReadModifyWrite = readConfigBoolean(Section::FlashTranslation,
                                            Config::Key::MergeReadModifyWrite);
@@ -125,7 +86,7 @@ PageLevelFTL::getRMWContext(uint64_t tag) {
 }
 
 void PageLevelFTL::read(Request *cmd) {
-  pMapper->readMapping(cmd, eventReadSubmit);
+  ftlobject.pMapping->readMapping(cmd, eventReadSubmit);
 }
 
 void PageLevelFTL::read_submit(uint64_t tag) {
@@ -149,7 +110,7 @@ void PageLevelFTL::read_done(uint64_t tag) {
 void PageLevelFTL::write(Request *cmd) {
   // if SSD is running out of free block, stall request.
   // Stalled requests will be continued after GC
-  if (!pAllocator->checkFreeBlockExist()) {
+  if (!ftlobject.pAllocator->checkFreeBlockExist()) {
     debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
                cmd->getTag());
     stalledRequests.push_back(cmd);
@@ -214,7 +175,7 @@ void PageLevelFTL::write(Request *cmd) {
         ret.first->second.chunkBegin = chunkBegin;
 
         // Do read translation - no need for loop
-        pMapper->readMapping(firstreq, eventPartialReadSubmit);
+        ftlobject.pMapping->readMapping(firstreq, eventPartialReadSubmit);
 
         stat.rmwCount++;
       }
@@ -228,7 +189,7 @@ void PageLevelFTL::write(Request *cmd) {
       auto &ret = writeList.emplace_back(std::move(pendingList));
 
       // No need for loop
-      pMapper->writeMapping(ret.front(), eventWriteSubmit);
+      ftlobject.pMapping->writeMapping(ret.front(), eventWriteSubmit);
     }
 
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
@@ -325,7 +286,7 @@ void PageLevelFTL::rmw_readDone(uint64_t now, uint64_t tag) {
     auto cmd = ctx.list.at(ctx.chunkBegin - ctx.alignedBegin);
 
     // Write translation
-    pMapper->writeMapping(cmd, eventPartialWriteSubmit);
+    ftlobject.pMapping->writeMapping(cmd, eventPartialWriteSubmit);
   }
 }
 
@@ -418,7 +379,7 @@ void PageLevelFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
 }
 
 void PageLevelFTL::invalidate(Request *cmd) {
-  pMapper->invalidateMapping(cmd, eventInvalidateSubmit);
+  ftlobject.pMapping->invalidateMapping(cmd, eventInvalidateSubmit);
 }
 
 void PageLevelFTL::invalidate_submit(uint64_t, uint64_t tag) {
@@ -427,216 +388,6 @@ void PageLevelFTL::invalidate_submit(uint64_t, uint64_t tag) {
   warn("Trim and Format not implemented.");
 
   completeRequest(req);
-}
-
-void PageLevelFTL::gc_trigger(uint64_t now) {
-  gcctx.init(now);
-
-  stat.gcCount++;
-
-  // victim block selection
-  pAllocator->getVictimBlocks(gcctx.victimSBlockList,
-                              eventGCSetNextVictimBlock);
-
-  debugprint(Log::DebugID::FTL_PageLevel, "GC    | On-demand | %u blocks",
-             gcctx.victimSBlockList.size());
-}
-
-void PageLevelFTL::gc_setNextVictimBlock(uint64_t now) {
-  if (LIKELY(gcctx.victimSBlockList.size() > 0)) {
-    auto nextVictimBlock = gcctx.victimSBlockList.back();
-    gcctx.victimSBlockList.pop_back();
-
-    debugprint(Log::DebugID::FTL_PageLevel,
-
-               "GC    | Victim BlockID  %" PRIu64 "", nextVictimBlock);
-    gcctx.copyctx.sblockID = nextVictimBlock;
-    gcctx.copyctx.beginAt = now;
-    pMapper->getCopyContext(gcctx.copyctx, eventGCReadSubmit);
-  }
-  else {
-    // no need to perform GC or GC finished
-    scheduleNow(eventGCDone);
-  }
-}
-
-void PageLevelFTL::gc_readSubmit() {
-  // alias
-  auto &copyctx = gcctx.copyctx;
-
-  // current victim block has no valid pages to copy
-  if (UNLIKELY(copyctx.list.size() == 0))
-    scheduleNow(eventGCEraseSubmit);
-
-  if (LIKELY(!copyctx.isReadSubmitDone())) {
-    auto firstReq = copyctx.iter->front();
-    PPN ppnBegin = firstReq->getPPN();
-    uint64_t listIndex = copyctx.iter - copyctx.list.begin();
-    uint64_t spBufferBaseAddr =
-        gcctx.bufferBaseAddress + listIndex * minMappingSize * pageSize;
-    copyctx.readCounter = 0;
-
-    // generate tag per SuperRequest
-    uint64_t tag = generateFTLTag();
-    copyctx.tag2ListIdx.emplace(tag, listIndex);
-
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | READ      | PPN %" PRIu64 " - %" PRIu64, ppnBegin,
-               ppnBegin + minMappingSize);
-
-    // submit requests in current SuperRequest
-    for (auto req : *copyctx.iter) {
-      req->setTag(tag);
-      pFIL->read(FIL::Request(req, eventGCReadDone));
-      object.memory->write(
-          spBufferBaseAddr + (req->getPPN() - ppnBegin) * pageSize, pageSize,
-          InvalidEventID, false);
-      copyctx.readCounter++;
-    }
-  }
-  else {
-    // we did all read we need
-  }
-}
-
-void PageLevelFTL::gc_readDone(uint64_t now) {
-  auto &copyctx = gcctx.copyctx;
-  copyctx.readCounter--;
-
-  if (copyctx.isReadDone()) {
-    PPN ppnBegin = copyctx.iter->front()->getPPN();
-
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | READDONE  | PPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
-               " - %" PRIu64 " (%" PRIu64 ")",
-               ppnBegin, ppnBegin + minMappingSize, copyctx.beginAt, now,
-               now - copyctx.beginAt);
-
-    // Get first command
-    auto req = copyctx.iter->at(0);
-
-    // Write translation
-    pMapper->writeMapping(req, eventGCWriteSubmit);
-
-    // submit next copy
-    // maybe the timing makes no sense
-    copyctx.iter++;
-    scheduleNow(eventGCReadSubmit);
-  }
-  return;
-}
-
-void PageLevelFTL::gc_writeSubmit(uint64_t tag) {
-  // alias
-  auto &copyctx = gcctx.copyctx;
-
-  const uint64_t listIndex = copyctx.tag2ListIdx.at(tag);
-  auto sReq = copyctx.list.at(listIndex);
-
-  auto firstReq = sReq.front();
-  LPN lpnBegin = firstReq->getLPN();
-  PPN ppnBegin = firstReq->getPPN();
-  uint64_t spBufferBaseAddr =
-      gcctx.bufferBaseAddress + listIndex * minMappingSize * pageSize;
-  uint64_t offset = 0;
-
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "GC | WRITE     | LPN %" PRIu64 " - %" PRIu64, lpnBegin,
-             lpnBegin + minMappingSize);
-
-  for (auto req : sReq) {
-    // update to new PPN
-    req->setPPN(static_cast<PPN>(ppnBegin + offset));
-
-    // submit
-    req->setDRAMAddress(spBufferBaseAddr + offset * pageSize);
-    pFIL->program(FIL::Request(req, eventGCWriteDone));
-    copyctx.writeCounter.at(listIndex)++;
-    offset++;
-  }
-}
-
-void PageLevelFTL::gc_writeDone(uint64_t now, uint64_t tag) {
-  auto &copyctx = gcctx.copyctx;
-  const auto listIndex = copyctx.tag2ListIdx.at(tag);
-  copyctx.writeCounter.at(listIndex)--;
-  stat.gcCopiedPages++;
-
-  if (copyctx.iswriteDone(listIndex)) {
-    LPN lpnBegin = copyctx.list.at(listIndex).front()->getLPN();
-
-    copyctx.copyCounter--;
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | WRITEDONE | LPN %" PRIu64 " - %" PRIu64 " | %" PRIu64
-               " - %" PRIu64 " (%" PRIu64 ")",
-               lpnBegin, lpnBegin + minMappingSize, copyctx.beginAt, now,
-               now - copyctx.beginAt);
-
-    if (copyctx.isCopyDone()) {
-      // valid page copy done
-      debugprint(Log::DebugID::FTL_PageLevel,
-                 "GC | COPYDONE  | BLOCK % " PRIu64 " PAGES %" PRIu64
-                 " | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 copyctx.sblockID, copyctx.list.size(), copyctx.beginAt, now,
-                 now - copyctx.beginAt);
-      scheduleNow(eventGCEraseSubmit);
-    }
-  }
-}
-
-void PageLevelFTL::gc_eraseSubmit() {
-  PSBN blockId = gcctx.copyctx.sblockID;
-
-  panic_if(pMapper->getValidPages(blockId) > 0, "valid page copy not done");
-
-  debugprint(Log::DebugID::FTL_PageLevel, "GC | ERASE     | BLOCK %" PRIu64 "",
-             blockId);
-
-  for (uint32_t i = 0; i < minMappingSize; i++) {
-    pFIL->erase(FIL::Request(pMapper->getInfo()->makePPN(blockId, 0, i),
-                             HIL::NoMemoryAccess, eventGCEraseDone, 0));
-    gcctx.copyctx.eraseCounter++;
-  }
-}
-
-void PageLevelFTL::gc_eraseDone(uint64_t now) {
-  gcctx.erasedBlocks++;
-  stat.gcErasedBlocks++;
-
-  auto &copyctx = gcctx.copyctx;
-  copyctx.eraseCounter--;
-
-  if (copyctx.isEraseDone()) {
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "GC | ERASEDONE | BLOCK %" PRIu64 " | %" PRIu64 " - %" PRIu64
-               " (%" PRIu64 ")",
-               copyctx.sblockID, copyctx.beginAt, now, now - copyctx.beginAt);
-
-    pMapper->markBlockErased(copyctx.sblockID);
-    pAllocator->reclaimBlocks(copyctx.sblockID, eventGCSetNextVictimBlock);
-  }
-}
-
-void PageLevelFTL::gc_done(uint64_t now) {
-  gcctx.inProgress = false;
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "GC | DONE      | %" PRIu64 " BLOCKS | %" PRIu64 " - %" PRIu64
-             " (%" PRIu64 ")",
-             gcctx.beginAt, gcctx.erasedBlocks, now, gcctx.beginAt,
-             now - gcctx.beginAt);
-
-  // continue stalled request
-  while (!stalledRequests.empty()) {
-    auto cmd = stalledRequests.front();
-    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | CONTINUE | TAG : %" PRIu64,
-               cmd->getTag());
-    write(cmd);
-    stalledRequests.pop_front();
-
-    // if gc restarted, stop continuing
-    if (gcctx.inProgress)
-      break;
-  }
 }
 
 void PageLevelFTL::backup(std::ostream &out, const SuperRequest &list) const
@@ -686,10 +437,6 @@ void PageLevelFTL::getStatList(std::vector<Stat> &list,
                     "Total read pages in read-modify-write");
   list.emplace_back(prefix + "rmw.written_pages",
                     "Total written pages in read-modify-write");
-  list.emplace_back(prefix + "gc.count", "Total GC count");
-  list.emplace_back(prefix + "gc.reclaimed_blocks",
-                    "Total reclaimed blocks in GC");
-  list.emplace_back(prefix + "gc.page_copies", "Total valid page copy");
 }
 
 void PageLevelFTL::getStatValues(std::vector<double> &values) noexcept {
@@ -697,9 +444,6 @@ void PageLevelFTL::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)stat.rmwMerged);
   values.push_back((double)stat.rmwReadPages);
   values.push_back((double)stat.rmwWrittenPages);
-  values.push_back((double)stat.gcCount);
-  values.push_back((double)stat.gcErasedBlocks);
-  values.push_back((double)stat.gcCopiedPages);
 }
 
 void PageLevelFTL::resetStatValues() noexcept {
@@ -763,7 +507,6 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventWriteSubmit);
   BACKUP_EVENT(out, eventWriteDone);
   BACKUP_EVENT(out, eventInvalidateSubmit);
-  BACKUP_EVENT(out, eventGCTrigger);
 }
 
 void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
@@ -829,7 +572,6 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventWriteSubmit);
   RESTORE_EVENT(in, eventWriteDone);
   RESTORE_EVENT(in, eventInvalidateSubmit);
-  RESTORE_EVENT(in, eventGCTrigger);
 }
 
 }  // namespace SimpleSSD::FTL

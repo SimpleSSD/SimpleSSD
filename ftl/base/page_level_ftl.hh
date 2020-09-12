@@ -76,26 +76,6 @@ class PageLevelFTL : public AbstractFTL {
   // list of stalled request <tag, writeRequestType>
   std::deque<Request *> stalledRequests;
 
-  struct GCContext {
-    bool inProgress;
-    std::vector<PSBN> victimSBlockList;
-    CopyContext copyctx;
-    uint64_t bufferBaseAddress;
-
-    uint64_t beginAt;
-    uint64_t erasedBlocks;
-
-    GCContext() : inProgress(false), beginAt(0) {}
-
-    void init(uint64_t now) {
-      inProgress = true;
-      beginAt = now;
-      victimSBlockList.clear();
-      erasedBlocks = 0;
-    }
-  };
-  GCContext gcctx;
-
   std::unordered_map<uint64_t, ReadModifyWriteContext>::iterator getRMWContext(
       uint64_t);
 
@@ -109,17 +89,7 @@ class PageLevelFTL : public AbstractFTL {
     uint64_t rmwMerged;        // Total number of merged RMW operation
     uint64_t rmwReadPages;     // Read pages in RMW
     uint64_t rmwWrittenPages;  // Written pages in RMW
-    uint64_t gcCount;          // GC invoked count
-    uint64_t gcErasedBlocks;   // Erased blocks
-    uint64_t gcCopiedPages;    // Copied pages
   } stat;
-
-  inline void triggerGC() {
-    if (pAllocator->checkForegroundGCThreshold() && !gcctx.inProgress) {
-      gcctx.inProgress = true;
-      scheduleNow(eventGCTrigger);
-    }
-  }
 
   Event eventReadSubmit;
   void read_submit(uint64_t);
@@ -148,39 +118,11 @@ class PageLevelFTL : public AbstractFTL {
   Event eventInvalidateSubmit;
   void invalidate_submit(uint64_t, uint64_t);
 
-  Event eventGCTrigger;
-  void gc_trigger(uint64_t);
-
-  Event eventGCSetNextVictimBlock;
-  void gc_setNextVictimBlock(uint64_t);
-
-  Event eventGCReadSubmit;
-  void gc_readSubmit();
-
-  Event eventGCReadDone;
-  void gc_readDone(uint64_t);
-
-  Event eventGCWriteSubmit;
-  void gc_writeSubmit(uint64_t);
-
-  Event eventGCWriteDone;
-  void gc_writeDone(uint64_t, uint64_t);
-
-  Event eventGCEraseSubmit;
-  void gc_eraseSubmit();
-
-  Event eventGCEraseDone;
-  void gc_eraseDone(uint64_t);
-
-  Event eventGCDone;
-  void gc_done(uint64_t);
-
   void backup(std::ostream &, const SuperRequest &) const noexcept;
   void restore(std::istream &, SuperRequest &) noexcept;
 
  public:
-  PageLevelFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
-               BlockAllocator::AbstractAllocator *, GC::AbstractGC *);
+  PageLevelFTL(ObjectData &, FTLObjectData &, FTL *);
   virtual ~PageLevelFTL();
 
   void read(Request *) override;

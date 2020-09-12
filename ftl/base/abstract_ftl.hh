@@ -12,10 +12,9 @@
 #define __SIMPLESSD_FTL_BASE_ABSTRACT_FTL_HH__
 
 #include "fil/fil.hh"
-#include "ftl/allocator/abstract_allocator.hh"
 #include "ftl/def.hh"
-#include "ftl/gc/abstract_gc.hh"
-#include "ftl/mapping/abstract_mapping.hh"
+#include "ftl/gc/hint.hh"
+#include "ftl/object.hh"
 #include "sim/object.hh"
 
 namespace SimpleSSD::FTL {
@@ -27,24 +26,22 @@ class AbstractFTL : public Object {
   FTL *pFTL;
 
  protected:
+  FTLObjectData &ftlobject;
+
   FIL::FIL *pFIL;
 
-  Mapping::AbstractMapping *pMapper;
-  BlockAllocator::AbstractAllocator *pAllocator;
-  GC::AbstractGC *pGC;
-
   void completeRequest(Request *);
-  uint64_t generateFTLTag();
 
  public:
-  AbstractFTL(ObjectData &, FTL *, FIL::FIL *, Mapping::AbstractMapping *,
-              BlockAllocator::AbstractAllocator *, GC::AbstractGC *);
-  virtual ~AbstractFTL() {}
+  AbstractFTL(ObjectData &, FTLObjectData &, FTL *);
+  virtual ~AbstractFTL();
 
+  uint64_t generateFTLTag();
   Request *getRequest(uint64_t);
+
   void getGCHint(GC::HintContext &ctx) noexcept;
 
-  virtual void initialize() {}
+  virtual void initialize();
 
   virtual void read(Request *) = 0;
   virtual void write(Request *) = 0;

@@ -11,6 +11,7 @@
 #include "ftl/allocator/generic_allocator.hh"
 #include "ftl/base/page_level_ftl.hh"
 #include "ftl/filling.hh"
+#include "ftl/gc/naive.hh"
 #include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
 
@@ -29,11 +30,11 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Mapping algorithm
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
-      pMapper = new Mapping::PageLevelMapping(object);
+      ftlobject.pMapping = new Mapping::PageLevelMapping(object, ftlobject);
 
       break;
     // case Config::MappingType::BlockLevelFTL:
-    //   pMapper = new Mapping::BlockLevel(object);
+    //   ftlobject.pMapping = new Mapping::BlockLevel(object);
 
     //   break;
     default:
@@ -45,7 +46,8 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Block allocator
   switch (mapping) {
     default:
-      pAllocator = new BlockAllocator::GenericAllocator(object, pMapper);
+      ftlobject.pAllocator =
+          new BlockAllocator::GenericAllocator(object, ftlobject);
 
       break;
   }
@@ -53,7 +55,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // GC algorithm
   switch (gcmode) {
     case Config::GCType::Naive:
-      pGC = nullptr;
+      ftlobject.pGC = new GC::NaiveGC(object, ftlobject);
 
       break;
     default:
@@ -65,7 +67,7 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   // Base FTL routine
   switch (mapping) {
     case Config::MappingType::PageLevelFTL:
-      pFTL = new PageLevelFTL(object, this, pFIL, pMapper, pAllocator);
+      ftlobject.pFTL = new PageLevelFTL(object, ftlobject, this);
 
       break;
     default:
@@ -77,10 +79,10 @@ FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
 
 FTL::~FTL() {
   delete pFIL;
-  delete pMapper;
-  delete pAllocator;
-  delete pGC;
-  delete pFTL;
+  delete ftlobject.pMapping;
+  delete ftlobject.pAllocator;
+  delete ftlobject.pGC;
+  delete ftlobject.pFTL;
 }
 
 Request *FTL::insertRequest(Request &&req) {
@@ -95,24 +97,24 @@ Request *FTL::insertRequest(Request &&req) {
 
 void FTL::initialize() {
   // Initialize all
-  pMapper->initialize(pFTL, pAllocator);
-  pAllocator->initialize(pMapper->getInfo());
-  pGC->initialize(pFTL, pMapper->getInfo());
+  ftlobject.pMapping->initialize();
+  ftlobject.pAllocator->initialize();
+  ftlobject.pGC->initialize();
 
-  pFTL->initialize();
+  ftlobject.pFTL->initialize();
 
   // Filling
-  Filling filler(object, pFTL, pMapper);
+  Filling filler(object, ftlobject);
 
   filler.start();
 }
 
 const Parameter *FTL::getInfo() {
-  return pMapper->getInfo();
+  return ftlobject.pMapping->getInfo();
 }
 
 uint64_t FTL::getPageUsage(LPN slpn, uint64_t nlp) {
-  return pMapper->getPageUsage(slpn, nlp);
+  return ftlobject.pMapping->getPageUsage(slpn, nlp);
 }
 
 Request *FTL::getRequest(uint64_t tag) {
@@ -137,7 +139,7 @@ void FTL::read(Request &&req) {
 
   debugprint(Log::DebugID::FTL, "READ  | LPN %" PRIu64, req.lpn);
 
-  pFTL->read(preq);
+  ftlobject.pFTL->read(preq);
 }
 
 void FTL::write(Request &&req) {
@@ -145,7 +147,7 @@ void FTL::write(Request &&req) {
 
   debugprint(Log::DebugID::FTL, "WRITE | LPN %" PRIu64, req.lpn);
 
-  pFTL->write(preq);
+  ftlobject.pFTL->write(preq);
 }
 
 void FTL::invalidate(Request &&req) {
@@ -153,7 +155,7 @@ void FTL::invalidate(Request &&req) {
 
   debugprint(Log::DebugID::FTL, "INVAL | LPN %" PRIu64, req.lpn);
 
-  pFTL->invalidate(preq);
+  ftlobject.pFTL->invalidate(preq);
 }
 
 void FTL::getGCHint(GC::HintContext &ctx) noexcept {
@@ -161,37 +163,42 @@ void FTL::getGCHint(GC::HintContext &ctx) noexcept {
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  pFTL->getStatList(list, prefix + "ftl.base.");
-  pMapper->getStatList(list, prefix + "ftl.mapper.");
-  pAllocator->getStatList(list, prefix + "ftl.allocator.");
+  ftlobject.pFTL->getStatList(list, prefix + "ftl.base.");
+  ftlobject.pMapping->getStatList(list, prefix + "ftl.mapper.");
+  ftlobject.pAllocator->getStatList(list, prefix + "ftl.allocator.");
+  ftlobject.pGC->getStatList(list, prefix + "ftl.gc.");
   pFIL->getStatList(list, prefix);
 }
 
 void FTL::getStatValues(std::vector<double> &values) noexcept {
-  pFTL->getStatValues(values);
-  pMapper->getStatValues(values);
-  pAllocator->getStatValues(values);
+  ftlobject.pFTL->getStatValues(values);
+  ftlobject.pMapping->getStatValues(values);
+  ftlobject.pAllocator->getStatValues(values);
+  ftlobject.pGC->getStatValues(values);
   pFIL->getStatValues(values);
 }
 
 void FTL::resetStatValues() noexcept {
-  pFTL->resetStatValues();
-  pMapper->resetStatValues();
-  pAllocator->resetStatValues();
+  ftlobject.pFTL->resetStatValues();
+  ftlobject.pMapping->resetStatValues();
+  ftlobject.pAllocator->resetStatValues();
+  ftlobject.pGC->resetStatValues();
   pFIL->resetStatValues();
 }
 
 void FTL::createCheckpoint(std::ostream &out) const noexcept {
-  pFTL->createCheckpoint(out);
-  pMapper->createCheckpoint(out);
-  pAllocator->createCheckpoint(out);
+  ftlobject.pFTL->createCheckpoint(out);
+  ftlobject.pMapping->createCheckpoint(out);
+  ftlobject.pAllocator->createCheckpoint(out);
+  ftlobject.pGC->createCheckpoint(out);
   pFIL->createCheckpoint(out);
 }
 
 void FTL::restoreCheckpoint(std::istream &in) noexcept {
-  pFTL->restoreCheckpoint(in);
-  pMapper->restoreCheckpoint(in);
-  pAllocator->restoreCheckpoint(in);
+  ftlobject.pFTL->restoreCheckpoint(in);
+  ftlobject.pMapping->restoreCheckpoint(in);
+  ftlobject.pAllocator->restoreCheckpoint(in);
+  ftlobject.pGC->restoreCheckpoint(in);
   pFIL->restoreCheckpoint(in);
 }
 

@@ -12,15 +12,15 @@
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
-GenericAllocator::GenericAllocator(ObjectData &o, Mapping::AbstractMapping *m)
-    : AbstractAllocator(o, m),
+GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
+    : AbstractAllocator(o, fo),
       inUseBlockMap(nullptr),
       freeBlocks(nullptr),
       mtengine(rd()) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
   dchoice =
-      readConfigUint(Section::FlashTranslation, Config::Key::DChoiceParam);
+      readConfigUint(Section::FlashTranslation, Config::Key::SamplingFactor);
   fgcThreshold =
       readConfigFloat(Section::FlashTranslation, Config::Key::FGCThreshold);
   bgcThreshold =
@@ -99,7 +99,7 @@ CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
 
   // Collect valid pages
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    valid.emplace_back(iter, pMapper->getValidPages(*iter));
+    valid.emplace_back(iter, ftlobject.pMapping->getValidPages(*iter));
   }
 
   // Find min value
@@ -133,9 +133,9 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(
 
   // Collect valid pages
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    float util = pMapper->getValidPages(*iter) / pageCount;
+    float util = ftlobject.pMapping->getValidPages(*iter) / pageCount;
 
-    util = util / ((1.f - util) * pMapper->getAge(*iter));
+    util = util / ((1.f - util) * ftlobject.pMapping->getAge(*iter));
 
     valid.emplace_back(iter, util);
   }
@@ -205,7 +205,7 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(
 
   for (uint64_t i = 0; i < currentList.size(); i++) {
     if (i == offsets.at(valid.size())) {
-      valid.emplace_back(iter, pMapper->getValidPages(*iter));
+      valid.emplace_back(iter, ftlobject.pMapping->getValidPages(*iter));
     }
 
     ++iter;
@@ -230,8 +230,8 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(
   return fstat;
 }
 
-void GenericAllocator::initialize(const Parameter *p) {
-  AbstractAllocator::initialize(p);
+void GenericAllocator::initialize() {
+  AbstractAllocator::initialize();
 
   superpage = param->superpage;
   parallelism = param->parallelism / superpage;

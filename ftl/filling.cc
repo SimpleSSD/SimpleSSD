@@ -13,8 +13,7 @@
 
 namespace SimpleSSD::FTL {
 
-Filling::Filling(ObjectData &o, AbstractFTL *f, Mapping::AbstractMapping *m)
-    : Object(o), pFTL(f), pMapper(m) {}
+Filling::Filling(ObjectData &o, FTLObjectData &fo) : Object(o), ftlobject(fo) {}
 
 void Filling::start() noexcept {
   std::random_device rd;
@@ -32,7 +31,7 @@ void Filling::start() noexcept {
   std::vector<uint8_t> spare;
 
   auto filparam = object.config->getNANDStructure();
-  auto param = pMapper->getInfo();
+  auto param = ftlobject.pMapping->getInfo();
 
   debugprint(Log::DebugID::FTL, "Initialization started");
 
@@ -72,13 +71,13 @@ void Filling::start() noexcept {
       mode == Config::FillingType::SequentialRandom) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
-      pMapper->writeMapping(static_cast<LSPN>(i), pspn);
+      ftlobject.pMapping->writeMapping(static_cast<LSPN>(i), pspn);
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
         auto _lpn = i * param->superpage + j;
 
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
+        ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -89,13 +88,13 @@ void Filling::start() noexcept {
     for (uint64_t i = 0; i < nPagesToWarmup; i++) {
       LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      pMapper->writeMapping(lspn, pspn);
+      ftlobject.pMapping->writeMapping(lspn, pspn);
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
         auto _lpn = i * param->superpage + j;
 
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
+        ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -104,13 +103,13 @@ void Filling::start() noexcept {
   if (mode == Config::FillingType::SequentialSequential) {
     // Sequential
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
-      pMapper->writeMapping(static_cast<LSPN>(i), pspn);
+      ftlobject.pMapping->writeMapping(static_cast<LSPN>(i), pspn);
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
         auto _lpn = i * param->superpage + j;
 
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
+        ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -123,13 +122,13 @@ void Filling::start() noexcept {
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      pMapper->writeMapping(lspn, pspn);
+      ftlobject.pMapping->writeMapping(lspn, pspn);
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
         auto _lpn = i * param->superpage + j;
 
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
+        ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
@@ -140,19 +139,19 @@ void Filling::start() noexcept {
     for (uint64_t i = 0; i < nPagesToInvalidate; i++) {
       LSPN lspn = static_cast<LSPN>(dist(gen));
 
-      pMapper->writeMapping(lspn, pspn);
+      ftlobject.pMapping->writeMapping(lspn, pspn);
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
         auto _lpn = i * param->superpage + j;
 
-        pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
+        ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
     }
   }
 
   // Report
-  pMapper->getPageStatistics(valid, invalid);
+  ftlobject.pMapping->getPageStatistics(valid, invalid);
 
   debugprint(Log::DebugID::FTL, "Filling finished. Page status:");
   debugprint(Log::DebugID::FTL,

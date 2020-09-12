@@ -18,11 +18,10 @@ class AbstractFTL;
 
 class Filling : public Object {
  private:
-  AbstractFTL *pFTL;
-  Mapping::AbstractMapping *pMapper;
+  FTLObjectData &ftlobject;
 
  public:
-  Filling(ObjectData &, AbstractFTL *, Mapping::AbstractMapping *);
+  Filling(ObjectData &, FTLObjectData &);
 
   void start() noexcept;
 

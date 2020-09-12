@@ -13,8 +13,8 @@
 
 #include <deque>
 
-#include "ftl/base/abstract_ftl.hh"
 #include "ftl/def.hh"
+#include "ftl/object.hh"
 #include "hil/request.hh"
 
 namespace SimpleSSD {
@@ -38,10 +38,7 @@ class FTL : public Object {
 
   FIL::FIL *pFIL;
 
-  Mapping::AbstractMapping *pMapper;
-  BlockAllocator::AbstractAllocator *pAllocator;
-  GC::AbstractGC *pGC;
-  AbstractFTL *pFTL;
+  FTLObjectData ftlobject;
 
   uint64_t requestCounter;
 

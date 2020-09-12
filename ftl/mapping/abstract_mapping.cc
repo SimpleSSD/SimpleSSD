@@ -10,8 +10,8 @@
 
 namespace SimpleSSD::FTL::Mapping {
 
-AbstractMapping::AbstractMapping(ObjectData &o)
-    : Object(o), allocator(nullptr), memoryTag(0) {
+AbstractMapping::AbstractMapping(ObjectData &o, FTLObjectData &fo)
+    : Object(o), ftlobject(fo), memoryTag(0) {
   filparam = object.config->getNANDStructure();
   auto channel =
       readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
@@ -134,11 +134,7 @@ void AbstractMapping::requestMemoryAccess(Event eid, uint64_t data,
   handleMemoryCommand(memtag);
 }
 
-void AbstractMapping::initialize(AbstractFTL *f,
-                                 BlockAllocator::AbstractAllocator *a) {
-  pFTL = f;
-  allocator = a;
-};
+void AbstractMapping::initialize() {}
 
 const Parameter *AbstractMapping::getInfo() {
   return &param;

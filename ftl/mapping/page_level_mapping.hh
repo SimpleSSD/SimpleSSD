@@ -48,10 +48,10 @@ class PageLevelMapping : public AbstractMapping {
   }
 
  public:
-  PageLevelMapping(ObjectData &);
+  PageLevelMapping(ObjectData &, FTLObjectData &);
   ~PageLevelMapping();
 
-  void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *) override;
+  void initialize() override;
 
   uint64_t getPageUsage(LPN, uint64_t) override;
 

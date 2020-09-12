@@ -10,29 +10,24 @@
 #ifndef __SIMPLESSD_FTL_GC_ABSTRACT_GC_HH__
 #define __SIMPLESSD_FTL_GC_ABSTRACT_GC_HH__
 
-#include "sim/object.hh"
 #include "ftl/def.hh"
+#include "ftl/gc/hint.hh"
+#include "ftl/object.hh"
+#include "sim/object.hh"
 
-namespace SimpleSSD::FTL {
-
-class AbstractFTL;
-
-namespace GC {
+namespace SimpleSSD::FTL::GC {
 
 class AbstractGC : public Object {
  protected:
-  AbstractFTL *pFTL;
+  FTLObjectData &ftlobject;
 
   const Parameter *param;
 
  public:
-  AbstractGC(ObjectData &o);
+  AbstractGC(ObjectData &, FTLObjectData &);
   virtual ~AbstractGC();
 
-  virtual void initialize(AbstractFTL *f, const Parameter *p) {
-    pFTL = f;
-    param = p;
-  }
+  virtual void initialize();
 
   /**
    * \brief Trigger foreground GC if condition met
@@ -43,15 +38,8 @@ class AbstractGC : public Object {
    * \brief Notify request arrived (background GC)
    */
   virtual void requestArrived() = 0;
-
-  /**
-   * \brief Block serving write request
-   */
-  virtual bool stopWrite() = 0;
 };
 
-}  // namespace GC
-
-}  // namespace SimpleSSD::FTL
+}  // namespace SimpleSSD::FTL::GC
 
 #endif

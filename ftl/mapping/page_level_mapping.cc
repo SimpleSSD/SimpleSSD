@@ -15,8 +15,8 @@
 
 namespace SimpleSSD::FTL::Mapping {
 
-PageLevelMapping::PageLevelMapping(ObjectData &o)
-    : AbstractMapping(o),
+PageLevelMapping::PageLevelMapping(ObjectData &o, FTLObjectData &fo)
+    : AbstractMapping(o, fo),
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
@@ -86,13 +86,14 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
   }
 
   // Get block from allocated block pool
-  PSBN blockID = allocator->getBlockAt(std::numeric_limits<uint32_t>::max());
+  PSBN blockID =
+      ftlobject.pAllocator->getBlockAt(std::numeric_limits<uint32_t>::max());
   auto block = &blockMetadata[blockID];
 
   // Check we have to get new block
   if (block->nextPageToWrite == filparam->page) {
     // Get a new block
-    fstat += allocator->allocateBlock(blockID);
+    fstat += ftlobject.pAllocator->allocateBlock(blockID);
 
     block = &blockMetadata[blockID];
   }
@@ -150,9 +151,8 @@ CPU::Function PageLevelMapping::invalidateMappingInternal(LSPN lspn,
   return fstat;
 }
 
-void PageLevelMapping::initialize(AbstractFTL *f,
-                                  BlockAllocator::AbstractAllocator *a) {
-  AbstractMapping::initialize(f, a);
+void PageLevelMapping::initialize() {
+  AbstractMapping::initialize();
 
   // Allocate table and block metadata
   entrySize = makeEntrySize(totalLogicalSuperPages, 1, readTableEntry,
@@ -193,11 +193,11 @@ void PageLevelMapping::initialize(AbstractFTL *f,
   debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
              totalPhysicalSuperBlocks * metadataEntrySize);
 
-  // Make free block pool in allocator
+  // Make free block pool in ftlobject.pAllocator
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
     PSBN tmp;
 
-    allocator->allocateBlock(tmp);
+    ftlobject.pAllocator->allocateBlock(tmp);
   }
 }
 

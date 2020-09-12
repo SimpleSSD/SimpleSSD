@@ -12,20 +12,11 @@
 #define __SIMPLESSD_FTL_MAPPING_ABSTRACT_MAPPING_HH__
 
 #include "ftl/def.hh"
+#include "ftl/object.hh"
 #include "hil/request.hh"
 #include "sim/object.hh"
 
-namespace SimpleSSD::FTL {
-
-class AbstractFTL;
-
-namespace BlockAllocator {
-
-class AbstractAllocator;
-
-}
-
-namespace Mapping {
+namespace SimpleSSD::FTL::Mapping {
 
 template <class T>
 struct BlockMetadata {
@@ -50,11 +41,10 @@ class AbstractMapping : public Object {
   using ParseEntryFunction = std::function<uint64_t(uint64_t &)>;
   using MakeEntryFunction = std::function<uint64_t(uint64_t, uint64_t)>;
 
+  FTLObjectData &ftlobject;
+
   Parameter param;
   FIL::Config::NANDStructure *filparam;
-
-  AbstractFTL *pFTL;
-  BlockAllocator::AbstractAllocator *allocator;
 
   // Stat
   uint64_t requestedReadCount;
@@ -231,7 +221,7 @@ class AbstractMapping : public Object {
   void handleMemoryCommand(uint64_t);
 
  public:
-  AbstractMapping(ObjectData &);
+  AbstractMapping(ObjectData &, FTLObjectData &);
   virtual ~AbstractMapping() {}
 
   /* Functions for AbstractAllocator */
@@ -263,15 +253,14 @@ class AbstractMapping : public Object {
    * Immediately call AbstractMapping::initialize() when you override this
    * function.
    * \code{.cc}
-   * void YOUR_FTL_CLASS::initialize(AbstractFTL *f,
-   *                                 BlockAllocator:AbstractAllocator *a) {
-   *   AbstractMapping::initialize(f, a);
+   * void YOUR_FTL_CLASS::initialize() {
+   *   AbstractMapping::initialize();
    *
    *   // Your initialization code here.
    * }
    * \endcode
    */
-  virtual void initialize(AbstractFTL *, BlockAllocator::AbstractAllocator *);
+  virtual void initialize();
 
   //! Return FTL parameter structure
   const Parameter *getInfo();
@@ -367,8 +356,6 @@ class AbstractMapping : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace Mapping
-
-}  // namespace SimpleSSD::FTL
+}  // namespace SimpleSSD::FTL::Mapping
 
 #endif

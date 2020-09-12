@@ -53,10 +53,10 @@ class GenericAllocator : public AbstractAllocator {
   CPU::Function dchoiceVictimSelection(uint64_t, std::vector<PSBN> &);
 
  public:
-  GenericAllocator(ObjectData &, Mapping::AbstractMapping *);
+  GenericAllocator(ObjectData &, FTLObjectData &);
   virtual ~GenericAllocator();
 
-  void initialize(const Parameter *) override;
+  void initialize() override;
 
   CPU::Function allocateBlock(PSBN &) override;
   PSBN getBlockAt(uint32_t) override;

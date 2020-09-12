@@ -12,27 +12,20 @@
 #define __SIMPLESSD_FTL_ALLOCATOR_ABSTRACT_ALLOCATOR_HH__
 
 #include "ftl/def.hh"
+#include "ftl/object.hh"
 #include "sim/object.hh"
 
-namespace SimpleSSD::FTL {
-
-namespace Mapping {
-
-class AbstractMapping;
-
-}
-
-namespace BlockAllocator {
+namespace SimpleSSD::FTL::BlockAllocator {
 
 class AbstractAllocator : public Object {
  protected:
+  FTLObjectData &ftlobject;
+
   const Parameter *param;
-  Mapping::AbstractMapping *pMapper;
 
  public:
-  AbstractAllocator(ObjectData &o, Mapping::AbstractMapping *m)
-      : Object(o), param(nullptr), pMapper(m) {}
-  virtual ~AbstractAllocator() {}
+  AbstractAllocator(ObjectData &, FTLObjectData &);
+  virtual ~AbstractAllocator();
 
   /* Functions for AbstractMapping */
 
@@ -65,14 +58,14 @@ class AbstractAllocator : public Object {
    * Immediately call AbstractAllocator::initialize() when you override this
    * function.
    * \code{.cc}
-   * void YOUR_ALLOCATOR_CLASS::initialize(Parameter *p) {
-   *   AbstractAllocator::initialize(p);
+   * void YOUR_ALLOCATOR_CLASS::initialize() {
+   *   AbstractAllocator::initialize();
    *
    *   // Your initialization code here.
    * }
    * \endcode
    */
-  virtual void initialize(const Parameter *p) { param = p; };
+  virtual void initialize();
 
   /**
    * Check Foreground GC trigger threshold.
@@ -116,8 +109,6 @@ class AbstractAllocator : public Object {
   virtual void reclaimBlocks(PSBN psbn, Event eid) = 0;
 };
 
-}  // namespace BlockAllocator
-
-}  // namespace SimpleSSD::FTL
+}  // namespace SimpleSSD::FTL::BlockAllocator
 
 #endif
