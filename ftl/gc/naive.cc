@@ -35,7 +35,7 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
         sbsize, Memory::MemoryType::DRAM, "FTL::NaiveGC::Buffer");
   }
 
-  eventTrigger = createEvent([this](uint64_t t, uint64_t) { gc_trigger(t); },
+  eventTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
                              "FTL::GC::eventTrigger");
   eventStart = createEvent([this](uint64_t t, uint64_t) { gc_start(t); },
                            "FTL::GC::eventStart");
@@ -65,6 +65,8 @@ void NaiveGC::initialize() {
 void NaiveGC::triggerForeground() {
   if (ftlobject.pAllocator->checkForegroundGCThreshold() &&
       beginAt == std::numeric_limits<uint64_t>::max()) {
+    beginAt = getTick();
+
     scheduleNow(eventTrigger);
   }
 }
@@ -77,7 +79,7 @@ bool NaiveGC::checkWriteStall() {
   return ftlobject.pAllocator->checkForegroundGCThreshold();
 }
 
-void NaiveGC::gc_trigger(uint64_t now) {
+void NaiveGC::gc_trigger() {
   stat.fgcCount++;
 
   // Get blocks to erase
@@ -85,8 +87,6 @@ void NaiveGC::gc_trigger(uint64_t now) {
 
   debugprint(Log::DebugID::FTL_NaiveGC, "GC    | Foreground | %u (super)blocks",
              blockList.size());
-
-  beginAt = now;
 }
 
 void NaiveGC::gc_start(uint64_t now) {

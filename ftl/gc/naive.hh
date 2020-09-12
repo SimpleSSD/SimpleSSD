@@ -37,7 +37,7 @@ class NaiveGC : public AbstractGC {
   }
 
   Event eventTrigger;
-  void gc_trigger(uint64_t);
+  void gc_trigger();
 
   Event eventStart;
   void gc_start(uint64_t);
