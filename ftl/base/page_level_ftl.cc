@@ -112,7 +112,7 @@ void PageLevelFTL::read_done(uint64_t tag) {
 bool PageLevelFTL::write(Request *cmd) {
   // if SSD is running out of free block, stall request.
   // Stalled requests will be continued after GC
-  if (!ftlobject.pGC->checkWriteStall()) {
+  if (ftlobject.pGC->checkWriteStall()) {
     debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
                cmd->getTag());
 
