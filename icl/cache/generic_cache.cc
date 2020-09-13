@@ -537,11 +537,11 @@ void GenericCache::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, size);
 
   for (uint64_t i = 0; i < size; i++) {
-    LPN lpn;
+    uint64_t tag;
 
-    RESTORE_SCALAR(in, lpn);
+    RESTORE_SCALAR(in, tag);
 
-    allocateList.emplace_back(lpn);
+    allocateList.emplace_back(tag);
   }
 
   RESTORE_EVENT(in, eventLookupDone);
