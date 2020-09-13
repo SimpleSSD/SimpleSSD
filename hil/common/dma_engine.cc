@@ -503,6 +503,7 @@ void DMAEngine::deinit(DMATag tag) noexcept {
 void DMAEngine::readNext(DMASession &session) noexcept {
   uint32_t read;
   bool submit = false;
+  bool mem = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
 
@@ -516,6 +517,8 @@ void DMAEngine::readNext(DMASession &session) noexcept {
                     eventReadDMADone, session.tag);
 
     if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      mem = true;
+
       object.memory->write(session.memoryAddress + session.handled, read,
                            eventReadDMADone, session.tag, false);
     }
@@ -523,6 +526,9 @@ void DMAEngine::readNext(DMASession &session) noexcept {
 
   session.handled += read;
 
+  if (!mem) {
+    dmaReadDone(session.tag);
+  }
   if (!submit) {
     dmaReadDone(session.tag);
   }
@@ -536,6 +542,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t currentOffset = 0;
   uint32_t read;
   bool submit = false;
+  bool mem = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer, memaddr);
   auto &session = siter.second;
@@ -557,6 +564,8 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 
         if (LIKELY(session.memoryAddress !=
                    std::numeric_limits<uint64_t>::max())) {
+          mem = true;
+
           object.memory->write(session.memoryAddress + session.handled, read,
                                eventReadDMADone, siter.first, false);
         }
@@ -570,6 +579,9 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
     currentOffset += iter.size;
   }
 
+  if (!mem) {
+    dmaReadDone(siter.first);
+  }
   if (!submit) {
     dmaReadDone(siter.first);
   }
@@ -578,6 +590,7 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 void DMAEngine::writeNext(DMASession &session) noexcept {
   uint32_t written;
   bool submit = false;
+  bool mem = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
 
@@ -592,6 +605,8 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
         eventWriteDMADone, session.tag);
 
     if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      mem = true;
+
       object.memory->read(session.memoryAddress + session.handled, written,
                           eventWriteDMADone, session.tag, false);
     }
@@ -599,6 +614,9 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
 
   session.handled += written;
 
+  if (!mem) {
+    dmaWriteDone(session.tag);
+  }
   if (!submit) {
     dmaWriteDone(session.tag);
   }
@@ -612,6 +630,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   uint64_t currentOffset = 0;
   uint32_t written;
   bool submit = false;
+  bool mem = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer, memaddr);
   auto &session = siter.second;
@@ -633,6 +652,8 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
 
         if (LIKELY(session.memoryAddress !=
                    std::numeric_limits<uint64_t>::max())) {
+          mem = true;
+
           object.memory->read(session.memoryAddress + session.handled, written,
                               eventWriteDMADone, siter.first, false);
         }
@@ -646,6 +667,9 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
     currentOffset += iter.size;
   }
 
+  if (!mem) {
+    dmaWriteDone(siter.first);
+  }
   if (!submit) {
     dmaWriteDone(siter.first);
   }
