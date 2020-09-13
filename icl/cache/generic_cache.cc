@@ -194,7 +194,7 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
 
   tagArray->collectFlushable(slpn, nlp, wbreq);
 
-  auto ret = writebackList.emplace_back(std::move(wbreq));
+  auto &ret = writebackList.emplace_back(std::move(wbreq));
 
   makeFlushContext(ret, list);
 
@@ -313,7 +313,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
     if (wbreq.lpnList.size() > 0) {
       eid = tagArray->getReadAllMemoryEvent();
 
-      auto ret = writebackList.emplace_back(std::move(wbreq));
+      auto &ret = writebackList.emplace_back(std::move(wbreq));
 
       makeFlushContext(ret, list);
 
