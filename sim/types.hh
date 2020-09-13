@@ -116,12 +116,6 @@ struct Parameter;
       return *this;                                                            \
     }                                                                          \
     inline operator uint##bits##_t() const { return value; }                   \
-    std::ostream &operator<<(std::ostream &os) {                               \
-      auto old = os.setf(std::ios::hex, std::ios::basefield);                  \
-      os << value << 'h';                                                      \
-      os.setf(old, std::ios::basefield);                                       \
-      return os;                                                               \
-    }                                                                          \
     inline bool isValid() const {                                              \
       return value != std::numeric_limits<uint##bits##_t>::max();              \
     }                                                                          \
