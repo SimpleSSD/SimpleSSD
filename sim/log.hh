@@ -343,7 +343,7 @@ class Log {
       *stream << cpu->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
 
       {
-        Printer printer(debug, format);
+        Printer printer(stream, format);
 
         (printer << ... << args).flush();
       }
