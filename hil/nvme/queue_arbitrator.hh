@@ -71,12 +71,10 @@ class CQContext {
 
   void update(SQContext *) noexcept;
 
-  template <
-      class Type,
-      std::enable_if_t<std::conjunction_v<
-                           std::is_enum<Type>,
-                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
-                       Type> = Type()>
+  template <class Type,
+            std::enable_if_t<std::conjunction_v<
+                std::is_enum<Type>, std::is_same<std::underlying_type_t<Type>,
+                                                 uint8_t>>> * = nullptr>
   void makeStatus(bool dnr, bool more, StatusType sct, Type sc) noexcept {
     entry.dword3.status = 0;  // Phase field will be filled before DMA
 
@@ -165,12 +163,10 @@ class Arbitrator : public Object {
   bool collectRoundRobin();
   bool collectWeightedRoundRobin();
 
-  template <
-      class Type,
-      std::enable_if_t<std::conjunction_v<
-                           std::is_enum<Type>,
-                           std::is_same<std::underlying_type_t<Type>, uint8_t>>,
-                       Type> = Type()>
+  template <class Type,
+            std::enable_if_t<std::conjunction_v<
+                std::is_enum<Type>, std::is_same<std::underlying_type_t<Type>,
+                                                 uint8_t>>> * = nullptr>
   void abortCommand(SQContext *sqe, StatusType sct, Type sc) {
     auto cqe = new CQContext();
 
