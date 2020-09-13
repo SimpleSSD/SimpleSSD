@@ -117,9 +117,9 @@ struct Parameter;
     }                                                                          \
     inline operator uint##bits##_t() const { return value; }                   \
     std::ostream &operator<<(std::ostream &os) {                               \
-      auto old = os.setf(std::ios::hex);                                       \
+      auto old = os.setf(std::ios::hex, std::ios::basefield);                  \
       os << value << 'h';                                                      \
-      os.setf(old);                                                            \
+      os.setf(old, std::ios::basefield);                                       \
       return os;                                                               \
     }                                                                          \
     inline bool isValid() const {                                              \
