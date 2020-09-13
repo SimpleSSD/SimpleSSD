@@ -377,17 +377,30 @@ void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid) {
 
 void GenericAllocator::getStatList(std::vector<Stat> &list,
                                    std::string prefix) noexcept {
-  list.emplace_back(prefix + "wear_leveling", "Wear-leveling factor");
+  list.emplace_back(prefix + "wear_leveling.factor", "Wear-leveling factor");
+  list.emplace_back(prefix + "erasecount.min", "Minimum block erased count.");
+  list.emplace_back(prefix + "erasecount.average",
+                    "Average block erased count.");
+  list.emplace_back(prefix + "erasecount.max", "Maximum block erased count.");
+  list.emplace_back(prefix + "freeblock.count",
+                    "Total number of free (super)blocks");
+  list.emplace_back(prefix + "freeblock.ratio",
+                    "Ratio of free (super)block / total (super)blocks");
 }
 
 void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
   double total = 0.;
   double square = 0.;
   double result = 0.;
+  uint32_t min = std::numeric_limits<uint32_t>::max();
+  uint32_t max = 0;
 
+  // TODO: Do I need to speed-up this function?
   for (uint64_t i = 0; i < totalSuperblock; i++) {
     total += (double)eraseCountList[i];
     square += pow((double)eraseCountList[i], 2.);
+    min = MIN(min, eraseCountList[i]);
+    max = MAX(max, eraseCountList[i]);
   }
 
   if (square > 0.) {
@@ -395,6 +408,11 @@ void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
   }
 
   values.push_back(result);
+  values.push_back((double)min);
+  values.push_back(total / totalSuperblock);
+  values.push_back((double)max);
+  values.push_back((double)freeBlockCount);
+  values.push_back((double)freeBlockCount / totalSuperblock);
 }
 
 void GenericAllocator::resetStatValues() noexcept {}
