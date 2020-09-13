@@ -23,9 +23,7 @@ LatencyTLC::LatencyTLC(ConfigReader *config) : Latency(config) {
 
 LatencyTLC::~LatencyTLC() {}
 
-void LatencyTLC::printTiming(SimpleSSD::Log *log,
-                             void (*print)(SimpleSSD::Log *, const char *,
-                                           ...)) {
+void LatencyTLC::printTiming(SimpleSSD::Log *log) {
   print(log, "TLC NAND timing:");
   print(log, "Operation |     LSB    |     CSB    |     MSB    |    DMA 0   |  "
              "  DMA 1");

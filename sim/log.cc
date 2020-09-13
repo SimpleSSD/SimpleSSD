@@ -8,6 +8,7 @@
 #include "sim/log.hh"
 
 #include <iostream>
+#include <regex>
 #include <vector>
 
 #include "sim/engine.hh"
@@ -15,34 +16,20 @@
 
 namespace SimpleSSD {
 
-const std::string idPrefix[] = {
-    "global",  //!< DebugID::Common
-    "CPU",
-    "Memory",
-    "Memory::DRAM",
-    "Memory::SRAM",
-    "HIL",
-    "HIL::Common",
-    "HIL::NVMe",
-    "HIL::NVMe::Command",
-    "ICL",
-    "ICL::GenericManager",
-    "ICL::RingBuffer",
-    "ICL::SetAssociative",
-    "FTL",
-    "FTL::Mapping::PageLevelMapping",
-    "FTL::GC::NaiveGC",
-    "FTL::GC::AdvancedGC",
-    "FTL::GC::PreemptibleGC",
-    "FIL",
-    "FIL::PALOLD",
-};
-
-const std::string logPrefix[] = {
-    "info",   //!< LogID::Info
-    "warn",   //!< LogID::Warn
-    "panic",  //!< LogID::Panic
-};
+/**
+ * \brief C-Style format string
+ *
+ * See: https://en.cppreference.com/w/cpp/io/c/fprintf
+ * No reordering ('n$') supports
+ */
+static const std::regex regexFormat(
+    "^%"                      // Format must start with %
+    "((?:-|\\+| |#|0)*)"      // Sign options (only for integral types)
+    "(\\*|\\d+)?"             // Width
+    "(\\.)?"                  // Separater for width and precision
+    "(\\*|\\d+)?"             // Precision
+    "(h{1,2}|l{1,2}|j|z|t)?"  // Length modifier
+    "(%|c|s|d|i|o|x|X|u|f|F|e|E|a|A|g|G|n|p)");  // Conversion specifier
 
 //! A constructor
 Log::Log() : inited(false), out(nullptr), err(nullptr), debug(nullptr) {}
@@ -81,101 +68,132 @@ void Log::deinit() noexcept {
   inited = false;
 }
 
-//! Print log and terminate program
-void Log::print(LogID id, const char *format, va_list args) const noexcept {
-  std::ostream *stream = nullptr;
+Printer::Printer(std::ostream *o, const char *f)
+    : os(o),
+      end(f + strlen(f)),
+      cur(const_cast<char *>(f)),
+      width(0),
+      precision(6),
+      flags(o->setf(static_cast<std::ios::fmtflags>(0))),
+      argwidth(false),
+      argprecision(false),
+      err(false),
+      consume(0) {}
 
-  if (UNLIKELY(!inited)) {
-    std::cerr << "panic: Log system not initialized" << std::endl;
+Printer::~Printer() {}
 
-    abort();
-  }
+std::ptrdiff_t Printer::parseFormat() {
+  std::ptrdiff_t fmtlen = 0;
+  std::cmatch match;
 
-  switch (id) {
-    case LogID::Info:
-      stream = out;
+  if (std::regex_search(cur, match, regexFormat)) {
+    std::ios::fmtflags f = flags;
 
-      break;
-    case LogID::Warn:
-    case LogID::Panic:
-      stream = err;
+    // Masks
+    f &= ~std::ios::adjustfield;
+    f &= ~std::ios::basefield;
+    f &= ~std::ios::floatfield;
 
-      break;
-    default:
-      std::cerr << "panic: Undefined Log ID: " << (uint32_t)id << std::endl;
+    // Format string length
+    fmtlen = match.length();
 
-      abort();
+    // Helper
+    const char *_signopt = match[1].length() == 0 ? nullptr : match[1].first;
+    const char *signopt_ = match[1].length() == 0 ? nullptr : match[1].second;
+    const char *_width = match[2].length() == 0 ? nullptr : match[2].first;
+    const char *_precision = match[4].length() == 0 ? nullptr : match[4].first;
+    const char _conversion = match[6].length() == 0 ? '\0' : match[6].first[0];
 
-      break;
-  }
+    if (_conversion == '\0') {
+      goto error;
+    }
 
-  if (UNLIKELY(!stream)) {
-    return;
-  }
+    checkSign(_signopt, signopt_, f);
 
-  if (LIKELY(stream->good())) {
-    *stream << cpu->getTick() << ": " << logPrefix[(uint32_t)id] << ": ";
+    switch (_conversion) {
+      case '%':
+        consume = -1;
+        fmtlen--;
 
-    print(stream, format, args);
+        os->put('%');
 
-    *stream << std::endl;
+        break;
+      case 's':
+      case 'c':
+        break;
+      case 'd':
+      case 'i':
+      case 'u':
+        // Decimal
+        changeFlag(f | std::ios::dec);
+        changeWidth(_width);
+
+        break;
+      case 'o':
+        // Octal
+        changeFlag(f | std::ios::oct);
+        changeWidth(_width);
+
+        break;
+      case 'p':
+        f |= std::ios::showbase;
+        /* fall through */
+      case 'X':
+        f |= std::ios::uppercase;
+        /* fall through */
+      case 'x':
+        // Hexadecimal
+        changeFlag(f | std::ios::hex);
+        changeWidth(_width);
+
+        break;
+      case 'F':
+      case 'f':
+        // Floating-point number in fixed format
+        changeFlag(f | std::ios::fixed);
+        changeWidth(_width);
+        changePrecision(_precision);
+
+        break;
+      case 'E':
+      case 'G':  // Not supported, just failback to scientific format
+        f |= std::ios::uppercase;
+        /* fall through */
+      case 'e':
+      case 'g':  // Not supported, just failback to scientific format
+        // Floating-point number in scientific format
+        changeFlag(f | std::ios::scientific);
+        changeWidth(_width);
+        changePrecision(_precision);
+
+        break;
+      case 'A':
+        f |= std::ios::uppercase;
+        /* fall through */
+      case 'a':
+        // Floating-point number in hex format
+        changeFlag(f | std::ios::floatfield);
+        changeWidth(_width);
+        changePrecision(_precision);
+
+        break;
+      case 'n':
+        goto error;
+      default:
+        // Not possible
+        break;
+    }
   }
   else {
-    std::cerr << "panic: Stream is not opened" << std::endl;
-
-    abort();
+    goto error;
   }
 
-  if (id == LogID::Panic) {
-    abort();
-  }
-}
+  return fmtlen;
 
-void Log::debugprint(DebugID id, const char *format, va_list args) const
-    noexcept {
-  if (UNLIKELY(!inited)) {
-    std::cerr << "panic: Log system not initialized" << std::endl;
+error:
+  err = true;
 
-    abort();
-  }
-
-  if (UNLIKELY(!debug)) {
-    return;
-  }
-
-  if (LIKELY(debug->good())) {
-    *debug << cpu->getTick() << ": " << idPrefix[(uint32_t)id] << ": ";
-
-    print(debug, format, args);
-
-    *debug << std::endl;
-  }
-  else {
-    std::cerr << "panic: debugfile is not opened" << std::endl;
-
-    abort();
-  }
-}
-
-/**
- * Print log to file stream
- *
- * \param[in]  os     std::ofstream object to print
- * \param[in]  format Format string
- * \param[in]  args   Argument list
- */
-void Log::print(std::ostream *os, const char *format, va_list args) const
-    noexcept {
-  va_list copy;
-  std::vector<char> str;
-
-  va_copy(copy, args);
-  str.resize(vsnprintf(nullptr, 0, format, copy) + 1);
-  va_end(copy);
-
-  vsnprintf(str.data(), str.size(), format, args);
-
-  *os << str.data();
+  return fmtlen;
 }
 
 }  // namespace SimpleSSD

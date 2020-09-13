@@ -22,8 +22,7 @@ class LatencySLC : public Latency {
   LatencySLC(SimpleSSD::ConfigReader *);
   ~LatencySLC();
 
-  void printTiming(SimpleSSD::Log *,
-                   void (*)(SimpleSSD::Log *, const char *, ...)) override;
+  void printTiming(SimpleSSD::Log *) override;
 
   uint64_t GetLatency(uint32_t, uint8_t, uint8_t) override;
   inline uint8_t GetPageType(uint32_t) override;

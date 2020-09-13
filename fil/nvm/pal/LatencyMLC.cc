@@ -21,9 +21,7 @@ LatencyMLC::LatencyMLC(ConfigReader *config) : Latency(config) {
 
 LatencyMLC::~LatencyMLC() {}
 
-void LatencyMLC::printTiming(SimpleSSD::Log *log,
-                             void (*print)(SimpleSSD::Log *, const char *,
-                                           ...)) {
+void LatencyMLC::printTiming(SimpleSSD::Log *log) {
   print(log, "MLC NAND timing:");
   print(log, "Operation |     LSB    |     MSB    |    DMA 0   |    DMA 1");
   print(log,

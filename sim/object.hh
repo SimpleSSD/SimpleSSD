@@ -98,6 +98,7 @@ class Object {
   ObjectData &object;
 
   /* Helper APIs for CPU */
+
   inline uint64_t getTick() const noexcept { return object.cpu->getTick(); }
   inline Event createEvent(EventFunction ef, std::string s) noexcept {
     return object.cpu->createEvent(std::move(ef), std::move(s));
@@ -126,6 +127,7 @@ class Object {
   inline void destroyEvent(Event e) noexcept { object.cpu->destroyEvent(e); }
 
   /* Helper APIs for Config */
+
   inline int64_t readConfigInt(Section s, uint32_t k) const noexcept {
     return object.config->readInt(s, k);
   }
@@ -159,34 +161,23 @@ class Object {
   }
 
   /* Helper APIs for Log */
-  inline void info_log(const char *format, ...) const noexcept {
-    va_list args;
 
-    va_start(args, format);
-    object.log->print(Log::LogID::Info, format, args);
-    va_end(args);
+  template <class... T>
+  inline void info_log(const char *format, T... args) const noexcept {
+    object.log->print(Log::LogID::Info, format, args...);
   }
-  inline void warn_log(const char *format, ...) const noexcept {
-    va_list args;
-
-    va_start(args, format);
-    object.log->print(Log::LogID::Warn, format, args);
-    va_end(args);
+  template <class... T>
+  inline void warn_log(const char *format, T... args) const noexcept {
+    object.log->print(Log::LogID::Warn, format, args...);
   }
-  inline void panic_log(const char *format, ...) const noexcept {
-    va_list args;
-
-    va_start(args, format);
-    object.log->print(Log::LogID::Panic, format, args);
-    va_end(args);
+  template <class... T>
+  inline void panic_log(const char *format, T... args) const noexcept {
+    object.log->print(Log::LogID::Panic, format, args...);
   }
-  inline void debugprint(Log::DebugID id, const char *format, ...) const
+  template <class... T>
+  inline void debugprint(Log::DebugID id, const char *format, T... args) const
       noexcept {
-    va_list args;
-
-    va_start(args, format);
-    object.log->debugprint(id, format, args);
-    va_end(args);
+    object.log->debugprint(id, format, args...);
   }
 
  public:

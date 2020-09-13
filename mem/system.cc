@@ -65,28 +65,19 @@ System::~System() {
   delete dram;
 }
 
-inline void System::debugprint(const char *format, ...) noexcept {
-  va_list args;
-
-  va_start(args, format);
-  pobject->log->debugprint(Log::DebugID::Memory, format, args);
-  va_end(args);
+template <class... T>
+void System::debugprint(const char *format, T... args) noexcept {
+  pobject->log->debugprint(Log::DebugID::Memory, format, args...);
 }
 
-inline void System::warn_log(const char *format, ...) noexcept {
-  va_list args;
-
-  va_start(args, format);
-  pobject->log->print(Log::LogID::Warn, format, args);
-  va_end(args);
+template <class... T>
+void System::warn_log(const char *format, T... args) noexcept {
+  pobject->log->print(Log::LogID::Warn, format, args...);
 }
 
-inline void System::panic_log(const char *format, ...) noexcept {
-  va_list args;
-
-  va_start(args, format);
-  pobject->log->print(Log::LogID::Panic, format, args);
-  va_end(args);
+template <class... T>
+void System::panic_log(const char *format, T... args) noexcept {
+  pobject->log->print(Log::LogID::Panic, format, args...);
 }
 
 inline MemoryType System::validate(uint64_t offset, uint32_t size) {

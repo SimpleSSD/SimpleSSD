@@ -114,9 +114,14 @@ class System {
   Event eventDRAMDone;
   void completion(uint64_t, uint64_t);
 
-  inline void debugprint(const char *format, ...) noexcept;
-  inline void warn_log(const char *format, ...) noexcept;
-  inline void panic_log(const char *format, ...) noexcept;
+  template <class... T>
+  inline void debugprint(const char *format, T... args) noexcept;
+
+  template <class... T>
+  inline void warn_log(const char *format, T... args) noexcept;
+
+  template <class... T>
+  inline void panic_log(const char *format, T... args) noexcept;
 
   inline MemoryType validate(uint64_t offset, uint32_t size);
 

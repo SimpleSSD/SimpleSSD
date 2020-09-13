@@ -40,7 +40,7 @@ PALOLD::PALOLD(ObjectData &o, Event e)
       break;
   }
 
-  lat->printTiming(object.log, print);
+  lat->printTiming(object.log);
 
   convertCPDPBP = convertObject.getConvertion();
 

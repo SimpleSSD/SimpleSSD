@@ -49,12 +49,17 @@ class Latency {
   uint64_t powererase;
   uint64_t powerstandby;
 
+  template <class... T>
+  static void print(SimpleSSD::Log *log, const char *format,
+                    T... args) noexcept {
+    log->debugprint(SimpleSSD::Log::DebugID::FIL_PALOLD, format, args...);
+  }
+
  public:
   Latency(SimpleSSD::ConfigReader *);
   virtual ~Latency();
 
-  virtual void printTiming(SimpleSSD::Log *,
-                           void (*)(SimpleSSD::Log *, const char *, ...)) = 0;
+  virtual void printTiming(SimpleSSD::Log *) = 0;
 
   // Get Latency for PageAddress(L/C/MSBpage), Operation(RWE),
   // BusyFor(Ch.DMA/Mem.Work)
