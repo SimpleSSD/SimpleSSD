@@ -128,7 +128,7 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_SECTION(node, "trigger", node2);
   STORE_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
   STORE_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
-  STORE_NAME_FLOAT(node2, NAME_BGC_IDLETIME, bgcIdletime);
+  STORE_NAME_UINT(node2, NAME_BGC_IDLETIME, bgcIdletime);
 
   STORE_SECTION(node, "blockselection", node2);
   STORE_NAME_UINT(node2, NAME_GC_EVICT_POLICY, gcBlockSelection);
