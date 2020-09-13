@@ -57,11 +57,12 @@ struct CacheTag {
 struct WritebackRequest {
   uint64_t tag;       // Tag of flush request
   uint64_t drainTag;  // Last tag of drain FTL request
+  uint32_t listSize;  // # request in this write-back request
   bool flush;         // True if tag is valid
 
   std::unordered_map<LPN, CacheTag *> lpnList;
 
-  WritebackRequest() : tag(0), drainTag(0), flush(false) {}
+  WritebackRequest() : tag(0), drainTag(0), listSize(0), flush(false) {}
 };
 
 class AbstractTagArray : public Object {

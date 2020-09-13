@@ -199,6 +199,7 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
   makeFlushContext(ret, list);
 
   ret.tag = sreq->getTag();
+  ret.listSize = list.size();
   ret.drainTag = manager->drain(list);
   ret.flush = true;
 
@@ -317,7 +318,8 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 
       makeFlushContext(ret, list);
 
-      pendingEviction += list.size();
+      ret.listSize = list.size();
+      pendingEviction += ret.listSize;
 
       ret.drainTag = manager->drain(list);
     }
@@ -350,7 +352,7 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
     // Write
     for (auto iter = writebackList.begin(); iter != writebackList.end();
          ++iter) {
-      uint64_t drainTagBegin = iter->drainTag - iter->lpnList.size();
+      uint64_t drainTagBegin = iter->drainTag - iter->listSize;
       uint64_t drainTagEnd = iter->drainTag;
 
       if (tag > drainTagBegin && tag <= drainTagEnd) {
