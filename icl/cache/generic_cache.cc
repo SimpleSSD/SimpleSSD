@@ -335,7 +335,12 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
     tagArray->collectEvictable(lpn, wbreq);
 
     if (wbreq.lpnList.size() > 0) {
-      eid = tagArray->getReadAllMemoryEvent();
+      if (eid == InvalidEventID) {
+        // Current request is appended to allocate List, and MUST NOT COMPLETE
+      }
+      else {
+        eid = tagArray->getReadAllMemoryEvent();
+      }
 
       auto &ret = writebackList.emplace_back(std::move(wbreq));
 
