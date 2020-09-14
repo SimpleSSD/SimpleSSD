@@ -90,7 +90,7 @@ void IdealDRAM::write(uint64_t address, Event eid, uint64_t data) {
 }
 
 void IdealDRAM::createCheckpoint(std::ostream &out) const noexcept {
-  IdealDRAM::createCheckpoint(out);
+  AbstractDRAM::createCheckpoint(out);
 
   BACKUP_SCALAR(out, packetLatency);
 
@@ -98,7 +98,7 @@ void IdealDRAM::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void IdealDRAM::restoreCheckpoint(std::istream &in) noexcept {
-  IdealDRAM::restoreCheckpoint(in);
+  AbstractDRAM::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, packetLatency);
 
