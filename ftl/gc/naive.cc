@@ -87,7 +87,7 @@ void NaiveGC::requestArrived(bool, uint32_t) {
 }
 
 bool NaiveGC::checkWriteStall() {
-  return ftlobject.pAllocator->checkForegroundGCThreshold();
+  return ftlobject.pAllocator->checkWriteStall();
 }
 
 void NaiveGC::gc_trigger() {
