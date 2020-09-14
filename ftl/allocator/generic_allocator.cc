@@ -430,6 +430,7 @@ void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_BLOB(out, eraseCountList, sizeof(uint32_t) * totalSuperblock);
   BACKUP_BLOB(out, inUseBlockMap, sizeof(PPN) * parallelism);
   BACKUP_SCALAR(out, freeBlockCount);
+  BACKUP_SCALAR(out, fullBlockCount);
 
   uint64_t size;
 
@@ -450,11 +451,6 @@ void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, iter);
     }
   }
-
-  BACKUP_SCALAR(out, selectionMode);
-  BACKUP_SCALAR(out, fgcThreshold);
-  BACKUP_SCALAR(out, bgcThreshold);
-  BACKUP_SCALAR(out, dchoice);
 }
 
 void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
@@ -471,6 +467,7 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
   RESTORE_BLOB(in, inUseBlockMap, sizeof(PPN) * parallelism);
   RESTORE_SCALAR(in, freeBlockCount);
+  RESTORE_SCALAR(in, fullBlockCount);
 
   uint64_t size;
 
@@ -497,11 +494,6 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
       fullBlocks[i].emplace_back(id);
     }
   }
-
-  RESTORE_SCALAR(in, selectionMode);
-  RESTORE_SCALAR(in, fgcThreshold);
-  RESTORE_SCALAR(in, bgcThreshold);
-  RESTORE_SCALAR(in, dchoice);
 }
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
