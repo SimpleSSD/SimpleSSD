@@ -75,10 +75,7 @@ Printer::Printer(std::ostream *o, const char *f)
       width(0),
       precision(6),
       flags(o->setf(static_cast<std::ios::fmtflags>(0))),
-      argwidth(false),
-      argprecision(false),
-      err(false),
-      consume(0) {}
+      data(0) {}
 
 Printer::~Printer() {}
 
@@ -110,6 +107,8 @@ std::ptrdiff_t Printer::parseFormat() {
 
     checkSign(_signopt, signopt_, f);
 
+    charAsInt = true;
+
     switch (_conversion) {
       case '%':
         consume = -1;
@@ -119,7 +118,10 @@ std::ptrdiff_t Printer::parseFormat() {
 
         break;
       case 's':
+        break;
       case 'c':
+        intAsChar = true;
+        charAsInt = false;
         break;
       case 'd':
       case 'i':

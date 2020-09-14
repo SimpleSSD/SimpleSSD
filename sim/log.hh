@@ -67,10 +67,19 @@ class Printer {
 
   /* For printing */
 
-  bool argwidth;      // '*' at width
-  bool argprecision;  // '*' at precision
-  bool err;  // Error while parsing format, #args not matched, and so on
-  int8_t consume;
+  union {
+    uint32_t data;
+    struct {
+      bool argwidth : 1;      // '*' at width
+      bool argprecision : 1;  // '*' at precision
+      bool err : 1;  // Error while parsing format, #args not matched, and so on
+      bool intAsChar : 1;
+      bool charAsInt : 1;
+      bool pad : 3;
+      int8_t consume;
+      uint16_t pad2;
+    };
+  };
 
   std::ptrdiff_t parseFormat();
 
@@ -196,7 +205,23 @@ class Printer {
 
   template <class T, std::enable_if_t<!std::is_enum_v<T>> * = nullptr>
   void printImpl(const T &value) {
-    (*os) << value;
+    if constexpr (std::is_integral_v<T>) {
+      if (intAsChar && std::is_integral_v<T>) {
+        (*os) << (char)value;
+      }
+      else if (charAsInt && std::is_same_v<T, char>) {
+        (*os) << (int16_t)value;
+      }
+      else if (charAsInt && std::is_same_v<T, uint8_t>) {
+        (*os) << (uint16_t)value;
+      }
+      else {
+        (*os) << value;
+      }
+    }
+    else {
+      (*os) << value;
+    }
   }
 
   template <class T, std::enable_if_t<std::is_enum_v<T>> * = nullptr>
