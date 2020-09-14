@@ -275,7 +275,7 @@ void NaiveGC::gc_doErase(uint64_t now, uint64_t tag) {
       pFIL->erase(FIL::Request(param->makePPN(psbn, i, 0), 0, eventDone, tag));
     }
 
-    block.copyList.back().beginAt = now;
+    block.beginAt = now;
     block.writeCounter = superpage;  // Reuse
     stat.gcErasedBlocks += superpage;
   }
@@ -288,20 +288,19 @@ void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
 
   if (block.writeCounter == 0) {
     PSBN psbn = block.blockID;
-    uint64_t beginAt = block.copyList.back().beginAt;
 
     // Erase completed
     if (superpage > 1) {
       debugprint(logid,
                  "GC | ERASE | PSBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
-                 psbn, beginAt, now, now - beginAt);
+                 psbn, block.beginAt, now, now - block.beginAt);
     }
     else {
       debugprint(logid,
                  "GC | ERASE | PBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
-                 psbn, beginAt, now, now - beginAt);
+                 psbn, block.beginAt, now, now - block.beginAt);
     }
 
     closeCopySession(tag);
