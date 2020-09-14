@@ -30,12 +30,12 @@ class AbstractGC : public Object {
 
   inline uint64_t getGCTag() noexcept { return requestCounter++; }
 
-  inline uint64_t startCopySession(CopyContext &&ctx) noexcept {
+  inline auto startCopySession(CopyContext &&ctx) noexcept {
     auto ret = ongoingCopy.emplace(getGCTag(), std::move(ctx));
 
     panic_if(!ret.second, "Unexpected tag colision.");
 
-    return ret.first->first;
+    return ret.first;
   }
 
   inline CopyContext &findCopySession(uint64_t tag) noexcept {

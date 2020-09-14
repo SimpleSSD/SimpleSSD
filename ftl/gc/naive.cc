@@ -109,11 +109,19 @@ void NaiveGC::gc_start(uint64_t now) {
 
     for (int32_t count = 0; count < n && blockList.size() > 0; count++) {
       // Start session
-      auto tag = startCopySession(std::move(blockList.front()));
+      auto session = startCopySession(std::move(blockList.front()));
       blockList.pop_front();
 
-      // Do read
-      scheduleNow(eventDoRead, tag);
+      if (session->second.copyList.size() == 0) {
+        // Do erase
+        session->second.writeCounter = 1;
+
+        scheduleNow(eventDoErase, session->first);
+      }
+      else {
+        // Do read
+        scheduleNow(eventDoRead, session->first);
+      }
     }
   }
   else {
@@ -247,10 +255,12 @@ void NaiveGC::gc_doErase(uint64_t now, uint64_t tag) {
       block.pageWriteIndex == block.copyList.size()) {
     PSBN psbn = block.blockID;
 
-    // Copy completed
-    debugprint(logid, "GC | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-               block.copyList.front().beginAt, now,
-               now - block.copyList.front().beginAt);
+    if (block.pageWriteIndex > 0) {
+      // Copy completed
+      debugprint(logid, "GC | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 block.copyList.front().beginAt, now,
+                 now - block.copyList.front().beginAt);
+    }
 
     // Erase
     if (superpage > 1) {
