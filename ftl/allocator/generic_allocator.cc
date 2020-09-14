@@ -452,10 +452,11 @@ void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
+  uint32_t tmp32;
   uint64_t tmp64;
 
-  RESTORE_SCALAR(in, tmp64);
-  panic_if(tmp64 != parallelism, "FTL configuration mismatch.");
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != parallelism, "FTL configuration mismatch.");
 
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != totalSuperblock, "FTL configuration mismatch.");
