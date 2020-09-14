@@ -22,3 +22,8 @@ pugixml is Copyright (C) 2006-2018 Arseny Kapoulkine.
 
 Multicore Power Area and Timing calculator.
 We modified source code to separate initialize phase and calculation phase.
+
+
+### [Catch2](https://github.com/catchorg/Catch2) located at `lib/catch2`
+
+Modern C++ test framework released under the Boost Software License
