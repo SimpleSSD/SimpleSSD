@@ -472,6 +472,9 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
 
   for (uint64_t i = 0; i < parallelism; i++) {
+    // Clear previous data
+    freeBlocks[i].clear();
+
     RESTORE_SCALAR(in, size);
 
     for (uint64_t j = 0; j < size; j++) {
