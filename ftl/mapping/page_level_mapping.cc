@@ -85,8 +85,10 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
   }
 
   // Get block from allocated block pool
-  PSBN blockID =
-      ftlobject.pAllocator->getBlockAt(std::numeric_limits<uint32_t>::max());
+  PSBN blockID;  // Invalid
+
+  blockID = ftlobject.pAllocator->getBlockAt(blockID);
+
   auto block = &blockMetadata[blockID];
 
   // Check we have to get new block
