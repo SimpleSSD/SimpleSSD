@@ -383,9 +383,13 @@ void GenericAllocator::getStatList(std::vector<Stat> &list,
                     "Average block erased count.");
   list.emplace_back(prefix + "erasecount.max", "Maximum block erased count.");
   list.emplace_back(prefix + "freeblock.count",
-                    "Total number of free (super)blocks");
+                    "Total number of free/clean (super)blocks");
   list.emplace_back(prefix + "freeblock.ratio",
                     "Ratio of free (super)block / total (super)blocks");
+  list.emplace_back(prefix + "fullblock.count",
+                    "Total number of full/closed (super)blocks");
+  list.emplace_back(prefix + "inuseblock.count",
+                    "Total number of inuse/open (super)blocks");
 }
 
 void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
@@ -413,6 +417,8 @@ void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)max);
   values.push_back((double)freeBlockCount);
   values.push_back((double)freeBlockCount / totalSuperblock);
+  values.push_back((double)fullBlockCount);
+  values.push_back((double)(totalSuperblock - freeBlockCount - fullBlockCount));
 }
 
 void GenericAllocator::resetStatValues() noexcept {}
