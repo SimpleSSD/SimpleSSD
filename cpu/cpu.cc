@@ -64,12 +64,15 @@ void Function::clear() {
 void markFunction(Function &) {
 }
 
-#ifdef __clang__
-[[clang::optnone]]
-#endif
+#ifdef FW_LATENCY
+bool isFirmwareEnabled() {
+  return true;
+}
+#else
 bool isFirmwareEnabled() {
   return false;
 }
+#endif
 
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}

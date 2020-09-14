@@ -419,6 +419,10 @@ else ()
   else ()
     target_compile_options(simplessd PRIVATE -O2)
   endif ()
+
+  if (FW_LATENCY)
+    target_compile_definitions(simplessd PRIVATE -DFW_LATENCY=1)
+  endif ()
 endif ()
 
 # Force version checking in every build
