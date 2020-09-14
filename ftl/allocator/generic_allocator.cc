@@ -336,8 +336,14 @@ bool GenericAllocator::checkBackgroundGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
-bool GenericAllocator::checkFreeBlockExist() {
-  return freeBlockCount > parallelism;
+bool GenericAllocator::checkWriteStall() {
+  /*
+   * GC also requires freeblock, so we need to secure some portion of
+   * (super)blocks. As GenericAllocator allocates block spread in parallelism
+   * level, stop write when we have free (super)blocks less or equal to
+   * parallelism level.
+   */
+  return freeBlockCount <= parallelism;
 }
 
 void GenericAllocator::getVictimBlocks(std::deque<CopyContext> &victimList,

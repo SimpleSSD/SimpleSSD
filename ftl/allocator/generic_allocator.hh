@@ -63,7 +63,7 @@ class GenericAllocator : public AbstractAllocator {
 
   bool checkForegroundGCThreshold() override;
   bool checkBackgroundGCThreshold() override;
-  bool checkFreeBlockExist() override;
+  bool checkWriteStall() override;
   void getVictimBlocks(std::deque<CopyContext> &, Event) override;
   void reclaimBlocks(PSBN, Event) override;
 

@@ -68,26 +68,27 @@ class AbstractAllocator : public Object {
   virtual void initialize();
 
   /**
-   * Check Foreground GC trigger threshold.
+   * \brief Check Foreground GC trigger threshold.
    *
    * \return True if Foreground GC should be invoked.
    */
   virtual bool checkForegroundGCThreshold() = 0;
 
   /**
-   * Check Background GC trigger threshold.
+   * \brief Check Background GC trigger threshold.
    *
    * \return True if Background GC should be invoked.
    */
   virtual bool checkBackgroundGCThreshold() = 0;
 
   /**
-   * Check if there is a free block.
-   * If not, GC must be invoked now.
+   * \brief Check free block count and stall the write
+   *
+   * Return true if there are no free blocks.
    *
    * \return True if there is a free block
    */
-  virtual bool checkFreeBlockExist() = 0;
+  virtual bool checkWriteStall() = 0;
 
   /**
    * \brief Select block to erase
