@@ -157,11 +157,11 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
     auto ppn = param->makePPN(block.blockID, 0, ctx.pageIndex);
 
     if (superpage > 1) {
-      debugprint(logid, "GC | READ  | PSPN %" PRIx64 "h",
+      debugprint(logid, "GC    | READ  | PSPN %" PRIx64 "h",
                  param->getPSPNFromPPN(ppn));
     }
     else {
-      debugprint(logid, "GC | READ  | PPN %" PRIx64 "h", ppn);
+      debugprint(logid, "GC    | READ  | PPN %" PRIx64 "h", ppn);
     }
 
     for (uint32_t i = 0; i < superpage; i++) {
@@ -205,15 +205,15 @@ void NaiveGC::gc_doTranslate(uint64_t now, uint64_t tag) {
 
     if (superpage > 1) {
       debugprint(logid,
-                 "GC | READ  | PSPN %" PRIx64 "h -> LSPN %" PRIx64
+                 "GC    | READ  | PSPN %" PRIx64 "h -> LSPN %" PRIx64
                  "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
                  ctx.beginAt, now, now - ctx.beginAt);
     }
     else {
       debugprint(logid,
-                 "GC | READ  | PPN %" PRIx64 "h -> LPN %" PRIx64 "h | %" PRIu64
-                 " - %" PRIu64 " (%" PRIu64 ")",
+                 "GC    | READ  | PPN %" PRIx64 "h -> LPN %" PRIx64
+                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
     }
 
@@ -228,12 +228,12 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
   auto ppn = ctx.request.getPPN();
 
   if (superpage > 1) {
-    debugprint(logid, "GC | WRITE | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h",
+    debugprint(logid, "GC    | WRITE | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h",
                param->getLSPNFromLPN(lpn), param->getPSPNFromPPN(ppn));
   }
   else {
-    debugprint(logid, "GC | WRITE | LPN %" PRIx64 "h -> PPN %" PRIx64 "h", lpn,
-               ppn);
+    debugprint(logid, "GC    | WRITE | LPN %" PRIx64 "h -> PPN %" PRIx64 "h",
+               lpn, ppn);
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
@@ -257,17 +257,18 @@ void NaiveGC::gc_doErase(uint64_t now, uint64_t tag) {
 
     if (block.pageWriteIndex > 0) {
       // Copy completed
-      debugprint(logid, "GC | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+      debugprint(logid,
+                 "GC    | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  block.copyList.front().beginAt, now,
                  now - block.copyList.front().beginAt);
     }
 
     // Erase
     if (superpage > 1) {
-      debugprint(logid, "GC | ERASE | PSBN %" PRIx64 "h", psbn);
+      debugprint(logid, "GC    | ERASE | PSBN %" PRIx64 "h", psbn);
     }
     else {
-      debugprint(logid, "GC | ERASE | PBN %" PRIx64 "h",
+      debugprint(logid, "GC    | ERASE | PBN %" PRIx64 "h",
                  psbn);  // PSBN == PBN when superpage == 1
     }
 
@@ -292,13 +293,13 @@ void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
     // Erase completed
     if (superpage > 1) {
       debugprint(logid,
-                 "GC | ERASE | PSBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
+                 "GC    | ERASE | PSBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
                  psbn, block.beginAt, now, now - block.beginAt);
     }
     else {
       debugprint(logid,
-                 "GC | ERASE | PBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
+                 "GC    | ERASE | PBN %" PRIx64 "h | %" PRIu64 " - %" PRIu64
                  " (%" PRIu64 ")",
                  psbn, block.beginAt, now, now - block.beginAt);
     }
