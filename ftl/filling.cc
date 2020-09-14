@@ -38,6 +38,17 @@ void Filling::start() noexcept {
   totalLogicalSuperPages = param->totalLogicalPages / param->superpage;
   totalPhysicalSuperBlocks = param->totalPhysicalBlocks / param->superpage;
 
+  float threshold = readConfigFloat(Section::FlashTranslation,
+                                    Config::Key::BackgroundGCThreshold);
+
+  // If Naive GC, use Foreground GC threshold
+  if ((Config::GCType)readConfigUint(Section::FlashTranslation,
+                                     Config::Key::GCMode) ==
+      Config::GCType::Naive) {
+    threshold = readConfigFloat(Section::FlashTranslation,
+                                Config::Key::ForegroundGCThreshold);
+  }
+
   nPagesToWarmup = (uint64_t)(
       totalLogicalSuperPages *
       readConfigFloat(Section::FlashTranslation, Config::Key::FillRatio));
@@ -46,10 +57,7 @@ void Filling::start() noexcept {
                                                Config::Key::InvalidFillRatio));
   mode = (Config::FillingType)readConfigUint(Section::FlashTranslation,
                                              Config::Key::FillingMode);
-  maxPagesBeforeGC =
-      (uint64_t)(totalPhysicalSuperBlocks *
-                 readConfigFloat(Section::FlashTranslation,
-                                 Config::Key::BackgroundGCThreshold));
+  maxPagesBeforeGC = (uint64_t)(totalPhysicalSuperBlocks * threshold);
   maxPagesBeforeGC = totalPhysicalSuperBlocks - maxPagesBeforeGC;
   maxPagesBeforeGC *= filparam->page;
 
