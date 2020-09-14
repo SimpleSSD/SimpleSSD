@@ -64,6 +64,13 @@ void Function::clear() {
 void markFunction(Function &) {
 }
 
+#ifdef __clang__
+[[clang::optnone]]
+#endif
+bool isFirmwareEnabled() {
+  return false;
+}
+
 CPU::Core::Core()
     : parent(nullptr), busyUntil(0), clockPeriod(0), jobEvent(InvalidEventID) {}
 

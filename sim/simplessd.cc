@@ -163,45 +163,51 @@ void SimpleSSD::deinit() noexcept {
         log.init(object.cpu, outfile, errfile, debugfile);
       }
 
-      debugprint(Log::DebugID::CPU, "Begin CPU power calculation");
+      if (CPU::isFirmwareEnabled()) {
+        debugprint(Log::DebugID::CPU, "Begin CPU power calculation");
 
-      object.cpu->calculatePower(power);
+        object.cpu->calculatePower(power);
 
-      debugprint(Log::DebugID::CPU, "Core:");
-      debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.core.area);
-      debugprint(Log::DebugID::CPU, "  Peak Dynamic: %lf W",
-                 power.core.peakDynamic);
-      debugprint(Log::DebugID::CPU, "  Subthreshold Leakage: %lf W",
-                 power.core.subthresholdLeakage);
-      debugprint(Log::DebugID::CPU, "  Gate Leakage: %lf W",
-                 power.core.gateLeakage);
-      debugprint(Log::DebugID::CPU, "  Runtime Dynamic: %lf W",
-                 power.core.runtimeDynamic);
-
-      if (power.level2.area > 0.0) {
-        debugprint(Log::DebugID::CPU, "L2:");
-        debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.level2.area);
+        debugprint(Log::DebugID::CPU, "Core:");
+        debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.core.area);
         debugprint(Log::DebugID::CPU, "  Peak Dynamic: %lf W",
-                   power.level2.peakDynamic);
+                   power.core.peakDynamic);
         debugprint(Log::DebugID::CPU, "  Subthreshold Leakage: %lf W",
-                   power.level2.subthresholdLeakage);
+                   power.core.subthresholdLeakage);
         debugprint(Log::DebugID::CPU, "  Gate Leakage: %lf W",
-                   power.level2.gateLeakage);
+                   power.core.gateLeakage);
         debugprint(Log::DebugID::CPU, "  Runtime Dynamic: %lf W",
-                   power.level2.runtimeDynamic);
+                   power.core.runtimeDynamic);
+
+        if (power.level2.area > 0.0) {
+          debugprint(Log::DebugID::CPU, "L2:");
+          debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.level2.area);
+          debugprint(Log::DebugID::CPU, "  Peak Dynamic: %lf W",
+                     power.level2.peakDynamic);
+          debugprint(Log::DebugID::CPU, "  Subthreshold Leakage: %lf W",
+                     power.level2.subthresholdLeakage);
+          debugprint(Log::DebugID::CPU, "  Gate Leakage: %lf W",
+                     power.level2.gateLeakage);
+          debugprint(Log::DebugID::CPU, "  Runtime Dynamic: %lf W",
+                     power.level2.runtimeDynamic);
+        }
+
+        if (power.level3.area > 0.0) {
+          debugprint(Log::DebugID::CPU, "L3:");
+          debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.level3.area);
+          debugprint(Log::DebugID::CPU, "  Peak Dynamic: %lf W",
+                     power.level3.peakDynamic);
+          debugprint(Log::DebugID::CPU, "  Subthreshold Leakage: %lf W",
+                     power.level3.subthresholdLeakage);
+          debugprint(Log::DebugID::CPU, "  Gate Leakage: %lf W",
+                     power.level3.gateLeakage);
+          debugprint(Log::DebugID::CPU, "  Runtime Dynamic: %lf W",
+                     power.level3.runtimeDynamic);
+        }
       }
-
-      if (power.level3.area > 0.0) {
-        debugprint(Log::DebugID::CPU, "L3:");
-        debugprint(Log::DebugID::CPU, "  Area: %lf mm^2", power.level3.area);
-        debugprint(Log::DebugID::CPU, "  Peak Dynamic: %lf W",
-                   power.level3.peakDynamic);
-        debugprint(Log::DebugID::CPU, "  Subthreshold Leakage: %lf W",
-                   power.level3.subthresholdLeakage);
-        debugprint(Log::DebugID::CPU, "  Gate Leakage: %lf W",
-                   power.level3.gateLeakage);
-        debugprint(Log::DebugID::CPU, "  Runtime Dynamic: %lf W",
-                   power.level3.runtimeDynamic);
+      else {
+        debugprint(Log::DebugID::CPU,
+                   "Firmware latency disabled. Skip power calculation.");
       }
     }
 

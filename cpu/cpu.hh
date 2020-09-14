@@ -86,6 +86,13 @@ class Function {
 void markFunction(Function &);
 
 /**
+ * \brief Check LLVM pass enabled
+ *
+ * This function is used whether power calculation is possible
+ */
+bool isFirmwareEnabled();
+
+/**
  * \brief CPU object declaration
  *
  * This object manages event scheduling and firmware execution latency.
