@@ -317,7 +317,9 @@ void NaiveGC::getStatValues(std::vector<double> &values) noexcept {
   values.push_back((double)stat.fgcCount);
   values.push_back((double)stat.gcErasedBlocks);
   values.push_back((double)stat.gcCopiedPages);
-  values.push_back((double)stat.avg_penalty / stat.penalty_count);
+  values.push_back(stat.penalty_count > 0
+                       ? (double)stat.avg_penalty / stat.penalty_count
+                       : 0.);
   values.push_back((double)stat.min_penalty);
   values.push_back((double)stat.max_penalty);
   values.push_back((double)stat.penalty_count);
