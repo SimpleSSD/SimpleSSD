@@ -75,7 +75,7 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
     PSPN old = static_cast<PSPN>(entry);
 
     PSBN block = param.getPSBNFromPSPN(old);
-    PSBN page = param.getPSBNFromPSPN(old);
+    uint32_t page = param.getPageIndexFromPSPN(old);
 
     blockMetadata[block].validPages.reset(page);
 
@@ -134,7 +134,7 @@ CPU::Function PageLevelMapping::invalidateMappingInternal(LSPN lspn,
 
     // Invalidate block
     PSBN block = param.getPSBNFromPSPN(pspn);
-    PSBN page = param.getPSBNFromPSPN(pspn);
+    uint32_t page = param.getPageIndexFromPSPN(pspn);
 
     blockMetadata[block].validPages.reset(page);
     insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1);
