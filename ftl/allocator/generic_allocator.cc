@@ -465,7 +465,7 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, lastAllocated);
   RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
-  RESTORE_BLOB(in, inUseBlockMap, sizeof(PPN) * parallelism);
+  RESTORE_BLOB(in, inUseBlockMap, sizeof(PSBN) * parallelism);
   RESTORE_SCALAR(in, freeBlockCount);
   RESTORE_SCALAR(in, fullBlockCount);
 
@@ -475,7 +475,7 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, size);
 
     for (uint64_t j = 0; j < size; j++) {
-      PPN id;
+      PSBN id;
 
       RESTORE_SCALAR(in, id);
 
@@ -487,7 +487,7 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, size);
 
     for (uint64_t j = 0; j < size; j++) {
-      PPN id;
+      PSBN id;
 
       RESTORE_SCALAR(in, id);
 
