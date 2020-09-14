@@ -68,8 +68,8 @@ void NaiveGC::initialize() {
 }
 
 void NaiveGC::triggerForeground() {
-  if (ftlobject.pAllocator->checkForegroundGCThreshold() &&
-      state == State::Idle) {
+  if (UNLIKELY(ftlobject.pAllocator->checkForegroundGCThreshold() &&
+               state == State::Idle)) {
     state = State::Foreground;
     beginAt = getTick();
 
@@ -79,7 +79,7 @@ void NaiveGC::triggerForeground() {
 
 void NaiveGC::requestArrived(bool, uint32_t) {
   // Save tick for penalty calculation
-  if (state >= State::Foreground) {
+  if (UNLIKELY(state >= State::Foreground)) {
     // GC in-progress
     firstRequestArrival = MIN(firstRequestArrival, getTick());
     stat.affected_requests++;

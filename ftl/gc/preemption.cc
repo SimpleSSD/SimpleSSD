@@ -22,8 +22,8 @@ PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 PreemptibleGC::~PreemptibleGC() {}
 
 void PreemptibleGC::triggerBackground(uint64_t now) {
-  if (ftlobject.pAllocator->checkBackgroundGCThreshold() &&
-      state < State::Foreground) {
+  if (UNLIKELY(ftlobject.pAllocator->checkBackgroundGCThreshold() &&
+               state < State::Foreground)) {
     if (state == State::Paused) {
       resumePaused();
     }
@@ -37,8 +37,8 @@ void PreemptibleGC::triggerBackground(uint64_t now) {
 }
 
 void PreemptibleGC::triggerForeground() {
-  if (ftlobject.pAllocator->checkForegroundGCThreshold() &&
-      state < State::Foreground) {
+  if (UNLIKELY(ftlobject.pAllocator->checkForegroundGCThreshold() &&
+               state < State::Foreground)) {
     if (state == State::Paused) {
       resumePaused();
     }
@@ -130,7 +130,7 @@ void PreemptibleGC::requestArrived(bool isread, uint32_t bytes) {
   PreemptibleGC::requestArrived(isread, bytes);
 
   // Request preemption
-  if (state >= State::Foreground && !preemptRequested()) {
+  if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
     preemptRequestedAt = getTick();
 
     debugprint(logid, "GC    | Preemption requested");

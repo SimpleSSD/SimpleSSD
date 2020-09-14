@@ -31,8 +31,8 @@ AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 AdvancedGC::~AdvancedGC() {}
 
 void AdvancedGC::triggerBackground(uint64_t now) {
-  if (ftlobject.pAllocator->checkBackgroundGCThreshold() &&
-      state == State::Idle) {
+  if (UNLIKELY(ftlobject.pAllocator->checkBackgroundGCThreshold() &&
+               state == State::Idle)) {
     state = State::Background;
     beginAt = now;
 
@@ -83,8 +83,13 @@ void AdvancedGC::requestArrived(bool isread, uint32_t bytes) {
   // Penalty calculation
   NaiveGC::requestArrived(isread, bytes);
 
-  // Not scheduled and GC is not in progress
-  if (!isScheduled(eventBackgroundGC) && state < State::Foreground) {
+  // Not scheduled
+  if (LIKELY(state < State::Foreground)) {
+    // Reschedule GC check
+    if (isScheduled(eventBackgroundGC)) {
+      deschedule(eventBackgroundGC);
+    }
+
     scheduleRel(eventBackgroundGC, 0, idletime);
   }
 }
