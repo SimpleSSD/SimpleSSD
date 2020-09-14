@@ -46,8 +46,9 @@ class GenericCache : public AbstractCache {
   uint64_t pendingEviction;
   std::list<WritebackRequest> writebackList;
 
-  void tryLookup(LPN, bool = false);
+  void tryLookup(LPN);
   void tryAllocate(LPN);
+  CPU::Function lookupImpl(HIL::SubRequest *sreq, bool &retry);
 
   inline void makeFlushContext(WritebackRequest &wbreq,
                                std::vector<Manager::FlushContext> &list) {

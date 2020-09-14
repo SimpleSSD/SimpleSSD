@@ -58,20 +58,20 @@ GenericCache::~GenericCache() {
   delete tagArray;
 }
 
-void GenericCache::tryLookup(LPN lpn, bool flush) {
+void GenericCache::tryLookup(LPN lpn) {
   auto iter = lookupList.find(lpn);
 
   if (iter != lookupList.end()) {
-    if (flush) {
-      // This was flush -> cacheline looked up was invalidated
-      auto req = getSubRequest(iter->second);
+    bool retry = true;
+    auto sreq = getSubRequest(iter->second);
 
-      req->setAllocate();
-      req->setMiss();
-    }
-
-    manager->lookupDone(iter->second);
     lookupList.erase(iter);
+
+    lookupImpl(sreq, retry);
+
+    if (LIKELY(!retry)) {
+      manager->lookupDone(sreq->getTag());
+    }
   }
 }
 
@@ -89,7 +89,7 @@ void GenericCache::tryAllocate(LPN lpn) {
   }
 }
 
-void GenericCache::lookup(HIL::SubRequest *sreq) {
+CPU::Function GenericCache::lookupImpl(HIL::SubRequest *sreq, bool &retry) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -129,13 +129,23 @@ void GenericCache::lookup(HIL::SubRequest *sreq) {
         missConflictList.emplace(lpn, sreq->getTag());
       }
 
-      return;
+      retry = true;
+
+      return fstat;
     }
   }
   else {
-    debugprint(logid, "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | %s",
-               sreq->getParentTag(), sreq->getTagForLog(), lpn,
-               tagArray->print(ctag).c_str());
+    if (retry) {
+      debugprint(logid,
+                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Retry %s",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn,
+                 tagArray->print(ctag).c_str());
+    }
+    else {
+      debugprint(logid, "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | %s",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn,
+                 tagArray->print(ctag).c_str());
+    }
 
     sreq->setDRAMAddress(tagArray->getDataAddress(ctag));
 
@@ -149,7 +159,9 @@ void GenericCache::lookup(HIL::SubRequest *sreq) {
       lookupList.emplace(ctag->tag, sreq->getTag());
 
       // TODO: Memory/FW latency is missing
-      return;
+      retry = true;
+
+      return fstat;
     }
 
     auto opcode = sreq->getOpcode();
@@ -175,8 +187,19 @@ void GenericCache::lookup(HIL::SubRequest *sreq) {
     }
   }
 
-  scheduleFunction(CPU::CPUGroup::InternalCache,
-                   tagArray->getLookupMemoryEvent(), sreq->getTag(), fstat);
+  retry = false;
+
+  return fstat;
+}
+
+void GenericCache::lookup(HIL::SubRequest *sreq) {
+  bool retry = false;
+  auto fstat = lookupImpl(sreq, retry);
+
+  if (LIKELY(!retry)) {
+    scheduleFunction(CPU::CPUGroup::InternalCache,
+                     tagArray->getLookupMemoryEvent(), sreq->getTag(), fstat);
+  }
 }
 
 void GenericCache::flush(HIL::SubRequest *sreq) {
@@ -346,8 +369,6 @@ void GenericCache::dmaDone(LPN lpn) {
 }
 
 void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
-  bool found = false;
-
   if (drain) {
     // Write
     for (auto iter = writebackList.begin(); iter != writebackList.end();
@@ -396,7 +417,7 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
   }
 
   // Lookup
-  tryLookup(lpn, found);
+  tryLookup(lpn);
 
   // Allocate
   tryAllocate(lpn);
