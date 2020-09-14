@@ -97,6 +97,9 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
     fstat += ftlobject.pAllocator->allocateBlock(blockID);
 
     block = &blockMetadata[blockID];
+
+    panic_if(block->nextPageToWrite == filparam->page,
+             "BlockAllocator corrupted.");
   }
 
   // Get new page
