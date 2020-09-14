@@ -308,6 +308,13 @@ void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
   std::string cpt_file =
       Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_NAME);
 
+  if (object.cpu->getTick() != 0) {
+    std::cerr << "You must restore from checkpoint before starting simulation."
+              << std::endl;
+
+    abort();
+  }
+
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);
 
