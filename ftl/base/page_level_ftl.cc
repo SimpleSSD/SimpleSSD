@@ -110,10 +110,16 @@ void PageLevelFTL::read_done(uint64_t tag) {
 }
 
 bool PageLevelFTL::write(Request *cmd) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  LPN lpn = cmd->getLPN();
+
   // if SSD is running out of free block, stall request.
   // Stalled requests will be continued after GC
   if (ftlobject.pGC->checkWriteStall()) {
-    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | STALL | TAG: %" PRIu64,
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "WRITE | LPN %" PRIx64 "h | Stopped by GC | Tag %" PRIu64, lpn,
                cmd->getTag());
 
     stalledRequestList.emplace_back(cmd);
@@ -123,10 +129,6 @@ bool PageLevelFTL::write(Request *cmd) {
     return false;
   }
 
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  LPN lpn = cmd->getLPN();
   LPN slpn = cmd->getSLPN();
   uint32_t nlp = cmd->getNLP();
 
@@ -402,8 +404,9 @@ void PageLevelFTL::restartStalledRequests() {
   while (!stalledRequestList.empty()) {
     auto cmd = stalledRequestList.front();
 
-    debugprint(Log::DebugID::FTL_PageLevel, "WRITE | CONTINUE | TAG : %" PRIu64,
-               cmd->getTag());
+    debugprint(Log::DebugID::FTL_PageLevel,
+               "WRITE | LPN %" PRIx64 "h | Try to resume | Tag %" PRIu64,
+               cmd->getLPN(), cmd->getTag());
 
     stalledRequestList.pop_front();
 
