@@ -82,8 +82,7 @@ DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
       regionIndex(0),
       buffer(b),
       memoryAddress(a),
-      both(false),
-      lastSize(0) {}
+      both(false) {}
 
 void DMAEngine::DMASession::allocateBuffer(uint32_t size) {
   bufferSize = size;
@@ -136,70 +135,44 @@ DMAEngine::~DMAEngine() {
 void DMAEngine::dmaReadDone(uint64_t tag) {
   auto &session = findSession(tag);
 
-  if (session.both) {
-    // Memory done
-    session.both = false;
-
-    if (session.handled == session.requested) {
-      scheduleNow(session.eid, session.data);
-
-      destroySession(tag);
-    }
-  }
-  else {
-    // DMA done
+  // Callback should be called twice (from interface and memory)
+  if (!session.both) {
     session.both = true;
 
-    object.memory->write(
-        session.memoryAddress + session.handled - session.lastSize,
-        session.lastSize, eventReadDMADone, session.tag, false);
+    return;
+  }
 
-    if (session.handled < session.requested) {
-      readNext(session);
-    }
+  session.both = false;
+
+  if (session.handled == session.requested) {
+    scheduleNow(session.eid, session.data);
+
+    destroySession(tag);
+  }
+  else {
+    readNext(session);
   }
 }
 
 void DMAEngine::dmaWriteDone(uint64_t tag) {
   auto &session = findSession(tag);
 
-  if (session.both) {
-    // DMA done
-    session.both = false;
-
-    if (session.handled == session.requested) {
-      scheduleNow(session.eid, session.data);
-
-      destroySession(tag);
-    }
-  }
-  else {
-    // Memory done
+  // Callback should be called twice (from interface and memory)
+  if (!session.both) {
     session.both = true;
 
-    auto &iter = session.parent->prList.at(session.regionIndex);
+    return;
+  }
 
-    if (!iter.ignore) {
-      if (session.regionIndex == 0) {
-        interface->write(iter.address + session.handled - session.lastSize,
-                         session.lastSize, session.buffer, eventWriteDMADone,
-                         session.tag);
-      }
-      else {
-        interface->write(
-            iter.address, session.lastSize,
-            session.buffer ? session.buffer + session.handled - session.lastSize
-                           : nullptr,
-            eventWriteDMADone, session.tag);
-      }
-    }
-    else {
-      scheduleNow(eventWriteDMADone);
-    }
+  session.both = false;
 
-    if (session.handled < session.requested) {
-      writeNext(session);
-    }
+  if (session.handled == session.requested) {
+    scheduleNow(session.eid, session.data);
+
+    destroySession(tag);
+  }
+  else {
+    writeNext(session);
   }
 }
 
@@ -528,22 +501,34 @@ void DMAEngine::deinit(DMATag tag) noexcept {
 }
 
 void DMAEngine::readNext(DMASession &session) noexcept {
+  uint32_t read;
   bool submit = false;
+  bool mem = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
 
-  session.lastSize = MIN(iter.size, session.requested - session.handled);
+  read = MIN(iter.size, session.requested - session.handled);
 
   if (!iter.ignore) {
     submit = true;
 
-    interface->read(iter.address, session.lastSize,
+    interface->read(iter.address, read,
                     session.buffer ? session.buffer + session.handled : nullptr,
                     eventReadDMADone, session.tag);
+
+    if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      mem = true;
+
+      object.memory->write(session.memoryAddress + session.handled, read,
+                           eventReadDMADone, session.tag, false);
+    }
   }
 
-  session.handled += session.lastSize;
+  session.handled += read;
 
+  if (!mem) {
+    dmaReadDone(session.tag);
+  }
   if (!submit) {
     dmaReadDone(session.tag);
   }
@@ -555,7 +540,9 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
+  uint32_t read;
   bool submit = false;
+  bool mem = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer, memaddr);
   auto &session = siter.second;
@@ -566,16 +553,25 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
 
     if (currentOffset + iter.size > offset) {
       session.handled = offset - currentOffset;
-      session.lastSize = MIN(iter.size - session.handled, size);
+
+      read = MIN(iter.size - session.handled, size);
 
       if (!iter.ignore) {
         submit = true;
 
-        interface->read(iter.address + session.handled, session.lastSize,
-                        session.buffer, eventReadDMADone, siter.first);
+        interface->read(iter.address + session.handled, read, session.buffer,
+                        eventReadDMADone, siter.first);
+
+        if (LIKELY(session.memoryAddress !=
+                   std::numeric_limits<uint64_t>::max())) {
+          mem = true;
+
+          object.memory->write(session.memoryAddress + session.handled, read,
+                               eventReadDMADone, siter.first, false);
+        }
       }
 
-      session.handled = session.lastSize;
+      session.handled = read;
 
       break;
     }
@@ -583,29 +579,44 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
     currentOffset += iter.size;
   }
 
+  if (!mem) {
+    dmaReadDone(siter.first);
+  }
   if (!submit) {
     dmaReadDone(siter.first);
   }
 }
 
 void DMAEngine::writeNext(DMASession &session) noexcept {
+  uint32_t written;
   bool submit = false;
+  bool mem = false;
 
   auto &iter = session.parent->prList.at(++session.regionIndex);
 
-  session.lastSize = MIN(iter.size, session.requested - session.handled);
+  written = MIN(iter.size, session.requested - session.handled);
 
-  if (!iter.ignore &&
-      session.memoryAddress != std::numeric_limits<uint64_t>::max()) {
+  if (!iter.ignore) {
     submit = true;
 
-    object.memory->read(session.memoryAddress + session.handled,
-                        session.lastSize, eventWriteDMADone, session.tag,
-                        false);
+    interface->write(
+        iter.address, written,
+        session.buffer ? session.buffer + session.handled : nullptr,
+        eventWriteDMADone, session.tag);
+
+    if (LIKELY(session.memoryAddress != std::numeric_limits<uint64_t>::max())) {
+      mem = true;
+
+      object.memory->read(session.memoryAddress + session.handled, written,
+                          eventWriteDMADone, session.tag, false);
+    }
   }
 
-  session.handled += session.lastSize;
+  session.handled += written;
 
+  if (!mem) {
+    dmaWriteDone(session.tag);
+  }
   if (!submit) {
     dmaWriteDone(session.tag);
   }
@@ -617,7 +628,9 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
 
   uint64_t currentOffset = 0;
+  uint32_t written;
   bool submit = false;
+  bool mem = false;
 
   auto &siter = createSession(tag, eid, data, size, buffer, memaddr);
   auto &session = siter.second;
@@ -628,18 +641,25 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
 
     if (currentOffset + iter.size > offset) {
       session.handled = offset - currentOffset;
-      session.lastSize = MIN(iter.size - session.handled, size);
 
-      if (!iter.ignore &&
-          session.memoryAddress != std::numeric_limits<uint64_t>::max()) {
+      written = MIN(iter.size - session.handled, size);
+
+      if (!iter.ignore) {
         submit = true;
 
-        object.memory->read(session.memoryAddress + session.handled,
-                            session.lastSize, eventWriteDMADone, siter.first,
-                            false);
+        interface->write(iter.address + session.handled, written,
+                         session.buffer, eventWriteDMADone, siter.first);
+
+        if (LIKELY(session.memoryAddress !=
+                   std::numeric_limits<uint64_t>::max())) {
+          mem = true;
+
+          object.memory->read(session.memoryAddress + session.handled, written,
+                              eventWriteDMADone, siter.first, false);
+        }
       }
 
-      session.handled = session.lastSize;
+      session.handled = written;
 
       break;
     }
@@ -647,6 +667,9 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
     currentOffset += iter.size;
   }
 
+  if (!mem) {
+    dmaWriteDone(siter.first);
+  }
   if (!submit) {
     dmaWriteDone(siter.first);
   }

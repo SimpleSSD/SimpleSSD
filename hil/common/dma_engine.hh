@@ -82,12 +82,10 @@ class DMAEngine : public Object {
 
     bool both;
 
-    uint32_t lastSize;
-
     void allocateBuffer(uint32_t);
     void deallocateBuffer();
 
-    DMASession(uint64_t t) : tag(t), both(false), lastSize(0) {}
+    DMASession(uint64_t t) : tag(t), both(false) {}
     DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *,
                uint64_t);
   };
