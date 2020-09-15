@@ -150,11 +150,12 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
     auto ppn = param->makePPN(block.blockID, 0, ctx.pageIndex);
 
     if (superpage > 1) {
-      debugprint(logid, "GC    | READ  | PSPN %" PRIx64 "h",
-                 param->getPSPNFromPPN(ppn));
+      debugprint(logid, "GC    | READ  | PSBN %" PRIx64 "h | PSPN %" PRIx64 "h",
+                 block.blockID, param->getPSPNFromPPN(ppn));
     }
     else {
-      debugprint(logid, "GC    | READ  | PPN %" PRIx64 "h", ppn);
+      debugprint(logid, "GC    | READ  | PBN %" PRIx64 "h | PPN %" PRIx64 "h",
+                 block.blockID, ppn);
     }
 
     for (uint32_t i = 0; i < superpage; i++) {
@@ -187,8 +188,8 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
       debugprint(logid, "GC    | ERASE | PSBN %" PRIx64 "h", psbn);
     }
     else {
-      debugprint(logid, "GC    | ERASE | PBN %" PRIx64 "h",
-                 psbn);  // PSBN == PBN when superpage == 1
+      // PSBN == PBN when superpage == 1
+      debugprint(logid, "GC    | ERASE | PBN %" PRIx64 "h", psbn);
     }
 
     for (uint32_t i = 0; i < superpage; i++) {
@@ -215,17 +216,19 @@ void NaiveGC::gc_doTranslate(uint64_t now, uint64_t tag) {
     panic_if(!lpn.isValid(), "Invalid LPN received.");
 
     if (superpage > 1) {
-      debugprint(logid,
-                 "GC    | READ  | PSPN %" PRIx64 "h -> LSPN %" PRIx64
-                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
-                 ctx.beginAt, now, now - ctx.beginAt);
+      debugprint(
+          logid,
+          "GC    | READ  | PSBN %" PRIx64 "h | PSPN %" PRIx64
+          "h -> LSPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+          block.blockID, param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
+          ctx.beginAt, now, now - ctx.beginAt);
     }
     else {
       debugprint(logid,
-                 "GC    | READ  | PPN %" PRIx64 "h -> LPN %" PRIx64
-                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
+                 "GC    | READ  | PBN %" PRIx64 "h | PPN %" PRIx64
+                 "h -> LPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+                 ")",
+                 block.blockID, ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
     }
 
     ftlobject.pMapping->writeMapping(&ctx.request, eventDoWrite);
@@ -239,12 +242,17 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
   auto ppn = ctx.request.getPPN();
 
   if (superpage > 1) {
-    debugprint(logid, "GC    | WRITE | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h",
-               param->getLSPNFromLPN(lpn), param->getPSPNFromPPN(ppn));
+    debugprint(logid,
+               "GC    | WRITE | PSBN %" PRIx64 "h | LSPN %" PRIx64
+               "h -> PSPN %" PRIx64 "h",
+               block.blockID, param->getLSPNFromLPN(lpn),
+               param->getPSPNFromPPN(ppn));
   }
   else {
-    debugprint(logid, "GC    | WRITE | LPN %" PRIx64 "h -> PPN %" PRIx64 "h",
-               lpn, ppn);
+    debugprint(logid,
+               "GC    | WRITE | PBN %" PRIx64 "h | LPN %" PRIx64
+               "h -> PPN %" PRIx64 "h",
+               block.blockID, lpn, ppn);
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
@@ -268,17 +276,19 @@ void NaiveGC::gc_writeDone(uint64_t now, uint64_t tag) {
     auto ppn = ctx.request.getPPN();
 
     if (superpage > 1) {
-      debugprint(logid,
-                 "GC    | WRITE | PSPN %" PRIx64 "h -> LSPN %" PRIx64
-                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
-                 ctx.beginAt, now, now - ctx.beginAt);
+      debugprint(
+          logid,
+          "GC    | WRITE | PSBN %" PRIx64 "h | LSPN %" PRIx64
+          "h -> PSPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+          block.blockID, param->getLSPNFromLPN(lpn), param->getPSPNFromPPN(ppn),
+          ctx.beginAt, now, now - ctx.beginAt);
     }
     else {
       debugprint(logid,
-                 "GC    | WRITE | PPN %" PRIx64 "h -> LPN %" PRIx64
-                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
+                 "GC    | WRITE | PBN %" PRIx64 "h | LPN %" PRIx64
+                 "h -> PPN %" PRIx64 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64
+                 ")",
+                 block.blockID, lpn, ppn, ctx.beginAt, now, now - ctx.beginAt);
     }
 
     // Go back to read
