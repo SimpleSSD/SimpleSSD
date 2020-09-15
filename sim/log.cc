@@ -139,10 +139,12 @@ std::ptrdiff_t Printer::parseFormat() {
         break;
       case 'p':
         f |= std::ios::showbase;
-        /* fall through */
+
+        [[fallthrough]];
       case 'X':
         f |= std::ios::uppercase;
-        /* fall through */
+
+        [[fallthrough]];
       case 'x':
         // Hexadecimal
         changeFlag(f | std::ios::hex);
@@ -160,7 +162,8 @@ std::ptrdiff_t Printer::parseFormat() {
       case 'E':
       case 'G':  // Not supported, just failback to scientific format
         f |= std::ios::uppercase;
-        /* fall through */
+
+        [[fallthrough]];
       case 'e':
       case 'g':  // Not supported, just failback to scientific format
         // Floating-point number in scientific format
@@ -171,7 +174,8 @@ std::ptrdiff_t Printer::parseFormat() {
         break;
       case 'A':
         f |= std::ios::uppercase;
-        /* fall through */
+
+        [[fallthrough]];
       case 'a':
         // Floating-point number in hex format
         changeFlag(f | std::ios::floatfield);

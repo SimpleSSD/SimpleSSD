@@ -425,7 +425,7 @@ DMATag DMAEngine::initFromPRP(uint64_t prp1, uint64_t prp2, uint32_t size,
       // PRP1 is PRP pointer, PRP2 is PRP list
       ret->prList.emplace_back(PhysicalRegion(prp1, prp1Size));
 
-      /* fallthrough */
+      [[fallthrough]];
     case 3:
       // Prepare for read
       immediate = false;

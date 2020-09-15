@@ -650,7 +650,7 @@ void CPU::schedule(CPUGroup group, Event eid, uint64_t data,
       break;
     case CPUGroup::FlashTranslationLayer:
       begin = hilCore + iclCore;
-      /* fallthrough */
+      [[fallthrough]];
     case CPUGroup::Any:
       end = hilCore + iclCore + ftlCore;
       break;

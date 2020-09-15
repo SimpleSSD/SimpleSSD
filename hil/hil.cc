@@ -148,7 +148,7 @@ void HIL::submit(Operation opcode, Request *req) {
 
       panic("Compare not implemented yet.");
 
-      /* fallthrough */
+      [[fallthrough]];
     case Operation::Read:
       /*
        * For read, we push all NVM requests at same time, and do the DMA when

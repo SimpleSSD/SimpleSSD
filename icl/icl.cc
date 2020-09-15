@@ -45,7 +45,7 @@ ICL::ICL(ObjectData &o, HIL::HIL *p) : Object(o), pHIL(p) {
       writeConfigUint(Section::InternalCache, Config::Key::CacheSize,
                       param->parallelismLevel[0] * param->pageSize * 2);
 
-      /* fallthrough */
+      [[fallthrough]];
     case Config::Mode::SetAssociative:
     case Config::Mode::RingBuffer:
       pCache = new Cache::GenericCache(object, pManager, param);
