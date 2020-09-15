@@ -17,9 +17,7 @@
 #include "ftl/mapping/page_level_mapping.hh"
 #include "icl/icl.hh"
 
-namespace SimpleSSD {
-
-namespace FTL {
+namespace SimpleSSD::FTL {
 
 FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
   pFIL = new FIL::FIL(object);
@@ -212,6 +210,4 @@ void FTL::restoreCheckpoint(std::istream &in) noexcept {
   pFIL->restoreCheckpoint(in);
 }
 
-}  // namespace FTL
-
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::FTL
