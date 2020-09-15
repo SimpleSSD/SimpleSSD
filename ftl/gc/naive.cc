@@ -52,9 +52,6 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   eventDoWrite =
       createEvent([this](uint64_t t, uint64_t d) { gc_doWrite(t, d); },
                   "FTL::GC::eventDoWrite");
-  eventDoErase =
-      createEvent([this](uint64_t t, uint64_t d) { gc_doErase(t, d); },
-                  "FTL::GC::eventDoErase");
   eventDone = createEvent([this](uint64_t t, uint64_t d) { gc_done(t, d); },
                           "FTL::GC::eventEraseDone");
 
@@ -144,13 +141,31 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
   auto &block = findCopySession(tag);
 
-  if (block.copyList.size() == 0) {
-    // Do erase
-    block.writeCounter = 1;
+  if (LIKELY(block.pageWriteIndex > 0)) {
+    block.writeCounter--;
 
-    gc_doErase(now, tag);
+    if (block.writeCounter == 0) {
+      auto &ctx = block.copyList.at(block.pageWriteIndex - 1);
+      auto lpn = ctx.request.getLPN();
+      auto ppn = ctx.request.getPPN();
+
+      if (superpage > 1) {
+        debugprint(logid,
+                   "GC    | WRITE | PSPN %" PRIx64 "h -> LSPN %" PRIx64
+                   "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                   param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
+                   ctx.beginAt, now, now - ctx.beginAt);
+      }
+      else {
+        debugprint(logid,
+                   "GC    | WRITE | PPN %" PRIx64 "h -> LPN %" PRIx64
+                   "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                   ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
+      }
+    }
   }
-  else if (LIKELY(block.pageReadIndex < block.copyList.size())) {
+
+  if (LIKELY(block.pageReadIndex < block.copyList.size())) {
     // Do read
     auto &ctx = block.copyList.at(block.pageReadIndex++);
     auto ppn = param->makePPN(block.blockID, 0, ctx.pageIndex);
@@ -184,6 +199,27 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
     ctx.beginAt = now;
     stat.gcCopiedPages += superpage;
   }
+  else {
+    // Do erase
+    PSBN psbn = block.blockID;
+
+    // Erase
+    if (superpage > 1) {
+      debugprint(logid, "GC    | ERASE | PSBN %" PRIx64 "h", psbn);
+    }
+    else {
+      debugprint(logid, "GC    | ERASE | PBN %" PRIx64 "h",
+                 psbn);  // PSBN == PBN when superpage == 1
+    }
+
+    for (uint32_t i = 0; i < superpage; i++) {
+      pFIL->erase(FIL::Request(param->makePPN(psbn, i, 0), 0, eventDone, tag));
+    }
+
+    block.beginAt = now;
+    block.writeCounter = superpage;  // Reuse
+    stat.gcErasedBlocks += superpage;
+  }
 }
 
 void NaiveGC::gc_doTranslate(uint64_t now, uint64_t tag) {
@@ -192,9 +228,6 @@ void NaiveGC::gc_doTranslate(uint64_t now, uint64_t tag) {
   block.readCounter--;
 
   if (block.readCounter == 0) {
-    // Read completed, start next read
-    scheduleNow(eventDoRead, tag);
-
     // Start address translation
     auto &ctx = block.copyList.at(block.pageWriteIndex);
     auto lpn = ctx.request.getLPN();
@@ -237,48 +270,12 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
 
   for (uint32_t i = 0; i < superpage; i++) {
     pFIL->program(FIL::Request(static_cast<PPN>(ppn + i),
-                               makeBufferAddress(i, ctx.pageIndex),
-                               eventDoErase, tag));
+                               makeBufferAddress(i, ctx.pageIndex), eventDoRead,
+                               tag));
   }
 
   block.writeCounter += superpage;  // Do not overwrite
   ctx.beginAt = now;
-}
-
-void NaiveGC::gc_doErase(uint64_t now, uint64_t tag) {
-  auto &block = findCopySession(tag);
-
-  block.writeCounter--;
-
-  if (block.writeCounter == 0 &&
-      block.pageWriteIndex == block.copyList.size()) {
-    PSBN psbn = block.blockID;
-
-    if (block.pageWriteIndex > 0) {
-      // Copy completed
-      debugprint(logid,
-                 "GC    | WRITE | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 block.copyList.front().beginAt, now,
-                 now - block.copyList.front().beginAt);
-    }
-
-    // Erase
-    if (superpage > 1) {
-      debugprint(logid, "GC    | ERASE | PSBN %" PRIx64 "h", psbn);
-    }
-    else {
-      debugprint(logid, "GC    | ERASE | PBN %" PRIx64 "h",
-                 psbn);  // PSBN == PBN when superpage == 1
-    }
-
-    for (uint32_t i = 0; i < superpage; i++) {
-      pFIL->erase(FIL::Request(param->makePPN(psbn, i, 0), 0, eventDone, tag));
-    }
-
-    block.beginAt = now;
-    block.writeCounter = superpage;  // Reuse
-    stat.gcErasedBlocks += superpage;
-  }
 }
 
 void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
@@ -358,7 +355,6 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventDoRead);
   BACKUP_EVENT(out, eventDoTranslate);
   BACKUP_EVENT(out, eventDoWrite);
-  BACKUP_EVENT(out, eventDoErase);
   BACKUP_EVENT(out, eventDone);
 }
 
@@ -384,7 +380,6 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventDoRead);
   RESTORE_EVENT(in, eventDoTranslate);
   RESTORE_EVENT(in, eventDoWrite);
-  RESTORE_EVENT(in, eventDoErase);
   RESTORE_EVENT(in, eventDone);
 }
 

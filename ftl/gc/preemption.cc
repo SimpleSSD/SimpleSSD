@@ -60,12 +60,7 @@ void PreemptibleGC::resumePaused() {
     panic_if(block.writeCounter != 0 || block.readCounter != 0,
              "Unexpected GC preemption state");
 
-    if (block.pageWriteIndex == block.copyList.size()) {
-      // Preempted before erase
-      scheduleNow(eventDoErase, iter.first);
-    }
-    else if (block.pageWriteIndex == block.pageReadIndex) {
-      // Preempted before read
+    if (block.pageWriteIndex == block.pageReadIndex) {
       scheduleNow(eventDoRead, iter.first);
     }
     else {
@@ -99,24 +94,6 @@ void PreemptibleGC::gc_doWrite(uint64_t now, uint64_t tag) {
   AdvancedGC::gc_doWrite(now, tag);
 
   increasePendingFIL();
-}
-
-void PreemptibleGC::gc_doErase(uint64_t now, uint64_t tag) {
-  decreasePendingFIL();
-
-  auto &block = findCopySession(tag);
-
-  if (UNLIKELY(preemptRequested() && block.writeCounter == 1)) {
-    block.writeCounter = 0;
-
-    return;
-  }
-
-  AdvancedGC::gc_doErase(now, tag);
-
-  if (block.writeCounter == 0) {
-    increasePendingFIL();
-  }
 }
 
 void PreemptibleGC::gc_done(uint64_t now, uint64_t tag) {
