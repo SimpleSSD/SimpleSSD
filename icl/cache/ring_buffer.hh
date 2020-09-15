@@ -17,8 +17,6 @@ namespace SimpleSSD::ICL::Cache {
 
 class RingBuffer : public AbstractTagArray {
  protected:
-  uint64_t cacheTagSize;
-  uint64_t cacheDataSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 

@@ -23,8 +23,6 @@ class SetAssociative : public AbstractTagArray {
   uint32_t setSize;
   uint32_t waySize;
 
-  uint64_t cacheTagSize;
-  uint64_t cacheDataSize;
   uint64_t cacheTagBaseAddress;
   uint64_t cacheDataBaseAddress;
 

@@ -69,6 +69,9 @@ class AbstractTagArray : public Object {
  protected:
   Manager::AbstractManager *manager;
 
+  uint32_t cacheTagSize;
+  uint32_t cacheDataSize;
+
   uint32_t pagesToEvict;
   const uint32_t sectorsInPage;
 
@@ -84,6 +87,8 @@ class AbstractTagArray : public Object {
                    const FTL::Parameter *p)
       : Object(o),
         manager(m),
+        cacheTagSize(0),
+        cacheDataSize(p->pageSize),
         pagesToEvict(0),
         sectorsInPage(DIVCEIL(p->pageSize, AbstractCache::minIO)) {}
   virtual ~AbstractTagArray() {}
@@ -93,6 +98,12 @@ class AbstractTagArray : public Object {
     pagesToEvict = p;
     eventLookupDone = el;
     eventCacheDone = ed;
+  }
+
+  //! Return Line size
+  void getTagSize(uint32_t &tagSize, uint32_t &dataSize) noexcept {
+    tagSize = cacheTagSize;
+    dataSize = cacheDataSize;
   }
 
   //! Return TagArray size

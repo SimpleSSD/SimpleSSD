@@ -39,6 +39,8 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
   totalTags = tagArray->getArraySize();
   logid = tagArray->getLogID();
 
+  tagArray->getTagSize(cacheTagSize, cacheDataSize);
+
   // Dirty pages threshold
   evictThreshold =
       readConfigFloat(Section::InternalCache, Config::Key::EvictThreshold) *
