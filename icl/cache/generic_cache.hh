@@ -56,7 +56,7 @@ class GenericCache : public AbstractCache {
 
     for (auto &iter : wbreq.lpnList) {
       auto ctag = iter.second;
-      auto item = list.emplace_back(
+      auto &item = list.emplace_back(
           Manager::FlushContext(ctag->tag, tagArray->getDataAddress(ctag)));
 
       item.offset = ctag->validbits.ctz() * AbstractCache::minIO;
