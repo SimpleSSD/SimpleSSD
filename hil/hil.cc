@@ -407,14 +407,41 @@ SubRequest *HIL::getSubRequest(uint64_t tag) {
 }
 
 void HIL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  list.emplace_back(prefix + "hil.read.count", "Total read requests");
+  list.emplace_back(prefix + "hil.read.pages", "Total read pages");
+  list.emplace_back(prefix + "hil.read.latency.average",
+                    "Average read latency");
+  list.emplace_back(prefix + "hil.read.latency.min", "Minimum read latency");
+  list.emplace_back(prefix + "hil.read.latency.max", "Maximum read latency");
+  list.emplace_back(prefix + "hil.write.count", "Total write requests");
+  list.emplace_back(prefix + "hil.write.pages", "Total write pages");
+  list.emplace_back(prefix + "hil.write.latency.average",
+                    "Average write latency");
+  list.emplace_back(prefix + "hil.write.latency.min", "Minimum write latency");
+  list.emplace_back(prefix + "hil.write.latency.max", "Maximum write latency");
+
   icl.getStatList(list, prefix);
 }
 
 void HIL::getStatValues(std::vector<double> &values) noexcept {
+  values.push_back((double)readStat.getCount());
+  values.push_back((double)readStat.getSize() / lpnSize);
+  values.push_back((double)readStat.getAverageLatency());
+  values.push_back((double)readStat.getMinimumLatency());
+  values.push_back((double)readStat.getMaximumLatency());
+  values.push_back((double)writeStat.getCount());
+  values.push_back((double)writeStat.getSize() / lpnSize);
+  values.push_back((double)writeStat.getAverageLatency());
+  values.push_back((double)writeStat.getMinimumLatency());
+  values.push_back((double)writeStat.getMaximumLatency());
+
   icl.getStatValues(values);
 }
 
 void HIL::resetStatValues() noexcept {
+  readStat.clear();
+  writeStat.clear();
+
   icl.resetStatValues();
 }
 
@@ -441,6 +468,9 @@ void HIL::createCheckpoint(std::ostream &out) const noexcept {
 
     iter.second.createCheckpoint(out);
   }
+
+  readStat.createCheckpoint(out);
+  writeStat.createCheckpoint(out);
 
   icl.createCheckpoint(out);
 }
@@ -475,6 +505,9 @@ void HIL::restoreCheckpoint(std::istream &in) noexcept {
 
     sreq.restoreCheckpoint(in, this);
   }
+
+  readStat.restoreCheckpoint(in);
+  writeStat.restoreCheckpoint(in);
 
   icl.restoreCheckpoint(in);
 }

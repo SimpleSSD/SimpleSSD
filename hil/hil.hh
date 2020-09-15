@@ -17,6 +17,7 @@
 #include "icl/icl.hh"
 #include "sim/abstract_subsystem.hh"
 #include "sim/object.hh"
+#include "util/stat_helper.hh"
 
 namespace SimpleSSD::HIL {
 
@@ -65,6 +66,9 @@ class HIL : public Object {
 
   Event eventDMACompletion;
   void dmaCompletion(uint64_t, uint64_t);
+
+  LatencyStat readStat;
+  LatencyStat writeStat;
 
  public:
   HIL(ObjectData &, AbstractSubsystem *);

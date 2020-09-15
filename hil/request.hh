@@ -67,8 +67,8 @@ class Request {
   uint32_t nvmCounter;  //!< # completed NVM (ICL) request
   uint32_t nlp;         //!< # logical pages
 
-  uint64_t dmaBeginAt;
-  uint64_t nvmBeginAt;
+  uint64_t dmaBeginAt;  //!< SSD handles DMA (some request dose not have DMA)
+  uint64_t nvmBeginAt;  //!< SSD started to handle request
 
   uint64_t requestTag;  //!< Unique ID for HIL
   uint64_t hostTag;     //!< Host tag info <u32:ctrl><u16:queue><u16:entry>
