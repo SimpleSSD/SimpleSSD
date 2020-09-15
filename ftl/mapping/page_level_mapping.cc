@@ -335,10 +335,10 @@ void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  const auto block = &blockMetadata[ctx.blockID];
+  auto &block = blockMetadata[ctx.blockID];
 
   for (uint32_t i = 0; i < filparam->page; i++) {
-    if (block->validPages.test(i)) {
+    if (block.validPages.test(i)) {
       ctx.copyList.emplace_back(i);
     }
   }
