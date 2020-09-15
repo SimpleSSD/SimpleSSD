@@ -282,8 +282,9 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
 
     // Fill cacheline
     ctag->data = 0;  // Clear other bits
-    ctag->valid = true;
     ctag->tag = lpn;
+    ctag->valid = true;
+    ctag->validbits.reset();
     ctag->insertedAt = getTick();
     ctag->accessedAt = getTick();
 
@@ -421,7 +422,6 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
     panic_if(ctag == nullptr, "Cache corrupted.");
 
     ctag->nvmPending = false;
-    ctag->validbits.set();
   }
 
   // Lookup
