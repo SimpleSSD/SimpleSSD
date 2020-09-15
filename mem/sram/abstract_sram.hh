@@ -23,8 +23,8 @@ class AbstractSRAM : public Object {
 
   double totalEnergy;   // Unit: pJ
   double averagePower;  // Unit: mW
-  IOStat readStat;
-  IOStat writeStat;
+  SizeStat readStat;
+  SizeStat writeStat;
 
  public:
   AbstractSRAM(ObjectData &);

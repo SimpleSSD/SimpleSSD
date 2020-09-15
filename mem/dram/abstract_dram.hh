@@ -23,8 +23,8 @@ class AbstractDRAM : public Object {
   Config::DRAMTiming *pTiming;
   Config::DRAMPower *pPower;
 
-  IOStat readStat;
-  IOStat writeStat;
+  SizeStat readStat;
+  SizeStat writeStat;
 
  public:
   AbstractDRAM(ObjectData &);

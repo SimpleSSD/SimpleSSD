@@ -57,12 +57,12 @@ class RatioStat : public CountStat {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-class IOStat : public CountStat {
+class SizeStat : public CountStat {
  private:
   uint64_t size;
 
  public:
-  IOStat();
+  SizeStat();
 
   void add() noexcept = delete;
   void add(uint64_t) noexcept;
@@ -96,17 +96,22 @@ class BusyStat {
   void restoreCheckpoint(std::istream &) noexcept;
 };
 
-class LatencyStat : public CountStat {
+class LatencyStat : public SizeStat {
  private:
-  uint64_t time;
+  uint64_t total;
+  uint64_t min;
+  uint64_t max;
 
  public:
   LatencyStat();
 
   void add() noexcept = delete;
-  void add(uint64_t) noexcept;
+  void add(uint64_t) noexcept = delete;
+  void add(uint64_t, uint64_t) noexcept;
 
   uint64_t getAverageLatency() noexcept;
+  uint64_t getMinimumLatency() noexcept;
+  uint64_t getMaximumLatency() noexcept;
   uint64_t getTotalLatency() noexcept;
 
   void clear() noexcept override;

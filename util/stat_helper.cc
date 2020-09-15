@@ -94,31 +94,31 @@ void RatioStat::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, hit);
 }
 
-IOStat::IOStat() : CountStat(), size(0) {}
+SizeStat::SizeStat() : CountStat(), size(0) {}
 
-void IOStat::add(uint64_t reqsize) noexcept {
+void SizeStat::add(uint64_t reqsize) noexcept {
   CountStat::add();
 
   size += reqsize;
 }
 
-uint64_t IOStat::getSize() noexcept {
+uint64_t SizeStat::getSize() noexcept {
   return size;
 }
 
-void IOStat::clear() noexcept {
+void SizeStat::clear() noexcept {
   CountStat::clear();
 
   size = 0;
 }
 
-void IOStat::createCheckpoint(std::ostream &out) const noexcept {
+void SizeStat::createCheckpoint(std::ostream &out) const noexcept {
   CountStat::createCheckpoint(out);
 
   BACKUP_SCALAR(out, size);
 }
 
-void IOStat::restoreCheckpoint(std::istream &in) noexcept {
+void SizeStat::restoreCheckpoint(std::istream &in) noexcept {
   CountStat::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, size);
@@ -178,45 +178,67 @@ void BusyStat::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalBusy);
 }
 
-LatencyStat::LatencyStat() : CountStat(), time(0) {}
+LatencyStat::LatencyStat()
+    : SizeStat(), total(0), min(std::numeric_limits<uint64_t>::max()), max(0) {}
 
-void LatencyStat::add(uint64_t lat) noexcept {
-  CountStat::add();
+void LatencyStat::add(uint64_t size, uint64_t latency) noexcept {
+  SizeStat::add(size);
 
-  time += lat;
+  total += latency;
+  min = MIN(min, latency);
+  max = MAX(max, latency);
 }
 
 uint64_t LatencyStat::getAverageLatency() noexcept {
-  auto total = CountStat::getCount();
+  auto count = SizeStat::getCount();
 
-  if (total > 0) {
-    return time / CountStat::getCount();
+  if (count > 0) {
+    return total / count;
   }
-  else {
-    return 0.;
+
+  return 0;
+}
+
+uint64_t LatencyStat::getMinimumLatency() noexcept {
+  auto count = SizeStat::getCount();
+
+  if (count > 0) {
+    return min;
   }
+
+  return 0;
+}
+
+uint64_t LatencyStat::getMaximumLatency() noexcept {
+  return max;
 }
 
 uint64_t LatencyStat::getTotalLatency() noexcept {
-  return time;
+  return total;
 }
 
 void LatencyStat::clear() noexcept {
-  CountStat::clear();
+  SizeStat::clear();
 
-  time = 0;
+  total = 0;
+  min = std::numeric_limits<uint64_t>::max();
+  max = 0;
 }
 
 void LatencyStat::createCheckpoint(std::ostream &out) const noexcept {
   CountStat::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, time);
+  BACKUP_SCALAR(out, total);
+  BACKUP_SCALAR(out, min);
+  BACKUP_SCALAR(out, max);
 }
 
 void LatencyStat::restoreCheckpoint(std::istream &in) noexcept {
   CountStat::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, time);
+  RESTORE_SCALAR(in, total);
+  RESTORE_SCALAR(in, min);
+  RESTORE_SCALAR(in, max);
 }
 
 }  // namespace SimpleSSD
