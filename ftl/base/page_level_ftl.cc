@@ -179,7 +179,7 @@ bool PageLevelFTL::write(Request *cmd) {
       debugprint(Log::DebugID::FTL_PageLevel,
                  "RMW | INSERT | REQUEST %" PRIx64 "h (+%u) - %" PRIx64
                  "h (-%u) | ALIGN %" PRIx64 "h - %" PRIx64 "h",
-                 chunkBegin, chunkEnd, skipFront, skipEnd, alignedBegin,
+                 chunkBegin, skipFront, chunkEnd, skipEnd, alignedBegin,
                  alignedEnd);
 
       bool merged = false;
