@@ -169,12 +169,18 @@ bool PageLevelFTL::write(Request *cmd) {
 
   // Check cmd is final of current chunk
   if (lpn + 1 == chunkEnd) {
+    // Partial write within page?
+    uint32_t skipFront = pendingList.front()->getOffset();
+    uint32_t skipEnd = pageSize - pendingList.back()->getLength();
+
     // Not aligned to minMappingSize
-    if (alignedBegin != chunkBegin || alignedEnd != chunkEnd) {
+    if (alignedBegin != chunkBegin || alignedEnd != chunkEnd ||
+        skipFront != 0 || skipEnd != 0) {
       debugprint(Log::DebugID::FTL_PageLevel,
-                 "RMW | INSERT | REQUEST %" PRIu64 " - %" PRIu64
-                 " | ALIGN %" PRIu64 " - %" PRIu64,
-                 chunkBegin, chunkEnd, alignedBegin, alignedEnd);
+                 "RMW | INSERT | REQUEST %" PRIx64 "h (+%u) - %" PRIx64
+                 "h (-%u) | ALIGN %" PRIx64 "h - %" PRIx64 "h",
+                 chunkBegin, chunkEnd, skipFront, skipEnd, alignedBegin,
+                 alignedEnd);
 
       bool merged = false;
 
@@ -282,10 +288,11 @@ void PageLevelFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
     uint64_t offset = 0;
 
     for (auto &cmd : ctx.list) {
-      if (!cmd) {
-        pFIL->read(FIL::Request(ppnBegin,
-                                pendingListBaseAddress + offset * pageSize,
-                                eventPartialReadDone, tag));
+      if (!cmd || cmd->getOffset() != 0 || cmd->getLength() != pageSize) {
+        uint64_t memaddr = cmd ? cmd->getDRAMAddress()
+                               : pendingListBaseAddress + offset * pageSize;
+
+        pFIL->read(FIL::Request(ppnBegin, memaddr, eventPartialReadDone, tag));
 
         ctx.counter++;
       }
