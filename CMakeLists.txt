@@ -438,7 +438,7 @@ set(SRC_TEST
 )
 
 add_executable(test_simplessd ${SRC_TEST})
-target_link_libraries(test_simplessd simplessd Catch2::Catch2)
+target_link_libraries(test_simplessd simplessd Catch2::Catch2 stdc++fs)
 
 include(CTest)
 include(${PROJECT_SOURCE_DIR}/lib/catch2/contrib/Catch.cmake)

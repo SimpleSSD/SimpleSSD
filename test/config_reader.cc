@@ -8,6 +8,7 @@
 #include "sim/config_reader.hh"
 
 #include <catch2/catch.hpp>
+#include <filesystem>
 
 TEST_CASE("ConfigReader") {
   using namespace SimpleSSD;
@@ -550,5 +551,13 @@ TEST_CASE("ConfigReader") {
       REQUIRE(npower->current.pICC5 == utest);
       REQUIRE(npower->current.pISB == utest);
     }
+  }
+
+  // Remove temporal file
+  try {
+    std::filesystem::remove(path);
+  }
+  catch (const std::exception &) {
+    // Do nothing
   }
 }
