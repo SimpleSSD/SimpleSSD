@@ -96,6 +96,12 @@ void PreemptibleGC::gc_doWrite(uint64_t now, uint64_t tag) {
   increasePendingFIL();
 }
 
+void PreemptibleGC::gc_writeDone(uint64_t now, uint64_t tag) {
+  decreasePendingFIL();
+
+  AdvancedGC::gc_writeDone(now, tag);
+}
+
 void PreemptibleGC::gc_done(uint64_t now, uint64_t tag) {
   decreasePendingFIL();
 

@@ -52,6 +52,9 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   eventDoWrite =
       createEvent([this](uint64_t t, uint64_t d) { gc_doWrite(t, d); },
                   "FTL::GC::eventDoWrite");
+  eventWriteDone =
+      createEvent([this](uint64_t t, uint64_t d) { gc_writeDone(t, d); },
+                  "FTL::GC::eventWriteDone");
   eventDone = createEvent([this](uint64_t t, uint64_t d) { gc_done(t, d); },
                           "FTL::GC::eventEraseDone");
 
@@ -140,30 +143,6 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 
 void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
   auto &block = findCopySession(tag);
-
-  if (LIKELY(block.pageWriteIndex > 0)) {
-    block.writeCounter--;
-
-    if (block.writeCounter == 0) {
-      auto &ctx = block.copyList.at(block.pageWriteIndex - 1);
-      auto lpn = ctx.request.getLPN();
-      auto ppn = ctx.request.getPPN();
-
-      if (superpage > 1) {
-        debugprint(logid,
-                   "GC    | WRITE | PSPN %" PRIx64 "h -> LSPN %" PRIx64
-                   "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                   param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
-                   ctx.beginAt, now, now - ctx.beginAt);
-      }
-      else {
-        debugprint(logid,
-                   "GC    | WRITE | PPN %" PRIx64 "h -> LPN %" PRIx64
-                   "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                   ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
-      }
-    }
-  }
 
   if (LIKELY(block.pageReadIndex < block.copyList.size())) {
     // Do read
@@ -278,6 +257,35 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
   ctx.beginAt = now;
 }
 
+void NaiveGC::gc_writeDone(uint64_t now, uint64_t tag) {
+  auto &block = findCopySession(tag);
+
+  block.writeCounter--;
+
+  if (block.writeCounter == 0) {
+    auto &ctx = block.copyList.at(block.pageWriteIndex - 1);
+    auto lpn = ctx.request.getLPN();
+    auto ppn = ctx.request.getPPN();
+
+    if (superpage > 1) {
+      debugprint(logid,
+                 "GC    | WRITE | PSPN %" PRIx64 "h -> LSPN %" PRIx64
+                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 param->getPSPNFromPPN(ppn), param->getLSPNFromLPN(lpn),
+                 ctx.beginAt, now, now - ctx.beginAt);
+    }
+    else {
+      debugprint(logid,
+                 "GC    | WRITE | PPN %" PRIx64 "h -> LPN %" PRIx64
+                 "h | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
+    }
+
+    // Go back to read
+    scheduleNow(eventDoRead, tag);
+  }
+}
+
 void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
   auto &block = findCopySession(tag);
 
@@ -355,6 +363,7 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventDoRead);
   BACKUP_EVENT(out, eventDoTranslate);
   BACKUP_EVENT(out, eventDoWrite);
+  BACKUP_EVENT(out, eventWriteDone);
   BACKUP_EVENT(out, eventDone);
 }
 
@@ -380,6 +389,7 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventDoRead);
   RESTORE_EVENT(in, eventDoTranslate);
   RESTORE_EVENT(in, eventDoWrite);
+  RESTORE_EVENT(in, eventWriteDone);
   RESTORE_EVENT(in, eventDone);
 }
 

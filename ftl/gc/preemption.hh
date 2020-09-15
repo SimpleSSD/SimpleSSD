@@ -54,6 +54,7 @@ class PreemptibleGC : public AdvancedGC {
   void gc_doRead(uint64_t, uint64_t) override;
   void gc_doTranslate(uint64_t, uint64_t) override;
   void gc_doWrite(uint64_t, uint64_t) override;
+  void gc_writeDone(uint64_t, uint64_t) override;
   void gc_done(uint64_t, uint64_t) override;
 
  public:

@@ -90,6 +90,9 @@ class NaiveGC : public AbstractGC {
   Event eventDoWrite;
   virtual void gc_doWrite(uint64_t, uint64_t);
 
+  Event eventWriteDone;
+  virtual void gc_writeDone(uint64_t, uint64_t);
+
   Event eventDone;
   virtual void gc_done(uint64_t, uint64_t);
 
