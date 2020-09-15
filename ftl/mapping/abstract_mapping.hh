@@ -340,10 +340,11 @@ class AbstractMapping : public Object {
    * Fill copyList of CopyContext. Each entry of copyList represents pair of
    * LPN and pageIndex.
    *
-   * \param[in] ctx CopyContext structure
-   * \param[in] eid Callback event
+   * \param[in] ctx   CopyContext structure
+   * \param[in] eid   Callback event
+   * \param[in] data  Context of event
    */
-  virtual void getCopyContext(CopyContext &ctx, Event eid) = 0;
+  virtual void getCopyContext(CopyContext &ctx, Event eid, uint64_t data) = 0;
 
   /**
    * \brief Mark block as erased

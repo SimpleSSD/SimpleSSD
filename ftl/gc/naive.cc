@@ -113,7 +113,8 @@ void NaiveGC::gc_start(uint64_t now) {
       blockList.pop_front();
 
       // Request copy context
-      ftlobject.pMapping->getCopyContext(session->second, eventDoRead);
+      ftlobject.pMapping->getCopyContext(session->second, eventDoRead,
+                                         session->first);
     }
   }
   else {
@@ -257,8 +258,8 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
 
   for (uint32_t i = 0; i < superpage; i++) {
     pFIL->program(FIL::Request(static_cast<PPN>(ppn + i),
-                               makeBufferAddress(i, ctx.pageIndex), eventDoRead,
-                               tag));
+                               makeBufferAddress(i, ctx.pageIndex),
+                               eventWriteDone, tag));
   }
 
   block.writeCounter += superpage;  // Do not overwrite
