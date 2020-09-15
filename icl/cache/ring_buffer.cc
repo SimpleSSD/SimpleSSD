@@ -308,7 +308,7 @@ CPU::Function RingBuffer::getValidLine(LPN lpn, CacheTag **ctag) {
   return fstat;
 }
 
-CPU::Function RingBuffer::getAllocatableLine(LPN, CacheTag **ctag) {
+CPU::Function RingBuffer::getAllocatableLine(LPN lpn, CacheTag **ctag) {
   uint64_t idx;
 
   auto fstat = getEmptyLine(idx);
@@ -319,6 +319,18 @@ CPU::Function RingBuffer::getAllocatableLine(LPN, CacheTag **ctag) {
 
   if (idx < totalEntries) {
     *ctag = getTag(idx);
+
+    // Fill tag hashtable
+    if ((*ctag)->valid) {
+      // Remove previous
+      auto iter = tagHashTable.find((*ctag)->tag);
+
+      panic_if(iter == tagHashTable.end(), "Cache corrupted.");
+
+      tagHashTable.erase(iter);
+    }
+
+    tagHashTable.emplace(lpn, idx);
   }
   else {
     *ctag = nullptr;
@@ -364,6 +376,14 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     iter.createCheckpoint(out);
   }
 
+  uint64_t size = tagHashTable.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : tagHashTable) {
+    BACKUP_SCALAR(out, iter.first);
+    BACKUP_SCALAR(out, iter.second);
+  }
+
   BACKUP_EVENT(out, eventReadTagAll);
 }
 
@@ -375,6 +395,18 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
 
   for (auto &iter : cacheline) {
     iter.restoreCheckpoint(in);
+  }
+
+  RESTORE_SCALAR(in, tmp64);
+
+  for (uint64_t i = 0; i < tmp64; i++) {
+    LPN lpn;
+    uint64_t idx;
+
+    RESTORE_SCALAR(in, lpn);
+    RESTORE_SCALAR(in, idx);
+
+    tagHashTable.emplace(lpn, idx);
   }
 
   RESTORE_EVENT(in, eventReadTagAll);
