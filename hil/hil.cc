@@ -329,7 +329,7 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
         // Apply stat
         auto &stat = req.opcode == Operation::Read ? readStat : writeStat;
 
-        stat.add(now - req.nvmBeginAt, req.nlp * lpnSize);
+        stat.add(req.nlp * lpnSize, now - req.nvmBeginAt);
 
         // Invoke callback
         scheduleAbs(req.eid, req.data, now);
