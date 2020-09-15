@@ -409,7 +409,7 @@ if (MSVC)
   target_compile_definitions(simplessd PRIVATE -D_CRT_SECURE_NO_WARNINGS)
   target_compile_options(simplessd PRIVATE /wd4819)  # Surpress unicode warning
 else ()
-  target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror)
+  target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror -Wno-attributes)
 
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
 

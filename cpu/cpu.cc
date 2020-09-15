@@ -56,13 +56,7 @@ void Function::clear() {
   cycles = 0;
 }
 
-#ifdef __clang__
-// Actually, all C++17 compiler can understand (and ignore correctly).
-// But with -Werror flag, this will generate error (not warning).
-[[clang::optnone]]
-#endif
-void markFunction(Function &) {
-}
+[[clang::optnone]] void markFunction(Function &) {}
 
 #ifdef FW_LATENCY
 bool isFirmwareEnabled() {
