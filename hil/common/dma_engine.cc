@@ -80,10 +80,10 @@ DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
       requested(s),
       bufferSize(0),
       regionIndex(0),
+      lastSize(0),
+      counter(0),
       buffer(b),
-      memoryAddress(a),
-      both(false),
-      lastSize(0) {}
+      memoryAddress(a) {}
 
 void DMAEngine::DMASession::allocateBuffer(uint32_t size) {
   bufferSize = size;
@@ -104,6 +104,12 @@ DMAEngine::DMAEngine(ObjectData &o, DMAInterface *i)
                   "HIL::DMAEngine::eventReadDMADone");
   eventWriteDMADone =
       createEvent([this](uint64_t, uint64_t d) { dmaWriteDone(d); },
+                  "HIL::DMAEngine::eventWriteDMADone");
+  eventReadDRAMDone =
+      createEvent([this](uint64_t, uint64_t d) { dramReadDone(d); },
+                  "HIL::DMAEngine::eventReadDMADone");
+  eventWriteDRAMDone =
+      createEvent([this](uint64_t, uint64_t d) { dramWriteDone(d); },
                   "HIL::DMAEngine::eventWriteDMADone");
   eventPRDTInitDone =
       createEvent([this](uint64_t, uint64_t d) { prdt_readDone(d); },
@@ -135,71 +141,94 @@ DMAEngine::~DMAEngine() {
 
 void DMAEngine::dmaReadDone(uint64_t tag) {
   auto &session = findSession(tag);
+  auto &iter = session.parent->prList.at(session.regionIndex);
 
-  if (session.both) {
-    // Memory done
-    session.both = false;
-
-    if (session.handled == session.requested) {
-      scheduleNow(session.eid, session.data);
-
-      destroySession(tag);
-    }
+  if (!iter.ignore &&
+      session.memoryAddress != std::numeric_limits<uint64_t>::max()) {
+    object.memory->write(session.memoryAddress + session.handled,
+                         session.lastSize, eventReadDRAMDone, tag, false);
   }
   else {
-    // DMA done
-    session.both = true;
+    scheduleNow(eventReadDRAMDone, tag);
+  }
 
-    object.memory->write(
-        session.memoryAddress + session.handled - session.lastSize,
-        session.lastSize, eventReadDMADone, session.tag, false);
+  session.counter++;
 
-    if (session.handled < session.requested) {
-      readNext(session);
-    }
+  printf("MEM WRITE | %xh + %xh\n", session.handled, session.lastSize);
+
+  if (session.regionIndex == 0) {
+    session.handled = session.lastSize;
+  }
+  else {
+    session.handled += session.lastSize;
+  }
+
+  if (session.handled < session.requested) {
+    readNext(session);
+  }
+}
+
+void DMAEngine::dramReadDone(uint64_t tag) {
+  auto &session = findSession(tag);
+
+  session.counter--;
+
+  if (session.handled == session.requested && session.counter == 0) {
+    scheduleNow(session.eid, session.data);
+
+    destroySession(tag);
   }
 }
 
 void DMAEngine::dmaWriteDone(uint64_t tag) {
   auto &session = findSession(tag);
 
-  if (session.both) {
-    // DMA done
-    session.both = false;
+  session.counter--;
 
-    if (session.handled == session.requested) {
-      scheduleNow(session.eid, session.data);
+  if (session.handled == session.requested && session.counter == 0) {
+    scheduleNow(session.eid, session.data);
 
-      destroySession(tag);
+    destroySession(tag);
+  }
+}
+
+void DMAEngine::dramWriteDone(uint64_t tag) {
+  auto &session = findSession(tag);
+  auto &iter = session.parent->prList.at(session.regionIndex);
+
+  if (!iter.ignore) {
+    if (session.regionIndex == 0) {
+      printf("DMA WRITE | %" PRIx64 "h + %xh\n", iter.address + session.handled,
+             session.lastSize);
+
+      interface->write(iter.address + session.handled, session.lastSize,
+                       session.buffer, eventWriteDMADone, tag);
+    }
+    else {
+      printf("DMA WRITE | %" PRIx64 "h + %xh\n", iter.address,
+             session.lastSize);
+
+      interface->write(
+          iter.address, session.lastSize,
+          session.buffer ? session.buffer + session.handled : nullptr,
+          eventWriteDMADone, tag);
     }
   }
   else {
-    // Memory done
-    session.both = true;
+    scheduleNow(eventWriteDMADone, tag);
+  }
 
-    auto &iter = session.parent->prList.at(session.regionIndex);
+  session.counter++;
 
-    if (!iter.ignore) {
-      if (session.regionIndex == 0) {
-        interface->write(iter.address + session.handled - session.lastSize,
-                         session.lastSize, session.buffer, eventWriteDMADone,
-                         session.tag);
-      }
-      else {
-        interface->write(
-            iter.address, session.lastSize,
-            session.buffer ? session.buffer + session.handled - session.lastSize
-                           : nullptr,
-            eventWriteDMADone, session.tag);
-      }
-    }
-    else {
-      scheduleNow(eventWriteDMADone);
-    }
+  if (session.regionIndex == 0) {
+    session.handled = session.lastSize;
+  }
+  else {
+    session.handled += session.lastSize;
+  }
 
-    if (session.handled < session.requested) {
-      writeNext(session);
-    }
+  if (session.handled < session.requested) {
+    writeNext(session);
   }
 }
 
@@ -542,7 +571,7 @@ void DMAEngine::readNext(DMASession &session) noexcept {
                     eventReadDMADone, session.tag);
   }
 
-  session.handled += session.lastSize;
+  printf("DMA READ  | %" PRIx64 "h + %xh\n", iter.address, session.lastSize);
 
   if (!submit) {
     dmaReadDone(session.tag);
@@ -553,6 +582,9 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
                      uint8_t *buffer, uint64_t memaddr, Event eid,
                      uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
+
+  printf("DMA READ  | %" PRIx64 "h + %xh | %" PRIx64 "h\n", offset, size,
+         memaddr);
 
   uint64_t currentOffset = 0;
   bool submit = false;
@@ -575,7 +607,8 @@ void DMAEngine::read(DMATag tag, uint64_t offset, uint32_t size,
                         session.buffer, eventReadDMADone, siter.first);
       }
 
-      session.handled = session.lastSize;
+      printf("DMA READ  | %" PRIx64 "h + %xh\n", iter.address + session.handled,
+             session.lastSize);
 
       break;
     }
@@ -600,14 +633,14 @@ void DMAEngine::writeNext(DMASession &session) noexcept {
     submit = true;
 
     object.memory->read(session.memoryAddress + session.handled,
-                        session.lastSize, eventWriteDMADone, session.tag,
+                        session.lastSize, eventWriteDRAMDone, session.tag,
                         false);
   }
 
-  session.handled += session.lastSize;
+  printf("MEM READ  | %xh + %xh\n", session.handled, session.lastSize);
 
   if (!submit) {
-    dmaWriteDone(session.tag);
+    dramWriteDone(session.tag);
   }
 }
 
@@ -615,6 +648,9 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
                       uint8_t *buffer, uint64_t memaddr, Event eid,
                       uint64_t data) noexcept {
   panic_if(!tag, "Accessed to uninitialized DMAEngine.");
+
+  printf("DMA WRITE | %" PRIx64 "h + %xh | %" PRIx64 "h\n", offset, size,
+         memaddr);
 
   uint64_t currentOffset = 0;
   bool submit = false;
@@ -635,11 +671,11 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
         submit = true;
 
         object.memory->read(session.memoryAddress + session.handled,
-                            session.lastSize, eventWriteDMADone, siter.first,
+                            session.lastSize, eventWriteDRAMDone, siter.first,
                             false);
       }
 
-      session.handled = session.lastSize;
+      printf("MEM READ  | %xh + %xh\n", session.handled, session.lastSize);
 
       break;
     }
@@ -648,7 +684,7 @@ void DMAEngine::write(DMATag tag, uint64_t offset, uint32_t size,
   }
 
   if (!submit) {
-    dmaWriteDone(siter.first);
+    dramWriteDone(siter.first);
   }
 }
 
@@ -687,6 +723,8 @@ void DMAEngine::resetStatValues() noexcept {}
 void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventReadDMADone);
   BACKUP_EVENT(out, eventWriteDMADone);
+  BACKUP_EVENT(out, eventReadDRAMDone);
+  BACKUP_EVENT(out, eventWriteDRAMDone);
   BACKUP_EVENT(out, eventPRDTInitDone);
   BACKUP_EVENT(out, eventPRPReadDone);
   BACKUP_EVENT(out, eventSGLReadDone);
@@ -729,6 +767,8 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
 void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventReadDMADone);
   RESTORE_EVENT(in, eventWriteDMADone);
+  RESTORE_EVENT(in, eventReadDRAMDone);
+  RESTORE_EVENT(in, eventWriteDRAMDone);
   RESTORE_EVENT(in, eventPRDTInitDone);
   RESTORE_EVENT(in, eventPRPReadDone);
   RESTORE_EVENT(in, eventSGLReadDone);

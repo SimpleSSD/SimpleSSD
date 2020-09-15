@@ -77,17 +77,15 @@ class DMAEngine : public Object {
     uint32_t bufferSize;
     uint32_t regionIndex;
 
+    uint32_t lastSize;
+    uint32_t counter;
+
     uint8_t *buffer;
     uint64_t memoryAddress;
-
-    bool both;
-
-    uint32_t lastSize;
 
     void allocateBuffer(uint32_t);
     void deallocateBuffer();
 
-    DMASession(uint64_t t) : tag(t), both(false), lastSize(0) {}
     DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *,
                uint64_t);
   };
@@ -95,6 +93,8 @@ class DMAEngine : public Object {
   DMAInterface *interface;
   Event eventReadDMADone;
   Event eventWriteDMADone;
+  Event eventReadDRAMDone;
+  Event eventWriteDRAMDone;
 
   Event eventPRDTInitDone;
   Event eventPRPReadDone;
@@ -110,6 +110,8 @@ class DMAEngine : public Object {
 
   void dmaReadDone(uint64_t);
   void dmaWriteDone(uint64_t);
+  void dramReadDone(uint64_t);
+  void dramWriteDone(uint64_t);
 
   DMATag createTag();
   void destroyTag(DMATag);
