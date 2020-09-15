@@ -226,7 +226,7 @@ void LatencyStat::clear() noexcept {
 }
 
 void LatencyStat::createCheckpoint(std::ostream &out) const noexcept {
-  CountStat::createCheckpoint(out);
+  SizeStat::createCheckpoint(out);
 
   BACKUP_SCALAR(out, total);
   BACKUP_SCALAR(out, min);
@@ -234,7 +234,7 @@ void LatencyStat::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void LatencyStat::restoreCheckpoint(std::istream &in) noexcept {
-  CountStat::restoreCheckpoint(in);
+  SizeStat::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, total);
   RESTORE_SCALAR(in, min);
