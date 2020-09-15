@@ -326,6 +326,12 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
       icl.done(&sreq);  // Mark as complete
 
       if (req.dmaCounter == req.nlp) {
+        // Apply stat
+        auto &stat = req.opcode == Operation::Read ? readStat : writeStat;
+
+        stat.add(now - req.nvmBeginAt, req.nlp * lpnSize);
+
+        // Invoke callback
         scheduleAbs(req.eid, req.data, now);
 
         // Remove request
