@@ -113,22 +113,46 @@ bool PageLevelFTL::write(Request *cmd) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  LPN lpn = cmd->getLPN();
+  if (UNLIKELY(stalledRequestList.size() > 0 ||
+               ftlobject.pGC->checkWriteStall())) {
+    // We have stalled request, so push cmd back to end of list
+    if (LIKELY(cmd)) {
+      stalledRequestList.emplace_back(cmd);
+    }
 
-  // if SSD is running out of free block, stall request.
-  // Stalled requests will be continued after GC
-  if (ftlobject.pGC->checkWriteStall()) {
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "WRITE | LPN %" PRIx64 "h | Stopped by GC | Tag %" PRIu64, lpn,
-               cmd->getTag());
+    // As pop-front command should be pushed to front (not back), check here
+    if (!ftlobject.pGC->checkWriteStall()) {
+      bool print = false;
+      if (UNLIKELY(cmd == nullptr)) {
+        print = true;
+      }
 
-    stalledRequestList.emplace_back(cmd);
+      // We will not stall now, so pop cmd from front and handle it
+      cmd = stalledRequestList.front();
+      stalledRequestList.pop_front();
 
-    ftlobject.pGC->triggerForeground();
+      if (print) {
+        debugprint(Log::DebugID::FTL_PageLevel,
+                   "WRITE | LPN %" PRIx64 "h | Resume | Tag %" PRIu64,
+                   cmd->getLPN(), cmd->getTag());
+      }
+    }
+    else {
+      // if SSD is running out of free block, stall request.
+      // Stalled requests will be continued after GC
+      if (LIKELY(cmd)) {
+        debugprint(Log::DebugID::FTL_PageLevel,
+                   "WRITE | LPN %" PRIx64 "h | Stopped by GC | Tag %" PRIu64,
+                   cmd->getLPN(), cmd->getTag());
+      }
 
-    return false;
+      ftlobject.pGC->triggerForeground();
+
+      return false;
+    }
   }
 
+  LPN lpn = cmd->getLPN();
   LPN slpn = cmd->getSLPN();
   uint32_t nlp = cmd->getNLP();
 
@@ -402,15 +426,7 @@ void PageLevelFTL::invalidate_submit(uint64_t, uint64_t tag) {
 
 void PageLevelFTL::restartStalledRequests() {
   while (!stalledRequestList.empty()) {
-    auto cmd = stalledRequestList.front();
-
-    debugprint(Log::DebugID::FTL_PageLevel,
-               "WRITE | LPN %" PRIx64 "h | Try to resume | Tag %" PRIu64,
-               cmd->getLPN(), cmd->getTag());
-
-    stalledRequestList.pop_front();
-
-    if (!write(cmd)) {
+    if (!write(nullptr)) {
       break;
     }
   }
