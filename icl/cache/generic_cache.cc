@@ -25,6 +25,7 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
       tagArray = new SetAssociative(o, m, p);
 
       break;
+    case Config::Mode::None:
     case Config::Mode::RingBuffer:
       tagArray = new RingBuffer(o, m, p);
 
