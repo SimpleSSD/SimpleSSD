@@ -112,16 +112,8 @@ void NaiveGC::gc_start(uint64_t now) {
       auto session = startCopySession(std::move(blockList.front()));
       blockList.pop_front();
 
-      if (session->second.copyList.size() == 0) {
-        // Do erase
-        session->second.writeCounter = 1;
-
-        scheduleNow(eventDoErase, session->first);
-      }
-      else {
-        // Do read
-        scheduleNow(eventDoRead, session->first);
-      }
+      // Request copy context
+      ftlobject.pMapping->getCopyContext(session->second, eventDoRead);
     }
   }
   else {
@@ -152,7 +144,14 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
   auto &block = findCopySession(tag);
 
-  if (LIKELY(block.pageReadIndex < block.copyList.size())) {
+  if (block.copyList.size() == 0) {
+    // Do erase
+    block.writeCounter = 1;
+
+    gc_doErase(now, tag);
+  }
+  else if (LIKELY(block.pageReadIndex < block.copyList.size())) {
+    // Do read
     auto &ctx = block.copyList.at(block.pageReadIndex++);
     auto ppn = param->makePPN(block.blockID, 0, ctx.pageIndex);
 
