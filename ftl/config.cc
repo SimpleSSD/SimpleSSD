@@ -71,7 +71,7 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
                node3 = node3.next_sibling()) {
             LOAD_NAME_FLOAT(node3, NAME_FGC_THRESHOLD, fgcThreshold);
             LOAD_NAME_FLOAT(node3, NAME_BGC_THRESHOLD, bgcThreshold);
-            LOAD_NAME_FLOAT(node3, NAME_BGC_IDLETIME, bgcIdletime);
+            LOAD_NAME_TIME(node3, NAME_BGC_IDLETIME, bgcIdletime);
           }
         }
         else if (strcmp(name2, "blockselection") == 0 && isSection(node2)) {
