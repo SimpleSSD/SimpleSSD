@@ -138,7 +138,7 @@ void Convert::getBlockAlignedPPN(PPN &ppn) {
   else {
     uint64_t div = channel * way * die * plane * block;
 
-    ppn = static_cast<PPN>(ppn / div * div);
+    ppn = static_cast<PPN>(ppn % div);
   }
 }
 
