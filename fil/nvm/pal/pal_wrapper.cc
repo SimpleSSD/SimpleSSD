@@ -93,10 +93,14 @@ void PALOLD::submit(Request *req) {
       object.memory->write(memaddr, param->pageSize, InvalidEventID, 0ul,
                            false);
 
+      panic_if(!lpn.isValid(), "Invalid LPN read");
+
       stat.readCount++;
       break;
     case Operation::Program:
       cplt.oper = OPER_WRITE;
+
+      panic_if(!lpn.isValid(), "Try to write invalid LPN");
 
       // backingFile.write(blockID, cplt.addr.Page, req->getData());
       // writeSpare(cplt.addr, scmd.spare.data(), scmd.spare.size());
@@ -171,23 +175,16 @@ void PALOLD::readSpare(PPN ppn, uint8_t *data, uint64_t len) {
   // Find PPN
   auto iter = spareList.find(ppn);
 
-  if (iter == spareList.end()) {
-    memset(data, 0, len);
-  }
-  else {
-    memcpy(data, iter->second.data(), len);
-  }
+  panic_if(iter == spareList.end(), "Reading unwritten spare data.");
+
+  memcpy(data, iter->second.data(), len);
 }
 
 void PALOLD::writeSpare(PPN ppn, uint8_t *data, uint64_t len) {
   panic_if(len > param->spareSize, "Unexpected size of spare data.");
 
   // Find PPN
-  auto iter = spareList.find(ppn);
-
-  if (iter == spareList.end()) {
-    iter = spareList.emplace(ppn, std::vector<uint8_t>(len, 0)).first;
-  }
+  auto iter = spareList.emplace(ppn, std::vector<uint8_t>(len, 0)).first;
 
   memcpy(iter->second.data(), data, len);
 }
