@@ -110,7 +110,7 @@ void PreemptibleGC::gc_done(uint64_t now, uint64_t tag) {
 
 void PreemptibleGC::requestArrived(bool isread, uint32_t bytes) {
   // Penalty calculation & Background GC invocation
-  PreemptibleGC::requestArrived(isread, bytes);
+  AdvancedGC::requestArrived(isread, bytes);
 
   // Request preemption
   if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
