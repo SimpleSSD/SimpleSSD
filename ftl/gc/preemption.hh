@@ -28,9 +28,9 @@ class PreemptibleGC : public AdvancedGC {
   inline void increasePendingFIL() { pendingFIL += superpage; }
 
   inline void decreasePendingFIL() {
-    pendingFIL--;
-
     checkPreemptible();
+
+    pendingFIL--;
   }
 
   inline void checkPreemptible() {
