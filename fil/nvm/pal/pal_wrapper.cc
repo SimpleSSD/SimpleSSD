@@ -336,6 +336,17 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second.finishedAt);
   }
 
+  size = spareList.size();
+  BACKUP_SCALAR(out, size);
+
+  for (auto &iter : spareList) {
+    BACKUP_SCALAR(out, iter.first);
+
+    uint64_t len = iter.second.size();
+    BACKUP_SCALAR(out, len);
+    BACKUP_BLOB(out, iter.second.data(), len);
+  }
+
   lat->backup(out);
   stats->backup(out);
   pal->backup(out);
@@ -357,6 +368,23 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp.finishedAt);
 
     completionQueue.emplace(tmp.finishedAt, tmp);
+  }
+
+  RESTORE_SCALAR(in, size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    PPN ppn;
+    uint64_t len;
+    std::vector<uint8_t> vector;
+
+    RESTORE_SCALAR(in, ppn);
+    RESTORE_SCALAR(in, len);
+
+    vector.resize(len);
+
+    RESTORE_BLOB(in, vector.data(), len);
+
+    spareList.emplace(ppn, std::move(vector));
   }
 
   lat->restore(in);
