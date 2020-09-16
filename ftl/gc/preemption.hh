@@ -26,15 +26,10 @@ class PreemptibleGC : public AdvancedGC {
   }
 
   inline void increasePendingFIL() { pendingFIL += superpage; }
-
-  inline void decreasePendingFIL() {
-    checkPreemptible();
-
-    pendingFIL--;
-  }
+  inline void decreasePendingFIL() { pendingFIL--; }
 
   inline void checkPreemptible() {
-    if (UNLIKELY(preemptRequested() && pendingFIL == 0)) {
+    if (UNLIKELY(pendingFIL == 0)) {
       state = State::Paused;
 
       debugprint(logid, "GC    | Preempted");

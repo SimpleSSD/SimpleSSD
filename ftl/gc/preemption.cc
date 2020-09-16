@@ -82,6 +82,9 @@ void PreemptibleGC::gc_doRead(uint64_t now, uint64_t tag) {
 
     increasePendingFIL();
   }
+  else {
+    checkPreemptible();
+  }
 }
 
 void PreemptibleGC::gc_doTranslate(uint64_t now, uint64_t tag) {
