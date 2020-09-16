@@ -116,6 +116,11 @@ struct Parameter {
     return static_cast<PPN>(pspn * superpage + superpageIndex);
   }
 
+  //! Make LPN from LSPN and SuperpageIndex
+  inline LPN makeLPN(LSPN lspn, uint32_t superpageIndex) const {
+    return static_cast<LPN>(lspn * superpage + superpageIndex);
+  }
+
   //! Get parallelism index from PBN
   inline uint32_t getParallelismIndexFromPBN(PBN pbn) const {
     return pbn % parallelism;

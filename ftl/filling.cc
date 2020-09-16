@@ -85,7 +85,7 @@ void Filling::start() noexcept {
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
-        auto _lpn = i * param->superpage + j;
+        auto _lpn = param->makeLPN(static_cast<LSPN>(i), j);
 
         ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
@@ -102,7 +102,7 @@ void Filling::start() noexcept {
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
-        auto _lpn = i * param->superpage + j;
+        auto _lpn = param->makeLPN(lspn, j);
 
         ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
@@ -117,7 +117,7 @@ void Filling::start() noexcept {
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
-        auto _lpn = i * param->superpage + j;
+        auto _lpn = param->makeLPN(static_cast<LSPN>(i), j);
 
         ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
@@ -136,7 +136,7 @@ void Filling::start() noexcept {
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
-        auto _lpn = i * param->superpage + j;
+        auto _lpn = param->makeLPN(lspn, j);
 
         ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
@@ -153,7 +153,7 @@ void Filling::start() noexcept {
 
       for (uint32_t j = 0; j < param->superpage; j++) {
         auto _ppn = param->makePPN(pspn, j);
-        auto _lpn = i * param->superpage + j;
+        auto _lpn = param->makeLPN(lspn, j);
 
         ftlobject.pFTL->writeSpare(_ppn, (uint8_t *)&_lpn, sizeof(LPN));
       }
