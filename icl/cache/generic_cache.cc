@@ -185,6 +185,9 @@ CPU::Function GenericCache::lookupImpl(HIL::SubRequest *sreq, bool &retry) {
       test &= ctag->validbits;
 
       if (test.none()) {
+        // Cache miss (partial contents), so set nvmPending as true
+        ctag->nvmPending = true;
+
         sreq->setMiss();
       }
     }
