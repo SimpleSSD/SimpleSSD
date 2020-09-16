@@ -382,6 +382,8 @@ void GenericCache::dmaDone(LPN lpn) {
 
 void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
   if (drain) {
+    bool handled = false;
+
     // Write
     for (auto iter = writebackList.begin(); iter != writebackList.end();
          ++iter) {
@@ -412,9 +414,13 @@ void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
           writebackList.erase(iter);
         }
 
+        handled = true;
+
         break;
       }
     }
+
+    panic_if(!handled, "Unexpected write-back completion.");
   }
   else {
     // Read
