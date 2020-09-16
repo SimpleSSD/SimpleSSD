@@ -143,6 +143,7 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 }
 
 void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
+  LPN invlpn;
   auto &block = findCopySession(tag);
 
   if (LIKELY(block.pageReadIndex < block.copyList.size())) {
@@ -171,7 +172,8 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
         pFIL->read(FIL::Request(&ctx.request, eventDoTranslate));
       }
       else {
-        pFIL->read(FIL::Request(ppn, makeBufferAddress(i, ctx.pageIndex),
+        pFIL->read(FIL::Request(invlpn, ppn,
+                                makeBufferAddress(i, ctx.pageIndex),
                                 eventDoTranslate, tag));
       }
     }
@@ -194,7 +196,8 @@ void NaiveGC::gc_doRead(uint64_t now, uint64_t tag) {
     }
 
     for (uint32_t i = 0; i < superpage; i++) {
-      pFIL->erase(FIL::Request(param->makePPN(psbn, i, 0), 0, eventDone, tag));
+      pFIL->erase(
+          FIL::Request(invlpn, param->makePPN(psbn, i, 0), 0, eventDone, tag));
     }
 
     block.beginAt = now;
@@ -257,9 +260,9 @@ void NaiveGC::gc_doWrite(uint64_t now, uint64_t tag) {
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
-    pFIL->program(FIL::Request(static_cast<PPN>(ppn + i),
-                               makeBufferAddress(i, ctx.pageIndex),
-                               eventWriteDone, tag));
+    pFIL->program(
+        FIL::Request(static_cast<LPN>(lpn + i), static_cast<PPN>(ppn + i),
+                     makeBufferAddress(i, ctx.pageIndex), eventWriteDone, tag));
   }
 
   block.writeCounter += superpage;  // Do not overwrite

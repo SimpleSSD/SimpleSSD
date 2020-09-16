@@ -45,8 +45,8 @@ class Request {
   FTL::Request *parent;
 
  public:
-  Request(PPN p, uint64_t a, Event e, uint64_t d)
-      : ppn(p), eid(e), data(d), memoryAddress(a), parent(nullptr) {}
+  Request(LPN l, PPN p, uint64_t a, Event e, uint64_t d)
+      : lpn(l), ppn(p), eid(e), data(d), memoryAddress(a), parent(nullptr) {}
   Request(FTL::Request *r, Event e)
       : lpn(r->getLPN()),
         ppn(r->getPPN()),

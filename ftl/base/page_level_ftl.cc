@@ -241,14 +241,16 @@ bool PageLevelFTL::write(Request *cmd) {
 void PageLevelFTL::write_submit(uint64_t tag) {
   auto list = getWriteContext(tag);
 
-  PPN ppn = list->front()->getPPN();
+  auto req = list->front();
+  auto lpn = req->getLPN();
+  auto ppn = req->getPPN();
   uint32_t offset = 0;
 
   for (auto &req : *list) {
     if (LIKELY(req->getResponse() == Response::Success)) {
-      pFIL->program(FIL::Request(static_cast<PPN>(ppn + offset),
-                                 req->getDRAMAddress(), eventWriteDone,
-                                 req->getTag()));
+      pFIL->program(FIL::Request(
+          static_cast<LPN>(lpn + offset), static_cast<PPN>(ppn + offset),
+          req->getDRAMAddress(), eventWriteDone, req->getTag()));
     }
     else {
       completeRequest(req);
@@ -284,6 +286,7 @@ void PageLevelFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
 
   if (LIKELY(cmd->getResponse() == Response::Success)) {
     // Convert PPN to aligned
+    LPN lpnBegin = static_cast<LPN>(cmd->getLPN() - diff);
     PPN ppnBegin = static_cast<PPN>(cmd->getPPN() - diff);
     uint64_t offset = 0;
 
@@ -292,12 +295,14 @@ void PageLevelFTL::rmw_readSubmit(uint64_t now, uint64_t tag) {
         uint64_t memaddr = cmd ? cmd->getDRAMAddress()
                                : pendingListBaseAddress + offset * pageSize;
 
-        pFIL->read(FIL::Request(ppnBegin, memaddr, eventPartialReadDone, tag));
+        pFIL->read(FIL::Request(lpnBegin, ppnBegin, memaddr,
+                                eventPartialReadDone, tag));
 
         ctx.counter++;
       }
 
       ++ppnBegin;
+      ++lpnBegin;
       offset++;
     }
 
@@ -348,16 +353,17 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 
   if (LIKELY(cmd->getResponse() == Response::Success)) {
     // Convert PPN to aligned
+    LPN lpnBegin = static_cast<LPN>(cmd->getLPN() - diff);
     PPN ppnBegin = static_cast<PPN>(cmd->getPPN() - diff);
     uint64_t offset = 0;
 
     for (auto &cmd : ctx.list) {
       if (cmd) {
-        pFIL->program(FIL::Request(ppnBegin, cmd->getDRAMAddress(),
+        pFIL->program(FIL::Request(lpnBegin, ppnBegin, cmd->getDRAMAddress(),
                                    eventPartialWriteDone, tag));
       }
       else {
-        pFIL->program(FIL::Request(ppnBegin,
+        pFIL->program(FIL::Request(lpnBegin, ppnBegin,
                                    pendingListBaseAddress + offset * pageSize,
                                    eventPartialWriteDone, tag));
       }
@@ -365,6 +371,7 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
       ctx.counter++;
 
       ++ppnBegin;
+      ++lpnBegin;
       offset++;
     }
 
