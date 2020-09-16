@@ -41,14 +41,6 @@ void Filling::start() noexcept {
   float threshold = readConfigFloat(Section::FlashTranslation,
                                     Config::Key::BackgroundGCThreshold);
 
-  // If Naive GC, use Foreground GC threshold
-  if ((Config::GCType)readConfigUint(Section::FlashTranslation,
-                                     Config::Key::GCMode) ==
-      Config::GCType::Naive) {
-    threshold = readConfigFloat(Section::FlashTranslation,
-                                Config::Key::ForegroundGCThreshold);
-  }
-
   nPagesToWarmup = (uint64_t)(
       totalLogicalSuperPages *
       readConfigFloat(Section::FlashTranslation, Config::Key::FillRatio));
