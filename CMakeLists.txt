@@ -420,7 +420,7 @@ else ()
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "Using debug build.")
+    message(STATUS "Using debug build")
 
     target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
     target_compile_options(simplessd PRIVATE -O0)
