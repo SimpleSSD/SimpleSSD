@@ -9,8 +9,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(simplessd)
 
-# Add options for debug build
-option(DEBUG_BUILD "Build SimpleSSD in debug mode." OFF)
+# Validate build type
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Select CMake build type.")
+endif ()
+
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 
 # Set cache entry for external library include path
 set(DRAMPOWER_SOURCE_DIR "." CACHE PATH "Source directory to DRAMPower library")
@@ -269,6 +273,8 @@ if (MSVC AND FW_LATENCY)
 endif ()
 
 if (FW_LATENCY)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING FORCE)
+
   # Check llvm-simplessd is valid
   if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
     message(FATAL_ERROR "Failed to find llvm-simplessd library. \
@@ -413,7 +419,9 @@ else ()
 
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
 
-  if (DEBUG_BUILD)
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Using debug build.")
+
     target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
     target_compile_options(simplessd PRIVATE -O0)
   else ()
