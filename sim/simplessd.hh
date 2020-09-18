@@ -41,12 +41,10 @@ class SimpleSSD {
   std::ostream *openStream(std::string &, std::string &) noexcept;
   void closeStream(std::ostream *) noexcept;
 
-  inline void debugprint(Log::DebugID id, const char *format, ...) noexcept {
-    va_list args;
-
-    va_start(args, format);
-    object.log->debugprint(id, format, args);
-    va_end(args);
+  template <class... T>
+  inline void debugprint(Log::DebugID id, const char *format,
+                         T... args) const noexcept {
+    object.log->debugprint(id, format, args...);
   }
 
  public:
