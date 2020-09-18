@@ -674,7 +674,7 @@ void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
     panic_log("Invalid tick %" PRIu64, tick);
   }
 
-  eid->scheduledAt.push(tick);
+  eid->schedule();
 
   jobQueue.emplace(tick, Job(eid, data));
 
@@ -682,31 +682,19 @@ void CPU::scheduleAbs(Event eid, uint64_t data, uint64_t tick) noexcept {
 }
 
 void CPU::deschedule(Event eid) noexcept {
-  uint64_t tick = eid->scheduledAt.top();
+  eid->deschedule();
 
-  auto range = jobQueue.equal_range(tick);
-
-  for (auto iter = range.first; iter != range.second;) {
+  for (auto iter = jobQueue.begin(); iter != jobQueue.end(); ++iter) {
     if (iter->second.eid == eid) {
-      iter = jobQueue.erase(iter);
+      jobQueue.erase(iter);
 
-      // Erase only one job
       break;
     }
-    else {
-      ++iter;
-    }
   }
-
-  eid->deschedule();
 }
 
 bool CPU::isScheduled(Event eid) noexcept {
   return eid->isScheduled();
-}
-
-uint64_t CPU::when(Event eid) noexcept {
-  return eid->scheduledAt.top();
 }
 
 void CPU::destroyEvent(Event) noexcept {
@@ -872,7 +860,7 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, data);
 
     eid = restoreEventID(eid);
-    eid->scheduledAt.push(tick);
+    eid->schedule();
 
     jobQueue.emplace(tick, Job(eid, data));
   }

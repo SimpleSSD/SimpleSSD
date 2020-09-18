@@ -275,14 +275,6 @@ class CPU {
   bool isScheduled(Event eid) noexcept;
 
   /**
-   * \brief Check when event is scheduled
-   *
-   * \param[in] eid Event ID to check
-   * \return Tick scheduled (-1 if not scheduled)
-   */
-  uint64_t when(Event eid) noexcept;
-
-  /**
    * \brief Destroy event
    *
    * \param[in] eid Event ID to destroy
@@ -311,18 +303,18 @@ class EventData {
   std::string name;
 #endif
 
-  std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>
-      scheduledAt;
+  uint64_t scheduled;
 
-  inline bool isScheduled() { return !scheduledAt.empty(); }
-  inline void deschedule() { scheduledAt.pop(); }
+  inline bool isScheduled() { return scheduled > 0; }
+  inline void deschedule() { scheduled--; }
+  inline void schedule() { scheduled++; }
 
  public:
 #ifdef SIMPLESSD_DEBUG
   EventData(EventFunction &&f, std::string &&s)
-      : func(std::move(f)), name(std::move(s)) {}
+      : func(std::move(f)), name(std::move(s)), scheduled(0) {}
 #else
-  EventData(EventFunction &&f) : func(std::move(f)) {}
+  EventData(EventFunction &&f) : func(std::move(f)), scheduled(0) {}
 #endif
   EventData(const EventData &) = delete;
   EventData(EventData &&) noexcept = delete;
