@@ -111,10 +111,17 @@ void FTL::initialize() {
 
   ftlobject.pFTL->initialize();
 
-  // Filling
-  Filling filler(object, ftlobject);
+  if (UNLIKELY(
+          readConfigBoolean(Section::Simulation,
+                            SimpleSSD::Config::Key::RestoreFromCheckpoint))) {
+    debugprint(Log::DebugID::FTL, "Restoring from checkpoint. Skip filling.");
+  }
+  else {
+    // Filling
+    Filling filler(object, ftlobject);
 
-  filler.start();
+    filler.start();
+  }
 }
 
 const Parameter *FTL::getInfo() {
