@@ -16,6 +16,7 @@ const char NAME_OUTPUT_FILE[] = "OutputFile";
 const char NAME_ERROR_FILE[] = "ErrorFile";
 const char NAME_DEBUG_FILE[] = "DebugFile";
 const char NAME_CONTROLLER[] = "Controller";
+const char NAME_RESTORE[] = "RestoreFromCheckpoint";
 
 //! A constructor
 Config::Config() {
@@ -24,6 +25,7 @@ Config::Config() {
   errorFile = FILE_STDERR;
   debugFile = FILE_STDOUT;
   mode = Mode::None;
+  restore = false;
 }
 
 void Config::loadFrom(pugi::xml_node &section) noexcept {
@@ -69,6 +71,15 @@ std::string Config::readString(uint32_t idx) const noexcept {
   return "";
 }
 
+bool Config::readBoolean(uint32_t idx) const noexcept {
+  switch (idx) {
+    case RestoreFromCheckpoint:
+      return restore;
+  }
+
+  return false;
+}
+
 bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
   bool ret = true;
 
@@ -99,6 +110,21 @@ bool Config::writeString(uint32_t idx, std::string &value) noexcept {
       break;
     case DebugFile:
       debugFile = value;
+      break;
+    default:
+      ret = false;
+      break;
+  }
+
+  return ret;
+}
+
+bool Config::writeBoolean(uint32_t idx, bool value) noexcept {
+  bool ret = true;
+
+  switch (idx) {
+    case RestoreFromCheckpoint:
+      restore = value;
       break;
     default:
       ret = false;

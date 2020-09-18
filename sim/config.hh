@@ -30,6 +30,7 @@ class Config : public BaseConfig {
     ErrorFile,
     DebugFile,
     Controller,
+    RestoreFromCheckpoint,
   };
 
   enum class Mode : uint8_t {
@@ -45,6 +46,7 @@ class Config : public BaseConfig {
   std::string errorFile;
   std::string debugFile;
   Mode mode;
+  bool restore;
 
  public:
   Config();
@@ -56,8 +58,10 @@ class Config : public BaseConfig {
 
   uint64_t readUint(uint32_t) const noexcept override;
   std::string readString(uint32_t) const noexcept override;
+  bool readBoolean(uint32_t) const noexcept override;
   bool writeUint(uint32_t, uint64_t) noexcept override;
   bool writeString(uint32_t, std::string &) noexcept override;
+  bool writeBoolean(uint32_t, bool) noexcept override;
 };
 
 }  // namespace SimpleSSD
