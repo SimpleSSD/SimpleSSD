@@ -730,23 +730,14 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
     }
   }
 
-  {
-    /**
-     * DMA Sessions cannot be checkpointed -- serialized. Because it has buffer
-     * pointer, which may have different value after restarting simulation.
-     * The gem5 provides concept of Drain - DrainState, drain() function of
-     * SimObject. All pending DMA operations should be drained before
-     * checkpoint -- serialized.
-     */
-    if (UNLIKELY(sessionList.size() != 0)) {
-      // Remove const qualifier
-      auto pthis = const_cast<DMAEngine *>(this);
-
-      pthis->panic_log("%s:%u: %s\n  "
-                       "Sessions cannot be checkpointed.",
-                       __FILENAME__, __LINE__, __PRETTY_FUNCTION__);
-    }
-  }
+  /**
+   * DMA Sessions cannot be checkpointed -- serialized. Because it has buffer
+   * pointer, which may have different value after restarting simulation.
+   * The gem5 provides concept of Drain - DrainState, drain() function of
+   * SimObject. All pending DMA operations should be drained before
+   * checkpoint -- serialized.
+   */
+  panic_if(sessionList.size() != 0, "Sessions cannot be checkpointed.");
 }
 
 void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
