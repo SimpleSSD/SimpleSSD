@@ -17,8 +17,13 @@ endif ()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 
 # Validate build path
+# https://github.com/llvm/llvm-project/blob/master/llvm/CMakeLists.txt#L249
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR AND NOT MSVC)
-  message (FATAL_ERROR "In-source builds are not allowed.")
+  message(FATAL_ERROR "In-source builds are not allowed.
+Please create a directory and run cmake from there, passing the path
+to this source directory as the last argument.
+This process created the file `CMakeCache.txt' and the directory `CMakeFiles'.
+Please delete them.")
 endif ()
 
 # Set cache entry for external library include path
