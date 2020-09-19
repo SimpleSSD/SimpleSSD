@@ -207,8 +207,6 @@ class Request {
 
   inline void setDRAMAddress(uint64_t addr) { address = addr; };
 
-  uint32_t counter;
-
   void createCheckpoint(std::ostream &) const noexcept;
   void restoreCheckpoint(std::istream &, ObjectData &) noexcept;
 };

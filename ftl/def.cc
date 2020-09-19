@@ -21,11 +21,10 @@ Request::Request(Event e, uint64_t d)
       result(Response::Success),
       event(e),
       data(d),
-      address(0),
-      counter(0) {}
+      address(0) {}
 
 Request::Request(Event e, HIL::SubRequest *r)
-    : result(Response::Success), event(e), counter(0) {
+    : result(Response::Success), event(e) {
   // Opcode
   switch (r->getOpcode()) {
     case HIL::Operation::Read:
@@ -70,8 +69,7 @@ Request::Request(Operation op, LPN l, uint32_t o, uint32_t s, LPN sl,
       result(Response::Success),
       event(e),
       data(d),
-      address(0),
-      counter(0) {}
+      address(0) {}
 
 Request::Request(PPN p)
     : ppn(p),
@@ -83,8 +81,7 @@ Request::Request(PPN p)
       result(Response::Success),
       event(InvalidEventID),
       data(0),
-      address(0),
-      counter(0) {}
+      address(0) {}
 
 void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, tag);
@@ -99,7 +96,6 @@ void Request::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, event);
   BACKUP_SCALAR(out, data);
   BACKUP_SCALAR(out, address);
-  BACKUP_SCALAR(out, counter);
 }
 
 void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
@@ -115,7 +111,6 @@ void Request::restoreCheckpoint(std::istream &in, ObjectData &object) noexcept {
   RESTORE_EVENT(in, event);
   RESTORE_SCALAR(in, data);
   RESTORE_SCALAR(in, address);
-  RESTORE_SCALAR(in, counter);
 }
 
 void backupSuperRequest(std::ostream &out, const SuperRequest &list) noexcept {
@@ -156,8 +151,8 @@ void restoreSuperRequest(std::istream &in, SuperRequest &list,
   }
 }
 
-void ReadModifyWriteContext::createCheckpoint(std::ostream &out) const
-    noexcept {
+void ReadModifyWriteContext::createCheckpoint(
+    std::ostream &out) const noexcept {
   // next and last should be handled outside of this function
   BACKUP_SCALAR(out, alignedBegin);
   BACKUP_SCALAR(out, chunkBegin);
