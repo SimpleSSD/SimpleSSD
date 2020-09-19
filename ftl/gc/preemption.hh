@@ -57,7 +57,7 @@ class PreemptibleGC : public AdvancedGC {
   virtual ~PreemptibleGC();
 
   void triggerForeground() override;
-  void requestArrived(bool, uint32_t) override;
+  void requestArrived(Request *) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

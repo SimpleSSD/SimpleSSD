@@ -103,7 +103,7 @@ class NaiveGC : public AbstractGC {
   void initialize() override;
 
   void triggerForeground() override;
-  void requestArrived(bool, uint32_t) override;
+  void requestArrived(Request *) override;
 
   bool checkWriteStall() override;
 

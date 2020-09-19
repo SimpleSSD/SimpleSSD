@@ -77,7 +77,7 @@ void NaiveGC::triggerForeground() {
   }
 }
 
-void NaiveGC::requestArrived(bool, uint32_t) {
+void NaiveGC::requestArrived(Request *) {
   // Save tick for penalty calculation
   if (UNLIKELY(state >= State::Foreground)) {
     // GC in-progress

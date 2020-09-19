@@ -28,7 +28,7 @@ class AdvancedGC : public NaiveGC {
   AdvancedGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AdvancedGC();
 
-  void requestArrived(bool, uint32_t) override;
+  void requestArrived(Request *) override;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;

@@ -79,9 +79,9 @@ void AdvancedGC::gc_checkDone(uint64_t now) {
   triggerBackground(now);
 }
 
-void AdvancedGC::requestArrived(bool isread, uint32_t bytes) {
+void AdvancedGC::requestArrived(Request *req) {
   // Penalty calculation
-  NaiveGC::requestArrived(isread, bytes);
+  NaiveGC::requestArrived(req);
 
   // Not scheduled
   if (LIKELY(state < State::Foreground)) {

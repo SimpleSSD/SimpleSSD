@@ -87,7 +87,7 @@ PageLevelFTL::getRMWContext(uint64_t tag) {
 }
 
 void PageLevelFTL::read(Request *cmd) {
-  ftlobject.pGC->requestArrived(false, cmd->getNLP());
+  ftlobject.pGC->requestArrived(cmd);
   ftlobject.pMapping->readMapping(cmd, eventReadSubmit);
 }
 
@@ -156,7 +156,7 @@ bool PageLevelFTL::write(Request *cmd) {
   LPN slpn = cmd->getSLPN();
   uint32_t nlp = cmd->getNLP();
 
-  ftlobject.pGC->requestArrived(false, nlp);
+  ftlobject.pGC->requestArrived(cmd);
 
   LPN alignedBegin = getAlignedLPN(lpn);
   LPN alignedEnd = static_cast<LPN>(alignedBegin + minMappingSize);
