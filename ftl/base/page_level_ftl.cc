@@ -156,8 +156,6 @@ bool PageLevelFTL::write(Request *cmd) {
   LPN slpn = cmd->getSLPN();
   uint32_t nlp = cmd->getNLP();
 
-  ftlobject.pGC->requestArrived(cmd);
-
   LPN alignedBegin = getAlignedLPN(lpn);
   LPN alignedEnd = static_cast<LPN>(alignedBegin + minMappingSize);
 
@@ -231,6 +229,8 @@ bool PageLevelFTL::write(Request *cmd) {
     }
 
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
+
+    ftlobject.pGC->requestArrived(cmd);
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID, fstat);
