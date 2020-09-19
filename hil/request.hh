@@ -95,26 +95,26 @@ class Request {
   Request &operator=(const Request &) = delete;
   Request &operator=(Request &&rhs) {
     if (this != &rhs) {
-      this->opcode = std::exchange(rhs.opcode, Operation::None);
-      this->result = std::exchange(rhs.result, Response::Success);
-      this->clear = std::exchange(rhs.clear, 0);
-      this->lbaSize = std::exchange(rhs.lbaSize, 0);
-      this->dmaEngine = std::exchange(rhs.dmaEngine, nullptr);
-      this->dmaTag = std::exchange(rhs.dmaTag, nullptr);
-      this->eid = std::exchange(rhs.eid, nullptr);
-      this->data = std::exchange(rhs.data, 0);
-      this->offset = std::exchange(rhs.offset, 0);
-      this->length = std::exchange(rhs.length, 0);
-      this->dmaCounter = std::exchange(rhs.dmaCounter, 0);
-      this->nvmCounter = std::exchange(rhs.nvmCounter, 0);
-      this->nlp = std::exchange(rhs.nlp, 0);
-      this->dmaBeginAt = std::exchange(rhs.dmaBeginAt, 0);
-      this->nvmBeginAt = std::exchange(rhs.nvmBeginAt, 0);
-      this->requestTag = std::exchange(rhs.requestTag, 0);
-      this->hostTag = std::exchange(rhs.hostTag, 0);
-      this->slpn = std::move(rhs.slpn);
-      this->firstSubRequestTag = std::exchange(rhs.firstSubRequestTag, 0);
-      this->buffer = std::exchange(rhs.buffer, nullptr);
+      opcode = std::exchange(rhs.opcode, Operation::None);
+      result = std::exchange(rhs.result, Response::Success);
+      clear = std::exchange(rhs.clear, 0);
+      lbaSize = std::exchange(rhs.lbaSize, 0);
+      dmaEngine = std::exchange(rhs.dmaEngine, nullptr);
+      dmaTag = std::exchange(rhs.dmaTag, nullptr);
+      eid = std::exchange(rhs.eid, nullptr);
+      data = std::exchange(rhs.data, 0);
+      offset = std::exchange(rhs.offset, 0);
+      length = std::exchange(rhs.length, 0);
+      dmaCounter = std::exchange(rhs.dmaCounter, 0);
+      nvmCounter = std::exchange(rhs.nvmCounter, 0);
+      nlp = std::exchange(rhs.nlp, 0);
+      dmaBeginAt = std::exchange(rhs.dmaBeginAt, 0);
+      nvmBeginAt = std::exchange(rhs.nvmBeginAt, 0);
+      requestTag = std::exchange(rhs.requestTag, 0);
+      hostTag = std::exchange(rhs.hostTag, 0);
+      slpn = std::move(rhs.slpn);
+      firstSubRequestTag = std::exchange(rhs.firstSubRequestTag, 0);
+      buffer = std::exchange(rhs.buffer, nullptr);
     }
 
     return *this;
