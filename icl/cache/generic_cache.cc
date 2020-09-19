@@ -62,13 +62,18 @@ GenericCache::~GenericCache() {
 }
 
 void GenericCache::tryLookup(LPN lpn) {
-  auto iter = lookupList.find(lpn);
+  auto range = lookupList.equal_range(lpn);
+  std::vector<uint64_t> tagList;
 
-  if (iter != lookupList.end()) {
+  for (auto iter = range.first; iter != range.second; ++iter) {
+    tagList.emplace_back(iter->second);
+  }
+
+  lookupList.erase(lpn);
+
+  for (auto &iter : tagList) {
     bool retry = true;
-    auto sreq = getSubRequest(iter->second);
-
-    lookupList.erase(iter);
+    auto sreq = getSubRequest(iter);
 
     lookupImpl(sreq, retry);
 
@@ -138,13 +143,7 @@ CPU::Function GenericCache::lookupImpl(HIL::SubRequest *sreq, bool &retry) {
     }
   }
   else {
-    if (retry) {
-      debugprint(logid,
-                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Retry %s",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn,
-                 tagArray->print(ctag).c_str());
-    }
-    else {
+    if (!retry) {
       debugprint(logid, "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | %s",
                  sreq->getParentTag(), sreq->getTagForLog(), lpn,
                  tagArray->print(ctag).c_str());
@@ -154,9 +153,11 @@ CPU::Function GenericCache::lookupImpl(HIL::SubRequest *sreq, bool &retry) {
 
     // Check NAND/DMA is pending
     if (tagArray->checkPending(ctag)) {
-      debugprint(logid,
-                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
-                 sreq->getParentTag(), sreq->getTagForLog(), lpn);
+      if (!retry) {
+        debugprint(logid,
+                   "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Pending",
+                   sreq->getParentTag(), sreq->getTagForLog(), lpn);
+      }
 
       // We need to stall this lookup
       lookupList.emplace(ctag->tag, sreq->getTag());
@@ -165,6 +166,13 @@ CPU::Function GenericCache::lookupImpl(HIL::SubRequest *sreq, bool &retry) {
       retry = true;
 
       return fstat;
+    }
+
+    if (retry) {
+      debugprint(logid,
+                 "LOOKUP | REQ %7" PRIu64 ":%-3u | LPN %" PRIu64 " | Retry %s",
+                 sreq->getParentTag(), sreq->getTagForLog(), lpn,
+                 tagArray->print(ctag).c_str());
     }
 
     auto opcode = sreq->getOpcode();
@@ -299,11 +307,12 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
       dirtyLines++;
 
       ctag->dirty = true;
+      ctag->dmaPending = true;
 
       updateSkip(ctag->validbits, sreq);
     }
     else if (opcode == HIL::Operation::Read) {
-      ctag->nvmPending = true;  // Read is triggered immediately
+      ctag->nvmPending = true;
       ctag->validbits.set();
     }
 
