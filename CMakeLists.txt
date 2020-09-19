@@ -16,6 +16,11 @@ endif ()
 
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 
+# Validate build path
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR AND NOT MSVC)
+  message (FATAL_ERROR "In-source builds are not allowed.")
+endif ()
+
 # Set cache entry for external library include path
 set(DRAMPOWER_SOURCE_DIR "." CACHE PATH "Source directory to DRAMPower library")
 
