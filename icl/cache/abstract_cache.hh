@@ -106,21 +106,33 @@ class AbstractCache : public Object {
    *
    * Called when DMA operation (Host <-> DRAM) has been completed.
    *
-   * \param[in] lpn LPN address than completed
+   * \param[in] sreq  Current subrequest
    */
-  virtual void dmaDone(LPN lpn) = 0;
+  virtual void dmaDone(HIL::SubRequest *sreq) = 0;
+
+  /**
+   * \brief Drain done callback
+   *
+   * Called when DMA operation (DRAM <-> NVM) has been completed, requested by
+   * ICL::Manger::AbstracterManager::drain() function.
+   *
+   * \param[in] lpn   LPN address than has been completed
+   * \param[in] tag   Drain tag of completed drain request
+   * \param[in] drain True when drain (write)
+   */
+  virtual void drainDone(LPN lpn, uint64_t tag) = 0;
 
   /**
    * \brief NVM done callback
    *
-   * Called when DMA operation (DRAM <-> NVM) has been completed. If lpn is
-   * InvalidLPN, write-back has been completed. If not, read has been completed.
+   * Called when DMA operation (DRAM <-> NVM) has been completed. This function
+   * will be called when read operation or write-through operation has been
+   * completed.
    *
-   * \param[in] lpn   LPN address than completed
-   * \param[in] tag   Tag of completed request
-   * \param[in] drain True when drain (write)
+   * \param[in] lpn   LPN address that has been completed
+   * \param[in] tag   HIL::SubRequest tag of completed request
    */
-  virtual void nvmDone(LPN lpn, uint64_t tag, bool drain) = 0;
+  virtual void nvmDone(LPN, uint64_t tag) = 0;
 
   /**
    * \brief Return cache status for GC

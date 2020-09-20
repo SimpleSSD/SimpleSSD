@@ -373,8 +373,9 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
   scheduleFunction(CPU::CPUGroup::InternalCache, eid, sreq->getTag(), fstat);
 }
 
-void GenericCache::dmaDone(LPN lpn) {
+void GenericCache::dmaDone(HIL::SubRequest *sreq) {
   CacheTag *ctag;
+  auto lpn = sreq->getLPN();
 
   tagArray->getValidLine(lpn, &ctag);
 
@@ -389,58 +390,62 @@ void GenericCache::dmaDone(LPN lpn) {
   }
 }
 
-void GenericCache::nvmDone(LPN lpn, uint64_t tag, bool drain) {
-  if (drain) {
-    bool handled = false;
+void GenericCache::drainDone(LPN lpn, uint64_t tag) {
+  bool handled = false;
 
-    // Write
-    for (auto iter = writebackList.begin(); iter != writebackList.end();
-         ++iter) {
-      uint64_t drainTagBegin = iter->drainTag - iter->listSize;
-      uint64_t drainTagEnd = iter->drainTag;
+  // Write
+  for (auto iter = writebackList.begin(); iter != writebackList.end(); ++iter) {
+    uint64_t drainTagBegin = iter->drainTag - iter->listSize;
+    uint64_t drainTagEnd = iter->drainTag;
 
-      if (tag > drainTagBegin && tag <= drainTagEnd) {
-        auto fr = iter->lpnList.find(lpn);
+    if (tag > drainTagBegin && tag <= drainTagEnd) {
+      auto fr = iter->lpnList.find(lpn);
 
-        panic_if(fr == iter->lpnList.end(), "Cache write-back corrupted.");
+      panic_if(fr == iter->lpnList.end(), "Cache write-back corrupted.");
 
-        dirtyLines--;
+      dirtyLines--;
 
-        if (!iter->flush) {
-          pendingEviction--;
-        }
-
-        fr->second->dirty = false;
-        fr->second->nvmPending = false;
-
-        iter->lpnList.erase(fr);
-
-        if (iter->lpnList.size() == 0) {
-          if (iter->flush) {
-            manager->cacheDone(iter->tag);
-          }
-
-          writebackList.erase(iter);
-        }
-
-        handled = true;
-
-        break;
+      if (!iter->flush) {
+        pendingEviction--;
       }
+
+      fr->second->dirty = false;
+      fr->second->nvmPending = false;
+
+      iter->lpnList.erase(fr);
+
+      if (iter->lpnList.size() == 0) {
+        if (iter->flush) {
+          manager->cacheDone(iter->tag);
+        }
+
+        writebackList.erase(iter);
+      }
+
+      handled = true;
+
+      break;
     }
-
-    panic_if(!handled, "Unexpected write-back completion.");
   }
-  else {
-    // Read
-    CacheTag *ctag;
 
-    tagArray->getValidLine(lpn, &ctag);
+  panic_if(!handled, "Unexpected write-back completion.");
 
-    panic_if(ctag == nullptr, "Cache corrupted.");
+  // Lookup
+  tryLookup(lpn);
 
-    ctag->nvmPending = false;
-  }
+  // Allocate
+  tryAllocate(lpn);
+}
+
+void GenericCache::nvmDone(LPN lpn, uint64_t) {
+  // Read
+  CacheTag *ctag;
+
+  tagArray->getValidLine(lpn, &ctag);
+
+  panic_if(ctag == nullptr, "Cache corrupted.");
+
+  ctag->nvmPending = false;
 
   // Lookup
   tryLookup(lpn);

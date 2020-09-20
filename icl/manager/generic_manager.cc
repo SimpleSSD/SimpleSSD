@@ -180,7 +180,7 @@ void GenericManager::erase(HIL::SubRequest *req) {
 }
 
 void GenericManager::dmaDone(HIL::SubRequest *req) {
-  cache->dmaDone(req->getLPN());
+  cache->dmaDone(req);
 }
 
 void GenericManager::lookupDone(uint64_t tag) {
@@ -291,7 +291,7 @@ void GenericManager::drainDone(uint64_t now, uint64_t tag) {
              iter->second.lpn, iter->second.flushedAt, now,
              now - iter->second.flushedAt);
 
-  cache->nvmDone(iter->second.lpn, tag, true);
+  cache->drainDone(iter->second.lpn, tag);
 
   drainQueue.erase(iter);
 }
@@ -299,7 +299,7 @@ void GenericManager::drainDone(uint64_t now, uint64_t tag) {
 void GenericManager::readDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
-  cache->nvmDone(req->getLPN(), tag, false);
+  cache->nvmDone(req->getLPN(), tag);
 
   scheduleNow(eventICLCompletion, tag);
 }

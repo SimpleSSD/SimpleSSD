@@ -77,8 +77,9 @@ class GenericCache : public AbstractCache {
   void flush(HIL::SubRequest *) override;
   void erase(HIL::SubRequest *) override;
   void allocate(HIL::SubRequest *) override;
-  void dmaDone(LPN) override;
-  void nvmDone(LPN, uint64_t, bool) override;
+  void dmaDone(HIL::SubRequest *) override;
+  void drainDone(LPN, uint64_t) override;
+  void nvmDone(LPN, uint64_t) override;
 
   void getGCHint(FTL::GC::HintContext &) noexcept override;
 
