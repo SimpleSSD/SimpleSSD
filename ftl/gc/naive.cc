@@ -101,9 +101,7 @@ void NaiveGC::gc_trigger() {
 
 void NaiveGC::gc_start(uint64_t now) {
   if (LIKELY(blockList.size() > 0)) {
-    // Parallel submission
-    int32_t n =
-        param->parallelismLevel[0] / param->superpage - getSessionCount();
+    int32_t n = 1 - getSessionCount();
 
     panic_if(n < 0, "Copy session list corrupted");
 
