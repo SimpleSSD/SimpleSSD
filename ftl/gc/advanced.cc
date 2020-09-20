@@ -238,12 +238,14 @@ void AdvancedGC::gc_done(uint64_t now, uint64_t tag) {
 void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
   NaiveGC::createCheckpoint(out);
 
+  BACKUP_SCALAR(out, pendingFIL);
   BACKUP_EVENT(out, eventBackgroundGC);
 }
 
 void AdvancedGC::restoreCheckpoint(std::istream &in) noexcept {
   NaiveGC::restoreCheckpoint(in);
 
+  RESTORE_SCALAR(in, pendingFIL);
   RESTORE_EVENT(in, eventBackgroundGC);
 }
 
