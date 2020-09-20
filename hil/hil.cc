@@ -48,11 +48,9 @@ void HIL::submit(Operation opcode, Request *req) {
   req->opcode = opcode;
   req->requestTag = tag;
 
-  auto ret = requestQueue.emplace(tag, req);
+  auto ret = requestQueue.push_back(tag, req);
 
   panic_if(!ret.second, "Request ID conflict.");
-
-  std::vector<SubRequest *> subrequestList;
 
   // Make LPN address
   LPN slpn;
@@ -112,8 +110,6 @@ void HIL::submit(Operation opcode, Request *req) {
 
       sreq.first->second.skipFront = sf;
       sreq.first->second.skipEnd = se;
-
-      subrequestList.emplace_back(&sreq.first->second);
     }
 
     req->slpn = slpn;
@@ -130,15 +126,32 @@ void HIL::submit(Operation opcode, Request *req) {
     sreq.first->second.offset = slpn;
     sreq.first->second.length = nlp;
 
-    subrequestList.emplace_back(&sreq.first->second);
-
     req->nlp = 1;
   }
 
-  req->nvmBeginAt = getTick();
   req->firstSubRequestTag = subrequestCounter - req->nlp + 1;
+}
 
-  switch (opcode) {
+void HIL::dispatch(Request *req) {
+  uint64_t stagBegin = req->firstSubRequestTag;
+  uint64_t stagEnd = req->firstSubRequestTag + req->nlp;
+
+  std::vector<SubRequest *> subrequestList;
+
+  // Make subrequestList
+  subrequestList.reserve(req->nlp);
+
+  for (uint64_t t = stagBegin; t < stagEnd; t++) {
+    auto siter = subrequestQueue.find(t);
+
+    panic_if(siter == subrequestQueue.end(), "Unexpected SubRequest ID.");
+
+    subrequestList.emplace_back(&siter->second);
+  }
+
+  req->nvmBeginAt = getTick();
+
+  switch (req->opcode) {
     case Operation::Compare:
     case Operation::CompareAndWrite:
       /*
@@ -368,6 +381,9 @@ void HIL::write(Request *req, bool zerofill) {
 
 void HIL::flush(Request *req) {
   submit(Operation::Flush, req);
+
+  // Immediate dispatch
+  dispatch(req);
 }
 
 void HIL::format(Request *req, FormatOption option) {
@@ -379,6 +395,9 @@ void HIL::format(Request *req, FormatOption option) {
 
   submit(option == FormatOption::None ? Operation::Trim : Operation::Format,
          req);
+
+  // Immediate dispatch
+  dispatch(req);
 }
 
 void HIL::compare(Request *req, bool fused) {
@@ -389,6 +408,30 @@ void HIL::compare(Request *req, bool fused) {
   else {
     submit(Operation::Compare, req);
   }
+}
+
+void HIL::notifyDMAInited(uint64_t tag) {
+  auto iter = requestQueue.find(tag);
+
+  panic_if(iter == requestQueue.end(), "Unexpected Request ID.");
+  panic_if(!iter->second->dmaTag->isInited(), "DMA Not inited?");
+
+  if (iter != requestQueue.begin()) {
+    auto copy = iter;
+
+    --copy;
+
+    if (copy->second->nvmBeginAt == 0) {
+      // Not first item, skip dispatch
+      return;
+    }
+  }
+
+  do {
+    dispatch(iter->second);
+
+    ++iter;
+  } while (iter != requestQueue.end() && iter->second->dmaTag->isInited());
 }
 
 uint64_t HIL::getPageUsage(LPN offset, uint64_t length) {
@@ -499,7 +542,7 @@ void HIL::restoreCheckpoint(std::istream &in) noexcept {
 
     panic_if(req == nullptr, "Invalid request while restore.");
 
-    requestQueue.emplace(tag, req);
+    requestQueue.push_back(tag, req);
   }
 
   RESTORE_SCALAR(in, size);

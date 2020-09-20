@@ -24,9 +24,7 @@ void Compare::dmaInitDone(uint64_t gcid) {
   auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
 
-  // Submit compare request
-  // TODO: Support FUSED operation
-  pHIL->compare(&tag->request, false);
+  pHIL->notifyDMAInited(tag->request.getTag());
 }
 
 void Compare::completion(uint64_t now, uint64_t gcid) {
@@ -87,12 +85,17 @@ void Compare::setRequest(ControllerData *cdata, SQContext *req) {
 
   // Prepare request
   uint32_t lbaSize = ns->second->getInfo()->lbaSize;
+  auto pHIL = subsystem->getHIL();
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(slba, nlb, lbaSize);
   tag->request.setHostTag(tag->getGCID());
   tag->beginAt = getTick();
   tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
+
+  // Submit compare request
+  // TODO: Support FUSED operation
+  pHIL->compare(&tag->request, false);
 }
 
 void Compare::getStatList(std::vector<Stat> &, std::string) noexcept {}
