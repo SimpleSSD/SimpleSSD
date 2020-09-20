@@ -435,8 +435,8 @@ void GenericCache::dmaDone(HIL::SubRequest *sreq) {
         makeFlushContext(ret, list);
 
         ret.listSize = list.size();
-        pendingEviction += ret.listSize;
 
+        ret.writethrough = true;
         ret.drainTag = manager->drain(list);
       }
     }
@@ -472,11 +472,17 @@ void GenericCache::drainDone(LPN lpn, uint64_t tag) {
 
       panic_if(fr == iter->lpnList.end(), "Cache write-back corrupted.");
 
-      dirtyLines--;
+#if USE_WRITE_THROUGH
+      if (UNLIKELY(!iter->writethrough)) {
+#endif
+        dirtyLines--;
 
-      if (!iter->flush) {
-        pendingEviction--;
+        if (!iter->flush) {
+          pendingEviction--;
+        }
+#if USE_WRITE_THROUGH
       }
+#endif
 
       fr->second->dirty = false;
       fr->second->nvmPending = false;
