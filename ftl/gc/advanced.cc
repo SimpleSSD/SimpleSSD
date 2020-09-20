@@ -61,6 +61,11 @@ void AdvancedGC::triggerForeground() {
 }
 
 void AdvancedGC::requestArrived(Request *req) {
+  // Request preemption
+  if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
+    debugprint(logid, "GC    | Preemption requested");
+  }
+
   // Penalty calculation & Background GC invocation
   NaiveGC::requestArrived(req);
 
@@ -72,11 +77,6 @@ void AdvancedGC::requestArrived(Request *req) {
     }
 
     scheduleRel(eventBackgroundGC, 0, idletime);
-  }
-
-  // Request preemption
-  if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
-    debugprint(logid, "GC    | Preemption requested");
   }
 }
 
