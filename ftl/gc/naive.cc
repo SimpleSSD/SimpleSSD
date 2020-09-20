@@ -333,6 +333,7 @@ void NaiveGC::gc_done(uint64_t now, uint64_t tag) {
 void NaiveGC::getStatList(std::vector<Stat> &list,
                           std::string prefix) noexcept {
   list.emplace_back(prefix + "foreground", "Total Foreground GC count");
+  list.emplace_back(prefix + "background", "Total Background GC count");
   list.emplace_back(prefix + "block", "Total reclaimed blocks in GC");
   list.emplace_back(prefix + "copy", "Total valid page copy");
   list.emplace_back(prefix + "penalty.average", "Averagy penalty / GC");
@@ -342,15 +343,28 @@ void NaiveGC::getStatList(std::vector<Stat> &list,
 }
 
 void NaiveGC::getStatValues(std::vector<double> &values) noexcept {
-  values.push_back((double)stat.fgcCount);
-  values.push_back((double)stat.gcErasedBlocks);
-  values.push_back((double)stat.gcCopiedPages);
-  values.push_back(stat.penalty_count > 0
-                       ? (double)stat.avg_penalty / stat.penalty_count
+  auto copy = stat;
+
+  if (firstRequestArrival != std::numeric_limits<uint64_t>::max()) {
+    // On-going GC
+    auto penalty = getTick() - firstRequestArrival;
+
+    copy.penalty_count++;
+    copy.avg_penalty += penalty;
+    copy.min_penalty = MIN(copy.min_penalty, penalty);
+    copy.max_penalty = MAX(copy.max_penalty, penalty);
+  }
+
+  values.push_back((double)copy.fgcCount);
+  values.push_back((double)copy.bgcCount);
+  values.push_back((double)copy.gcErasedBlocks);
+  values.push_back((double)copy.gcCopiedPages);
+  values.push_back(copy.penalty_count > 0
+                       ? (double)copy.avg_penalty / copy.penalty_count
                        : 0.);
-  values.push_back((double)(stat.penalty_count > 0 ? stat.min_penalty : 0));
-  values.push_back((double)stat.max_penalty);
-  values.push_back((double)stat.penalty_count);
+  values.push_back((double)(copy.penalty_count > 0 ? copy.min_penalty : 0));
+  values.push_back((double)copy.max_penalty);
+  values.push_back((double)copy.penalty_count);
 }
 
 void NaiveGC::resetStatValues() noexcept {
