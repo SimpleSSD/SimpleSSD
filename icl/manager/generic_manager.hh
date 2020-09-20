@@ -64,8 +64,8 @@ class GenericManager : public AbstractManager {
   Event eventDrainDone;
   void drainDone(uint64_t, uint64_t);
 
-  Event eventReadDone;
-  void readDone(uint64_t);
+  Event eventNVMDone;
+  void nvmDone(uint64_t);
 
   // Statistics
   struct {

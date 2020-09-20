@@ -117,8 +117,8 @@ GenericManager::GenericManager(ObjectData &o, ICL *p, FTL::FTL *f)
   eventDrainDone =
       createEvent([this](uint64_t t, uint64_t d) { drainDone(t, d); },
                   "ICL::BasicManager::eventDrainDone");
-  eventReadDone = createEvent([this](uint64_t, uint64_t d) { readDone(d); },
-                              "ICL::BasicManager::eventReadDone");
+  eventNVMDone = createEvent([this](uint64_t, uint64_t d) { nvmDone(d); },
+                             "ICL::BasicManager::eventNVMDone");
 }
 
 GenericManager::~GenericManager() {
@@ -210,7 +210,7 @@ void GenericManager::cacheDone(uint64_t tag) {
 
   // Submit to FIL
   if (opcode == HIL::Operation::Read && req->getMiss()) {
-    pFTL->read(FTL::Request(eventReadDone, req));
+    pFTL->read(FTL::Request(eventNVMDone, req));
   }
   else if (opcode == HIL::Operation::Trim || opcode == HIL::Operation::Format) {
     pFTL->invalidate(FTL::Request(eventICLCompletion, req));
@@ -296,7 +296,7 @@ void GenericManager::drainDone(uint64_t now, uint64_t tag) {
   drainQueue.erase(iter);
 }
 
-void GenericManager::readDone(uint64_t tag) {
+void GenericManager::nvmDone(uint64_t tag) {
   auto req = getSubRequest(tag);
 
   cache->nvmDone(req->getLPN(), tag);
@@ -352,7 +352,7 @@ void GenericManager::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   BACKUP_EVENT(out, eventDrainDone);
-  BACKUP_EVENT(out, eventReadDone);
+  BACKUP_EVENT(out, eventNVMDone);
 }
 
 void GenericManager::restoreCheckpoint(std::istream &in) noexcept {
@@ -389,7 +389,7 @@ void GenericManager::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   RESTORE_EVENT(in, eventDrainDone);
-  RESTORE_EVENT(in, eventReadDone);
+  RESTORE_EVENT(in, eventNVMDone);
 }
 
 }  // namespace SimpleSSD::ICL::Manager
