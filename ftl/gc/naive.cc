@@ -135,6 +135,7 @@ void NaiveGC::gc_checkDone(uint64_t now) {
              beginAt, now, now - beginAt);
 
   state = State::Idle;
+  firstRequestArrival = std::numeric_limits<uint64_t>::max();
 
   // Check threshold
   triggerForeground();

@@ -18,10 +18,9 @@ class AdvancedGC : public NaiveGC {
  protected:
   uint64_t idletime;
   uint64_t pendingFIL;  // Pending FIL requests (read/program/erase)
-  uint64_t preemptRequestedAt;
 
   inline bool preemptRequested() {
-    return preemptRequestedAt < std::numeric_limits<uint64_t>::max();
+    return firstRequestArrival < std::numeric_limits<uint64_t>::max();
   }
 
   inline void increasePendingFIL() { pendingFIL += superpage; }
@@ -34,11 +33,9 @@ class AdvancedGC : public NaiveGC {
       debugprint(logid, "GC    | Preempted");
 
       // Calculate penalty here
-      firstRequestArrival = MIN(firstRequestArrival, preemptRequestedAt);
-
       updatePenalty(getTick());
 
-      preemptRequestedAt = std::numeric_limits<uint64_t>::max();
+      firstRequestArrival = std::numeric_limits<uint64_t>::max();
     }
   }
 

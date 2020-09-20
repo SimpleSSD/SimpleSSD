@@ -13,9 +13,7 @@
 namespace SimpleSSD::FTL::GC {
 
 AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : NaiveGC(o, fo, f),
-      pendingFIL(0),
-      preemptRequestedAt(std::numeric_limits<uint64_t>::max()) {
+    : NaiveGC(o, fo, f), pendingFIL(0) {
   logid = Log::DebugID::FTL_AdvancedGC;
 
   idletime = readConfigUint(Section::FlashTranslation,
@@ -78,8 +76,6 @@ void AdvancedGC::requestArrived(Request *req) {
 
   // Request preemption
   if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
-    preemptRequestedAt = getTick();
-
     debugprint(logid, "GC    | Preemption requested");
   }
 }
