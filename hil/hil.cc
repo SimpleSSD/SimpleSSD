@@ -281,6 +281,10 @@ void HIL::nvmCompletion(uint64_t now, uint64_t tag) {
 
       break;
     case Operation::WriteZeroes:
+      // Write-zeroes does not require DMA operation
+      icl.done(&sreq);
+
+      [[fallthrough]];
     case Operation::Flush:
     case Operation::Trim:
     case Operation::Format:
