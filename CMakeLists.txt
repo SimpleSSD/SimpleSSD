@@ -420,6 +420,9 @@ else ()
   add_library(simplessd STATIC ${SRCS} ${SRCS_EXCLUDE})
 endif ()
 
+# Always use write-through cache
+target_compile_definitions(simplessd PRIVATE -DUSE_WRITE_THROUGH=1)
+
 # Platform specific settings
 if (MSVC)
   target_compile_definitions(simplessd PRIVATE -D_CRT_SECURE_NO_WARNINGS)
