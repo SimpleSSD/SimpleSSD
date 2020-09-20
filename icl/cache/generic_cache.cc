@@ -449,6 +449,7 @@ void GenericCache::dmaDone(HIL::SubRequest *sreq) {
 #if USE_WRITE_THROUGH
     // In write-through mode, ctag may in NVM pending state.
     if (ctag->nvmPending) {
+      // No need to check allocate pending list
       return;
     }
 #endif
