@@ -126,8 +126,7 @@ class AbstractCache : public Object {
    * \brief NVM done callback
    *
    * Called when DMA operation (DRAM <-> NVM) has been completed. This function
-   * will be called when read operation or write-through operation has been
-   * completed.
+   * will be called when read operation has been completed.
    *
    * \param[in] lpn   LPN address that has been completed
    * \param[in] tag   HIL::SubRequest tag of completed request

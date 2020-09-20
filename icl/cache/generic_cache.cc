@@ -36,6 +36,8 @@ GenericCache::GenericCache(ObjectData &o, Manager::AbstractManager *m,
       break;
   }
 
+  superpage = p->superpage;
+
   totalTags = tagArray->getArraySize();
   logid = tagArray->getLogID();
 
@@ -382,8 +384,74 @@ void GenericCache::dmaDone(HIL::SubRequest *sreq) {
   if (ctag) {
     ctag->dmaPending = false;
 
+#if USE_WRITE_THROUGH
+    auto opcode = sreq->getOpcode();
+
+    if (opcode == HIL::Operation::Write ||
+        opcode == HIL::Operation::WriteZeroes) {
+      // Check validbits
+      if (!ctag->validbits.all()) {
+        goto out;
+      }
+
+      // Check superpage boundary
+      // TODO: We need to query FTL::Mapping for min mapping size, not directly
+      // using FTL::Parameter::superpage
+      LPN alignedBegin = static_cast<LPN>(lpn / superpage * superpage);
+      LPN alignedEnd = static_cast<LPN>(alignedBegin + superpage);
+
+      {
+        WritebackRequest wbreq;
+        std::vector<Manager::FlushContext> list;
+
+        wbreq.lpnList.reserve(superpage);
+
+        for (auto i = alignedBegin; i < alignedEnd; ++i) {
+          CacheTag *line;
+
+          if (i == lpn) {
+            line = ctag;
+          }
+          else {
+            tagArray->getValidLine(i, &line);
+          }
+
+          if (line) {
+            if (!line->validbits.all() || tagArray->checkPending(ctag)) {
+              goto out;
+            }
+
+            line->nvmPending = true;
+
+            wbreq.lpnList.emplace(line->tag, line);
+          }
+          else {
+            goto out;
+          }
+        }
+
+        auto &ret = writebackList.emplace_back(std::move(wbreq));
+
+        makeFlushContext(ret, list);
+
+        ret.listSize = list.size();
+        pendingEviction += ret.listSize;
+
+        ret.drainTag = manager->drain(list);
+      }
+    }
+  out:
+#endif
+
     // Lookup
     tryLookup(lpn);
+
+#if USE_WRITE_THROUGH
+    // In write-through mode, ctag may in NVM pending state.
+    if (ctag->nvmPending) {
+      return;
+    }
+#endif
 
     // Allocate
     tryAllocate(lpn);

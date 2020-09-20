@@ -31,6 +31,7 @@ class GenericCache : public AbstractCache {
   uint64_t totalTags;
 
   Log::DebugID logid;
+  uint32_t superpage;
 
   // Lookup pending
   std::unordered_multimap<LPN, uint64_t> lookupList;
