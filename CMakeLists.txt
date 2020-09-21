@@ -362,6 +362,7 @@ if (FW_LATENCY)
     "-emit-llvm"
     "-I${PROJECT_SOURCE_DIR}"
     "-I${DRAMPOWER_SOURCE_DIR}"
+    "-DUSE_WRITE_THROUGH=1"
   )
 
   set(FW_FIRST_PASS_ARGS
@@ -437,8 +438,10 @@ else ()
 
     target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
     target_compile_options(simplessd PRIVATE -O0)
-  else ()
+  elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(simplessd PRIVATE -O2)
+  else ()
+    message(FATAL_ERROR "Unknown build type: ${CMAKE_BUILD_TYPE}")
   endif ()
 
   if (FW_LATENCY)
