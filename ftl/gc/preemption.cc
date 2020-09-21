@@ -66,7 +66,9 @@ void PreemptibleGC::resumePaused() {
 
 void PreemptibleGC::gc_checkDone(uint64_t now) {
   // Maybe GC is completed while waiting for pending requests
-  checkPreemptible();
+  if (UNLIKELY(preemptRequested())) {
+    checkPreemptible();
+  }
 
   AdvancedGC::gc_checkDone(now);
 }
