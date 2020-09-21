@@ -189,7 +189,6 @@ set(SRC_FTL_BASE
   ftl/base/page_level_ftl.cc
 )
 set(SRC_FTL_GC
-  ftl/gc/abstract_gc.cc
   ftl/gc/advanced.cc
   ftl/gc/naive.cc
   ftl/gc/preemption.cc
