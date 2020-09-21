@@ -16,6 +16,12 @@ endif ()
 
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 
+string (TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
+
+if (NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE)$")
+  message (FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+endif ()
+
 # Validate build path
 # https://github.com/llvm/llvm-project/blob/master/llvm/CMakeLists.txt#L249
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR AND NOT MSVC)
@@ -433,19 +439,17 @@ else ()
 
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
 
-  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "Using debug build")
+  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message (STATUS "Using debug build")
 
     target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
     target_compile_options(simplessd PRIVATE -O0)
-  elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(simplessd PRIVATE -O2)
   else ()
-    message(FATAL_ERROR "Unknown build type: ${CMAKE_BUILD_TYPE}")
+    target_compile_options(simplessd PRIVATE -O2)
   endif ()
 
   if (FW_LATENCY)
-    target_compile_definitions(simplessd PRIVATE -DFW_LATENCY=1)
+    target_compile_definitions(simplessd PRIVrm ATE -DFW_LATENCY=1)
   endif ()
 endif ()
 
