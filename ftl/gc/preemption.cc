@@ -104,7 +104,7 @@ void PreemptibleGC::gc_writeDone(uint64_t now) {
 void PreemptibleGC::gc_eraseDone(uint64_t now) {
   decreasePendingFIL();
 
-  AdvancedGC::gc_done(now);
+  AdvancedGC::gc_eraseDone(now);
 }
 
 void PreemptibleGC::requestArrived(Request *req) {
