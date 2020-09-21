@@ -26,16 +26,15 @@ class AbstractGC : public Object {
   const Parameter *param;
 
  public:
-  AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
-      : Object(o), ftlobject(fo), pFIL(fil), param(nullptr) {}
-  virtual ~AbstractGC() {}
+  AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
+  virtual ~AbstractGC();
 
   /**
    * \brief GC initialization function
    *
    * Immediately call AbstractGC::initialize() when you override this function.
    */
-  virtual void initialize() { param = ftlobject.pMapping->getInfo(); }
+  virtual void initialize();
 
   /**
    * \brief Trigger foreground GC if condition met
