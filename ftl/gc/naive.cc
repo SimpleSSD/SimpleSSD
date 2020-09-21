@@ -42,7 +42,7 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
   eventTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
                              "FTL::GC::eventTrigger");
-  eventStart = createEvent([this](uint64_t t, uint64_t) { gc_start(t); },
+  eventStart = createEvent([this](uint64_t, uint64_t) { gc_start(); },
                            "FTL::GC::eventStart");
   eventDoRead = createEvent([this](uint64_t t, uint64_t) { gc_doRead(t); },
                             "FTL::GC::eventDoRead");
@@ -98,7 +98,7 @@ void NaiveGC::gc_trigger() {
   debugprint(logid, "GC    | Foreground");
 }
 
-void NaiveGC::gc_start(uint64_t now) {
+void NaiveGC::gc_start() {
   // Request copy context
   ftlobject.pMapping->getCopyContext(targetBlock, eventDoRead);
 }
