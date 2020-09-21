@@ -54,6 +54,9 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   eventWriteDone =
       createEvent([this](uint64_t t, uint64_t) { gc_writeDone(t); },
                   "FTL::GC::eventWriteDone");
+  eventEraseDone =
+      createEvent([this](uint64_t t, uint64_t) { gc_eraseDone(t); },
+                  "FTL::GC::eventEraseDone");
   eventDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
                           "FTL::GC::eventEraseDone");
 
