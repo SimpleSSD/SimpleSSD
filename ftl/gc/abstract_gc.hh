@@ -25,47 +25,17 @@ class AbstractGC : public Object {
 
   const Parameter *param;
 
-  uint64_t requestCounter;
-  std::unordered_map<uint64_t, CopyContext> ongoingCopy;
-
-  inline uint64_t getGCTag() noexcept { return requestCounter++; }
-
-  inline auto startCopySession(CopyContext &&ctx) noexcept {
-    auto ret = ongoingCopy.emplace(getGCTag(), std::move(ctx));
-
-    panic_if(!ret.second, "Unexpected tag colision.");
-
-    return ret.first;
-  }
-
-  inline CopyContext &findCopySession(uint64_t tag) noexcept {
-    auto iter = ongoingCopy.find(tag);
-
-    panic_if(iter == ongoingCopy.end(), "Unexpected copy tag.");
-
-    return iter->second;
-  }
-
-  inline void closeCopySession(uint64_t tag) noexcept {
-    auto iter = ongoingCopy.find(tag);
-
-    panic_if(iter == ongoingCopy.end(), "Unexpected copy tag.");
-
-    ongoingCopy.erase(iter);
-  }
-
-  inline uint64_t getSessionCount() noexcept { return ongoingCopy.size(); }
-
  public:
-  AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
-  virtual ~AbstractGC();
+  AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
+      : Object(o), ftlobject(fo), pFIL(fil), param(nullptr) {}
+  virtual ~AbstractGC() {}
 
   /**
    * \brief GC initialization function
    *
    * Immediately call AbstractGC::initialize() when you override this function.
    */
-  virtual void initialize();
+  virtual void initialize() { param = ftlobject.pMapping->getInfo(); }
 
   /**
    * \brief Trigger foreground GC if condition met
@@ -81,9 +51,6 @@ class AbstractGC : public Object {
    * \brief Check write request should be stalled
    */
   virtual bool checkWriteStall() = 0;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::GC
