@@ -350,8 +350,6 @@ void NaiveGC::resetStatValues() noexcept {
 }
 
 void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
-  AbstractGC::createCheckpoint(out);
-
   targetBlock.createCheckpoint(out);
 
   BACKUP_SCALAR(out, stat);
@@ -368,8 +366,6 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
-  AbstractGC::restoreCheckpoint(in);
-
   targetBlock.restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, stat);
