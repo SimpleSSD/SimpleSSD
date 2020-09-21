@@ -331,8 +331,7 @@ void PageLevelMapping::getPageStatistics(uint64_t &valid, uint64_t &invalid) {
   }
 }
 
-void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid,
-                                      uint64_t data) {
+void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -344,7 +343,7 @@ void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid,
     }
   }
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
 }
 
 void PageLevelMapping::markBlockErased(PSBN blockId) {

@@ -67,7 +67,7 @@ class PageLevelMapping : public AbstractMapping {
 
   void getPageStatistics(uint64_t &, uint64_t &) override;
 
-  void getCopyContext(CopyContext &, Event, uint64_t) override;
+  void getCopyContext(CopyContext &, Event) override;
   void markBlockErased(PSBN) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
