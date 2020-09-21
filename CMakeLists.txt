@@ -449,7 +449,7 @@ else ()
   endif ()
 
   if (FW_LATENCY)
-    target_compile_definitions(simplessd PRIVrm ATE -DFW_LATENCY=1)
+    target_compile_definitions(simplessd PRIVATE -DFW_LATENCY=1)
   endif ()
 endif ()
 
