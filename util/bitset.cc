@@ -377,7 +377,7 @@ void Bitset::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, dataSize);
 
   // Free or allocate memory if necessary
-  *this = std::move(Bitset(dataSize));
+  *this = Bitset(dataSize);
 
   RESTORE_SCALAR(in, allocSize);
   RESTORE_SCALAR(in, loopSize);

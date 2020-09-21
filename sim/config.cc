@@ -35,6 +35,7 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
     LOAD_NAME_STRING(node, NAME_ERROR_FILE, errorFile);
     LOAD_NAME_STRING(node, NAME_DEBUG_FILE, debugFile);
     LOAD_NAME_UINT_TYPE(node, NAME_CONTROLLER, Mode, mode);
+    LOAD_NAME_BOOLEAN(node, NAME_RESTORE, restore);
   }
 }
 
@@ -45,6 +46,7 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_STRING(section, NAME_ERROR_FILE, errorFile);
   STORE_NAME_STRING(section, NAME_DEBUG_FILE, debugFile);
   STORE_NAME_UINT(section, NAME_CONTROLLER, mode);
+  STORE_NAME_BOOLEAN(section, NAME_RESTORE, restore);
 }
 
 uint64_t Config::readUint(uint32_t idx) const noexcept {

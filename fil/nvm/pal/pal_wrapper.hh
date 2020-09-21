@@ -66,10 +66,10 @@ class PALOLD : public AbstractNVM {
   void readSpare(PPN, uint8_t *, uint64_t);
   void eraseSpare(PPN);
 
-  uint64_t channelMultiplier;
-  uint64_t wayMultiplier;
-  uint64_t dieMultiplier;
-  uint64_t planeMultiplier;
+  // uint64_t channelMultiplier;
+  // uint64_t wayMultiplier;
+  // uint64_t dieMultiplier;
+  // uint64_t planeMultiplier;
 
   void printCPDPBP(::CPDPBP &, const char *);
   void reschedule(Complete &&);
