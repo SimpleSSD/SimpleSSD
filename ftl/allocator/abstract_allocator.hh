@@ -93,13 +93,12 @@ class AbstractAllocator : public Object {
   /**
    * \brief Select block to erase
    *
-   * Return physical block address to erase. This function may return multiple
-   * blocks.
+   * Return physical block address to erase.
    *
-   * \param[in] list  List of Physical Superblock Number
-   * \param[in] eid   Callback event
+   * \param[in] ctx CopyContext
+   * \param[in] eid Callback event
    */
-  virtual void getVictimBlocks(std::deque<CopyContext> &list, Event eid) = 0;
+  virtual void getVictimBlocks(CopyContext &ctx, Event eid) = 0;
 
   /**
    * \brief Mark block as erased

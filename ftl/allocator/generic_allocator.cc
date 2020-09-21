@@ -28,30 +28,26 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
 
   switch (selectionMode) {
     case Config::VictimSelectionMode::Random:
-      victimSelectionFunction = [this](uint64_t idx,
-                                       std::deque<CopyContext> &list) {
-        return randomVictimSelection(idx, list);
+      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
+        return randomVictimSelection(idx, ctx);
       };
 
       break;
     case Config::VictimSelectionMode::Greedy:
-      victimSelectionFunction = [this](uint64_t idx,
-                                       std::deque<CopyContext> &list) {
-        return greedyVictimSelection(idx, list);
+      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
+        return greedyVictimSelection(idx, ctx);
       };
 
       break;
     case Config::VictimSelectionMode::CostBenefit:
-      victimSelectionFunction = [this](uint64_t idx,
-                                       std::deque<CopyContext> &list) {
-        return costbenefitVictimSelection(idx, list);
+      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
+        return costbenefitVictimSelection(idx, ctx);
       };
 
       break;
     case Config::VictimSelectionMode::DChoice:
-      victimSelectionFunction = [this](uint64_t idx,
-                                       std::deque<CopyContext> &list) {
-        return dchoiceVictimSelection(idx, list);
+      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
+        return dchoiceVictimSelection(idx, ctx);
       };
 
       break;
@@ -69,8 +65,8 @@ GenericAllocator::~GenericAllocator() {
   delete[] fullBlocks;
 }
 
-CPU::Function GenericAllocator::randomVictimSelection(
-    uint64_t idx, std::deque<CopyContext> &list) {
+CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
+                                                      CopyContext &ctx) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -86,15 +82,15 @@ CPU::Function GenericAllocator::randomVictimSelection(
   // O(n)
   std::advance(iter, ridx);
 
-  list.emplace_back(*iter);
+  ctx.blockID = *iter;
   currentList.erase(iter);
   fullBlockCount--;
 
   return fstat;
 }
 
-CPU::Function GenericAllocator::greedyVictimSelection(
-    uint64_t idx, std::deque<CopyContext> &list) {
+CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
+                                                      CopyContext &ctx) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -118,15 +114,15 @@ CPU::Function GenericAllocator::greedyVictimSelection(
   }
 
   // Get block ID from sorted list
-  list.emplace_back(*minIndex);
+  ctx.blockID = *minIndex;
   currentList.erase(minIndex);
   fullBlockCount--;
 
   return fstat;
 }
 
-CPU::Function GenericAllocator::costbenefitVictimSelection(
-    uint64_t idx, std::deque<CopyContext> &list) {
+CPU::Function GenericAllocator::costbenefitVictimSelection(uint64_t idx,
+                                                           CopyContext &ctx) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -156,15 +152,15 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(
   }
 
   // Get block ID from sorted list
-  list.emplace_back(*minIndex);
+  ctx.blockID = *minIndex;
   currentList.erase(minIndex);
   fullBlockCount--;
 
   return fstat;
 }
 
-CPU::Function GenericAllocator::dchoiceVictimSelection(
-    uint64_t idx, std::deque<CopyContext> &list) {
+CPU::Function GenericAllocator::dchoiceVictimSelection(uint64_t idx,
+                                                       CopyContext &ctx) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -172,10 +168,12 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(
 
   if (UNLIKELY(currentList.size() <= dchoice)) {
     // Just return least erased blocks
-    list.emplace_back(currentList.front());
+    ctx.blockID = currentList.front();
 
     currentList.pop_front();
     fullBlockCount--;
+
+    return fstat;
   }
 
   std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
@@ -227,7 +225,7 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(
   }
 
   // Get block ID from sorted list
-  list.emplace_back(*minIndex);
+  ctx.blockID = *minIndex;
   currentList.erase(minIndex);
   fullBlockCount--;
 
@@ -255,12 +253,13 @@ void GenericAllocator::initialize() {
   freeBlocks = new std::list<PSBN>[parallelism]();
   fullBlocks = new std::list<PSBN>[parallelism]();
 
+  lastErased = 0;
   lastAllocated = 0;
 
   // Fill data
   uint64_t left = totalSuperblock / parallelism;
 
-  for (uint64_t i = 0; i < parallelism; i++) {
+  for (uint32_t i = 0; i < parallelism; i++) {
     for (uint64_t j = 0; j < left; j++) {
       freeBlocks[i].emplace_back(i + j * parallelism);
     }
@@ -346,13 +345,13 @@ bool GenericAllocator::checkWriteStall() {
   return freeBlockCount <= parallelism;
 }
 
-void GenericAllocator::getVictimBlocks(std::deque<CopyContext> &victimList,
-                                       Event eid) {
+void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid) {
   CPU::Function fstat;
-  CPU::markFunction(fstat);
 
-  for (uint64_t i = 0; i < parallelism; i++) {
-    fstat += victimSelectionFunction(i, victimList);
+  fstat = victimSelectionFunction(lastErased++, ctx);
+
+  if (lastErased == parallelism) {
+    lastErased = 0;
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
@@ -432,6 +431,7 @@ void GenericAllocator::resetStatValues() noexcept {}
 void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, totalSuperblock);
+  BACKUP_SCALAR(out, lastErased);
   BACKUP_SCALAR(out, lastAllocated);
   BACKUP_BLOB(out, eraseCountList, sizeof(uint32_t) * totalSuperblock);
   BACKUP_BLOB(out, inUseBlockMap, sizeof(PPN) * parallelism);
@@ -469,6 +469,7 @@ void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != totalSuperblock, "FTL configuration mismatch.");
 
+  RESTORE_SCALAR(in, lastErased);
   RESTORE_SCALAR(in, lastAllocated);
   RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
   RESTORE_BLOB(in, inUseBlockMap, sizeof(PSBN) * parallelism);

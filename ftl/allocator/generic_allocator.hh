@@ -20,8 +20,7 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 class GenericAllocator : public AbstractAllocator {
  protected:
-  using BlockSelection =
-      std::function<CPU::Function(uint64_t, std::deque<CopyContext> &)>;
+  using BlockSelection = std::function<CPU::Function(uint64_t, CopyContext &)>;
 
   uint64_t totalSuperblock;
   uint32_t superpage;
@@ -29,7 +28,8 @@ class GenericAllocator : public AbstractAllocator {
 
   uint32_t *eraseCountList;
 
-  uint64_t lastAllocated;  // Used for pMapper->initialize
+  uint32_t lastErased;     // Used for victim selection
+  uint32_t lastAllocated;  // Used for pMapper->initialize
   PSBN *inUseBlockMap;     // Allocated free blocks
 
   uint64_t freeBlockCount;      // Free block count shortcut
@@ -47,10 +47,10 @@ class GenericAllocator : public AbstractAllocator {
 
   BlockSelection victimSelectionFunction;
 
-  CPU::Function randomVictimSelection(uint64_t, std::deque<CopyContext> &);
-  CPU::Function greedyVictimSelection(uint64_t, std::deque<CopyContext> &);
-  CPU::Function costbenefitVictimSelection(uint64_t, std::deque<CopyContext> &);
-  CPU::Function dchoiceVictimSelection(uint64_t, std::deque<CopyContext> &);
+  CPU::Function randomVictimSelection(uint64_t, CopyContext &);
+  CPU::Function greedyVictimSelection(uint64_t, CopyContext &);
+  CPU::Function costbenefitVictimSelection(uint64_t, CopyContext &);
+  CPU::Function dchoiceVictimSelection(uint64_t, CopyContext &);
 
  public:
   GenericAllocator(ObjectData &, FTLObjectData &);
@@ -64,7 +64,7 @@ class GenericAllocator : public AbstractAllocator {
   bool checkForegroundGCThreshold() override;
   bool checkBackgroundGCThreshold() override;
   bool checkWriteStall() override;
-  void getVictimBlocks(std::deque<CopyContext> &, Event) override;
+  void getVictimBlocks(CopyContext &, Event) override;
   void reclaimBlocks(PSBN, Event) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
