@@ -64,6 +64,8 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   // bool lr = entry->dword12 & 0x80000000;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
+  panic_if(nlb == 0, "Unexpected request length.");
+
   debugprint_command(tag, "NVM     | Read | NSID %u | %" PRIx64 "h + %xh", nsid,
                      slba, nlb);
 

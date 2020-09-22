@@ -77,6 +77,8 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   // uint16_t dspec = entry->dword13 >> 16;
   // uint8_t dsm = entry->dword13 & 0xFF;
 
+  panic_if(nlb == 0, "Unexpected request length.");
+
   debugprint_command(tag, "NVM     | Write | NSID %u | %" PRIx64 "h + %xh",
                      nsid, slba, nlb);
 
