@@ -289,7 +289,11 @@ if (MSVC AND FW_LATENCY)
 endif ()
 
 if (FW_LATENCY)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Force release when using automatic firmware latency generation." FORCE)
+  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message(STATUS "Force release build")
+    set(uppercase_CMAKE_BUILD_TYPE "RELEASE")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Force release build" FORCE)
+  endif ()
 
   # Check llvm-simplessd is valid
   if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/llvm-simplessd/CMakeLists.txt")
