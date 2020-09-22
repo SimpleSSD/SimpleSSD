@@ -303,7 +303,6 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 
   targetBlock.blockID.invalidate();
   state = State::Idle;
-  firstRequestArrival = std::numeric_limits<uint64_t>::max();
 
   // Check threshold
   triggerForeground();

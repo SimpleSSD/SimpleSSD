@@ -86,6 +86,7 @@ void AdvancedGC::gc_checkDone(uint64_t now) {
                beginAt, now, now - beginAt);
   }
 
+  targetBlock.blockID.invalidate();
   state = State::Idle;
 
   // Check threshold
