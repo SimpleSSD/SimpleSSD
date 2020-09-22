@@ -133,10 +133,11 @@ class AbstractManager : public Object {
    * supplied to AbstractCache::nvmDone().
    *
    * \param[in] list  Vector of write-back context
+   * \param[in] wt    This drain is write-through
    * \return  Return last request id. You need to reconstruct issued request id
    * using [retval - list.size() + 1, retval + 1).
    */
-  virtual uint64_t drain(std::vector<FlushContext> &list) = 0;
+  virtual uint64_t drain(std::vector<FlushContext> &list, bool wt) = 0;
 };
 
 }  // namespace Manager

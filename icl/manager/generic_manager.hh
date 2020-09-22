@@ -70,7 +70,8 @@ class GenericManager : public AbstractManager {
   // Statistics
   struct {
     uint64_t prefetched;  // prefetched pages
-    uint64_t drained;     // evicted pages
+    uint64_t drained;     // evicted pages (write-back)
+    uint64_t through;     // evicted pages (write-through)
     uint64_t hit;         // cache hit
     uint64_t miss;        // cache miss
     uint64_t eviction;    // cache eviction
@@ -89,7 +90,7 @@ class GenericManager : public AbstractManager {
   void lookupDone(uint64_t) override;
   void cacheDone(uint64_t) override;
 
-  uint64_t drain(std::vector<FlushContext> &) override;
+  uint64_t drain(std::vector<FlushContext> &, bool) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

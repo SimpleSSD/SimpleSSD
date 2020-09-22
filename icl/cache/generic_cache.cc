@@ -239,7 +239,7 @@ void GenericCache::flush(HIL::SubRequest *sreq) {
 
   ret.tag = sreq->getTag();
   ret.listSize = list.size();
-  ret.drainTag = manager->drain(list);
+  ret.drainTag = manager->drain(list, false);
   ret.flush = true;
 
   scheduleFunction(CPU::CPUGroup::InternalCache,
@@ -367,7 +367,7 @@ void GenericCache::allocate(HIL::SubRequest *sreq) {
       ret.listSize = list.size();
       pendingEviction += ret.listSize;
 
-      ret.drainTag = manager->drain(list);
+      ret.drainTag = manager->drain(list, false);
     }
   }
 
@@ -437,7 +437,7 @@ void GenericCache::dmaDone(HIL::SubRequest *sreq) {
         ret.listSize = list.size();
 
         ret.writethrough = true;
-        ret.drainTag = manager->drain(list);
+        ret.drainTag = manager->drain(list, true);
       }
     }
   out:

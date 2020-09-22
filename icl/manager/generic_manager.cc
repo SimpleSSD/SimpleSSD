@@ -220,7 +220,7 @@ void GenericManager::cacheDone(uint64_t tag) {
   }
 }
 
-uint64_t GenericManager::drain(std::vector<FlushContext> &list) {
+uint64_t GenericManager::drain(std::vector<FlushContext> &list, bool wt) {
   uint64_t now = getTick();
   uint64_t size = list.size();
 
@@ -254,6 +254,13 @@ uint64_t GenericManager::drain(std::vector<FlushContext> &list) {
 
   stat.eviction++;
 
+  if (wt) {
+    stat.through += size;
+  }
+  else {
+    stat.drained += size;
+  }
+
   return drainCounter;
 }
 
@@ -276,8 +283,6 @@ void GenericManager::drainRange(std::vector<FlushContext>::iterator begin,
 
     pFTL->write(std::move(req));
   }
-
-  stat.drained += nlp;
 }
 
 void GenericManager::drainDone(uint64_t now, uint64_t tag) {
@@ -307,7 +312,8 @@ void GenericManager::nvmDone(uint64_t tag) {
 void GenericManager::getStatList(std::vector<Stat> &list,
                                  std::string prefix) noexcept {
   list.emplace_back(prefix + "prefetched", "Prefetched pages");
-  list.emplace_back(prefix + "drained", "Written pages");
+  list.emplace_back(prefix + "drained", "Written pages (write-back)");
+  list.emplace_back(prefix + "written", "Written pages (write-through)");
   list.emplace_back(prefix + "hit", "Number of cache hit");
   list.emplace_back(prefix + "miss", "Number of cache miss");
   list.emplace_back(prefix + "eviction", "Number of cache eviction");
@@ -316,6 +322,7 @@ void GenericManager::getStatList(std::vector<Stat> &list,
 void GenericManager::getStatValues(std::vector<double> &values) noexcept {
   values.emplace_back((double)stat.prefetched);
   values.emplace_back((double)stat.drained);
+  values.emplace_back((double)stat.through);
   values.emplace_back((double)stat.hit);
   values.emplace_back((double)stat.miss);
   values.emplace_back((double)stat.eviction);
