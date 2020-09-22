@@ -966,7 +966,15 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
     ns->restoreCheckpoint(in);
 
-    namespaceList.emplace(ns->getNSID(), ns);
+    auto iter = namespaceList.find(ns->getNSID());
+
+    if (iter != namespaceList.end()) {
+      delete iter->second;
+      iter->second = ns;
+    }
+    else {
+      namespaceList.emplace(ns->getNSID(), ns);
+    }
   }
 
   RESTORE_SCALAR(in, size);
