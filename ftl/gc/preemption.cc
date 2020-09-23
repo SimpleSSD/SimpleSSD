@@ -74,7 +74,7 @@ void PreemptibleGC::gc_checkDone(uint64_t now) {
 }
 
 void PreemptibleGC::gc_doRead(uint64_t now) {
-  if (LIKELY(!preemptRequested())) {
+  if (LIKELY(!preemptRequested() || state == State::Foreground)) {
     // Don't use AdvancedGC::gc_doRead
     NaiveGC::gc_doRead(now);
 
@@ -111,7 +111,7 @@ void PreemptibleGC::gc_eraseDone(uint64_t now) {
 
 void PreemptibleGC::requestArrived(Request *req) {
   // Request preemption
-  if (UNLIKELY(state >= State::Foreground && !preemptRequested())) {
+  if (UNLIKELY(state >= State::Background && !preemptRequested())) {
     debugprint(logid, "GC    | Preemption requested");
   }
 
