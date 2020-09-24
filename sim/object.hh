@@ -40,22 +40,15 @@ namespace SimpleSSD {
 #define warn_if(cond, format, ...)                                             \
   {                                                                            \
     if (UNLIKELY(cond)) {                                                      \
-      warn_log("%s:%u: %s\n  " format, __FILENAME__, __LINE__,                 \
-               __PRETTY_FUNCTION__, ##__VA_ARGS__);                            \
+      warn_log(format, ##__VA_ARGS__);                                         \
     }                                                                          \
   }
 
 #define warn(format, ...)                                                      \
-  {                                                                            \
-    warn_log("%s:%u: %s\n  " format, __FILENAME__, __LINE__,                   \
-             __PRETTY_FUNCTION__, ##__VA_ARGS__);                              \
-  }
+  { warn_log(format, ##__VA_ARGS__); }
 
 #define info(format, ...)                                                      \
-  {                                                                            \
-    info_log("%s:%u: %s\n  " format, __FILENAME__, __LINE__,                   \
-             __PRETTY_FUNCTION__, ##__VA_ARGS__);                              \
-  }
+  { info_log(format, ##__VA_ARGS__); }
 
 #endif
 
@@ -175,8 +168,8 @@ class Object {
     object.log->print(Log::LogID::Panic, format, args...);
   }
   template <class... T>
-  inline void debugprint(Log::DebugID id, const char *format, T... args) const
-      noexcept {
+  inline void debugprint(Log::DebugID id, const char *format,
+                         T... args) const noexcept {
     object.log->debugprint(id, format, args...);
   }
 
