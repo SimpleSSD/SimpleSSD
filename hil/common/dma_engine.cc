@@ -71,7 +71,7 @@ bool DMAData::isInited() noexcept {
 }
 
 DMAEngine::DMASession::DMASession(uint64_t i, DMATag t, Event e, uint64_t d,
-                                  uint64_t s, uint8_t *b, uint64_t a)
+                                  uint32_t s, uint8_t *b, uint64_t a)
     : tag(i),
       parent(t),
       eid(e),
@@ -684,7 +684,7 @@ DMAEngine::DMASession &DMAEngine::findSession(uint64_t tag) {
 }
 
 std::pair<const uint64_t, DMAEngine::DMASession> &DMAEngine::createSession(
-    DMATag t, Event e, uint64_t d, uint64_t s, uint8_t *b, uint64_t a) {
+    DMATag t, Event e, uint64_t d, uint32_t s, uint8_t *b, uint64_t a) {
   uint64_t tag = sessionID++;
   auto iter = sessionList.emplace(tag, DMASession(tag, t, e, d, s, b, a));
 

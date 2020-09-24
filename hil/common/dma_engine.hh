@@ -86,7 +86,7 @@ class DMAEngine : public Object {
     void deallocateBuffer();
 
     DMASession(uint64_t t) : tag(t), both(false) {}
-    DMASession(uint64_t, DMATag, Event, uint64_t, uint64_t, uint8_t *,
+    DMASession(uint64_t, DMATag, Event, uint64_t, uint32_t, uint8_t *,
                uint64_t);
   };
 
@@ -131,7 +131,7 @@ class DMAEngine : public Object {
 
   inline DMASession &findSession(uint64_t);
   inline std::pair<const uint64_t, DMASession> &createSession(
-      DMATag, Event, uint64_t = 0, uint64_t = 0, uint8_t * = nullptr,
+      DMATag, Event, uint64_t = 0, uint32_t = 0, uint8_t * = nullptr,
       uint64_t = std::numeric_limits<uint64_t>::max());
   inline void destroySession(uint64_t);
 
