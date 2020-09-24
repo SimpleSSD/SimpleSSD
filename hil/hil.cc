@@ -436,17 +436,11 @@ void HIL::notifyDMAInited(uint64_t tag) {
     }
   }
 
-  for (; iter != requestQueue.end(); ++iter) {
-    if (UNLIKELY(iter->second->eid == InvalidEventID)) {
-      // this is read-ahead/prefetch request, skip
-      continue;
-    }
-    if (!iter->second->dmaTag->isInited()) {
-      break;
-    }
-
+  do {
     dispatch(iter->second);
-  }
+
+    ++iter;
+  } while (iter != requestQueue.end() && iter->second->dmaTag->isInited());
 }
 
 uint64_t HIL::getPageUsage(LPN offset, uint64_t length) {
