@@ -12,15 +12,16 @@ namespace SimpleSSD::FTL::Mapping {
 AbstractMapping::AbstractMapping(ObjectData &o, FTLObjectData &fo)
     : Object(o), ftlobject(fo), memoryTag(0) {
   filparam = object.config->getNANDStructure();
-  auto channel =
-      readConfigUint(Section::FlashInterface, FIL::Config::Key::Channel);
-  auto way = readConfigUint(Section::FlashInterface, FIL::Config::Key::Way);
+  auto channel = (uint32_t)readConfigUint(Section::FlashInterface,
+                                          FIL::Config::Key::Channel);
+  auto way =
+      (uint32_t)readConfigUint(Section::FlashInterface, FIL::Config::Key::Way);
 
   param.totalPhysicalBlocks =
       channel * way * filparam->die * filparam->plane * filparam->block;
   param.totalLogicalBlocks =
       (uint64_t)(param.totalPhysicalBlocks *
-                 (1.f - readConfigFloat(Section::FlashTranslation,
+                 (1.0 - readConfigFloat(Section::FlashTranslation,
                                         Config::Key::OverProvisioningRatio)));
   param.totalPhysicalPages = param.totalPhysicalBlocks * filparam->page;
   param.totalLogicalPages = param.totalLogicalBlocks * filparam->page;

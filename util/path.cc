@@ -35,13 +35,13 @@ std::string makeOutputFilename(ObjectData &object, const char *filename) {
   // Append!
   outdir /= filename;
 
-  return outdir;
+  return outdir.string();
 }
 
 std::string joinPath(const char *path, const char *filename) {
   std::filesystem::path fspath(path);
 
-  return fspath / filename;
+  return (fspath / filename).string();
 }
 
 #ifdef _MSC_VER

@@ -60,7 +60,7 @@ struct Parameter {
 
   //! Get PageIndex from PPN
   inline uint32_t getPageIndexFromPPN(PPN ppn) const {
-    return ppn / totalPhysicalBlocks;
+    return static_cast<uint32_t>(ppn / totalPhysicalBlocks);
   }
 
   //! Make PPN from PBN and PageIndex
@@ -80,12 +80,12 @@ struct Parameter {
 
   //! Get SuperpageIndex from Physical Page Number
   inline uint32_t getSuperpageIndexFromPPN(PPN ppn) const {
-    return ppn % superpage;
+    return static_cast<uint32_t>(ppn % superpage);
   }
 
   //! Get SuperpageIndex from Logical Page Number
   inline uint32_t getSuperpageIndexFromLPN(LPN lpn) const {
-    return lpn % superpage;
+    return static_cast<uint32_t>(lpn % superpage);
   }
 
   //! Get PSBN from PSPN
@@ -95,7 +95,7 @@ struct Parameter {
 
   //! Get PageIndex from PSPN
   inline uint32_t getPageIndexFromPSPN(PSPN pspn) const {
-    return pspn / (totalPhysicalBlocks / superpage);
+    return static_cast<uint32_t>(pspn / (totalPhysicalBlocks / superpage));
   }
 
   //! Make PSPN from PSBN and PageIndex
@@ -123,12 +123,12 @@ struct Parameter {
 
   //! Get parallelism index from PBN
   inline uint32_t getParallelismIndexFromPBN(PBN pbn) const {
-    return pbn % parallelism;
+    return static_cast<uint32_t>(pbn % parallelism);
   }
 
   //! Get parallelism index from PSBN
   inline uint32_t getParallelismIndexFromPSBN(PSBN psbn) const {
-    return psbn % (parallelism / superpage);
+    return static_cast<uint32_t>(psbn % (parallelism / superpage));
   }
 };
 

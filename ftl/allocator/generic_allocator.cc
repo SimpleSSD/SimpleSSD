@@ -133,7 +133,7 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(uint64_t idx,
 
   // Collect valid pages
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    float util = ftlobject.pMapping->getValidPages(*iter) / pageCount;
+    float util = (float)ftlobject.pMapping->getValidPages(*iter) / pageCount;
 
     util = util / ((1.f - util) * ftlobject.pMapping->getAge(*iter));
 

@@ -172,8 +172,8 @@ Config::Config() {
 
   controller.readQueueSize = 64;
   controller.writeQueueSize = 64;
-  controller.writeMinThreshold = 0.5;
-  controller.writeMaxThreshold = 0.85;
+  controller.writeMinThreshold = 0.5f;
+  controller.writeMaxThreshold = 0.85f;
   controller.minWriteBurst = 16;
   controller.schedulePolicy = MemoryScheduling::FRFCFS;
   controller.addressPolicy = AddressMapping::RoRaBaCoCh;
@@ -212,10 +212,10 @@ void Config::loadDRAMStructure(pugi::xml_node &section) noexcept {
     LOAD_NAME_UINT_TYPE(node, NAME_BANK, uint8_t, dram.bank);
     LOAD_NAME_UINT_TYPE(node, NAME_CHIP, uint8_t, dram.chip);
     LOAD_NAME_UINT_TYPE(node, NAME_BUS_WIDTH, uint16_t, dram.width);
-    LOAD_NAME_UINT_TYPE(node, NAME_BURST_CHOP, uint16_t, dram.burstChop);
-    LOAD_NAME_UINT_TYPE(node, NAME_BURST_LENGTH, uint16_t, dram.burstLength);
+    LOAD_NAME_UINT_TYPE(node, NAME_BURST_CHOP, uint8_t, dram.burstChop);
+    LOAD_NAME_UINT_TYPE(node, NAME_BURST_LENGTH, uint8_t, dram.burstLength);
     LOAD_NAME_UINT(node, NAME_CHIP_SIZE, dram.chipSize);
-    LOAD_NAME_UINT(node, NAME_ROWBUFFER_SIZE, dram.rowSize);
+    LOAD_NAME_UINT_TYPE(node, NAME_ROWBUFFER_SIZE, uint32_t, dram.rowSize);
   }
 }
 

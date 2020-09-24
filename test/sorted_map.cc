@@ -7,6 +7,8 @@
 
 #include "util/sorted_map.hh"
 
+#include <array>
+
 #include <catch2/catch.hpp>
 
 TEST_CASE("Sorted map list") {

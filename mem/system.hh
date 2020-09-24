@@ -90,7 +90,7 @@ class System {
           data(0) {}
     MemoryRequest(bool r, bool s, uint64_t b, uint64_t e, Event ei, uint64_t d)
         : start(b), read(r), sram(s), submit(0), complete(0), eid(ei), data(d) {
-      npkt = (e - b) / MemoryPacketSize;
+      npkt = (uint32_t)((e - b) / MemoryPacketSize);
     }
   };
 
