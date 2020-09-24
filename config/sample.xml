@@ -253,11 +253,11 @@
       Interface and bus configuration
 
       NVMe uses "pcie" and "axi"
-       PCIe RC -> PCIe -> PCIe EP -> AXI (SSD memory bus)
+       PCIe RC -> PCIe -> PCIe EP -> (SSD memory bus)
       SATA uses "pcie", "sata" and "axi"
-       PCIe RC -> PCIe -> HBA -> SATA -> SATA PHY -> AXI (SSD memory bus)
+       PCIe RC -> PCIe -> HBA -> SATA -> SATA PHY -> (SSD memory bus)
       UFS uses "mphy" and "axi"
-       System bus -> UFSHCI -> MPHY -> PHY -> AXI (SSD memory bus)
+       System bus -> UFSHCI -> MPHY -> PHY -> (SSD memory bus)
      -->
     <section name="interface">
       <!-- PCIe configuration -->
