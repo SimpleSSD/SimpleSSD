@@ -11,14 +11,14 @@ project(simplessd)
 
 # Validate build type
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Select CMake build type.")
-endif ()
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Select CMake build type." FORCE)
 
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+endif ()
 
 string (TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
-if (NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE)$")
+if (CMAKE_BUILD_TYPE AND NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE)$")
   message (FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif ()
 
@@ -431,6 +431,15 @@ else ()
   add_library(simplessd STATIC ${SRCS} ${SRCS_EXCLUDE})
 endif ()
 
+# Configure test
+set(SRC_TEST
+  test/main.cc
+  test/config_reader.cc
+  test/sorted_map.cc
+)
+
+add_executable(test_simplessd ${SRC_TEST})
+
 # Always use write-through cache
 target_compile_definitions(simplessd PRIVATE -DUSE_WRITE_THROUGH=1)
 
@@ -442,6 +451,9 @@ else ()
   target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror -Wno-attributes)
 
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
+
+  target_link_libraries(simplessd stdc++fs)
+  target_link_libraries(test_simplessd stdc++fs)
 
   if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     message (STATUS "Using debug build")
@@ -460,17 +472,8 @@ endif ()
 # Force version checking in every build
 add_dependencies(simplessd ${VERSION_TARGET})
 
-target_link_libraries(simplessd mcpat pugixml stdc++fs)
-
-# Configure test
-set(SRC_TEST
-  test/main.cc
-  test/config_reader.cc
-  test/sorted_map.cc
-)
-
-add_executable(test_simplessd ${SRC_TEST})
-target_link_libraries(test_simplessd simplessd Catch2::Catch2 stdc++fs)
+target_link_libraries(simplessd mcpat pugixml)
+target_link_libraries(test_simplessd simplessd Catch2::Catch2)
 
 include(CTest)
 include(${PROJECT_SOURCE_DIR}/lib/catch2/contrib/Catch.cmake)
