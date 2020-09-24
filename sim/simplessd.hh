@@ -41,6 +41,8 @@ class SimpleSSD {
   std::ostream *openStream(std::string &, std::string &) noexcept;
   void closeStream(std::ostream *) noexcept;
 
+  bool comparePath(std::string &, std::string &, std::string &) noexcept;
+
   template <class... T>
   inline void debugprint(Log::DebugID id, const char *format,
                          T... args) const noexcept {

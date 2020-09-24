@@ -7,6 +7,7 @@
 
 #include "sim/simplessd.hh"
 
+#include <filesystem>
 #include <iostream>
 
 #include "hil/none/subsystem.hh"
@@ -84,6 +85,15 @@ void SimpleSSD::closeStream(std::ostream *os) noexcept {
   delete os;
 }
 
+bool SimpleSSD::comparePath(std::string &prefix, std::string &file1,
+                            std::string &file2) noexcept {
+  std::filesystem::path a(prefix + file1);
+  std::filesystem::path b(prefix + file2);
+  std::error_code ec;
+
+  return std::filesystem::equivalent(a, b, ec);
+}
+
 /**
  * \brief Initialize SimpleSSD
  *
@@ -108,8 +118,23 @@ bool SimpleSSD::init(Engine *e, ConfigReader *c) noexcept {
       (Config::Mode)c->readUint(Section::Simulation, Config::Controller);
 
   outfile = openStream(prefix, outpath);
-  errfile = openStream(prefix, errpath);
-  debugfile = openStream(prefix, debugpath);
+
+  if (comparePath(prefix, outpath, errpath)) {
+    errfile = outfile;
+  }
+  else {
+    errfile = openStream(prefix, errpath);
+  }
+
+  if (comparePath(prefix, outpath, debugpath)) {
+    debugfile = outfile;
+  }
+  else if (comparePath(prefix, errpath, debugpath)) {
+    debugfile = errfile;
+  }
+  else {
+    debugfile = openStream(prefix, debugpath);
+  }
 
   // Initialize hardware
   object.cpu = new CPU::CPU(e, c, &log);
@@ -221,8 +246,14 @@ void SimpleSSD::deinit() noexcept {
 
     // Close files
     closeStream(outfile);
-    closeStream(errfile);
-    closeStream(debugfile);
+
+    if (errfile != outfile) {
+      closeStream(errfile);
+    }
+
+    if (debugfile != errfile && debugfile != outfile) {
+      closeStream(debugfile);
+    }
 
     outfile = nullptr;
     errfile = nullptr;
