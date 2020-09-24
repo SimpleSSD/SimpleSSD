@@ -17,7 +17,6 @@
 #include "icl/icl.hh"
 #include "sim/abstract_subsystem.hh"
 #include "sim/object.hh"
-#include "util/sorted_map.hh"
 #include "util/stat_helper.hh"
 
 namespace SimpleSSD::HIL {
@@ -57,11 +56,10 @@ class HIL : public Object {
   uint64_t requestCounter;
   uint64_t subrequestCounter;
 
-  map_list<uint64_t, Request *> requestQueue;
+  std::unordered_map<uint64_t, Request *> requestQueue;
   std::unordered_map<uint64_t, SubRequest> subrequestQueue;
 
   void submit(Operation, Request *);
-  void dispatch(Request *);
 
   Event eventNVMCompletion;
   void nvmCompletion(uint64_t, uint64_t);
@@ -120,13 +118,6 @@ class HIL : public Object {
    * \param[in] fused True if this request is FUSED operation in NVMe
    */
   void compare(Request *req, bool fused = false);
-
-  /**
-   * \brief Notify DMATag is inited
-   *
-   * TODO: Add description why this function exists
-   */
-  void notifyDMAInited(uint64_t tag);
 
   /**
    * \brief Get logical pages contains data

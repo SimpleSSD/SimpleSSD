@@ -27,7 +27,8 @@ void Write::dmaInitDone(uint64_t gcid) {
   auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
 
-  pHIL->notifyDMAInited(tag->request.getTag());
+  // Perform write
+  pHIL->write(&tag->request);
 }
 
 void Write::completion(uint64_t now, uint64_t gcid) {
@@ -100,7 +101,6 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
 
   // Prepare request
   uint32_t lbaSize = ns->second->getInfo()->lbaSize;
-  auto pHIL = subsystem->getHIL();
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(slba, nlb, lbaSize);
@@ -117,9 +117,6 @@ void Write::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   count++;
-
-  // Perform write
-  pHIL->write(&tag->request);
 }
 
 void Write::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

@@ -27,7 +27,8 @@ void Read::dmaInitDone(uint64_t gcid) {
   auto tag = findTag(gcid);
   auto pHIL = subsystem->getHIL();
 
-  pHIL->notifyDMAInited(tag->request.getTag());
+  // Perform read
+  pHIL->read(&tag->request);
 }
 
 void Read::completion(uint64_t now, uint64_t gcid) {
@@ -87,7 +88,6 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
 
   // Prepare request
   uint32_t lbaSize = ns->second->getInfo()->lbaSize;
-  auto pHIL = subsystem->getHIL();
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(slba, nlb, lbaSize);
@@ -108,9 +108,6 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   count++;
-
-  // Perform read
-  pHIL->read(&tag->request);
 }
 
 void Read::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
