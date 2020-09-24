@@ -21,7 +21,7 @@ class Controller : public AbstractController {
   Controller(ObjectData &, ControllerID, Subsystem *, Interface *);
   ~Controller();
 
-  HIL* getHIL() const;
+  HIL *getHIL() const;
 
   uint64_t read(uint64_t, uint32_t, uint8_t *) noexcept override;
   uint64_t write(uint64_t, uint32_t, uint8_t *) noexcept override;
