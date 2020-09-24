@@ -377,11 +377,6 @@ void HIL::dmaCompletion(uint64_t now, uint64_t tag) {
 
 void HIL::read(Request *req) {
   submit(Operation::Read, req);
-
-  if (UNLIKELY(req->eid == InvalidEventID)) {
-    // Immediate dispatch
-    dispatch(req);
-  }
 }
 
 void HIL::write(Request *req, bool zerofill) {
