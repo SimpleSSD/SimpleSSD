@@ -168,8 +168,8 @@ bool PageLevelFTL::write(Request *cmd) {
   // Check cmd is final of current chunk
   if (lpn + 1 == chunkEnd) {
     // Partial write within page?
-    uint32_t skipFront = pendingList.front()->getOffset();
-    uint32_t skipEnd = pageSize - pendingList.back()->getLength();
+    uint32_t skipFront = getSkipFront();
+    uint32_t skipEnd = getSkipEnd();
 
     // Not aligned to minMappingSize
     if (alignedBegin != chunkBegin || alignedEnd != chunkEnd ||

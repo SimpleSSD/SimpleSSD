@@ -24,6 +24,7 @@ class PageLevelFTL : public AbstractFTL {
 
   // Pending request
   uint64_t pendingListBaseAddress;
+  LPN pendingListLPN;
   SuperRequest pendingList;
 
   std::list<SuperRequest> writeList;
@@ -36,6 +37,30 @@ class PageLevelFTL : public AbstractFTL {
 
   inline LPN getAlignedLPN(LPN lpn) {
     return static_cast<LPN>(lpn / minMappingSize * minMappingSize);
+  }
+
+  inline uint32_t getSkipFront() {
+    for (uint64_t i = 0; i < minMappingSize; i++) {
+      if (pendingList.at(i)) {
+        return pendingList.at(i)->getOffset();
+      }
+    }
+
+    panic("No valid command in pending List.");
+
+    return 0;
+  }
+
+  inline uint32_t getSkipEnd() {
+    for (uint64_t i = 1; i <= minMappingSize; i++) {
+      if (pendingList.at(minMappingSize - i)) {
+        return pageSize - pendingList.at(minMappingSize - i)->getLength();
+      }
+    }
+
+    panic("No valid command in pending List.");
+
+    return 0;
   }
 
   // Statistics
