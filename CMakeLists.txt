@@ -142,26 +142,30 @@ set(SRC_HIL_NVME
 set(SRC_HIL_NVME_COMMAND
   hil/nvme/command/abstract_command.cc
   hil/nvme/command/command.cc
-  hil/nvme/command/feature.cc
-  hil/nvme/command/log_page.cc
-  hil/nvme/command/delete_sq.cc
-  hil/nvme/command/create_sq.cc
-  hil/nvme/command/get_log_page.cc
-  hil/nvme/command/delete_cq.cc
-  hil/nvme/command/create_cq.cc
-  hil/nvme/command/identify.cc
-  hil/nvme/command/abort.cc
-  hil/nvme/command/set_feature.cc
-  hil/nvme/command/get_feature.cc
-  hil/nvme/command/async_event_request.cc
-  hil/nvme/command/namespace_management.cc
-  hil/nvme/command/namespace_attachment.cc
-  hil/nvme/command/format_nvm.cc
-  hil/nvme/command/flush.cc
-  hil/nvme/command/write.cc
-  hil/nvme/command/read.cc
-  hil/nvme/command/compare.cc
-  hil/nvme/command/dataset_management.cc
+)
+set(SRC_HIL_NVME_COMMAND_ADMIN
+  hil/nvme/command/admin/feature.cc
+  hil/nvme/command/admin/log_page.cc
+  hil/nvme/command/admin/delete_sq.cc
+  hil/nvme/command/admin/create_sq.cc
+  hil/nvme/command/admin/get_log_page.cc
+  hil/nvme/command/admin/delete_cq.cc
+  hil/nvme/command/admin/create_cq.cc
+  hil/nvme/command/admin/identify.cc
+  hil/nvme/command/admin/abort.cc
+  hil/nvme/command/admin/set_feature.cc
+  hil/nvme/command/admin/get_feature.cc
+  hil/nvme/command/admin/async_event_request.cc
+  hil/nvme/command/admin/namespace_management.cc
+  hil/nvme/command/admin/namespace_attachment.cc
+)
+set(SRC_HIL_NVME_COMMAND_NVM
+  hil/nvme/command/nvm/format_nvm.cc
+  hil/nvme/command/nvm/flush.cc
+  hil/nvme/command/nvm/write.cc
+  hil/nvme/command/nvm/read.cc
+  hil/nvme/command/nvm/compare.cc
+  hil/nvme/command/nvm/dataset_management.cc
 )
 set(SRC_ICL
   icl/icl.cc
@@ -240,6 +244,8 @@ SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_COMMON})
 SOURCE_GROUP("Source Files\\hil\\common" FILES ${SRC_HIL_NONE})
 SOURCE_GROUP("Source Files\\hil\\nvme" FILES ${SRC_HIL_NVME})
 SOURCE_GROUP("Source Files\\hil\\nvme\\command" FILES ${SRC_HIL_NVME_COMMAND})
+SOURCE_GROUP("Source Files\\hil\\nvme\\command\\admin" FILES ${SRC_HIL_NVME_COMMAND_ADMIN})
+SOURCE_GROUP("Source Files\\hil\\nvme\\command\\nvm" FILES ${SRC_HIL_NVME_COMMAND_NVM})
 SOURCE_GROUP("Source Files\\icl" FILES ${SRC_ICL})
 SOURCE_GROUP("Source Files\\icl\\cache" FILES ${SRC_ICL_CACHE})
 SOURCE_GROUP("Source Files\\icl\\manager" FILES ${SRC_ICL_MANAGER})
@@ -261,6 +267,8 @@ set(SRCS
   ${SRC_HIL_NONE}
   ${SRC_HIL_NVME}
   ${SRC_HIL_NVME_COMMAND}
+  ${SRC_HIL_NVME_COMMAND_ADMIN}
+  ${SRC_HIL_NVME_COMMAND_NVM}
   ${SRC_ICL}
   ${SRC_ICL_CACHE}
   ${SRC_ICL_MANAGER}
