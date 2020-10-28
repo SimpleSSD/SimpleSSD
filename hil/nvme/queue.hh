@@ -47,8 +47,13 @@ union SQEntry {
 union CQEntry {
   uint8_t data[16];
   struct {
-    uint32_t dword0;
-    uint32_t reserved;
+    union {
+      uint64_t result;
+      struct {
+        uint32_t dword0;
+        uint32_t dword1;
+      };
+    };
     struct {
       uint16_t sqHead;
       uint16_t sqID;
