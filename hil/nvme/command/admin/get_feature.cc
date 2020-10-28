@@ -5,8 +5,6 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "hil/nvme/command/get_feature.hh"
-
 #include "hil/nvme/command/internal.hh"
 
 namespace SimpleSSD::HIL::NVMe {

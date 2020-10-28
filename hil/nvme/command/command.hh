@@ -13,26 +13,26 @@
 #include "hil/request.hh"
 
 // Admin commands
-#include "hil/nvme/command/abort.hh"
-#include "hil/nvme/command/async_event_request.hh"
-#include "hil/nvme/command/create_cq.hh"
-#include "hil/nvme/command/create_sq.hh"
-#include "hil/nvme/command/delete_cq.hh"
-#include "hil/nvme/command/delete_sq.hh"
-#include "hil/nvme/command/format_nvm.hh"
-#include "hil/nvme/command/get_feature.hh"
-#include "hil/nvme/command/get_log_page.hh"
-#include "hil/nvme/command/identify.hh"
-#include "hil/nvme/command/namespace_attachment.hh"
-#include "hil/nvme/command/namespace_management.hh"
-#include "hil/nvme/command/set_feature.hh"
+#include "hil/nvme/command/admin/abort.hh"
+#include "hil/nvme/command/admin/async_event_request.hh"
+#include "hil/nvme/command/admin/create_cq.hh"
+#include "hil/nvme/command/admin/create_sq.hh"
+#include "hil/nvme/command/admin/delete_cq.hh"
+#include "hil/nvme/command/admin/delete_sq.hh"
+#include "hil/nvme/command/admin/get_feature.hh"
+#include "hil/nvme/command/admin/get_log_page.hh"
+#include "hil/nvme/command/admin/identify.hh"
+#include "hil/nvme/command/admin/namespace_attachment.hh"
+#include "hil/nvme/command/admin/namespace_management.hh"
+#include "hil/nvme/command/admin/set_feature.hh"
 
-// NVM commands
-#include "hil/nvme/command/compare.hh"
-#include "hil/nvme/command/dataset_management.hh"
-#include "hil/nvme/command/flush.hh"
-#include "hil/nvme/command/read.hh"
-#include "hil/nvme/command/write.hh"
+// NVM command set specific
+#include "hil/nvme/command/nvm/compare.hh"
+#include "hil/nvme/command/nvm/dataset_management.hh"
+#include "hil/nvme/command/nvm/flush.hh"
+#include "hil/nvme/command/nvm/format_nvm.hh"
+#include "hil/nvme/command/nvm/read.hh"
+#include "hil/nvme/command/nvm/write.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 

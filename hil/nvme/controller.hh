@@ -11,8 +11,8 @@
 #define __SIMPLESSD_HIL_NVME_CONTROLLER_HH__
 
 #include "hil/common/interrupt_manager.hh"
-#include "hil/nvme/command/feature.hh"
-#include "hil/nvme/command/log_page.hh"
+#include "hil/nvme/command/admin/feature.hh"
+#include "hil/nvme/command/admin/log_page.hh"
 #include "hil/nvme/queue_arbitrator.hh"
 #include "sim/abstract_controller.hh"
 #include "util/fifo.hh"

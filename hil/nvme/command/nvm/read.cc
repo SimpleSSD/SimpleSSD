@@ -6,8 +6,6 @@
  *         Junhyeok Jang <jhjang@camelab.org>
  */
 
-#include "hil/nvme/command/read.hh"
-
 #include "hil/nvme/command/internal.hh"
 
 namespace SimpleSSD::HIL::NVMe {
