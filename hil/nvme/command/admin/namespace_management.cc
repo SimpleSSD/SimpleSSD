@@ -35,36 +35,40 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
   info.nvmSetIdentifier = *(uint16_t *)(buffer + 100);
   info.commandSetIdentifier = tag->sqc->getData()->dword11 >> 24;
 
-  // Execute
-  uint32_t nsid = NSID_NONE;
-  auto ret = subsystem->createNamespace(&info, nsid);
+  if (tag->controller->getIOCommandSetSelected() != 6 &&
+      info.commandSetIdentifier != 0) {
+    // Non-NVM command set selected, but controller only supports NVM
+    tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::IOCommandSetNotSupported);
+  }
+  else {
+    // Execute
+    uint32_t nsid = NSID_NONE;
+    auto ret = subsystem->createNamespace(&info, nsid);
 
-  switch (ret) {
-    case 0:
-      tag->cqc->getData()->dword0 = nsid;
+    switch (ret) {
+      case 0:
+        tag->cqc->getData()->dword0 = nsid;
 
-      break;
-    case 1:
-      tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                           CommandSpecificStatusCode::Invalid_Format);
+        break;
+      case 1:
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::Invalid_Format);
 
-      break;
-    case 2:
-      tag->cqc->makeStatus(
-          false, false, StatusType::CommandSpecificStatus,
-          CommandSpecificStatusCode::NamespaceIdentifierUnavailable);
+        break;
+      case 2:
+        tag->cqc->makeStatus(
+            false, false, StatusType::CommandSpecificStatus,
+            CommandSpecificStatusCode::NamespaceIdentifierUnavailable);
 
-      break;
-    case 3:
-      tag->cqc->makeStatus(
-          false, false, StatusType::CommandSpecificStatus,
-          CommandSpecificStatusCode::NamespaceInsufficientCapacity);
+        break;
+      case 3:
+        tag->cqc->makeStatus(
+            false, false, StatusType::CommandSpecificStatus,
+            CommandSpecificStatusCode::NamespaceInsufficientCapacity);
 
-      break;
-    case 4:
-      tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                           CommandSpecificStatusCode::IOCommandSetNotSupported);
-      break;
+        break;
+    }
   }
 
   subsystem->complete(tag);

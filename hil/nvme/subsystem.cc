@@ -11,6 +11,7 @@
 
 #include "hil/nvme/command/command.hh"
 #include "hil/nvme/controller.hh"
+#include "hil/nvme/namespace.hh"
 
 namespace SimpleSSD::HIL::NVMe {
 
@@ -231,7 +232,19 @@ bool Subsystem::_createNamespace(uint32_t nsid, Config::Disk *disk,
   nsinfo->sizeInByteH = 0;
 
   // Create namespace
-  Namespace *pNS = new Namespace(object, this);
+  Namespace *pNS = nullptr;
+
+  switch ((CommandSetIdentifier)nsinfo->commandSetIdentifier) {
+    case CommandSetIdentifier::NVM:
+      pNS = new Namespace(object);
+
+      break;
+    default:
+      panic("Invalid command set identifier.");
+
+      break;
+  }
+
   pNS->setInfo(nsid, nsinfo, disk);
 
   auto ret = namespaceList.emplace(nsid, pNS);
@@ -548,7 +561,8 @@ HIL *Subsystem::getHIL() const {
   return pHIL;
 }
 
-const std::map<uint32_t, Namespace *> &Subsystem::getNamespaceList() const {
+const std::map<uint32_t, AbstractNamespace *> &Subsystem::getNamespaceList()
+    const {
   return namespaceList;
 }
 
@@ -901,6 +915,8 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, size);
 
   for (auto &iter : namespaceList) {
+    BACKUP_SCALAR(out, iter.second->getInfo()->commandSetIdentifier);
+
     iter.second->createCheckpoint(out);
   }
 
@@ -972,8 +988,21 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, size);
 
+  CommandSetIdentifier csi = CommandSetIdentifier::Invalid;
+
   for (uint64_t i = 0; i < size; i++) {
-    auto ns = new Namespace(object, this);
+    AbstractNamespace *ns = nullptr;
+
+    RESTORE_SCALAR(in, csi);
+
+    switch (csi) {
+      case CommandSetIdentifier::NVM:
+        ns = new Namespace(object);
+        break;
+      default:
+        panic("Invalid command set identifier.");
+        break;
+    }
 
     ns->restoreCheckpoint(in);
 

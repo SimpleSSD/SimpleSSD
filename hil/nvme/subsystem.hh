@@ -14,9 +14,9 @@
 #include <variant>
 
 #include "hil/hil.hh"
+#include "hil/nvme/abstract_namespace.hh"
 #include "hil/nvme/command/command.hh"
 #include "hil/nvme/def.hh"
-#include "hil/nvme/namespace.hh"
 #include "hil/nvme/queue_arbitrator.hh"
 #include "sim/abstract_subsystem.hh"
 #include "util/sorted_map.hh"
@@ -32,7 +32,7 @@ class Subsystem : public AbstractSubsystem {
   ControllerID controllerID;
 
   std::map<ControllerID, ControllerData *> controllerList;
-  std::map<uint32_t, Namespace *> namespaceList;
+  std::map<uint32_t, AbstractNamespace *> namespaceList;
   std::map<ControllerID, std::set<uint32_t>> attachmentTable;
 
   // Log Pages
@@ -145,7 +145,7 @@ class Subsystem : public AbstractSubsystem {
 
   // Command interface
   HIL *getHIL() const;
-  const std::map<uint32_t, Namespace *> &getNamespaceList() const;
+  const std::map<uint32_t, AbstractNamespace *> &getNamespaceList() const;
   const std::set<uint32_t> *getAttachment(ControllerID ctrlid) const;
   const std::map<ControllerID, ControllerData *> &getControllerList() const;
   uint32_t getLPNSize() const;
