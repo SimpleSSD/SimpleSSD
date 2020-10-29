@@ -375,6 +375,60 @@
           aligned with LBASize.
          -->
         <config name="Capacity">0</config>
+        <!--
+          <int:u8> I/O Command Set to use
+
+          Possible values:
+            0: NVM Command Set
+            1: Key Value Command Set
+            2: Zoned Namespace Command Set
+         -->
+        <config name="CommandSet">0</config>
+        <!-- Key Value Command Set specific configuration -->
+        <section name="kv">
+          <!--
+            <int:u16> Maximun key length
+
+            Current TP only supports key length <= 16.
+           -->
+          <config name="MaxKeySize">16</config>
+          <!--
+            <int:u32> Maximum value length
+
+            SimpleSSD can handle any arbitrary length of PRP/SGL, but just limit
+            to 1MB.
+           -->
+          <config name="MaxValueSize">1048576</config>
+          <!--
+            <int:u32> Maximum number of keys
+
+            Not specified = 0
+           -->
+          <config name="MaxKeyCount">0</config>
+        </section>
+        <!-- Zoned Namespace Command Set specific configuration -->
+        <section name="zns">
+          <!--
+            <int:u64> Zone Size in logical blocks
+
+            Capacity of namespace will be multiple of this value.
+           -->
+          <config name="ZoneSize">1048576</config>
+          <!--
+            <int:u32> Maximum active zones
+
+            Active == Imp. Open / Exp. Open / Closed
+            No limit = 0
+           -->
+          <config name="MaxActiveZones">0</config>
+          <!--
+            <int:u32> Maximum open zones
+
+            Open == Imp. Open / Exp. Open
+            No limit = 0
+           -->
+          <config name="MaxOpenZones">0</config>
+        </section>
       </section>
     </section>
   </section>
