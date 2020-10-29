@@ -121,6 +121,15 @@ void Config::loadNVMe(pugi::xml_node &section) noexcept {
 void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) noexcept {
   ns->nsid = strtoul(section.attribute("nsid").value(), nullptr, 10);
 
+  // Fill defalut values
+  ns->commandSet = 0;
+  ns->maxKeySize = 16;
+  ns->maxValueSize = 1048576;
+  ns->maxKeyCount = 0;
+  ns->zoneSize = 1048576;
+  ns->maxOpenZones = 0;
+  ns->maxActiveZones = 0;
+
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_LBA_SIZE, uint16_t, ns->lbaSize);
     LOAD_NAME_UINT(node, NAME_CAPACITY, ns->capacity);
