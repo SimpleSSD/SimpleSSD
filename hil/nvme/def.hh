@@ -219,6 +219,8 @@ enum class CommandSetIdentifier : uint8_t {
   NVM,
   KeyValue,
   ZonedNamespace,
+
+  Invalid = 0xFF,
 };
 
 enum class FeatureID : uint8_t {
@@ -379,6 +381,8 @@ enum class CommandSpecificStatusCode : uint8_t {
   SanitizeProhibitedWhilePersistentMemoryRegionIsEnabled,
   Invalid_ANAGroupIdentifier,
   ANAAttachFailed,
+  IOCommandSetNotSupported = 0x29,
+  IOCommandSetNotEnabled = 0x2A,
 
   /** NVM Command Errors **/
   ConflictingAttributes = 0x80,

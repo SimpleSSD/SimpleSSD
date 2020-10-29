@@ -7,6 +7,7 @@
 
 #include "hil/nvme/abstract_namespace.hh"
 
+#include "hil/nvme/def.hh"
 #include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {
@@ -33,7 +34,11 @@ HealthInfo::HealthInfo() {
 }
 
 AbstractNamespace::AbstractNamespace(ObjectData &o)
-    : Object(o), inited(false), nsid(0), disk(nullptr) {}
+    : Object(o),
+      inited(false),
+      nsid(0),
+      csi(CommandSetIdentifier::Invalid),
+      disk(nullptr) {}
 
 AbstractNamespace::~AbstractNamespace() {
   delete disk;
@@ -81,6 +86,9 @@ NamespaceInformation *AbstractNamespace::getInfo() {
 
 void AbstractNamespace::setInfo(uint32_t _nsid, NamespaceInformation *_info,
                                 Config::Disk *_disk) {
+  panic_if((uint8_t)csi != _info->commandSetIdentifier,
+           "Invalid command set identifier.");
+
   *const_cast<uint32_t *>(&nsid) = _nsid;
   nsinfo = *_info;
 

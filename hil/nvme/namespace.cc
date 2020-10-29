@@ -12,7 +12,9 @@
 
 namespace SimpleSSD::HIL::NVMe {
 
-Namespace::Namespace(ObjectData &o) : AbstractNamespace(o) {}
+Namespace::Namespace(ObjectData &o) : AbstractNamespace(o) {
+  csi = CommandSetIdentifier::NVM;
+}
 
 Namespace::~Namespace() {}
 

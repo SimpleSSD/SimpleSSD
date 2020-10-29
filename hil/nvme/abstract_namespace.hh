@@ -33,6 +33,7 @@ class NamespaceInformation {
   uint8_t lbaFormatIndex;                //!< FLBAS
   uint8_t dataProtectionSettings;        //!< DPS
   uint8_t namespaceSharingCapabilities;  //!< NMIC
+  uint8_t commandSetIdentifier;          //!< DWORD11 [31:24]
   uint32_t anaGroupIdentifier;           //!< ANAGRPID
   uint16_t nvmSetIdentifier;             //!< NVMSETID
 
@@ -70,11 +71,12 @@ union HealthInfo {
 class AbstractNamespace : public Object {
  private:
   bool inited;
+  const uint32_t nsid;
 
   std::set<ControllerID> attachList;
 
  protected:
-  const uint32_t nsid;
+  CommandSetIdentifier csi;
 
   NamespaceInformation nsinfo;
   HealthInfo health;
@@ -101,7 +103,6 @@ class AbstractNamespace : public Object {
 
   Disk *getDisk();
 
-  virtual CommandSetIdentifier getCommandSetIdentifier() = 0;
   virtual bool validateCommand(ControllerID, SQContext *, CQContext *) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;

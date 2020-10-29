@@ -19,10 +19,6 @@ class Namespace : public AbstractNamespace {
   Namespace(ObjectData &);
   ~Namespace();
 
-  CommandSetIdentifier getCommandSetIdentifier() override {
-    return CommandSetIdentifier::NVM;
-  };
-
   bool validateCommand(ControllerID, SQContext *, CQContext *) override;
 };
 
