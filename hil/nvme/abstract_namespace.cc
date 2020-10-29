@@ -186,6 +186,8 @@ void AbstractNamespace::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, nsinfo);
 
+  csi = (CommandSetIdentifier)nsinfo.commandSetIdentifier;
+
   uint64_t val1, val2;
   RESTORE_SCALAR(in, val1);
   RESTORE_SCALAR(in, val2);
