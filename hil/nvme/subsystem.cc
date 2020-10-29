@@ -317,6 +317,8 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
           commandFormatNVM->setRequest(cdata, ns, sqc);
 
           return true;
+        default:
+          break;
       }
     }
 
@@ -376,6 +378,8 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
         case IOCommand::DatasetManagement:
           // Not supported in Key Value Command Set
           return false;
+        default:
+          break;
       }
     }
     else if (csi == CommandSetIdentifier::ZonedNamespace) {
@@ -386,6 +390,8 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
           panic("Zoned namespace commands not implemented.");
 
           return true;
+        default:
+          break;
       }
     }
 
