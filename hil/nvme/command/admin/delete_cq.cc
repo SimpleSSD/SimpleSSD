@@ -11,7 +11,8 @@ namespace SimpleSSD::HIL::NVMe {
 
 DeleteCQ::DeleteCQ(ObjectData &o, Subsystem *s) : Command(o, s) {}
 
-void DeleteCQ::setRequest(ControllerData *cdata, SQContext *req) {
+void DeleteCQ::setRequest(ControllerData *cdata, AbstractNamespace *,
+                          SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

@@ -25,7 +25,8 @@ void FormatNVM::completion(uint64_t now, uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void FormatNVM::setRequest(ControllerData *cdata, SQContext *req) {
+void FormatNVM::setRequest(ControllerData *cdata, AbstractNamespace *ns,
+                           SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
@@ -54,17 +55,18 @@ void FormatNVM::setRequest(ControllerData *cdata, SQContext *req) {
   }
   else {
     // Update namespace structure
-    auto &namespaceList = subsystem->getNamespaceList();
-    auto ns = namespaceList.find(nsid);
-
-    if (UNLIKELY(ns == namespaceList.end())) {
-      tag->cqc->makeStatus(false, false, StatusType::GenericCommandStatus,
-                           GenericCommandStatusCode::Invalid_Field);
+    if (UNLIKELY(ns == nullptr ||
+                 !ns->validateCommand(cdata->controller->getControllerID(), req,
+                                      tag->cqc))) {
+      if (UNLIKELY(ns == nullptr)) {
+        tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
+      }
     }
     else {
       immediate = false;
 
-      auto info = ns->second->getInfo();
+      auto info = ns->getInfo();
       auto pHIL = subsystem->getHIL();
 
       info->lbaFormatIndex = lbaf;

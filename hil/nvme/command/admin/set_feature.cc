@@ -11,7 +11,8 @@ namespace SimpleSSD::HIL::NVMe {
 
 SetFeature::SetFeature(ObjectData &o, Subsystem *s) : Command(o, s) {}
 
-void SetFeature::setRequest(ControllerData *cdata, SQContext *req) {
+void SetFeature::setRequest(ControllerData *cdata, AbstractNamespace *,
+                            SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

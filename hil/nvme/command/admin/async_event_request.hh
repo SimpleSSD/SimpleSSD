@@ -19,7 +19,7 @@ class AsyncEventRequest : public Command {
  public:
   AsyncEventRequest(ObjectData &, Subsystem *);
 
-  void setRequest(ControllerData *, SQContext *) override;
+  void setRequest(ControllerData *, AbstractNamespace *, SQContext *) override;
 
   void invokeAEN(ControllerID, AsyncEventType, uint8_t, LogPageID);
   void clearPendingRequests(ControllerID);

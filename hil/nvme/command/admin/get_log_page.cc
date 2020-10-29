@@ -33,7 +33,8 @@ void GetLogPage::dmaComplete(uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void GetLogPage::setRequest(ControllerData *cdata, SQContext *req) {
+void GetLogPage::setRequest(ControllerData *cdata, AbstractNamespace *,
+                            SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

@@ -12,7 +12,8 @@ namespace SimpleSSD::HIL::NVMe {
 AsyncEventRequest::AsyncEventRequest(ObjectData &o, Subsystem *s)
     : Command(o, s) {}
 
-void AsyncEventRequest::setRequest(ControllerData *cdata, SQContext *req) {
+void AsyncEventRequest::setRequest(ControllerData *cdata, AbstractNamespace *,
+                                   SQContext *req) {
   auto tag = createTag(cdata, req);
 
   debugprint_command(tag, "ADMIN   | Asynchronous Event Request");

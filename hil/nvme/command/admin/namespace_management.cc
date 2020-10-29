@@ -77,7 +77,8 @@ void NamespaceManagement::dmaInitDone(uint64_t gcid) {
                        NoMemoryAccess, dmaCompleteEvent, gcid);
 }
 
-void NamespaceManagement::setRequest(ControllerData *cdata, SQContext *req) {
+void NamespaceManagement::setRequest(ControllerData *cdata, AbstractNamespace *,
+                                     SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

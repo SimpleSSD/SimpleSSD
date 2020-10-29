@@ -282,47 +282,58 @@ bool Subsystem::_destroyNamespace(uint32_t nsid) {
 bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
   bool isAdmin = sqc->getSQID() == 0;
   uint8_t opcode = sqc->getData()->dword0.opcode;
+  uint32_t nsid = sqc->getData()->namespaceID;
+  AbstractNamespace *ns = nullptr;
+
+  // Get Namespace
+  if (nsid != NSID_ALL && nsid != NSID_NONE) {
+    auto iter = namespaceList.find(nsid);
+
+    if (LIKELY(iter != namespaceList.end())) {
+      ns = iter->second;
+    }
+  }
 
   if (isAdmin) {
     switch ((AdminCommand)opcode) {
       case AdminCommand::DeleteIOSQ:
-        commandDeleteSQ->setRequest(cdata, sqc);
+        commandDeleteSQ->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::CreateIOSQ:
-        commandCreateSQ->setRequest(cdata, sqc);
+        commandCreateSQ->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::GetLogPage:
-        commandGetLogPage->setRequest(cdata, sqc);
+        commandGetLogPage->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::DeleteIOCQ:
-        commandDeleteCQ->setRequest(cdata, sqc);
+        commandDeleteCQ->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::CreateIOCQ:
-        commandCreateCQ->setRequest(cdata, sqc);
+        commandCreateCQ->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::Identify:
-        commandIdentify->setRequest(cdata, sqc);
+        commandIdentify->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::Abort:
-        commandAbort->setRequest(cdata, sqc);
+        commandAbort->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::SetFeatures:
-        commandSetFeature->setRequest(cdata, sqc);
+        commandSetFeature->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::GetFeatures:
-        commandGetFeature->setRequest(cdata, sqc);
+        commandGetFeature->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::AsyncEventRequest:
-        commandAsyncEventRequest->setRequest(cdata, sqc);
+        commandAsyncEventRequest->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::NamespaceManagement:
-        commandNamespaceManagement->setRequest(cdata, sqc);
+        commandNamespaceManagement->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::NamespaceAttachment:
-        commandNamespaceAttachment->setRequest(cdata, sqc);
+        commandNamespaceAttachment->setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::FormatNVM:
-        commandFormatNVM->setRequest(cdata, sqc);
+        commandFormatNVM->setRequest(cdata, ns, sqc);
         break;
       default:
         return false;
@@ -331,19 +342,19 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
   else {
     switch ((IOCommand)opcode) {
       case IOCommand::Flush:
-        commandFlush->setRequest(cdata, sqc);
+        commandFlush->setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Write:
-        commandWrite->setRequest(cdata, sqc);
+        commandWrite->setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Read:
-        commandRead->setRequest(cdata, sqc);
+        commandRead->setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Compare:
-        commandCompare->setRequest(cdata, sqc);
+        commandCompare->setRequest(cdata, ns, sqc);
         break;
       case IOCommand::DatasetManagement:
-        commandDatasetManagement->setRequest(cdata, sqc);
+        commandDatasetManagement->setRequest(cdata, ns, sqc);
         break;
       default:
         return false;

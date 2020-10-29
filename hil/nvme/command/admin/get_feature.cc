@@ -13,7 +13,8 @@ GetFeature::GetFeature(ObjectData &o, Subsystem *s) : Command(o, s) {}
 
 GetFeature::~GetFeature() {}
 
-void GetFeature::setRequest(ControllerData *cdata, SQContext *req) {
+void GetFeature::setRequest(ControllerData *cdata, AbstractNamespace *,
+                            SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

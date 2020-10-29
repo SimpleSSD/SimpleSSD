@@ -20,7 +20,8 @@ void Abort::abortDone(uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void Abort::setRequest(ControllerData *cdata, SQContext *req) {
+void Abort::setRequest(ControllerData *cdata, AbstractNamespace *,
+                       SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = tag->sqc->getData();
 

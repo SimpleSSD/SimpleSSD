@@ -21,8 +21,11 @@ class Identify : public Command {
   Event dmaInitEvent;
   Event dmaCompleteEvent;
 
+  void makeEUI64(uint8_t *, uint32_t);
+
   void makeNamespaceStructure(CommandData *, uint32_t, bool = false);
   void makeNamespaceList(CommandData *, uint32_t, bool = false);
+  void makeNamespaceDescriptor(CommandData *, uint32_t);
   void makeControllerStructure(CommandData *);
   void makeControllerList(CommandData *, ControllerID, uint32_t = NSID_ALL);
 
@@ -32,7 +35,7 @@ class Identify : public Command {
  public:
   Identify(ObjectData &, Subsystem *);
 
-  void setRequest(ControllerData *, SQContext *) override;
+  void setRequest(ControllerData *, AbstractNamespace *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

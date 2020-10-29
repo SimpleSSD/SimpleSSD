@@ -21,7 +21,8 @@ void CreateCQ::createDone(uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void CreateCQ::setRequest(ControllerData *cdata, SQContext *req) {
+void CreateCQ::setRequest(ControllerData *cdata, AbstractNamespace *,
+                          SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

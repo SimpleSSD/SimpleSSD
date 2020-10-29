@@ -47,7 +47,7 @@ class Compare : public Command {
  public:
   Compare(ObjectData &, Subsystem *);
 
-  void setRequest(ControllerData *, SQContext *) override;
+  void setRequest(ControllerData *, AbstractNamespace *, SQContext *) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

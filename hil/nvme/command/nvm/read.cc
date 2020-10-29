@@ -51,7 +51,8 @@ void Read::completion(uint64_t now, uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void Read::setRequest(ControllerData *cdata, SQContext *req) {
+void Read::setRequest(ControllerData *cdata, AbstractNamespace *ns,
+                      SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
@@ -72,12 +73,13 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   tag->createResponse();
 
   // Check namespace
-  auto nslist = subsystem->getNamespaceList();
-  auto ns = nslist.find(nsid);
-
-  if (UNLIKELY(ns == nslist.end())) {
-    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                         GenericCommandStatusCode::Invalid_Field);
+  if (UNLIKELY(ns == nullptr ||
+               !ns->validateCommand(cdata->controller->getControllerID(), req,
+                                    tag->cqc))) {
+    if (UNLIKELY(ns == nullptr)) {
+      tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                           GenericCommandStatusCode::Invalid_Field);
+    }
 
     subsystem->complete(tag);
 
@@ -85,7 +87,7 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   }
 
   // Prepare request
-  uint32_t lbaSize = ns->second->getInfo()->lbaSize;
+  uint32_t lbaSize = ns->getInfo()->lbaSize;
 
   tag->initRequest(eventCompletion);
   tag->request.setAddress(slba, nlb, lbaSize);
@@ -94,7 +96,7 @@ void Read::setRequest(ControllerData *cdata, SQContext *req) {
   tag->createDMAEngine(nlb * lbaSize, eventDMAInitDone);
 
   // Handle disk
-  auto disk = ns->second->getDisk();
+  auto disk = ns->getDisk();
 
   if (disk) {
     // Allocate buffer

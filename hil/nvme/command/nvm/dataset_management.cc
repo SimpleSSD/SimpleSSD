@@ -80,7 +80,8 @@ void DatasetManagement::trimDone(uint64_t now, uint64_t gcid) {
   }
 }
 
-void DatasetManagement::setRequest(ControllerData *cdata, SQContext *req) {
+void DatasetManagement::setRequest(ControllerData *cdata, AbstractNamespace *ns,
+                                   SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
@@ -104,12 +105,13 @@ void DatasetManagement::setRequest(ControllerData *cdata, SQContext *req) {
   debugprint_command(tag, "NVM     | Dataset Management | NSID %u | Deallocate",
                      nsid);
 
-  auto nslist = subsystem->getNamespaceList();
-  auto ns = nslist.find(nsid);
-
-  if (UNLIKELY(ns == nslist.end())) {
-    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                         GenericCommandStatusCode::Invalid_Field);
+  if (UNLIKELY(ns == nullptr ||
+               !ns->validateCommand(cdata->controller->getControllerID(), req,
+                                    tag->cqc))) {
+    if (UNLIKELY(ns == nullptr)) {
+      tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                           GenericCommandStatusCode::Invalid_Field);
+    }
 
     subsystem->complete(tag);
 

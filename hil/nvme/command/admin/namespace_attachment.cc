@@ -131,7 +131,8 @@ void NamespaceAttachment::dmaComplete(uint64_t gcid) {
   }
 }
 
-void NamespaceAttachment::setRequest(ControllerData *cdata, SQContext *req) {
+void NamespaceAttachment::setRequest(ControllerData *cdata, AbstractNamespace *,
+                                     SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

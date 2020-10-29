@@ -18,6 +18,14 @@ Identify::Identify(ObjectData &o, Subsystem *s) : Command(o, s) {
                   "HIL::NVMe::Identify::dmaCompleteEvent");
 }
 
+void Identify::makeEUI64(uint8_t *buffer, uint32_t nsid) {
+  char eui[9] = "";
+
+  snprintf(eui, 8, "%08x", nsid);
+
+  memcpy(buffer, eui, 8);
+}
+
 void Identify::makeNamespaceStructure(CommandData *tag, uint32_t nsid,
                                       bool force) {
   auto ctrlID = tag->controller->getControllerID();
@@ -88,6 +96,49 @@ void Identify::makeNamespaceStructure(CommandData *tag, uint32_t nsid,
 
       // LBA Formats
       memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
+
+      // EUI64
+      makeEUI64(buffer + 120, nsid);
+    }
+    else {
+      // Namespace not attached
+      tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                           CommandSpecificStatusCode::NamespaceNotAttached);
+    }
+  }
+}
+
+void Identify::makeNamespaceDescriptor(CommandData *tag, uint32_t nsid) {
+  auto ctrlID = tag->controller->getControllerID();
+  uint8_t *buffer = tag->buffer.data();
+
+  if (nsid == NSID_ALL) {
+    // Invalid namespace ID
+    tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::Invalid_Format);
+  }
+  else {
+    auto attachList = subsystem->getAttachment(ctrlID);
+    auto iter = attachList->find(nsid);
+
+    if (iter != attachList->end()) {
+      auto &namespaceList = subsystem->getNamespaceList();
+      auto ns = namespaceList.find(nsid);
+
+      if (ns == namespaceList.end()) {
+        // Namespace not exists
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::Invalid_Format);
+
+        return;
+      }
+
+      auto info = ns->second->getInfo();
+      auto pHIL = subsystem->getHIL();
+      auto logicalPageSize = subsystem->getLPNSize();
+
+      // Namespace Size
+      memcpy(buffer + 0, &info->size, 8);
     }
     else {
       // Namespace not attached
@@ -653,7 +704,8 @@ void Identify::dmaComplete(uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void Identify::setRequest(ControllerData *cdata, SQContext *req) {
+void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
+                          SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 

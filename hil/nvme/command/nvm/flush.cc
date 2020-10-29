@@ -26,7 +26,8 @@ void Flush::completion(uint64_t now, uint64_t gcid) {
   subsystem->complete(tag);
 }
 
-void Flush::setRequest(ControllerData *cdata, SQContext *req) {
+void Flush::setRequest(ControllerData *cdata, AbstractNamespace *ns,
+                       SQContext *req) {
   auto tag = createTag(cdata, req);
   auto entry = req->getData();
 
@@ -52,19 +53,20 @@ void Flush::setRequest(ControllerData *cdata, SQContext *req) {
     length = last;
   }
   else {
-    auto nslist = subsystem->getNamespaceList();
-    auto ns = nslist.find(nsid);
-
-    if (UNLIKELY(ns == nslist.end())) {
-      tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
-                           GenericCommandStatusCode::Invalid_Field);
+    if (UNLIKELY(ns == nullptr ||
+                 !ns->validateCommand(cdata->controller->getControllerID(), req,
+                                      tag->cqc))) {
+      if (UNLIKELY(ns == nullptr)) {
+        tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                             GenericCommandStatusCode::Invalid_Field);
+      }
 
       subsystem->complete(tag);
 
       return;
     }
 
-    auto range = ns->second->getInfo()->namespaceRange;
+    auto range = ns->getInfo()->namespaceRange;
 
     offset = range.first;
     length = range.second;

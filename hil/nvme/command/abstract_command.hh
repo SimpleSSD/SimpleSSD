@@ -31,6 +31,7 @@ namespace SimpleSSD::HIL::NVMe {
 
 class Subsystem;
 class Controller;
+class AbstractNamespace;
 class Arbitrator;
 class SQContext;
 class CQContext;
@@ -73,7 +74,8 @@ class Command : public Object {
   Command(const Command &) = delete;
   Command(Command &&) noexcept = delete;
 
-  virtual void setRequest(ControllerData *, SQContext *) = 0;
+  virtual void setRequest(ControllerData *, AbstractNamespace *,
+                          SQContext *) = 0;
   void completeRequest(CommandTag);
 
   void createCheckpoint(std::ostream &) const noexcept override;
