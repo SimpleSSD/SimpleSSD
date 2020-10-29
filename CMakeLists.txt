@@ -133,6 +133,7 @@ set(SRC_HIL_NONE
   hil/none/subsystem.cc
 )
 set(SRC_HIL_NVME
+  hil/nvme/abstract_namespace.cc
   hil/nvme/controller.cc
   hil/nvme/namespace.cc
   hil/nvme/queue_arbitrator.cc
