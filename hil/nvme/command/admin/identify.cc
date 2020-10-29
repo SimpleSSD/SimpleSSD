@@ -134,11 +134,17 @@ void Identify::makeNamespaceDescriptor(CommandData *tag, uint32_t nsid) {
       }
 
       auto info = ns->second->getInfo();
-      auto pHIL = subsystem->getHIL();
-      auto logicalPageSize = subsystem->getLPNSize();
 
-      // Namespace Size
-      memcpy(buffer + 0, &info->size, 8);
+      // EUI64
+      buffer[0] = 0x01;
+      buffer[1] = 8;
+
+      makeEUI64(buffer + 4, nsid);
+
+      // CSI
+      buffer[12] = 0x04;
+      buffer[13] = 1;
+      buffer[16] = info->commandSetIdentifier;
     }
     else {
       // Namespace not attached
@@ -741,7 +747,7 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
 
       break;
     case IdentifyStructure::NamespaceIdentificationDescriptorList:
-      // Return zero-filled data
+      makeNamespaceDescriptor(tag, nsid);
 
       break;
     case IdentifyStructure::NVMSetList:
