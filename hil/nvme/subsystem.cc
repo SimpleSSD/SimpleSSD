@@ -297,6 +297,7 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
   uint8_t opcode = sqc->getData()->dword0.opcode;
   uint32_t nsid = sqc->getData()->namespaceID;
   AbstractNamespace *ns = nullptr;
+  CommandSetIdentifier csi = CommandSetIdentifier::NVM;
 
   // Get Namespace
   if (nsid != NSID_ALL && nsid != NSID_NONE) {
@@ -304,10 +305,21 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
 
     if (LIKELY(iter != namespaceList.end())) {
       ns = iter->second;
+      csi = (CommandSetIdentifier)ns->getInfo()->commandSetIdentifier;
     }
   }
 
   if (isAdmin) {
+    if (csi == CommandSetIdentifier::NVM) {
+      // NVM Command Set only commands
+      switch ((AdminCommand)opcode) {
+        case AdminCommand::FormatNVM:
+          commandFormatNVM->setRequest(cdata, ns, sqc);
+
+          return true;
+      }
+    }
+
     switch ((AdminCommand)opcode) {
       case AdminCommand::DeleteIOSQ:
         commandDeleteSQ->setRequest(cdata, ns, sqc);
@@ -345,14 +357,38 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
       case AdminCommand::NamespaceAttachment:
         commandNamespaceAttachment->setRequest(cdata, ns, sqc);
         break;
-      case AdminCommand::FormatNVM:
-        commandFormatNVM->setRequest(cdata, ns, sqc);
-        break;
       default:
         return false;
     }
   }
   else {
+    if (csi == CommandSetIdentifier::KeyValue) {
+      switch ((IOCommand)opcode) {
+        case IOCommand::Store:
+        case IOCommand::Retrieve:
+        case IOCommand::Delete:
+        case IOCommand::Exist:
+        case IOCommand::List:
+          panic("Key Value commands not implemented.");
+
+          return true;
+        case IOCommand::Compare:
+        case IOCommand::DatasetManagement:
+          // Not supported in Key Value Command Set
+          return false;
+      }
+    }
+    else if (csi == CommandSetIdentifier::ZonedNamespace) {
+      switch ((IOCommand)opcode) {
+        case IOCommand::ZoneManagementSend:
+        case IOCommand::ZoneManagementReceive:
+        case IOCommand::ZoneAppend:
+          panic("Zoned namespace commands not implemented.");
+
+          return true;
+      }
+    }
+
     switch ((IOCommand)opcode) {
       case IOCommand::Flush:
         commandFlush->setRequest(cdata, ns, sqc);
