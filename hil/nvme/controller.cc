@@ -54,11 +54,11 @@ Controller::Controller(ObjectData &o, ControllerID id, Subsystem *p,
   // [51:48] MPSMIN: Memory Page Size Minimum           : 2^12 Bytes
   // [47:46] Reserved
   // [45:45] BPS   : Boot Partition Supported           : No
-  // [44:37] CSS   : Command Sets Supported             : NVM command set
+  // [44:37] CSS   : Command Sets Supported             : NVM + more
   // [36:36] NSSRS : NVM Subsystem Reset Supported      : No
   // [35:32] DSTRD : Doorbell Stride                    : 0 (4 bytes)
   registers.controllerCapabilities =
-      0b000000'0'0'0010'0000'00'0'00000001'0'0000ull << 32;
+      0b000000'0'0'0010'0000'00'0'01000001'0'0000ull << 32;
 
   // [Bits ] Name  : Description                        : Current Setting
   // [31:24] TO    : Timeout                            : 40 * 500ms
@@ -112,6 +112,10 @@ void Controller::shutdownComplete() {
 
 ControllerData *Controller::getControllerData() {
   return &controllerData;
+}
+
+uint8_t Controller::getIOCommandSetSelected() {
+  return registers.cc.css;
 }
 
 uint64_t Controller::getCapabilities() {

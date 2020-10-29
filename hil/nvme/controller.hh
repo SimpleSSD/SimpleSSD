@@ -134,6 +134,7 @@ class Controller : public AbstractController {
   ControllerData *getControllerData();
 
   // Command
+  uint8_t getIOCommandSetSelected();
   uint64_t getCapabilities();
   void getQueueStride(uint64_t &, uint64_t &);
   Feature *getFeature();
