@@ -21,7 +21,7 @@ Identify::Identify(ObjectData &o, Subsystem *s) : Command(o, s) {
 void Identify::makeEUI64(uint8_t *buffer, uint32_t nsid) {
   char eui[9] = "";
 
-  snprintf(eui, 8, "%08x", nsid);
+  snprintf(eui, 9, "%08x", nsid);
 
   memcpy(buffer, eui, 8);
 }

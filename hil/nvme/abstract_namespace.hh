@@ -12,6 +12,8 @@
 
 #include <set>
 
+#include "hil/nvme/def.hh"
+#include "hil/nvme/queue_arbitrator.hh"
 #include "sim/abstract_controller.hh"
 
 namespace SimpleSSD {

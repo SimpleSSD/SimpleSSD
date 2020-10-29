@@ -7,7 +7,6 @@
 
 #include "hil/nvme/abstract_namespace.hh"
 
-#include "hil/nvme/def.hh"
 #include "util/disk.hh"
 
 namespace SimpleSSD::HIL::NVMe {

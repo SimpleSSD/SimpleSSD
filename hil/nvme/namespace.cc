@@ -23,7 +23,6 @@ bool Namespace::validateCommand(ControllerID ctrlid, SQContext *sqc,
   bool isAdmin = sqc->getSQID() == 0;
   uint8_t opcode = sqc->getData()->dword0.opcode;
   uint32_t target = sqc->getData()->namespaceID;
-  uint16_t ctrlid = sqc->getCCID();
 
   // Attachment checking
   if (!isAdmin || (isAdmin && opcode == (uint8_t)AdminCommand::FormatNVM)) {
