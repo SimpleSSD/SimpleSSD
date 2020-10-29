@@ -23,10 +23,13 @@ class Identify : public Command {
 
   void makeEUI64(uint8_t *, uint32_t);
 
-  void makeNamespaceStructure(CommandData *, uint32_t, bool = false);
-  void makeNamespaceList(CommandData *, uint32_t, bool = false);
+  void makeNamespaceStructure(CommandData *, CommandSetIdentifier, uint32_t,
+                              bool = false);
+  void makeNamespaceList(CommandData *, CommandSetIdentifier, uint32_t,
+                         bool = false);
   void makeNamespaceDescriptor(CommandData *, uint32_t);
-  void makeControllerStructure(CommandData *);
+  void makeControllerStructure(CommandData *, CommandSetIdentifier);
+  void makeCommonControllerStructure(CommandData *);
   void makeControllerList(CommandData *, ControllerID, uint32_t = NSID_ALL);
 
   void dmaInitDone(uint64_t);

@@ -26,20 +26,34 @@ void Identify::makeEUI64(uint8_t *buffer, uint32_t nsid) {
   memcpy(buffer, eui, 8);
 }
 
-void Identify::makeNamespaceStructure(CommandData *tag, uint32_t nsid,
+void Identify::makeNamespaceStructure(CommandData *tag,
+                                      CommandSetIdentifier csi, uint32_t nsid,
                                       bool force) {
   auto ctrlID = tag->controller->getControllerID();
   uint8_t *buffer = tag->buffer.data();
 
   if (nsid == NSID_ALL) {
-    // We support Namespace Management, so return common namespace info,
-    // especially LBA format information.
+    switch (csi) {
+      case CommandSetIdentifier::NVM:
+        // We support Namespace Management, so return common namespace info,
+        // especially LBA format information.
 
-    // Number of LBA Formats
-    buffer[25] = nLBAFormat - 1;  // 0's based
+        // Number of LBA Formats
+        buffer[25] = nLBAFormat - 1;  // 0's based
 
-    // LBA Formats
-    memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
+        // LBA Formats
+        memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
+
+        break;
+      case CommandSetIdentifier::KeyValue:
+      case CommandSetIdentifier::ZonedNamespace:
+        warn("Current specification does not define how to create KV/Zoned "
+             "namespace.");
+
+        break;
+      default:
+        break;
+    }
   }
   else {
     auto attachList = subsystem->getAttachment(ctrlID);
@@ -58,47 +72,133 @@ void Identify::makeNamespaceStructure(CommandData *tag, uint32_t nsid,
       }
 
       auto info = ns->second->getInfo();
+
+      if (info->commandSetIdentifier != (uint8_t)csi) {
+        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                             CommandSpecificStatusCode::Invalid_IOCommandSet);
+
+        return;
+      }
+
       auto pHIL = subsystem->getHIL();
       auto logicalPageSize = subsystem->getLPNSize();
 
-      // Namespace Size
-      memcpy(buffer + 0, &info->size, 8);
+      switch (csi) {
+        case CommandSetIdentifier::NVM:
+          // Namespace Size
+          memcpy(buffer + 0, &info->size, 8);
 
-      // Namespace Capacity
-      memcpy(buffer + 8, &info->capacity, 8);
+          // Namespace Capacity
+          memcpy(buffer + 8, &info->capacity, 8);
 
-      // Namespace Utilization
-      info->utilization = pHIL->getPageUsage(info->namespaceRange.first,
-                                             info->namespaceRange.second);
-      info->utilization *= logicalPageSize;
-      info->utilization /= info->lbaSize;
+          // Namespace Utilization
+          info->utilization = pHIL->getPageUsage(info->namespaceRange.first,
+                                                 info->namespaceRange.second);
+          info->utilization *= logicalPageSize;
+          info->utilization /= info->lbaSize;
 
-      memcpy(buffer + 16, &info->utilization, 8);
+          memcpy(buffer + 16, &info->utilization, 8);
 
-      // Namespace Features
-      buffer[24] = 0x04;  // Trim supported
+          // Namespace Features
+          buffer[24] = 0x04;  // Trim supported
 
-      // Number of LBA Formats
-      buffer[25] = nLBAFormat - 1;  // 0's based
+          // Number of LBA Formats
+          buffer[25] = nLBAFormat - 1;  // 0's based
 
-      // Formatted LBA Size
-      buffer[26] = info->lbaFormatIndex;
+          // Formatted LBA Size
+          buffer[26] = info->lbaFormatIndex;
 
-      // End-to-end Data Protection Capabilities
-      buffer[28] = info->dataProtectionSettings;
+          // End-to-end Data Protection Capabilities
+          buffer[28] = info->dataProtectionSettings;
 
-      // Namespace Multi-path I/O and Namespace Sharing Capabilities
-      buffer[30] = info->namespaceSharingCapabilities;
+          // Namespace Multi-path I/O and Namespace Sharing Capabilities
+          buffer[30] = info->namespaceSharingCapabilities;
 
-      // NVM capacity
-      memcpy(buffer + 48, &info->sizeInByteL, 8);
-      memcpy(buffer + 56, &info->sizeInByteH, 8);
+          // NVM capacity
+          memcpy(buffer + 48, &info->sizeInByteL, 8);
+          memcpy(buffer + 56, &info->sizeInByteH, 8);
 
-      // LBA Formats
-      memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
+          // ANA Group Identifier
+          *(uint32_t *)(buffer + 92) = info->anaGroupIdentifier;
 
-      // EUI64
-      makeEUI64(buffer + 120, nsid);
+          // NVM Set Identifier
+          *(uint32_t *)(buffer + 100) = info->nvmSetIdentifier;
+
+          // LBA Formats
+          memcpy(buffer + 128, lbaFormat, 4 * nLBAFormat);
+
+          // EUI64
+          makeEUI64(buffer + 120, nsid);
+
+          break;
+        case CommandSetIdentifier::KeyValue:
+          // Namespace Size
+          memcpy(buffer + 0, &info->size, 8);
+
+          // Namespace Utilization
+          info->utilization = pHIL->getPageUsage(info->namespaceRange.first,
+                                                 info->namespaceRange.second);
+          info->utilization *= logicalPageSize;
+          info->utilization /= info->lbaSize;
+
+          memcpy(buffer + 16, &info->utilization, 8);
+
+          // Namespace Features
+          buffer[24] = 0x00;
+
+          // Number of KV Formats
+          buffer[25] = 0x00;
+
+          // Namespace Multi-path I/O and Namespace Sharing Capabilities
+          buffer[26] = info->namespaceSharingCapabilities;
+
+          // ANA Group Identifier
+          *(uint32_t *)(buffer + 36) = info->anaGroupIdentifier;
+
+          // NVM Set Identifier
+          *(uint32_t *)(buffer + 44) = info->nvmSetIdentifier;
+
+          // EUI64
+          makeEUI64(buffer + 64, nsid);
+
+          // KV Formats
+          *(uint16_t *)(buffer + 72 + 16 * info->lbaFormatIndex) =
+              info->kvKeySize;
+          *(uint32_t *)(buffer + 76 + 16 * info->lbaFormatIndex) =
+              info->kvValueSize;
+          *(uint32_t *)(buffer + 80 + 16 * info->lbaFormatIndex) =
+              info->kvMaxKeys;
+
+          break;
+        case CommandSetIdentifier::ZonedNamespace:
+          // Zone Operation Characteristics
+          buffer[0] = 0x00;
+          buffer[1] = 0x00;
+
+          // Optional Zoned Command Support
+          buffer[2] = 0x01;
+          buffer[3] = 0x00;
+
+          // Maximum Active Resources
+          *(uint32_t *)(buffer + 4) = info->znsMaxActiveZones - 1;
+
+          // Maximum Open Resources
+          *(uint32_t *)(buffer + 8) = info->znsMaxOpenZones - 1;
+
+          // Reset Recommanded Limit
+          *(uint32_t *)(buffer + 12) = 0;
+
+          // Finish Recommended Limit
+          *(uint32_t *)(buffer + 16) = 0;
+
+          // LBA Format Extension
+          *(uint64_t *)(buffer + 2816 + 16 * info->lbaFormatIndex) =
+              info->znsZoneSize;
+
+          break;
+        default:
+          break;
+      }
     }
     else {
       // Namespace not attached
@@ -154,7 +254,8 @@ void Identify::makeNamespaceDescriptor(CommandData *tag, uint32_t nsid) {
   }
 }
 
-void Identify::makeNamespaceList(CommandData *tag, uint32_t nsid, bool force) {
+void Identify::makeNamespaceList(CommandData *tag, CommandSetIdentifier csi,
+                                 uint32_t nsid, bool force) {
   uint16_t idx = 0;
   uint8_t *buffer = tag->buffer.data();
 
@@ -164,10 +265,15 @@ void Identify::makeNamespaceList(CommandData *tag, uint32_t nsid, bool force) {
                          GenericCommandStatusCode::Invalid_Field);
   }
   else {
-    if (force) {
-      auto &namespaceList = subsystem->getNamespaceList();
+    auto &namespaceList = subsystem->getNamespaceList();
 
+    if (force) {
       for (auto &iter : namespaceList) {
+        if (csi != CommandSetIdentifier::NVM &&
+            iter.second->getInfo()->commandSetIdentifier != (uint8_t)csi) {
+          continue;
+        }
+
         ((uint32_t *)buffer)[idx++] = iter.first;
       }
     }
@@ -181,13 +287,40 @@ void Identify::makeNamespaceList(CommandData *tag, uint32_t nsid, bool force) {
       }
 
       for (auto iter = attachList->begin(); iter != attachList->end(); ++iter) {
+        auto ns = namespaceList.find(*iter);
+
+        if (csi != CommandSetIdentifier::NVM &&
+            ns->second->getInfo()->commandSetIdentifier != (uint8_t)csi) {
+          continue;
+        }
+
         ((uint32_t *)buffer)[idx++] = *iter;
       }
     }
   }
 }
 
-void Identify::makeControllerStructure(CommandData *tag) {
+void Identify::makeControllerStructure(CommandData *tag,
+                                       CommandSetIdentifier csi) {
+  uint8_t *buffer = tag->buffer.data();
+
+  switch (csi) {
+    case CommandSetIdentifier::NVM:
+      makeCommonControllerStructure(tag);
+      break;
+    case CommandSetIdentifier::KeyValue:
+      break;
+    case CommandSetIdentifier::ZonedNamespace:
+      // Zone Append Size Limit
+      buffer[0] = 0x00;
+
+      break;
+    default:
+      break;
+  }
+}
+
+void Identify::makeCommonControllerStructure(CommandData *tag) {
   uint16_t vid, ssvid;
   uint16_t id;
   uint64_t totalSize;
@@ -719,31 +852,55 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
   uint32_t nsid = entry->namespaceID;
   uint8_t cns = entry->dword10 & 0xFF;
   uint16_t cntid = (entry->dword10 & 0xFFFF0000) >> 16;
+  uint8_t csi = entry->dword11 >> 24;
   uint16_t setid = entry->dword11 & 0xFFFF;
   uint8_t uuid = entry->dword14 & 0x7F;
 
-  debugprint_command(
-      tag,
-      "ADMIN   | Identify | CNS %u | CNTID %u | NSID %u | NVMSET %u | UUID %u",
-      cns, cntid, nsid, setid, uuid);
+  debugprint_command(tag,
+                     "ADMIN   | Identify | CNS %u | CNTID %u | CSI %u | NSID "
+                     "%u | NVMSET %u | UUID %u",
+                     cns, cntid, csi, nsid, setid, uuid);
 
   // Make response
   tag->createResponse();
+
+  if (cns > 2) {
+    tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                         CommandSpecificStatusCode::Invalid_IOCommandSet);
+
+    goto end;
+  }
 
   // Make buffer
   tag->buffer.resize(4096);
 
   switch ((IdentifyStructure)cns) {
     case IdentifyStructure::Namespace:
-      makeNamespaceStructure(tag, nsid);
+      makeNamespaceStructure(tag, CommandSetIdentifier::NVM, nsid);
+
+      break;
+    case IdentifyStructure::IOCommandSetSpecificNamespace:
+      if (csi > 0) {
+        makeNamespaceStructure(tag, (CommandSetIdentifier)csi, nsid);
+      }
 
       break;
     case IdentifyStructure::Controller:
-      makeControllerStructure(tag);
+      makeControllerStructure(tag, CommandSetIdentifier::NVM);
+
+      break;
+    case IdentifyStructure::IOCommandSetSpecificController:
+      if (csi > 0) {
+        makeControllerStructure(tag, (CommandSetIdentifier)csi);
+      }
 
       break;
     case IdentifyStructure::ActiveNamespaceList:
-      makeNamespaceList(tag, nsid);
+      makeNamespaceList(tag, CommandSetIdentifier::NVM, nsid);
+
+      break;
+    case IdentifyStructure::IOCommandSetSpecificActiveNamespaceList:
+      makeNamespaceList(tag, (CommandSetIdentifier)csi, nsid);
 
       break;
     case IdentifyStructure::NamespaceIdentificationDescriptorList:
@@ -753,11 +910,21 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
     case IdentifyStructure::NVMSetList:
       break;
     case IdentifyStructure::AllocatedNamespaceList:
-      makeNamespaceList(tag, nsid, true);
+      makeNamespaceList(tag, CommandSetIdentifier::NVM, nsid, true);
+
+      break;
+    case IdentifyStructure::IOCommandSetSpecificAllocatedNamespaceList:
+      makeNamespaceList(tag, (CommandSetIdentifier)csi, nsid, true);
 
       break;
     case IdentifyStructure::AllocatedNamespace:
-      makeNamespaceStructure(tag, nsid, true);
+      makeNamespaceStructure(tag, CommandSetIdentifier::NVM, nsid, true);
+
+      break;
+    case IdentifyStructure::IOCommandSetSpecificAllocatedNamespace:
+      if (csi > 0) {
+        makeNamespaceStructure(tag, (CommandSetIdentifier)csi, nsid, true);
+      }
 
       break;
     case IdentifyStructure::AttachedControllerList:
@@ -766,6 +933,11 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
       break;
     case IdentifyStructure::ControllerList:
       makeControllerList(tag, cntid);
+
+      break;
+    case IdentifyStructure::IOCommandSet:
+      // SimpleSSD always support any I/O command set combination
+      tag->buffer[0] = 0x07;
 
       break;
     case IdentifyStructure::PrimaryControllerCapabilities:
@@ -779,6 +951,7 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
       break;
   }
 
+end:
   if (tag->cqc->isSuccess()) {
     // Data generated successfully. DMA data
     tag->createDMAEngine(4096, dmaInitEvent);

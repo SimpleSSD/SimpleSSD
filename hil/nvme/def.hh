@@ -199,7 +199,7 @@ enum class IdentifyStructure : uint8_t {
   ActiveNamespaceList,
   NamespaceIdentificationDescriptorList,  //!< For specified NSID
   NVMSetList,
-  IOCommandSetSpecificNamespaceWithCSI,
+  IOCommandSetSpecificNamespace,
   IOCommandSetSpecificController,
   IOCommandSetSpecificActiveNamespaceList,
   AllocatedNamespaceList = 0x10,
@@ -210,8 +210,8 @@ enum class IdentifyStructure : uint8_t {
   SecondaryControllerList,
   NamespaceGranularityList,
   UUIDList,
-  IOCommandSetSpecificAllocatedNamespace = 0x1A,
-  IOCommandSetSpecificNamespace,
+  IOCommandSetSpecificAllocatedNamespaceList = 0x1A,
+  IOCommandSetSpecificAllocatedNamespace,
   IOCommandSet,
 };
 
@@ -382,7 +382,9 @@ enum class CommandSpecificStatusCode : uint8_t {
   Invalid_ANAGroupIdentifier,
   ANAAttachFailed,
   IOCommandSetNotSupported = 0x29,
-  IOCommandSetNotEnabled = 0x2A,
+  IOCommandSetNotEnabled,
+  IOCommandSetCombinationRejected,
+  Invalid_IOCommandSet,
 
   /** NVM Command Errors **/
   ConflictingAttributes = 0x80,
