@@ -33,6 +33,7 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
   info.namespaceSharingCapabilities = buffer[30];
   info.anaGroupIdentifier = *(uint32_t *)(buffer + 92);
   info.nvmSetIdentifier = *(uint16_t *)(buffer + 100);
+  info.commandSetIdentifier = tag->sqc->getData()->dword11 >> 24;
 
   // Execute
   uint32_t nsid = NSID_NONE;
@@ -59,6 +60,10 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
           false, false, StatusType::CommandSpecificStatus,
           CommandSpecificStatusCode::NamespaceInsufficientCapacity);
 
+      break;
+    case 4:
+      tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
+                           CommandSpecificStatusCode::IOCommandSetNotSupported);
       break;
   }
 
