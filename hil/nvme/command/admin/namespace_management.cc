@@ -35,6 +35,10 @@ void NamespaceManagement::dmaComplete(uint64_t gcid) {
   info.nvmSetIdentifier = *(uint16_t *)(buffer + 100);
   info.commandSetIdentifier = tag->sqc->getData()->dword11 >> 24;
 
+  panic_if(info.commandSetIdentifier != 0,
+           "Current specification does not define how to create KV/Zoned "
+           "namespace.");
+
   if (tag->controller->getIOCommandSetSelected() != 6 &&
       info.commandSetIdentifier != 0) {
     // Non-NVM command set selected, but controller only supports NVM
