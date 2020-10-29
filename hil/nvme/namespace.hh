@@ -10,114 +10,22 @@
 #ifndef __SIMPLESSD_HIL_NVME_NAMESPACE_HH__
 #define __SIMPLESSD_HIL_NVME_NAMESPACE_HH__
 
-#include <set>
+#include "hil/nvme/abstract_namespace.hh"
 
-#include "hil/convert.hh"
-#include "sim/abstract_controller.hh"
-#include "sim/object.hh"
+namespace SimpleSSD ::HIL::NVMe {
 
-namespace SimpleSSD {
-
-class Disk;
-
-namespace HIL::NVMe {
-
-class Subsystem;
-
-//!< LPN Range. first = slpn, second = nlp.
-using LPNRange = std::pair<LPN, uint64_t>;
-
-class NamespaceInformation {
+class Namespace : public AbstractNamespace {
  public:
-  uint64_t size;                         //!< NSZE
-  uint64_t capacity;                     //!< NCAP
-  uint64_t utilization;                  //!< NUSE
-  uint64_t sizeInByteL;                  //<! NVMCAPL
-  uint64_t sizeInByteH;                  //<! NVMCAPH
-  uint8_t lbaFormatIndex;                //!< FLBAS
-  uint8_t dataProtectionSettings;        //!< DPS
-  uint8_t namespaceSharingCapabilities;  //!< NMIC
-  uint32_t anaGroupIdentifier;           //!< ANAGRPID
-  uint16_t nvmSetIdentifier;             //!< NVMSETID
-
-  uint64_t readBytes;
-  uint64_t writeBytes;
-  uint32_t lbaSize;
-  uint64_t lpnSize;
-  LPNRange namespaceRange;
-
-  NamespaceInformation();
-};
-
-union HealthInfo {
-  uint8_t data[0x200];
-  struct {
-    uint8_t status;
-    uint16_t temperature;
-    uint8_t availableSpare;
-    uint8_t spareThreshold;
-    uint8_t lifeUsed;
-    uint8_t reserved[26];
-    uint64_t readL;
-    uint64_t readH;
-    uint64_t writeL;
-    uint64_t writeH;
-    uint64_t readCommandL;
-    uint64_t readCommandH;
-    uint64_t writeCommandL;
-    uint64_t writeCommandH;
-  };
-
-  HealthInfo();
-};
-
-class Namespace : public Object {
- private:
-  // Subsystem *subsystem;
-  NamespaceInformation nsinfo;
-  HealthInfo health;
-
-  bool inited;
-
-  uint32_t nsid;
-  std::set<ControllerID> attachList;
-
-  Disk *disk;
-
- public:
-  Namespace(ObjectData &, Subsystem *);
+  Namespace(ObjectData &);
   ~Namespace();
 
-  uint32_t getNSID();
+  CommandSetIdentifier getCommandSetIdentifier() override {
+    return CommandSetIdentifier::NVM;
+  };
 
-  bool attach(ControllerID);
-  bool detach(ControllerID);
-  bool isAttached();
-  bool isAttached(ControllerID);
-
-  NamespaceInformation *getInfo();
-  void setInfo(uint32_t, NamespaceInformation *, Config::Disk *);
-
-  HealthInfo *getHealth();
-
-  const std::set<ControllerID> &getAttachment() const;
-
-  void format();
-  void read(uint64_t);
-  void write(uint64_t);
-
-  Disk *getDisk();
-
-  void getStatList(std::vector<Stat> &, std::string) noexcept override;
-  void getStatValues(std::vector<double> &) noexcept override;
-  void resetStatValues() noexcept override;
-
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  bool validateCommand(ControllerID, SQContext *, CQContext *) override;
 };
 
-}  // namespace HIL::NVMe
-
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::HIL::NVMe
 
 #endif
