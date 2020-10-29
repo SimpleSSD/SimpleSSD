@@ -111,22 +111,25 @@ enum class AdminCommand : uint8_t {
   NVMeMISend = 0x1D,
   NVMeMIReceive = 0x1E,
   DoorbellBufferConfig = 0x7C,
+
+  /** NVM Command Set Specific Admin Command **/
   FormatNVM = 0x80,
   SecuritySend = 0x81,
   SecurityReceive = 0x82,
   Sanitize = 0x84,
   GetLBAStatus = 0x86,
 
-  // OpenChannel SSD 1.2
+  /** OpenChannel SSD 1.2 **/
   DeviceIdentification = 0xE2,
   SetBadBlockTable = 0xF1,
   GetBadBlockTable = 0xF2,
 
-  // OpenChannel SSD 2.0
+  /** OpenChannel SSD 2.0 **/
   Geometry = 0xE2
 };
 
-enum class NVMCommand : uint8_t {
+enum class IOCommand : uint8_t {
+  /** NVM Command Set **/
   Flush = 0x00,
   Write = 0x01,
   Read = 0x02,
@@ -140,14 +143,26 @@ enum class NVMCommand : uint8_t {
   ReservationAcquire = 0x11,
   ReservationRelease = 0x15,
 
-  // OpenChannel SSD 1.2
+  /** Key Value Command Set **/
+  Store = 0x01,     // Write
+  Retrieve = 0x02,  // Read
+  Delete = 0x10,
+  Exist = 0x14,
+  List = 0x06,
+
+  /** Zoned Namespace Command Set **/
+  ZoneManagementSend = 0x79,
+  ZoneManagementReceive = 0x7A,
+  ZoneAppend = 0x7D,
+
+  /** OpenChannel SSD 1.2 **/
   PhysicalBlockErase = 0x90,
   PhysicalPageWrite,
   PhysicalPageRead,
   PhysicalPageRawWrite = 0x95,
   PhysicalPageRawRead,
 
-  // OpenChannel SSD 2.0
+  /** OpenChannel SSD 2.0 **/
   VectorChunkReset = 0x90,
   VectorChunkWrite,
   VectorChunkRead,
@@ -184,6 +199,9 @@ enum class IdentifyStructure : uint8_t {
   ActiveNamespaceList,
   NamespaceIdentificationDescriptorList,  //!< For specified NSID
   NVMSetList,
+  IOCommandSetSpecificNamespaceWithCSI,
+  IOCommandSetSpecificController,
+  IOCommandSetSpecificActiveNamespaceList,
   AllocatedNamespaceList = 0x10,
   AllocatedNamespace,
   AttachedControllerList,  //!< For specified NSID
@@ -192,6 +210,15 @@ enum class IdentifyStructure : uint8_t {
   SecondaryControllerList,
   NamespaceGranularityList,
   UUIDList,
+  IOCommandSetSpecificAllocatedNamespace = 0x1A,
+  IOCommandSetSpecificNamespace,
+  IOCommandSet,
+};
+
+enum class CommandSetIdentifier : uint8_t {
+  NVM,
+  KeyValue,
+  ZonedNamespace,
 };
 
 enum class FeatureID : uint8_t {
@@ -261,12 +288,6 @@ enum class NoticeCode : uint8_t {
   EnduranceGroupEventAggregateLogPageChange,
 };
 
-enum class NVMCommandSetSpecificStatusCode : uint8_t {
-  ReservationLogPageAvailable,
-  SanitizeOperationCompleted,
-  SanitizeOperationCompletedWithUnexpectedDeallocation,
-};
-
 enum class StatusType : uint8_t {
   GenericCommandStatus,
   CommandSpecificStatus,
@@ -312,7 +333,7 @@ enum class GenericCommandStatusCode : uint8_t {
   CommandInterrupted,
   TransientTransportError,
 
-  /** NVM Command Status **/
+  /** I/O Command Status **/
   LBAOutOfRange = 0x80,
   CapacityExceeded,
   NamespaceNotReady,
@@ -363,6 +384,23 @@ enum class CommandSpecificStatusCode : uint8_t {
   ConflictingAttributes = 0x80,
   InvalidProtectionInformation,
   WriteToReadOnlyRange,
+
+  /** Key Value Command Errors **/
+  InvalidValueSize = 0x85,
+  InvalidKeySize,
+  KeyNotExists,
+  UnrecoveredError,
+  KeyExists,
+
+  /** Zoned Namespace Command Errors **/
+  ZoneBoundaryError = 0xB8,
+  ZoneIsFull,
+  ZoneIsReadOnly,
+  ZoneIsOffline,
+  ZoneInvalidWrite,
+  TooManyActiveZones,
+  TooManyOpenZones,
+  InvalidZoneStateTransition,
 };
 
 enum class MediaAndDataIntegrityErrorCode : uint8_t {

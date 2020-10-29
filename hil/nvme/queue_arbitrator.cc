@@ -489,14 +489,14 @@ void Arbitrator::getHint(FTL::GC::HintContext &ctx) noexcept {
 
   for (auto &iter : requestQueue) {
     if (iter.second->sqID != 0) {
-      switch ((NVMCommand)iter.second->entry.dword0.opcode) {
-        case NVMCommand::Read:
-        case NVMCommand::Compare:
+      switch ((IOCommand)iter.second->entry.dword0.opcode) {
+        case IOCommand::Read:
+        case IOCommand::Compare:
           // Don't add Verify. It does not makes Host DMA operation.
           ctx.pendingReadBytes += LOW16(iter.second->entry.dword12) + 1;
 
           break;
-        case NVMCommand::Write:
+        case IOCommand::Write:
           // Don't add WriteZero. It does not makes Host DMA operation.
           ctx.pendingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
 
@@ -510,14 +510,14 @@ void Arbitrator::getHint(FTL::GC::HintContext &ctx) noexcept {
 
   for (auto &iter : dispatchedQueue) {
     if (iter.second->sqID != 0) {
-      switch ((NVMCommand)iter.second->entry.dword0.opcode) {
-        case NVMCommand::Read:
-        case NVMCommand::Compare:
+      switch ((IOCommand)iter.second->entry.dword0.opcode) {
+        case IOCommand::Read:
+        case IOCommand::Compare:
           // Don't add Verify. It does not makes Host DMA operation.
           ctx.handlingReadBytes += LOW16(iter.second->entry.dword12) + 1;
 
           break;
-        case NVMCommand::Write:
+        case IOCommand::Write:
           // Don't add WriteZero. It does not makes Host DMA operation.
           ctx.handlingWriteBytes += LOW16(iter.second->entry.dword12) + 1;
 

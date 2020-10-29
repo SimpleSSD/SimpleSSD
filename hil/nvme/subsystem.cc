@@ -329,20 +329,20 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
     }
   }
   else {
-    switch ((NVMCommand)opcode) {
-      case NVMCommand::Flush:
+    switch ((IOCommand)opcode) {
+      case IOCommand::Flush:
         commandFlush->setRequest(cdata, sqc);
         break;
-      case NVMCommand::Write:
+      case IOCommand::Write:
         commandWrite->setRequest(cdata, sqc);
         break;
-      case NVMCommand::Read:
+      case IOCommand::Read:
         commandRead->setRequest(cdata, sqc);
         break;
-      case NVMCommand::Compare:
+      case IOCommand::Compare:
         commandCompare->setRequest(cdata, sqc);
         break;
-      case NVMCommand::DatasetManagement:
+      case IOCommand::DatasetManagement:
         commandDatasetManagement->setRequest(cdata, sqc);
         break;
       default:
