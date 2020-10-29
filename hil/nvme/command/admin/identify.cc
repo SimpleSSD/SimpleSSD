@@ -220,7 +220,7 @@ void Identify::makeControllerStructure(CommandData *tag) {
     memcpy(buffer + 0x0018, "SimpleSSD NVMe Controller by CAMELab    ", 0x28);
 
     // Firmware Revision
-    memcpy(buffer + 0x0040, "03.00.00", 0x08);
+    memcpy(buffer + 0x0040, "03.01.00", 0x08);
 
     // Recommended Arbitration Burst
     buffer[0x0048] = 0x00;
@@ -240,7 +240,7 @@ void Identify::makeControllerStructure(CommandData *tag) {
     // [00:00] 1 for NVM subsystem may has more than one NVM subsystem port
     buffer[0x004C] = 0x02;
 
-    // Maximum buffer Transfer Size
+    // Maximum Data Transfer Size
     buffer[0x004D] = 0x00;  // No limit
 
     // Controller ID
@@ -249,10 +249,10 @@ void Identify::makeControllerStructure(CommandData *tag) {
     // Version
     {
       buffer[0x0050] = 0x00;
-      buffer[0x0051] = 0x03;
+      buffer[0x0051] = 0x04;
       buffer[0x0052] = 0x01;
       buffer[0x0053] = 0x00;
-    }  // NVM Express 1.3 Compliant Controller
+    }  // NVM Express 1.4b Compliant Controller
 
     // RTD3 Resume Latency
     {
