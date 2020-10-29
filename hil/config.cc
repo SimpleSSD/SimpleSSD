@@ -310,6 +310,8 @@ void Config::update() noexcept {
 
     panic_if(popcount16(ns.lbaSize) != 1 || ns.lbaSize < 512,
              "Invalid logical block size %u.", ns.lbaSize);
+
+    panic_if(ns.zoneSize == 0, "Invalid zone size.");
   }
 
   // Make link between disk and namespace
