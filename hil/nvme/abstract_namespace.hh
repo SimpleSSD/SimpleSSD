@@ -39,9 +39,17 @@ class NamespaceInformation {
   uint32_t anaGroupIdentifier;           //!< ANAGRPID
   uint16_t nvmSetIdentifier;             //!< NVMSETID
 
+  uint16_t kvKeySize;
+  uint32_t kvValueSize;
+  uint32_t kvMaxKeys;
+
+  uint32_t znsMaxOpenZones;
+  uint64_t znsZoneSize;
+  uint32_t znsMaxActiveZones;
+
+  uint32_t lbaSize;
   uint64_t readBytes;
   uint64_t writeBytes;
-  uint32_t lbaSize;
   uint64_t lpnSize;
   LPNRange namespaceRange;
 

@@ -540,6 +540,21 @@ void Subsystem::init() {
       // Other fields will be filled in createNamespace function
       nsinfo.size = nsSize;
       nsinfo.capacity = nsinfo.size;
+      nsinfo.commandSetIdentifier = ns.commandSet;
+      nsinfo.kvKeySize = ns.maxKeySize;
+      nsinfo.kvValueSize = ns.maxValueSize;
+      nsinfo.kvMaxKeys = ns.maxKeyCount;
+      nsinfo.znsZoneSize = ns.zoneSize;
+      nsinfo.znsMaxOpenZones = ns.maxOpenZones;
+      nsinfo.znsMaxActiveZones = ns.maxActiveZones;
+
+      if (ns.commandSet == (uint8_t)CommandSetIdentifier::ZonedNamespace) {
+        nsSize = ns.capacity / ns.zoneSize; // # zones
+        nsSize *= ns.zoneSize / ns.lbaSize;
+
+        nsinfo.size = nsSize;
+        nsinfo.capacity = nsinfo.size;
+      }
 
       if (!_createNamespace(ns.nsid, ns.pDisk, &nsinfo)) {
         panic("Failed to create namespace %u", ns.nsid);
