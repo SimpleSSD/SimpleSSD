@@ -31,6 +31,13 @@ const char NAME_DEFAULT_NAMESPACE[] = "DefaultNamespace";
 const char NAME_ATTACH_DEFAULT_NAMESPACES[] = "AttachDefaultNamespaces";
 const char NAME_LBA_SIZE[] = "LBASize";
 const char NAME_CAPACITY[] = "Capacity";
+const char NAME_COMMAND_SET[] = "CommandSet";
+const char NAME_MAX_KEY_SIZE[] = "MaxKeySize";
+const char NAME_MAX_VALUE_SIZE[] = "MaxValueSize";
+const char NAME_MAX_KEY_COUNT[] = "MaxKeyCount";
+const char NAME_ZONE_SIZE[] = "ZoneSize";
+const char NAME_MAX_ACTIVE_ZONES[] = "MaxActiveZones";
+const char NAME_MAX_OPEN_ZONES[] = "MaxOpenZones";
 
 //! A constructor
 Config::Config() {
@@ -117,6 +124,29 @@ void Config::loadNamespace(pugi::xml_node &section, Namespace *ns) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
     LOAD_NAME_UINT_TYPE(node, NAME_LBA_SIZE, uint16_t, ns->lbaSize);
     LOAD_NAME_UINT(node, NAME_CAPACITY, ns->capacity);
+    LOAD_NAME_UINT_TYPE(node, NAME_COMMAND_SET, uint8_t, ns->commandSet);
+
+    if (strcmp(node.attribute("name").value(), "kv") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT_TYPE(node2, NAME_MAX_KEY_SIZE, uint16_t, ns->maxKeySize);
+        LOAD_NAME_UINT_TYPE(node2, NAME_MAX_VALUE_SIZE, uint32_t,
+                            ns->maxValueSize);
+        LOAD_NAME_UINT_TYPE(node2, NAME_MAX_KEY_COUNT, uint32_t,
+                            ns->maxKeyCount);
+      }
+    }
+    else if (strcmp(node.attribute("name").value(), "zns") == 0 &&
+             isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT(node2, NAME_ZONE_SIZE, ns->zoneSize);
+        LOAD_NAME_UINT_TYPE(node2, NAME_MAX_ACTIVE_ZONES, uint32_t,
+                            ns->maxActiveZones);
+        LOAD_NAME_UINT_TYPE(node2, NAME_MAX_OPEN_ZONES, uint32_t,
+                            ns->maxOpenZones);
+      }
+    }
   }
 }
 
@@ -164,10 +194,23 @@ void Config::storeNVMe(pugi::xml_node &section) noexcept {
 }
 
 void Config::storeNamespace(pugi::xml_node &section, Namespace *ns) noexcept {
+  pugi::xml_node node;
+
   section.append_attribute("nsid").set_value(ns->nsid);
 
   STORE_NAME_UINT(section, NAME_LBA_SIZE, ns->lbaSize);
   STORE_NAME_UINT(section, NAME_CAPACITY, ns->capacity);
+  STORE_NAME_UINT(section, NAME_COMMAND_SET, ns->commandSet);
+
+  STORE_SECTION(section, "kv", node);
+  STORE_NAME_UINT(node, NAME_MAX_KEY_SIZE, ns->maxKeySize);
+  STORE_NAME_UINT(node, NAME_MAX_VALUE_SIZE, ns->maxValueSize);
+  STORE_NAME_UINT(node, NAME_MAX_KEY_COUNT, ns->maxKeyCount);
+
+  STORE_SECTION(section, "zns", node);
+  STORE_NAME_UINT(node, NAME_ZONE_SIZE, ns->zoneSize);
+  STORE_NAME_UINT(node, NAME_MAX_ACTIVE_ZONES, ns->maxActiveZones);
+  STORE_NAME_UINT(node, NAME_MAX_OPEN_ZONES, ns->maxOpenZones);
 }
 
 void Config::loadFrom(pugi::xml_node &section) noexcept {

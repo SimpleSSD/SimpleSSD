@@ -48,10 +48,17 @@ class Config : public BaseConfig {
   };
 
   struct Namespace {
+    Disk *pDisk;
+    uint64_t capacity;
     uint32_t nsid;
     uint16_t lbaSize;
-    uint64_t capacity;
-    Disk *pDisk;
+    uint16_t maxKeySize;
+    uint32_t maxValueSize;
+    uint32_t maxKeyCount;
+    uint64_t zoneSize;
+    uint32_t maxActiveZones;
+    uint32_t maxOpenZones;
+    uint8_t commandSet;
   };
 
  private:
