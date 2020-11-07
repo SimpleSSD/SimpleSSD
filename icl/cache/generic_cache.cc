@@ -421,13 +421,16 @@ void GenericCache::dmaDone(HIL::SubRequest *sreq) {
               goto out;
             }
 
-            line->nvmPending = true;
-
             wbreq.lpnList.emplace(line->tag, line);
           }
           else {
             goto out;
           }
+        }
+
+        // Mark lines pending
+        for (auto &iter : wbreq.lpnList) {
+          iter.second->nvmPending = true;
         }
 
         auto &ret = writebackList.emplace_back(std::move(wbreq));
