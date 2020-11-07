@@ -18,6 +18,7 @@ TEST_CASE("ConfigReader") {
   const bool btest = true;
   const std::string stest("test");
   const char path[] = "test_config.xml";
+  auto empty_cb = [](pugi::xml_node &) -> bool { return true; };
 
   {
     // Make empty ConfigReader object which is filled with default values
@@ -280,7 +281,7 @@ TEST_CASE("ConfigReader") {
   {
     ConfigReader reader;
 
-    reader.load(path, true);
+    reader.load(path, empty_cb, true);
 
     // Check values
     {
