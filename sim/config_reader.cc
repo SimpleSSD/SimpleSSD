@@ -25,7 +25,9 @@ ConfigReader::~ConfigReader() {}
  *
  * \param[in] path Input file path
  */
-void ConfigReader::load(const char *path, bool test) noexcept {
+void ConfigReader::load(const char *path,
+                        std::function<bool(pugi::xml_node &)> cb,
+                        bool test) noexcept {
   auto result = file.load_file(
       path, pugi::parse_default | pugi::parse_trim_pcdata, pugi::encoding_utf8);
 
@@ -47,6 +49,13 @@ void ConfigReader::load(const char *path, bool test) noexcept {
                 << std::endl;
       std::cerr << " File version: " << version << std::endl;
       std::cerr << " Program version: " << SIMPLESSD_VERSION << std::endl;
+    }
+
+    // Call callback for override
+    if (!cb(config)) {
+      std::cerr << " Override failed with error." << std::endl;
+
+      abort();
     }
 
     // Travel sections
@@ -98,8 +107,10 @@ void ConfigReader::load(const char *path, bool test) noexcept {
 }
 
 //! Load configuration from file
-void ConfigReader::load(std::string &path, bool test) noexcept {
-  load(path.c_str(), test);
+void ConfigReader::load(std::string &path,
+                        std::function<bool(pugi::xml_node &)> cb,
+                        bool test) noexcept {
+  load(path.c_str(), cb, test);
 }
 
 /**
@@ -221,8 +232,8 @@ float ConfigReader::readFloat(Section section, uint32_t key) const noexcept {
 }
 
 //! Read configuration as string
-std::string ConfigReader::readString(Section section, uint32_t key) const
-    noexcept {
+std::string ConfigReader::readString(Section section,
+                                     uint32_t key) const noexcept {
   switch (section) {
     case Section::Simulation:
       return simConfig.readString(key);
