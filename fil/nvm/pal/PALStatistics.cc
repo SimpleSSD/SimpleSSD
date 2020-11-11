@@ -765,6 +765,11 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
   Energy_DMA1.add(oper, (double)energy_dma1);
   Energy_Total.add(oper, (double)(energy_dma0 + energy_mem + energy_dma1));
 
+  Ticks_TotalOpti.add(oper, (double)time_all[TICK_PROC]);
+  Ticks_Active_ch[chIdx].add(
+      oper, (double)(time_all[TICK_DMA0] + time_all[TICK_DMA1]));
+  Ticks_Active_die[dieIdx].add(oper, (double)(time_all[TICK_MEM]));
+
   return;
 
   // printf("[Energy(fJ) of Oper(%d)] DMA0(%llu) MEM(%llu) DMA1(%llu)\n", oper,
@@ -804,12 +809,6 @@ void PALStatistics::AddLatency(Command &CMD, CPDPBP *CPD, uint32_t dieIdx,
     e = Ticks_Total_snapshot.upper_bound(e->first);
   }
   //***********************************************
-  Ticks_TotalOpti.add(oper, (double)time_all[TICK_PROC]);
-  Ticks_Active_ch[chIdx].add(
-      oper, (double)(time_all[TICK_DMA0] + time_all[TICK_DMA1]));
-  Ticks_Active_die[dieIdx].add(
-      oper, (double)(time_all[TICK_DMA0] + time_all[TICK_MEM] +
-                     time_all[TICK_DMA1WAIT] + time_all[TICK_DMA1]));
   if (oper == OPER_ERASE)
     Access_Capacity.add(oper, param->pageSize * param->page);  // ERASE
   else
