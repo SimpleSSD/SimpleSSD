@@ -212,7 +212,11 @@ void PALOLD::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
                     "Consumed energy by NAND erase operation (uJ)");
   list.emplace_back(prefix + "energy.total",
                     "Total consumed energy by NAND (uJ)");
+  list.emplace_back(prefix + "energy.total2",
+                    "Total consumed energy by NAND (uJ) - fix");
   list.emplace_back(prefix + "power", "Average power consumed by NAND (uW)");
+  list.emplace_back(prefix + "power2",
+                    "Average power consumed by NAND (uW) - fix");
   list.emplace_back(prefix + "read.count", "Total read operation count");
   list.emplace_back(prefix + "program.count", "Total program operation count");
   list.emplace_back(prefix + "erase.count", "Total erase operation count");
@@ -257,21 +261,37 @@ void PALOLD::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
 void PALOLD::getStatValues(std::vector<double> &values) noexcept {
   PALStatistics::OperStats energy;
   PALStatistics::OperStats ticks;
-  PALStatistics::ActiveTime active;
+  PALStatistics::ActiveTime active_ch;
+  PALStatistics::ActiveTime active_die;
   PALStatistics::Breakdown breakdown;
   double elapsedTick = (double)(getTick() - lastResetTick);
 
   stats->getEnergyStat(energy);
   stats->getTickStat(ticks);
 
+  stats->getChannelActiveTimeAll(active_ch);
+  stats->getDieActiveTimeAll(active_die);
+
   values.push_back(energy.read);
   values.push_back(energy.write);
   values.push_back(energy.erase);
   values.push_back(energy.total);
 
+  // Recalculate energy - temporal fix
+  double e = 0.;
+
+  e += lat->GetPower(OPER_READ, BUSY_DMA0) * active_ch.average * stats->channel;
+  e += lat->GetPower(OPER_READ, BUSY_MEM) * active_die.average * stats->totalDie;
+
+  // uJ = uW * ps / 1e+12
+  values.push_back(e / 1e+12);
+
   // uW = uJ / ps * 1e+12
   energy.total /= elapsedTick / 1e+12;
   values.push_back(energy.total);
+
+  // uW = uW * ps / ps
+  values.push_back(e / elapsedTick);
 
   values.push_back((double)stat.readCount);
   values.push_back((double)stat.writeCount);
@@ -305,11 +325,8 @@ void PALOLD::getStatValues(std::vector<double> &values) noexcept {
   values.push_back(breakdown.dma1);
   values.push_back(ticks.erase);
 
-  stats->getChannelActiveTimeAll(active);
-  values.push_back(active.average);
-
-  stats->getDieActiveTimeAll(active);
-  values.push_back(active.average);
+  values.push_back(active_ch.average);
+  values.push_back(active_die.average);
 }
 
 void PALOLD::resetStatValues() noexcept {
