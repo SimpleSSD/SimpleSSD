@@ -10,3 +10,6 @@
 [submodule "lib/catch2"]
 	path = lib/catch2
 	url = git@github.com:catchorg/Catch2.git
+[submodule "lib/json"]
+	path = lib/json
+	url = git@github.com:ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
