@@ -7,7 +7,7 @@
 
 #ifndef SORTED_MAP_TEMPLATE
 #define SORTED_MAP_TEMPLATE                                                    \
-  template <class Key, class T, std::enable_if_t<std::is_pointer_v<T>> *U>
+  template <class Key, class T, std::enable_if_t<std::is_pointer_v<T>, bool> U>
 
 #include "util/sorted_map.hh"
 
@@ -59,7 +59,7 @@ bool map_list<Key, T, U>::iterator::operator!=(const iterator &rhs) {
 
 SORTED_MAP_TEMPLATE
 typename map_list<Key, T, U>::iterator::reference
-    map_list<Key, T, U>::iterator::operator*() {
+map_list<Key, T, U>::iterator::operator*() {
   if (cur != head && cur != tail && cur != nullptr) {
     return cur->field;
   }
@@ -69,7 +69,7 @@ typename map_list<Key, T, U>::iterator::reference
 
 SORTED_MAP_TEMPLATE
 typename map_list<Key, T, U>::iterator::pointer
-    map_list<Key, T, U>::iterator::operator->() {
+map_list<Key, T, U>::iterator::operator->() {
   if (cur != head && cur != tail && cur != nullptr) {
     return &cur->field;
   }
@@ -117,7 +117,7 @@ bool map_list<Key, T, U>::const_iterator::operator!=(
 
 SORTED_MAP_TEMPLATE
 typename map_list<Key, T, U>::const_iterator::reference
-    map_list<Key, T, U>::const_iterator::operator*() const {
+map_list<Key, T, U>::const_iterator::operator*() const {
   if (cur != head && cur != tail && cur != nullptr) {
     return cur->field;
   }
@@ -127,7 +127,7 @@ typename map_list<Key, T, U>::const_iterator::reference
 
 SORTED_MAP_TEMPLATE
 typename map_list<Key, T, U>::const_iterator::pointer
-    map_list<Key, T, U>::const_iterator::operator->() const {
+map_list<Key, T, U>::const_iterator::operator->() const {
   if (cur != head && cur != tail && cur != nullptr) {
     return &cur->field;
   }
@@ -226,8 +226,8 @@ typename map_list<Key, T, U>::size_type map_list<Key, T, U>::size() noexcept {
 }
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::size_type map_list<Key, T, U>::size() const
-    noexcept {
+typename map_list<Key, T, U>::size_type map_list<Key, T, U>::size()
+    const noexcept {
   return map.size();
 }
 
@@ -397,14 +397,14 @@ typename map_list<Key, T, U>::iterator map_list<Key, T, U>::end() noexcept {
 }
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::begin() const
-    noexcept {
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::begin()
+    const noexcept {
   return make_iterator(listHead->next);
 }
 
 SORTED_MAP_TEMPLATE
-typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::end() const
-    noexcept {
+typename map_list<Key, T, U>::const_iterator map_list<Key, T, U>::end()
+    const noexcept {
   return make_iterator(listTail);
 }
 

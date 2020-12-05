@@ -164,12 +164,12 @@ class Printer {
     }
   }
 
-  template <class T, std::enable_if_t<std::is_integral_v<T>, T *> = nullptr>
+  template <class T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
   inline uint16_t get(const T &value) {
     return static_cast<uint16_t>(value);
   }
 
-  template <class T, std::enable_if_t<!std::is_integral_v<T>, T *> = nullptr>
+  template <class T, std::enable_if_t<!std::is_integral_v<T>, bool> = true>
   inline uint16_t get(const T &) {
     err = true;
 
@@ -203,7 +203,7 @@ class Printer {
     }
   }
 
-  template <class T, std::enable_if_t<!std::is_enum_v<T>> * = nullptr>
+  template <class T, std::enable_if_t<!std::is_enum_v<T>, bool> = true>
   void printImpl(const T &value) {
     if constexpr (std::is_integral_v<T>) {
       if (intAsChar && std::is_integral_v<T>) {
@@ -224,7 +224,7 @@ class Printer {
     }
   }
 
-  template <class T, std::enable_if_t<std::is_enum_v<T>> * = nullptr>
+  template <class T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   void printImpl(const T &value) {
     (*os) << static_cast<uint64_t>(value);
   }

@@ -23,7 +23,7 @@ namespace SimpleSSD {
  * Erase item by key, front or back.
  */
 template <class Key, class T,
-          std::enable_if_t<std::is_pointer_v<T>> * = nullptr>
+          std::enable_if_t<std::is_pointer_v<T>, bool> = true>
 class map_list {
  public:
   using key_type = Key;
@@ -168,7 +168,7 @@ class map_list {
  * Erase item by key, front or back.
  */
 template <class Key, class T,
-          std::enable_if_t<std::is_pointer_v<T>> * = nullptr>
+          std::enable_if_t<std::is_pointer_v<T>, bool> = true>
 class map_map : public map_list<Key, T> {
  public:
   using key_type = typename map_list<Key, T>::key_type;

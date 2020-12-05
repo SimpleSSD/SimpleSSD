@@ -16,7 +16,7 @@
 
 namespace SimpleSSD {
 
-template <class Type, std::enable_if_t<std::is_pointer_v<Type>> * = nullptr>
+template <class Type, std::enable_if_t<std::is_pointer_v<Type>, bool> = true>
 class SingleScheduler : public Object {
  public:
   using preFunction = std::function<uint64_t(Type)>;
@@ -133,7 +133,7 @@ class SingleScheduler : public Object {
   }
 };
 
-template <class Type, std::enable_if_t<std::is_pointer_v<Type>> * = nullptr>
+template <class Type, std::enable_if_t<std::is_pointer_v<Type>, bool> = true>
 class Scheduler : public Object {
  public:
   using preFunction = typename SingleScheduler<Type>::preFunction;
