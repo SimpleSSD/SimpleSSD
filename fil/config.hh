@@ -13,9 +13,9 @@
 #include "fil/def.hh"
 #include "sim/base_config.hh"
 
-#define NAND_MAX_LEVEL 3  // TLC
-
 namespace SimpleSSD::FIL {
+
+constexpr auto NAND_MAX_LEVEL = 3;  // TLC
 
 class Config : public BaseConfig {
  public:
