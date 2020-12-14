@@ -71,10 +71,17 @@ message(FATAL_ERROR "Failed to find catch2 library. \
 Check you initialized submodules.")
 endif ()
 
+# Check json is valid
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/json/include/nlohmann/json.hpp")
+message(FATAL_ERROR "Failed to find nlohmann json c++ library. \
+Check you initialized submodules.")
+endif ()
+
 # Add subproject
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/mcpat)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/pugixml)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/catch2)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/json)
 
 # Set include directories
 include_directories(
@@ -481,7 +488,7 @@ endif ()
 # Force version checking in every build
 add_dependencies(simplessd ${VERSION_TARGET})
 
-target_link_libraries(simplessd mcpat pugixml)
+target_link_libraries(simplessd mcpat pugixml nlohmann_json::nlohmann_json)
 target_link_libraries(test_simplessd simplessd Catch2::Catch2)
 
 include(CTest)
