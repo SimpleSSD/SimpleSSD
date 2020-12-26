@@ -475,9 +475,6 @@ else ()
     message (STATUS "Using debug build")
 
     target_compile_definitions(simplessd PRIVATE -DSIMPLESSD_DEBUG)
-    target_compile_options(simplessd PRIVATE -O0)
-  else ()
-    target_compile_options(simplessd PRIVATE -O2)
   endif ()
 
   if (FW_LATENCY)
