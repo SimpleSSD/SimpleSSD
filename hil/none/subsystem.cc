@@ -17,6 +17,7 @@ Subsystem::Subsystem(ObjectData &o)
 }
 
 Subsystem::~Subsystem() {
+  delete pController;
   delete pHIL;
 }
 
