@@ -19,29 +19,26 @@ Subsystem::Subsystem(ObjectData &o)
     : AbstractSubsystem(o),
       controllerID(0),
       allocatedLogicalPages(0),
+      commandDeleteSQ(object, this),
+      commandCreateSQ(object, this),
+      commandGetLogPage(object, this),
+      commandDeleteCQ(object, this),
+      commandCreateCQ(object, this),
+      commandIdentify(object, this),
+      commandAbort(object, this),
+      commandSetFeature(object, this),
+      commandGetFeature(object, this),
+      commandAsyncEventRequest(object, this),
+      commandNamespaceManagement(object, this),
+      commandNamespaceAttachment(object, this),
+      commandFormatNVM(object, this),
+      commandFlush(object, this),
+      commandWrite(object, this),
+      commandRead(object, this),
+      commandCompare(object, this),
+      commandDatasetManagement(object, this),
       dispatching(false) {
   pHIL = new HIL(o, this);
-
-  // Create commands
-  commandDeleteSQ = new DeleteSQ(object, this);
-  commandCreateSQ = new CreateSQ(object, this);
-  commandGetLogPage = new GetLogPage(object, this);
-  commandDeleteCQ = new DeleteCQ(object, this);
-  commandCreateCQ = new CreateCQ(object, this);
-  commandIdentify = new Identify(object, this);
-  commandAbort = new Abort(object, this);
-  commandSetFeature = new SetFeature(object, this);
-  commandGetFeature = new GetFeature(object, this);
-  commandAsyncEventRequest = new AsyncEventRequest(object, this);
-  commandNamespaceManagement = new NamespaceManagement(object, this);
-  commandNamespaceAttachment = new NamespaceAttachment(object, this);
-  commandFormatNVM = new FormatNVM(object, this);
-
-  commandFlush = new Flush(object, this);
-  commandWrite = new Write(object, this);
-  commandRead = new Read(object, this);
-  commandCompare = new Compare(object, this);
-  commandDatasetManagement = new DatasetManagement(object, this);
 
   // Initialize log pages
   // Fill firmware slot information
@@ -114,31 +111,11 @@ Subsystem::~Subsystem() {
   }
 
   delete pHIL;
-
-  delete commandDeleteSQ;
-  delete commandCreateSQ;
-  delete commandGetLogPage;
-  delete commandDeleteCQ;
-  delete commandCreateCQ;
-  delete commandIdentify;
-  delete commandAbort;
-  delete commandSetFeature;
-  delete commandGetFeature;
-  delete commandAsyncEventRequest;
-  delete commandNamespaceManagement;
-  delete commandNamespaceAttachment;
-  delete commandFormatNVM;
-
-  delete commandFlush;
-  delete commandWrite;
-  delete commandRead;
-  delete commandCompare;
-  delete commandDatasetManagement;
 }
 
 void Subsystem::scheduleAEN(AsyncEventType aet, uint8_t aei, LogPageID lid) {
   for (auto &iter : aenTo) {
-    commandAsyncEventRequest->invokeAEN(iter, aet, aei, lid);
+    commandAsyncEventRequest.invokeAEN(iter, aet, aei, lid);
   }
 
   aenTo.clear();
@@ -314,7 +291,7 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
       // NVM Command Set only commands
       switch ((AdminCommand)opcode) {
         case AdminCommand::FormatNVM:
-          commandFormatNVM->setRequest(cdata, ns, sqc);
+          commandFormatNVM.setRequest(cdata, ns, sqc);
 
           return true;
         default:
@@ -324,40 +301,40 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
 
     switch ((AdminCommand)opcode) {
       case AdminCommand::DeleteIOSQ:
-        commandDeleteSQ->setRequest(cdata, ns, sqc);
+        commandDeleteSQ.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::CreateIOSQ:
-        commandCreateSQ->setRequest(cdata, ns, sqc);
+        commandCreateSQ.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::GetLogPage:
-        commandGetLogPage->setRequest(cdata, ns, sqc);
+        commandGetLogPage.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::DeleteIOCQ:
-        commandDeleteCQ->setRequest(cdata, ns, sqc);
+        commandDeleteCQ.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::CreateIOCQ:
-        commandCreateCQ->setRequest(cdata, ns, sqc);
+        commandCreateCQ.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::Identify:
-        commandIdentify->setRequest(cdata, ns, sqc);
+        commandIdentify.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::Abort:
-        commandAbort->setRequest(cdata, ns, sqc);
+        commandAbort.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::SetFeatures:
-        commandSetFeature->setRequest(cdata, ns, sqc);
+        commandSetFeature.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::GetFeatures:
-        commandGetFeature->setRequest(cdata, ns, sqc);
+        commandGetFeature.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::AsyncEventRequest:
-        commandAsyncEventRequest->setRequest(cdata, ns, sqc);
+        commandAsyncEventRequest.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::NamespaceManagement:
-        commandNamespaceManagement->setRequest(cdata, ns, sqc);
+        commandNamespaceManagement.setRequest(cdata, ns, sqc);
         break;
       case AdminCommand::NamespaceAttachment:
-        commandNamespaceAttachment->setRequest(cdata, ns, sqc);
+        commandNamespaceAttachment.setRequest(cdata, ns, sqc);
         break;
       default:
         return false;
@@ -397,19 +374,19 @@ bool Subsystem::submitCommand(ControllerData *cdata, SQContext *sqc) {
 
     switch ((IOCommand)opcode) {
       case IOCommand::Flush:
-        commandFlush->setRequest(cdata, ns, sqc);
+        commandFlush.setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Write:
-        commandWrite->setRequest(cdata, ns, sqc);
+        commandWrite.setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Read:
-        commandRead->setRequest(cdata, ns, sqc);
+        commandRead.setRequest(cdata, ns, sqc);
         break;
       case IOCommand::Compare:
-        commandCompare->setRequest(cdata, ns, sqc);
+        commandCompare.setRequest(cdata, ns, sqc);
         break;
       case IOCommand::DatasetManagement:
-        commandDatasetManagement->setRequest(cdata, ns, sqc);
+        commandDatasetManagement.setRequest(cdata, ns, sqc);
         break;
       default:
         return false;
@@ -460,7 +437,7 @@ void Subsystem::dispatch() {
 
 void Subsystem::shutdownCompleted(ControllerID ctrlid) {
   // We need remove aenCommands of current controller
-  commandAsyncEventRequest->clearPendingRequests(ctrlid);
+  commandAsyncEventRequest.clearPendingRequests(ctrlid);
 }
 
 void Subsystem::triggerDispatch() {
@@ -549,7 +526,7 @@ void Subsystem::init() {
       nsinfo.znsMaxActiveZones = ns.maxActiveZones;
 
       if (ns.commandSet == (uint8_t)CommandSetIdentifier::ZonedNamespace) {
-        nsSize = ns.capacity / ns.zoneSize; // # zones
+        nsSize = ns.capacity / ns.zoneSize;  // # zones
         nsSize *= ns.zoneSize / ns.lbaSize;
 
         nsinfo.size = nsSize;
@@ -861,24 +838,24 @@ void Subsystem::getStatList(std::vector<Stat> &list,
   }
 
   // All commands
-  commandDeleteSQ->getStatList(list, nprefix + "admin.deletesq.");
-  commandCreateSQ->getStatList(list, nprefix + "admin.createsq.");
-  commandGetLogPage->getStatList(list, nprefix + "admin.getlogpage.");
-  commandDeleteCQ->getStatList(list, nprefix + "admin.deletecq.");
-  commandCreateCQ->getStatList(list, nprefix + "admin.createcq.");
-  commandIdentify->getStatList(list, nprefix + "admin.identify.");
-  commandAbort->getStatList(list, nprefix + "admin.abort.");
-  commandSetFeature->getStatList(list, nprefix + "admin.setfeature.");
-  commandGetFeature->getStatList(list, nprefix + "admin.getfeature.");
-  commandAsyncEventRequest->getStatList(list, nprefix + "admin.asynceventreq.");
-  commandNamespaceManagement->getStatList(list, nprefix + "admin.nsmgmt.");
-  commandNamespaceAttachment->getStatList(list, nprefix + "admin.nsattach.");
-  commandFormatNVM->getStatList(list, nprefix + "admin.format.");
-  commandFlush->getStatList(list, nprefix + "nvm.flush.");
-  commandWrite->getStatList(list, nprefix + "nvm.write.");
-  commandRead->getStatList(list, nprefix + "nvm.read.");
-  commandCompare->getStatList(list, nprefix + "nvm.compare.");
-  commandDatasetManagement->getStatList(list, nprefix + "nvm.datasetmgmt.");
+  commandDeleteSQ.getStatList(list, nprefix + "admin.deletesq.");
+  commandCreateSQ.getStatList(list, nprefix + "admin.createsq.");
+  commandGetLogPage.getStatList(list, nprefix + "admin.getlogpage.");
+  commandDeleteCQ.getStatList(list, nprefix + "admin.deletecq.");
+  commandCreateCQ.getStatList(list, nprefix + "admin.createcq.");
+  commandIdentify.getStatList(list, nprefix + "admin.identify.");
+  commandAbort.getStatList(list, nprefix + "admin.abort.");
+  commandSetFeature.getStatList(list, nprefix + "admin.setfeature.");
+  commandGetFeature.getStatList(list, nprefix + "admin.getfeature.");
+  commandAsyncEventRequest.getStatList(list, nprefix + "admin.asynceventreq.");
+  commandNamespaceManagement.getStatList(list, nprefix + "admin.nsmgmt.");
+  commandNamespaceAttachment.getStatList(list, nprefix + "admin.nsattach.");
+  commandFormatNVM.getStatList(list, nprefix + "admin.format.");
+  commandFlush.getStatList(list, nprefix + "nvm.flush.");
+  commandWrite.getStatList(list, nprefix + "nvm.write.");
+  commandRead.getStatList(list, nprefix + "nvm.read.");
+  commandCompare.getStatList(list, nprefix + "nvm.compare.");
+  commandDatasetManagement.getStatList(list, nprefix + "nvm.datasetmgmt.");
 
   // HIL
   pHIL->getStatList(list, prefix);
@@ -894,24 +871,24 @@ void Subsystem::getStatValues(std::vector<double> &values) noexcept {
   }
 
   // All commands
-  commandDeleteSQ->getStatValues(values);
-  commandCreateSQ->getStatValues(values);
-  commandGetLogPage->getStatValues(values);
-  commandDeleteCQ->getStatValues(values);
-  commandCreateCQ->getStatValues(values);
-  commandIdentify->getStatValues(values);
-  commandAbort->getStatValues(values);
-  commandSetFeature->getStatValues(values);
-  commandGetFeature->getStatValues(values);
-  commandAsyncEventRequest->getStatValues(values);
-  commandNamespaceManagement->getStatValues(values);
-  commandNamespaceAttachment->getStatValues(values);
-  commandFormatNVM->getStatValues(values);
-  commandFlush->getStatValues(values);
-  commandWrite->getStatValues(values);
-  commandRead->getStatValues(values);
-  commandCompare->getStatValues(values);
-  commandDatasetManagement->getStatValues(values);
+  commandDeleteSQ.getStatValues(values);
+  commandCreateSQ.getStatValues(values);
+  commandGetLogPage.getStatValues(values);
+  commandDeleteCQ.getStatValues(values);
+  commandCreateCQ.getStatValues(values);
+  commandIdentify.getStatValues(values);
+  commandAbort.getStatValues(values);
+  commandSetFeature.getStatValues(values);
+  commandGetFeature.getStatValues(values);
+  commandAsyncEventRequest.getStatValues(values);
+  commandNamespaceManagement.getStatValues(values);
+  commandNamespaceAttachment.getStatValues(values);
+  commandFormatNVM.getStatValues(values);
+  commandFlush.getStatValues(values);
+  commandWrite.getStatValues(values);
+  commandRead.getStatValues(values);
+  commandCompare.getStatValues(values);
+  commandDatasetManagement.getStatValues(values);
 
   // HIL
   pHIL->getStatValues(values);
@@ -927,24 +904,24 @@ void Subsystem::resetStatValues() noexcept {
   }
 
   // All commands
-  commandDeleteSQ->resetStatValues();
-  commandCreateSQ->resetStatValues();
-  commandGetLogPage->resetStatValues();
-  commandDeleteCQ->resetStatValues();
-  commandCreateCQ->resetStatValues();
-  commandIdentify->resetStatValues();
-  commandAbort->resetStatValues();
-  commandSetFeature->resetStatValues();
-  commandGetFeature->resetStatValues();
-  commandAsyncEventRequest->resetStatValues();
-  commandNamespaceManagement->resetStatValues();
-  commandNamespaceAttachment->resetStatValues();
-  commandFormatNVM->resetStatValues();
-  commandFlush->resetStatValues();
-  commandWrite->resetStatValues();
-  commandRead->resetStatValues();
-  commandCompare->resetStatValues();
-  commandDatasetManagement->resetStatValues();
+  commandDeleteSQ.resetStatValues();
+  commandCreateSQ.resetStatValues();
+  commandGetLogPage.resetStatValues();
+  commandDeleteCQ.resetStatValues();
+  commandCreateCQ.resetStatValues();
+  commandIdentify.resetStatValues();
+  commandAbort.resetStatValues();
+  commandSetFeature.resetStatValues();
+  commandGetFeature.resetStatValues();
+  commandAsyncEventRequest.resetStatValues();
+  commandNamespaceManagement.resetStatValues();
+  commandNamespaceAttachment.resetStatValues();
+  commandFormatNVM.resetStatValues();
+  commandFlush.resetStatValues();
+  commandWrite.resetStatValues();
+  commandRead.resetStatValues();
+  commandCompare.resetStatValues();
+  commandDatasetManagement.resetStatValues();
 
   // HIL
   pHIL->resetStatValues();
@@ -992,25 +969,25 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   // Store command status
-  commandDeleteSQ->createCheckpoint(out);
-  commandCreateSQ->createCheckpoint(out);
-  commandGetLogPage->createCheckpoint(out);
-  commandDeleteCQ->createCheckpoint(out);
-  commandCreateCQ->createCheckpoint(out);
-  commandIdentify->createCheckpoint(out);
-  commandAbort->createCheckpoint(out);
-  commandSetFeature->createCheckpoint(out);
-  commandGetFeature->createCheckpoint(out);
-  commandAsyncEventRequest->createCheckpoint(out);
-  commandNamespaceManagement->createCheckpoint(out);
-  commandNamespaceAttachment->createCheckpoint(out);
-  commandFormatNVM->createCheckpoint(out);
+  commandDeleteSQ.createCheckpoint(out);
+  commandCreateSQ.createCheckpoint(out);
+  commandGetLogPage.createCheckpoint(out);
+  commandDeleteCQ.createCheckpoint(out);
+  commandCreateCQ.createCheckpoint(out);
+  commandIdentify.createCheckpoint(out);
+  commandAbort.createCheckpoint(out);
+  commandSetFeature.createCheckpoint(out);
+  commandGetFeature.createCheckpoint(out);
+  commandAsyncEventRequest.createCheckpoint(out);
+  commandNamespaceManagement.createCheckpoint(out);
+  commandNamespaceAttachment.createCheckpoint(out);
+  commandFormatNVM.createCheckpoint(out);
 
-  commandFlush->createCheckpoint(out);
-  commandWrite->createCheckpoint(out);
-  commandRead->createCheckpoint(out);
-  commandCompare->createCheckpoint(out);
-  commandDatasetManagement->createCheckpoint(out);
+  commandFlush.createCheckpoint(out);
+  commandWrite.createCheckpoint(out);
+  commandRead.createCheckpoint(out);
+  commandCompare.createCheckpoint(out);
+  commandDatasetManagement.createCheckpoint(out);
 
   BACKUP_EVENT(out, eventDispatch);
 
@@ -1099,25 +1076,25 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
     }
   }
 
-  commandDeleteSQ->restoreCheckpoint(in);
-  commandCreateSQ->restoreCheckpoint(in);
-  commandGetLogPage->restoreCheckpoint(in);
-  commandDeleteCQ->restoreCheckpoint(in);
-  commandCreateCQ->restoreCheckpoint(in);
-  commandIdentify->restoreCheckpoint(in);
-  commandAbort->restoreCheckpoint(in);
-  commandSetFeature->restoreCheckpoint(in);
-  commandGetFeature->restoreCheckpoint(in);
-  commandAsyncEventRequest->restoreCheckpoint(in);
-  commandNamespaceManagement->restoreCheckpoint(in);
-  commandNamespaceAttachment->restoreCheckpoint(in);
-  commandFormatNVM->restoreCheckpoint(in);
+  commandDeleteSQ.restoreCheckpoint(in);
+  commandCreateSQ.restoreCheckpoint(in);
+  commandGetLogPage.restoreCheckpoint(in);
+  commandDeleteCQ.restoreCheckpoint(in);
+  commandCreateCQ.restoreCheckpoint(in);
+  commandIdentify.restoreCheckpoint(in);
+  commandAbort.restoreCheckpoint(in);
+  commandSetFeature.restoreCheckpoint(in);
+  commandGetFeature.restoreCheckpoint(in);
+  commandAsyncEventRequest.restoreCheckpoint(in);
+  commandNamespaceManagement.restoreCheckpoint(in);
+  commandNamespaceAttachment.restoreCheckpoint(in);
+  commandFormatNVM.restoreCheckpoint(in);
 
-  commandFlush->restoreCheckpoint(in);
-  commandWrite->restoreCheckpoint(in);
-  commandRead->restoreCheckpoint(in);
-  commandCompare->restoreCheckpoint(in);
-  commandDatasetManagement->restoreCheckpoint(in);
+  commandFlush.restoreCheckpoint(in);
+  commandWrite.restoreCheckpoint(in);
+  commandRead.restoreCheckpoint(in);
+  commandCompare.restoreCheckpoint(in);
+  commandDatasetManagement.restoreCheckpoint(in);
 
   RESTORE_EVENT(in, eventDispatch);
 
@@ -1131,7 +1108,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
 #define RESTORE_REQUEST(cmd, tag, ret)                                         \
   {                                                                            \
-    (ret) = (cmd)->restoreRequest(tag);                                        \
+    (ret) = (cmd).restoreRequest(tag);                                         \
                                                                                \
     if (ret) {                                                                 \
       return (ret);                                                            \

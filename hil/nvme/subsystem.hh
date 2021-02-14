@@ -56,32 +56,32 @@ class Subsystem : public AbstractSubsystem {
   // See NVMe 1.4 Section 7.1 Figure 417/418
   // Opcode Mandatory Description
   // 00h M Delete I/O Submission Queue
-  DeleteSQ *commandDeleteSQ;
+  DeleteSQ commandDeleteSQ;
   // 01h M Create I/O Submission Queue
-  CreateSQ *commandCreateSQ;
+  CreateSQ commandCreateSQ;
   // 02h M Get Log Page
-  GetLogPage *commandGetLogPage;
+  GetLogPage commandGetLogPage;
   // 04h M Delete I/O Completion Queue
-  DeleteCQ *commandDeleteCQ;
+  DeleteCQ commandDeleteCQ;
   // 05h M Create I/O Completion Queue
-  CreateCQ *commandCreateCQ;
+  CreateCQ commandCreateCQ;
   // 06h M Identify
-  Identify *commandIdentify;
+  Identify commandIdentify;
   // 08h M Abort
-  Abort *commandAbort;
+  Abort commandAbort;
   // 09h M Set Features
-  SetFeature *commandSetFeature;
+  SetFeature commandSetFeature;
   // 0Ah M Get Features
-  GetFeature *commandGetFeature;
+  GetFeature commandGetFeature;
   // 0Ch M Asynchronous Event Request
-  AsyncEventRequest *commandAsyncEventRequest;
+  AsyncEventRequest commandAsyncEventRequest;
   // 0Dh O Namespace Management
-  NamespaceManagement *commandNamespaceManagement;
+  NamespaceManagement commandNamespaceManagement;
   // 10h O Firmware Commit
   // 11h O Firmware Image Download
   // 14h O Device Self-test
   // 15h O Namespace Attachment
-  NamespaceAttachment *commandNamespaceAttachment;
+  NamespaceAttachment commandNamespaceAttachment;
   // 18h O Keep Alive
   // 19h O Directive Send
   // 1Ah O Directive Receive
@@ -90,7 +90,7 @@ class Subsystem : public AbstractSubsystem {
   // 1Eh O NVMe-MI Receive
   // 7Ch O Doorbell Buffer Config
   // 80h O Format NVM
-  FormatNVM *commandFormatNVM;
+  FormatNVM commandFormatNVM;
   // 81h O Security Send
   // 82h O Security Receive
   // 84h O Sanitize
@@ -99,17 +99,17 @@ class Subsystem : public AbstractSubsystem {
   // See NVMe 1.4 Section 7.1 Figure 419
   // Opcode Mandatory Description
   // 00h M Flush
-  Flush *commandFlush;
+  Flush commandFlush;
   // 01h M Write
-  Write *commandWrite;
+  Write commandWrite;
   // 02h M Read
-  Read *commandRead;
+  Read commandRead;
   // 04h O Write Uncorrectable
   // 05h O Compare
-  Compare *commandCompare;
+  Compare commandCompare;
   // 08h O Write Zeroes
   // 09h O Dataset Management
-  DatasetManagement *commandDatasetManagement;
+  DatasetManagement commandDatasetManagement;
   // 0Ch O Verify
   // 0Dh O Reservation Register
   // 0Eh O Reservation Report
