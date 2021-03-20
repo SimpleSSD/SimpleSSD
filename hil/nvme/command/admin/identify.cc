@@ -593,7 +593,7 @@ void Identify::makeCommonControllerStructure(CommandData *tag) {
       // [04:04] 1 for Support Save field in Set Features command and Select
       //         field in Get Features command
       // [03:03] 1 for Support Write Zeros command
-      // [02:02] 1 for Support bufferset Management command
+      // [02:02] 1 for Support Dataset Management command
       // [01:01] 1 for Support Write Uncorrectable command
       // [00:00] 1 for Support Compare command
       buffer[0x0208] = 0x04;
