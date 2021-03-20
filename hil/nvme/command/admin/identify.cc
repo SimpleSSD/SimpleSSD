@@ -214,8 +214,8 @@ void Identify::makeNamespaceDescriptor(CommandData *tag, uint32_t nsid) {
 
   if (nsid == NSID_ALL) {
     // Invalid namespace ID
-    tag->cqc->makeStatus(true, false, StatusType::CommandSpecificStatus,
-                         CommandSpecificStatusCode::Invalid_Format);
+    tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
+                         GenericCommandStatusCode::Invalid_NamespaceOrFormat);
   }
   else {
     auto attachList = subsystem->getAttachment(ctrlID);
@@ -227,8 +227,9 @@ void Identify::makeNamespaceDescriptor(CommandData *tag, uint32_t nsid) {
 
       if (ns == namespaceList.end()) {
         // Namespace not exists
-        tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
-                             CommandSpecificStatusCode::Invalid_Format);
+        tag->cqc->makeStatus(
+            false, false, StatusType::GenericCommandStatus,
+            GenericCommandStatusCode::Invalid_NamespaceOrFormat);
 
         return;
       }
