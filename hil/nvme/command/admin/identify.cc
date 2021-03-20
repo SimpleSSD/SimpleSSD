@@ -530,8 +530,8 @@ void Identify::makeCommonControllerStructure(CommandData *tag) {
 
     // Unallocated NVM Capacity
     {
-      memcpy(buffer + 0x118, &unallocated, 8);
-      memset(buffer + 0x120, 0, 8);
+      memcpy(buffer + 0x128, &unallocated, 8);
+      memset(buffer + 0x130, 0, 8);
     }
 
     // Replay Protected Memory Block Support
