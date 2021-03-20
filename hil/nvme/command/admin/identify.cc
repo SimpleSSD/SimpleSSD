@@ -859,7 +859,7 @@ void Identify::setRequest(ControllerData *cdata, AbstractNamespace *,
   // Make response
   tag->createResponse();
 
-  if (cns > 2) {
+  if (csi > 2) {
     tag->cqc->makeStatus(false, false, StatusType::CommandSpecificStatus,
                          CommandSpecificStatusCode::Invalid_IOCommandSet);
 
