@@ -466,7 +466,7 @@ void Identify::makeCommonControllerStructure(CommandData *tag) {
     // [01:01] 1 for Support Command Effects log page
     // [00:00] 1 for Support S.M.A.R.T. / Health information log page per
     //         namespace basis
-    buffer[0x0105] = 0x01;
+    buffer[0x0105] = 0x03;
 
     // Error Log Page Entries, 0's based value
     buffer[0x0106] = 0x63;  // 64 entries
@@ -623,12 +623,7 @@ void Identify::makeCommonControllerStructure(CommandData *tag) {
     // [Bits ] Description
     // [07:01] Reserved
     // [00:00] 1 for volatile write cache is present
-
-    // TODO: FILL HERE!
-    // buffer[0x020D] = readConfigBoolean(Section::InternalCache,
-    //                                    ICL::Config::Key::UseWriteCache)
-    //                      ? 0x01
-    //                      : 0x00;
+    buffer[0x020D] = 0x01;
 
     // Atomic Write Unit Normal
     {
