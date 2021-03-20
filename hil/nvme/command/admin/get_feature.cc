@@ -51,7 +51,7 @@ void GetFeature::setRequest(ControllerData *cdata, AbstractNamespace *,
         uint8_t sel = (entry->dword11 >> 20) & 0x03;
         uint8_t idx = (entry->dword11 >> 16) & 0x0F;
 
-        if (idx > 9 || sel > 1) {
+        if (idx >= 9 || sel > 1) {
           tag->cqc->makeStatus(true, false, StatusType::GenericCommandStatus,
                                GenericCommandStatusCode::Invalid_Field);
         }
