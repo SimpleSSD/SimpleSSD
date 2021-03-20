@@ -470,7 +470,7 @@ void Identify::makeCommonControllerStructure(CommandData *tag) {
     buffer[0x0105] = 0x03;
 
     // Error Log Page Entries, 0's based value
-    buffer[0x0106] = 0x63;  // 64 entries
+    buffer[0x0106] = 63;  // 64 entries
 
     // Number of Power States Support, 0's based value
     buffer[0x0107] = 0x00;  // 1 states
