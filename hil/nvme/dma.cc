@@ -156,6 +156,13 @@ void PRPList::getPRPListFromPRP(uint64_t base, uint64_t size) {
       // PRP list ends but size is not full
       // Last item of PRP list is pointer of another PRP
       // list
+
+      /* We must also account for currentSize variable.
+       * In case the last entry in the list is a pointer to another list
+       * currentSize must be decremented back by 8
+       */
+      currentSize -= listPRPSize;
+
       listPRP = pThis->prpList.back().addr;
       pThis->prpList.pop_back();
 
