@@ -29,7 +29,7 @@ Latency::Latency(ConfigReader *config)
   const uint8_t readCycle = 7;
   const uint8_t writeCycle = 7;
   const uint8_t eraseCycle = 5;
-  float tCK = 1.f / (structure->dmaSpeed * 1048576) * 1000 * 1000 * 1000 * 1000;
+  float tCK = 1.f / structure->dmaSpeed * 1000 * 1000 * 1000 * 1000;
 
   readdma0 = readCycle * tCK / (structure->dmaWidth / 8);
   writedma0 =
