@@ -220,22 +220,26 @@ typename map_list<Key, T>::size_type map_list<Key, T>::size() const noexcept {
 SORTED_MAP_TEMPLATE
 void map_list<Key, T>::pop_front() noexcept {
   if (LIKELY(map.size() > 0)) {
+    auto entry = listHead->next;
+
     // Remove first entry from list
-    eraseList(listHead->next);
+    eraseList(entry);
 
     // Remove first entry from map
-    eraseMap(listHead->next->field.first);
+    eraseMap(entry->field.first);
   }
 }
 
 SORTED_MAP_TEMPLATE
 void map_list<Key, T>::pop_back() noexcept {
   if (LIKELY(map.size() > 0)) {
+    auto entry = listTail->prev;
+
     // Remove last entry from list
-    eraseList(listTail->prev);
+    eraseList(entry);
 
     // Remove last entry from map
-    eraseMap(listTail->prev->field.first);
+    eraseMap(entry->field.first);
   }
 }
 
