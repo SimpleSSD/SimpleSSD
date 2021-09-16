@@ -72,7 +72,7 @@ Config::Config() {
   nandStructure.page = 512;
   nandStructure.pageSize = 16384;
   nandStructure.spareSize = 1216;
-  nandStructure.dmaSpeed = 400;
+  nandStructure.dmaSpeed = 400'000'000;
   nandStructure.dmaWidth = 8;
 
   nandTiming.tADL = 70000;
