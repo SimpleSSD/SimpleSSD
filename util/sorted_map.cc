@@ -6,8 +6,7 @@
  */
 
 #ifndef SORTED_MAP_TEMPLATE
-#define SORTED_MAP_TEMPLATE                                                    \
-  template <class Key, class T, std::enable_if_t<std::is_pointer_v<T>, bool> U>
+#define SORTED_MAP_TEMPLATE template <class Key, class T>
 
 #include "util/sorted_map.hh"
 
@@ -244,18 +243,7 @@ SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T>::iterator, bool>
 map_list<Key, T>::push_front(const key_type &key,
                              const mapped_type &value) noexcept {
-  if (LIKELY(map.count(key) == 0)) {
-    // Insert item to map
-    auto ret = insertMap(key, std::make_pair(key, value));
-    auto entry = &ret.first->second;
-
-    // Insert item to list
-    insertList(listHead, entry);
-
-    return std::make_pair(make_iterator(entry), true);
-  }
-
-  return std::make_pair(end(), false);
+  return emplace_front(key, std::move(value));
 }
 
 SORTED_MAP_TEMPLATE
@@ -281,18 +269,7 @@ SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T>::iterator, bool>
 map_list<Key, T>::push_back(const key_type &key,
                             const mapped_type &value) noexcept {
-  if (LIKELY(map.count(key) == 0)) {
-    // Insert item to map
-    auto ret = insertMap(key, std::make_pair(key, value));
-    auto entry = &ret.first->second;
-
-    // Insert item to list
-    insertList(listTail->prev, entry);
-
-    return std::make_pair(make_iterator(entry), true);
-  }
-
-  return std::make_pair(end(), false);
+  return emplace_back(key, std::move(value));
 }
 
 SORTED_MAP_TEMPLATE
@@ -430,18 +407,18 @@ typename map_list<Key, T>::const_iterator map_list<Key, T>::end()
 }
 
 SORTED_MAP_TEMPLATE
-map_map<Key, T, U>::map_map(Compare c) : map_list<Key, T>(), func(c) {}
+map_map<Key, T>::map_map(Compare c) : map_list<Key, T>(), func(c) {}
 
 SORTED_MAP_TEMPLATE
-map_map<Key, T, U>::map_map(map_map &&rhs) noexcept {
+map_map<Key, T>::map_map(map_map &&rhs) noexcept {
   *this = std::move(rhs);
 }
 
 SORTED_MAP_TEMPLATE
-map_map<Key, T, U>::~map_map() {}
+map_map<Key, T>::~map_map() {}
 
 SORTED_MAP_TEMPLATE
-map_map<Key, T, U> &map_map<Key, T, U>::operator=(map_map &&rhs) {
+map_map<Key, T> &map_map<Key, T>::operator=(map_map &&rhs) {
   if (this != &rhs) {
     this->map = std::move(rhs.map);
     this->listHead = std::exchange(rhs.listHead, nullptr);
@@ -453,9 +430,14 @@ map_map<Key, T, U> &map_map<Key, T, U>::operator=(map_map &&rhs) {
 }
 
 SORTED_MAP_TEMPLATE
-std::pair<typename map_map<Key, T, U>::iterator, bool>
-map_map<Key, T, U>::insert(const key_type &key,
-                           const mapped_type &value) noexcept {
+std::pair<typename map_map<Key, T>::iterator, bool> map_map<Key, T>::insert(
+    const key_type &key, const mapped_type &value) noexcept {
+  return emplace(key, std::move(value));
+}
+
+SORTED_MAP_TEMPLATE
+std::pair<typename map_map<Key, T>::iterator, bool> map_map<Key, T>::emplace(
+    const key_type &key, mapped_type &&value) noexcept {
   if (LIKELY(this->map.count(key) == 0)) {
     // Find where to insert
     list_item *prev = this->listHead;
@@ -470,11 +452,13 @@ map_map<Key, T, U>::insert(const key_type &key,
       prev = prev->next;
     }
 
-    // Insert item to list
-    auto entry = this->insertList(prev, std::make_pair(key, value));
-
     // Insert item to map
-    this->insertMap(key, entry);
+    auto ret = this->insertMap(
+        key, std::make_pair(key, std::forward<mapped_type>(value)));
+    auto entry = &ret.first->second;
+
+    // Insert item to list
+    insertList(prev, entry);
 
     return std::make_pair(this->make_iterator(entry), true);
   }

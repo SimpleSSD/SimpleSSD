@@ -176,8 +176,7 @@ class map_list {
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
-template <class Key, class T,
-          std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+template <class Key, class T>
 class map_map : public map_list<Key, T> {
  public:
   using key_type = typename map_list<Key, T>::key_type;
@@ -186,7 +185,7 @@ class map_map : public map_list<Key, T> {
   using iterator = typename map_list<Key, T>::iterator;
 
   //! Return true if a < b (a should go first)
-  using Compare = std::function<bool(const mapped_type, const mapped_type)>;
+  using Compare = std::function<bool(const mapped_type &, const mapped_type &)>;
 
  protected:
   using list_item = typename map_list<Key, T>::list_item;
@@ -209,11 +208,16 @@ class map_map : public map_list<Key, T> {
 
   std::pair<iterator, bool> push_front(const key_type &,
                                        const mapped_type &) noexcept = delete;
+  std::pair<iterator, bool> emplace_front(const key_type &,
+                                          mapped_type &&) noexcept = delete;
   std::pair<iterator, bool> push_back(const key_type &,
                                       const mapped_type &) noexcept = delete;
+  std::pair<iterator, bool> emplace_back(const key_type &,
+                                         mapped_type &&) noexcept = delete;
 
   std::pair<iterator, bool> insert(const key_type &,
                                    const mapped_type &) noexcept;
+  std::pair<iterator, bool> emplace(const key_type &, mapped_type &&) noexcept;
 };
 
 }  // namespace SimpleSSD
