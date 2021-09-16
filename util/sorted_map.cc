@@ -243,7 +243,18 @@ SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T>::iterator, bool>
 map_list<Key, T>::push_front(const key_type &key,
                              const mapped_type &value) noexcept {
-  return emplace_front(key, std::move(value));
+  if (LIKELY(map.count(key) == 0)) {
+    // Insert item to map
+    auto ret = insertMap(key, std::make_pair(key, value));
+    auto entry = &ret.first->second;
+
+    // Insert item to list
+    insertList(listHead, entry);
+
+    return std::make_pair(make_iterator(entry), true);
+  }
+
+  return std::make_pair(end(), false);
 }
 
 SORTED_MAP_TEMPLATE
@@ -269,7 +280,18 @@ SORTED_MAP_TEMPLATE
 std::pair<typename map_list<Key, T>::iterator, bool>
 map_list<Key, T>::push_back(const key_type &key,
                             const mapped_type &value) noexcept {
-  return emplace_back(key, std::move(value));
+  if (LIKELY(map.count(key) == 0)) {
+    // Insert item to map
+    auto ret = insertMap(key, std::make_pair(key, value));
+    auto entry = &ret.first->second;
+
+    // Insert item to list
+    insertList(listTail->prev, entry);
+
+    return std::make_pair(make_iterator(entry), true);
+  }
+
+  return std::make_pair(end(), false);
 }
 
 SORTED_MAP_TEMPLATE
@@ -432,7 +454,31 @@ map_map<Key, T> &map_map<Key, T>::operator=(map_map &&rhs) {
 SORTED_MAP_TEMPLATE
 std::pair<typename map_map<Key, T>::iterator, bool> map_map<Key, T>::insert(
     const key_type &key, const mapped_type &value) noexcept {
-  return emplace(key, std::move(value));
+  if (LIKELY(this->map.count(key) == 0)) {
+    // Find where to insert
+    list_item *prev = this->listHead;
+
+    while (prev != this->listTail) {
+      // prev->next->value is nullptr when prev->next is &listTail
+      if (prev->next == this->listTail ||
+          func(value, prev->next->field.second)) {
+        break;
+      }
+
+      prev = prev->next;
+    }
+
+    // Insert item to map
+    auto ret = this->insertMap(key, std::make_pair(key, value));
+    auto entry = &ret.first->second;
+
+    // Insert item to list
+    this->insertList(prev, entry);
+
+    return std::make_pair(this->make_iterator(entry), true);
+  }
+
+  return std::make_pair(this->end(), false);
 }
 
 SORTED_MAP_TEMPLATE
@@ -458,7 +504,7 @@ std::pair<typename map_map<Key, T>::iterator, bool> map_map<Key, T>::emplace(
     auto entry = &ret.first->second;
 
     // Insert item to list
-    insertList(prev, entry);
+    this->insertList(prev, entry);
 
     return std::make_pair(this->make_iterator(entry), true);
   }
