@@ -54,6 +54,16 @@ bool map_list<Key, T>::iterator::operator!=(const iterator &rhs) {
 }
 
 SORTED_MAP_TEMPLATE
+bool map_list<Key, T>::iterator::operator==(const iterator &rhs) const {
+  return cur == rhs.cur;
+}
+
+SORTED_MAP_TEMPLATE
+bool map_list<Key, T>::iterator::operator!=(const iterator &rhs) const {
+  return cur != rhs.cur;
+}
+
+SORTED_MAP_TEMPLATE
 typename map_list<Key, T>::iterator::reference
 map_list<Key, T>::iterator::operator*() {
   if (cur != head && cur != tail && cur != nullptr) {

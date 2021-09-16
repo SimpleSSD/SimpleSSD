@@ -49,6 +49,8 @@ class map_list {
   };
 
  public:
+  class const_iterator;
+
   class iterator {
    public:
     using difference_type = int64_t;
@@ -72,6 +74,8 @@ class map_list {
 
     bool operator==(const iterator &rhs);
     bool operator!=(const iterator &rhs);
+    bool operator==(const iterator &rhs) const;
+    bool operator!=(const iterator &rhs) const;
 
     reference operator*();
     pointer operator->();
