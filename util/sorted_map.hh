@@ -22,8 +22,7 @@ namespace SimpleSSD {
  * Access item by key, front or back.
  * Erase item by key, front or back.
  */
-template <class Key, class T,
-          std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+template <class Key, class T>
 class map_list {
  public:
   using key_type = Key;
@@ -106,15 +105,19 @@ class map_list {
   };
 
  protected:
-  std::unordered_map<key_type, list_item *> map;
+  std::unordered_map<key_type, list_item> map;
+
+  using map_iterator =
+      typename std::unordered_map<key_type, list_item>::iterator;
 
   list_item *listHead;
   list_item *listTail;
 
   void eraseMap(const key_type &) noexcept;
-  bool insertMap(const key_type &, list_item *) noexcept;
+  std::pair<map_iterator, bool> insertMap(const key_type &,
+                                          value_type &&) noexcept;
   void eraseList(list_item *) noexcept;
-  list_item *insertList(list_item *, value_type &&) noexcept;
+  void insertList(list_item *, list_item *) noexcept;
 
   iterator make_iterator(list_item *) noexcept;
   const_iterator make_iterator(const list_item *) const noexcept;
@@ -131,13 +134,19 @@ class map_list {
   size_type size() noexcept;
   size_type size() const noexcept;
 
+  void reserve(size_t size) { map.reserve(size); }
+
   void pop_front() noexcept;
   void pop_back() noexcept;
 
   std::pair<iterator, bool> push_front(const key_type &,
                                        const mapped_type &) noexcept;
+  std::pair<iterator, bool> emplace_front(const key_type &,
+                                          mapped_type &&) noexcept;
   std::pair<iterator, bool> push_back(const key_type &,
                                       const mapped_type &) noexcept;
+  std::pair<iterator, bool> emplace_back(const key_type &,
+                                         mapped_type &&) noexcept;
 
   iterator find(const key_type &) noexcept;
   const_iterator find(const key_type &) const noexcept;
