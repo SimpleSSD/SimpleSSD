@@ -136,8 +136,6 @@ uint64_t Bitset::ctz() noexcept {
 }
 
 uint64_t Bitset::ctz() const noexcept {
-  uint64_t ret = 0;
-
   if (allocSize > sizeof(buffer)) {
     uint64_t i = 0;
 
@@ -145,23 +143,19 @@ uint64_t Bitset::ctz() const noexcept {
       if (*(uint64_t *)(pointer + i) != 0) {
         break;
       }
-
-      ret += 8;
     }
 
     for (; i < allocSize - 1; i++) {
       if (pointer[i] != 0) {
         break;
       }
-
-      ret++;
     }
 
     if (UNLIKELY(i == allocSize && pointer[allocSize - 1] == 0)) {
       return dataSize;
     }
 
-    return (ret << 3) + ctz8(pointer[allocSize - 1]);
+    return (i << 3) + ctz8(pointer[i]);
   }
   else {
     uint64_t &value = *(uint64_t *)buffer;
@@ -217,10 +211,11 @@ void Bitset::set() noexcept {
 void Bitset::set(uint64_t idx, bool value) noexcept {
   auto data = getBuffer();
 
-  data[idx / 8] &= ~(0x01 << (idx % 8));
-
   if (value) {
-    data[idx / 8] = data[idx / 8] | (0x01 << (idx % 8));
+    data[idx / 8] |= (0x01 << (idx % 8));
+  }
+  else {
+    data[idx / 8] &= ~(0x01 << (idx % 8));
   }
 }
 
