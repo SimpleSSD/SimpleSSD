@@ -110,8 +110,8 @@ class map_list {
   using map_iterator =
       typename std::unordered_map<key_type, list_item>::iterator;
 
-  list_item *listHead;
-  list_item *listTail;
+  list_item listHead;
+  list_item listTail;
 
   void eraseMap(const key_type &) noexcept;
   std::pair<map_iterator, bool> insertMap(const key_type &,
@@ -125,11 +125,11 @@ class map_list {
  public:
   map_list();
   map_list(const map_list &) = delete;
-  map_list(map_list &&) noexcept;
+  map_list(map_list &&) noexcept = delete;
   ~map_list();
 
   map_list &operator=(const map_list &) = delete;
-  map_list &operator=(map_list &&);
+  map_list &operator=(map_list &&) = delete;
 
   size_type size() noexcept;
   size_type size() const noexcept;
@@ -197,11 +197,11 @@ class map_map : public map_list<Key, T> {
  public:
   map_map(Compare);
   map_map(const map_map &) = delete;
-  map_map(map_map &&) noexcept;
+  map_map(map_map &&) noexcept = delete;
   ~map_map();
 
   map_map &operator=(const map_map &) = delete;
-  map_map &operator=(map_map &&);
+  map_map &operator=(map_map &&) = delete;
 
   void pop_front() noexcept = delete;
   void pop_back() noexcept = delete;
