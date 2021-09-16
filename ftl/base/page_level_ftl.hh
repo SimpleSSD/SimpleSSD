@@ -24,7 +24,6 @@ class PageLevelFTL : public AbstractFTL {
 
   // Pending request
   uint64_t pendingListBaseAddress;
-  LPN pendingListLPN;
   SuperRequest pendingList;
 
   std::list<SuperRequest> writeList;
