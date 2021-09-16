@@ -24,30 +24,26 @@ InterruptManager::InterruptManager(ObjectData &o, Interface *i, ControllerID id)
       controllerID(id),
       aggregationThreshold(0),
       aggregationTime(0),
-      coalesceMap([](const CoalesceData *a, const CoalesceData *b) -> bool {
-        return a->nextDeadline < b->nextDeadline;
+      coalesceMap([](const CoalesceData &a, const CoalesceData &b) -> bool {
+        return a.nextDeadline < b.nextDeadline;
       }) {
   eventTimer = createEvent([this](uint64_t t, uint64_t) { timerHandler(t); },
                            "HIL::InterruptManager::eventTimer");
 }
 
 InterruptManager::~InterruptManager() {
-  for (auto &iter : coalesceMap) {
-    delete iter.second;
-  }
-
   coalesceMap.clear();
 }
 
 void InterruptManager::timerHandler(uint64_t tick) {
   auto data = coalesceMap.begin();
 
-  panic_if(data->second->nextDeadline != tick,
+  panic_if(data->second.nextDeadline != tick,
            "Timer broken in interrupt coalescing.");
 
-  data->second->currentRequestCount = 0;
-  data->second->nextDeadline = std::numeric_limits<uint64_t>::max();
-  data->second->pending = true;
+  data->second.currentRequestCount = 0;
+  data->second.nextDeadline = std::numeric_limits<uint64_t>::max();
+  data->second.pending = true;
 
   pInterface->postInterrupt(data->first, true);
 
@@ -56,7 +52,7 @@ void InterruptManager::timerHandler(uint64_t tick) {
 }
 
 void InterruptManager::reschedule(
-    map_map<uint16_t, CoalesceData *>::iterator iter) {
+    map_map<uint16_t, CoalesceData>::iterator iter) {
   if (iter != coalesceMap.end()) {
     auto iv = iter->first;
     auto data = iter->second;
@@ -69,7 +65,7 @@ void InterruptManager::reschedule(
   if (LIKELY(coalesceMap.size() > 0)) {
     auto next = coalesceMap.front();
 
-    scheduleAbs(eventTimer, 0ull, next.second->nextDeadline);
+    scheduleAbs(eventTimer, 0ull, next.second.nextDeadline);
   }
 }
 
@@ -79,29 +75,29 @@ void InterruptManager::postInterrupt(uint16_t iv, bool set) {
 
   if (iter != coalesceMap.end()) {
     if (set) {
-      iter->second->currentRequestCount++;
+      iter->second.currentRequestCount++;
 
-      if (iter->second->currentRequestCount == 1) {
-        iter->second->nextDeadline = getTick() + aggregationTime;
+      if (iter->second.currentRequestCount == 1) {
+        iter->second.nextDeadline = getTick() + aggregationTime;
 
         // Schedule Timer
         reschedule(iter);
       }
-      else if (iter->second->currentRequestCount >= aggregationThreshold) {
+      else if (iter->second.currentRequestCount >= aggregationThreshold) {
         immediate = true;
 
-        iter->second->currentRequestCount = 0;
-        iter->second->nextDeadline = std::numeric_limits<uint64_t>::max();
-        iter->second->pending = true;
+        iter->second.currentRequestCount = 0;
+        iter->second.nextDeadline = std::numeric_limits<uint64_t>::max();
+        iter->second.pending = true;
 
         // Schedule Timer
         reschedule(iter);
       }
     }
-    else if (iter->second->pending) {
+    else if (iter->second.pending) {
       immediate = true;
 
-      iter->second->pending = false;
+      iter->second.pending = false;
     }
   }
   else {
@@ -124,16 +120,9 @@ void InterruptManager::enableCoalescing(bool set, uint16_t iv) {
                   set ? "Enable" : "Disable", iv);
 
   if (set && iter == coalesceMap.end()) {
-    CoalesceData *tmp = new CoalesceData();
-
-    tmp->currentRequestCount = 0;
-    tmp->nextDeadline = 0;
-
-    coalesceMap.insert(iv, tmp);
+    coalesceMap.emplace(iv, CoalesceData());
   }
   else if (!set && iter != coalesceMap.end()) {
-    delete iter->second;
-
     coalesceMap.erase(iter);
 
     reschedule(coalesceMap.end());
@@ -180,9 +169,9 @@ void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
 
   for (auto &iter : coalesceMap) {
     BACKUP_SCALAR(out, iter.first);
-    BACKUP_SCALAR(out, iter.second->pending);
-    BACKUP_SCALAR(out, iter.second->currentRequestCount);
-    BACKUP_SCALAR(out, iter.second->nextDeadline);
+    BACKUP_SCALAR(out, iter.second.pending);
+    BACKUP_SCALAR(out, iter.second.currentRequestCount);
+    BACKUP_SCALAR(out, iter.second.nextDeadline);
   }
 }
 
@@ -198,12 +187,12 @@ void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
 
   for (uint64_t i = 0; i < size; i++) {
     uint16_t iv;
-    auto iter = new CoalesceData();
+    CoalesceData iter;
 
     RESTORE_SCALAR(in, iv);
-    RESTORE_SCALAR(in, iter->pending);
-    RESTORE_SCALAR(in, iter->currentRequestCount);
-    RESTORE_SCALAR(in, iter->nextDeadline);
+    RESTORE_SCALAR(in, iter.pending);
+    RESTORE_SCALAR(in, iter.currentRequestCount);
+    RESTORE_SCALAR(in, iter.nextDeadline);
 
     coalesceMap.insert(iv, iter);
   }
