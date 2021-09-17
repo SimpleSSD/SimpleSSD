@@ -30,7 +30,7 @@ struct Parameter;
   class classname {                                                            \
    private:                                                                    \
     uint##bits##_t value;                                                      \
-    static void assertNumber(                                                  \
+    static inline void assertNumber(                                           \
         uint##bits##_t v,                                                      \
         uint##bits##_t c =                                                     \
             std::numeric_limits<uint##bits##_t>::max()) noexcept {             \
