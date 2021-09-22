@@ -57,23 +57,26 @@ void AdvancedGC::requestArrived(Request *req) {
 
 void AdvancedGC::gc_trigger() {
   bool fgc = false;  // For message
+  uint32_t size = 0;
 
   if (ftlobject.pAllocator->checkForegroundGCThreshold()) {
     stat.fgcCount++;
     state = State::Foreground;
 
-    targetBlocks.resize(fgcBlocksToErase);
+    size = fgcBlocksToErase;
     fgc = true;
   }
   else if (state == State::Background) {
     stat.bgcCount++;
     state = State::Background;
 
+    size = bgcBlocksToErase;
     targetBlocks.resize(bgcBlocksToErase);
   }
 
-  // Get blocks to erase
-  for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
+  targetBlocks.resize(size);
+
+  for (uint32_t idx = 0; idx < size; idx++) {
     ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
   }
 
