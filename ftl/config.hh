@@ -32,6 +32,8 @@ class Config : public BaseConfig {
     IdleTimeForBackgroundGC,
     VictimSelectionPolicy,
     SamplingFactor,
+    ForegroundBlockEraseLevel,
+    BackgroundBlockEraseLevel,
 
     // Common FTL setting
     OverProvisioningRatio,
@@ -54,7 +56,6 @@ class Config : public BaseConfig {
     Naive,
     Advanced,
     Preemptible,
-    PreemptibleIdleTime,
   };
 
   enum class VictimSelectionMode : uint8_t {
@@ -62,6 +63,14 @@ class Config : public BaseConfig {
     Random,
     CostBenefit,
     DChoice,
+  };
+
+  enum class Granularity : uint8_t {
+    None,
+    FirstLevel,
+    SecondLevel,
+    ThirdLevel,
+    AllLevel,
   };
 
  private:
@@ -81,6 +90,8 @@ class Config : public BaseConfig {
 
   uint8_t superpageAllocation;
   bool mergeRMW;
+  Granularity fgcBlockEraseLevel;
+  Granularity bgcBlockEraseLevel;
 
   std::string superpage;
 

@@ -602,6 +602,29 @@
          -->
         <config name="SamplingFactor">3</config>
       </section>
+      <!-- Victim block erase configuration -->
+      <section name="blockerase">
+        <!--
+          <int:u8> Foreground GC block erase granularity
+
+          Set # blocks should be erased in parallel.
+          For the definition of parallelism group, see FIL section.
+
+          Possible values:
+            0: Only one block will be erased in parallel
+            1: # blocks = size of first parallelism level
+            2: # blocks = size of 1~2 parallelism level
+            3: # blocks = size of 1~3 parallelism level
+            4: # blocks = size of all parallelism level
+         -->
+        <config name="ForegroundBlockEraseLevel">3</config>
+        <!--
+          <int:u8> Background GC block erase granularity
+
+          Same with Foreground GC block erase granularity, but for Background GC
+         -->
+        <config name="BackgroundBlockEraseLevel">0</config>
+      </section>
     </section>
     <!--
       Common FTL algorithm configurations

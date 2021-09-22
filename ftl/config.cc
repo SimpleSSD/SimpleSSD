@@ -23,6 +23,10 @@ const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
 const char NAME_GC_D_CHOICE_PARAM[] = "SamplingFactor";
 
+// gc > erase strategy
+const char NAME_FGC_PARALLEL_BLOCK_ERASE[] = "ForegroundBlockEraseLevel";
+const char NAME_BGC_PARALLEL_BLOCK_ERASE[] = "BackgroundBlockEraseLevel";
+
 // common section
 const char NAME_OVERPROVISION_RATIO[] = "OverProvisioningRatio";
 const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
@@ -47,6 +51,9 @@ Config::Config() {
   fgcThreshold = 0.05f;
   bgcThreshold = 0.1f;
   bgcIdletime = 5000000000000ul;
+
+  fgcBlockEraseLevel = Granularity::ThirdLevel;
+  bgcBlockEraseLevel = Granularity::None;
 
   mergeRMW = false;
 
@@ -80,6 +87,15 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
             LOAD_NAME_UINT_TYPE(node3, NAME_GC_EVICT_POLICY,
                                 VictimSelectionMode, gcBlockSelection);
             LOAD_NAME_UINT(node3, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
+          }
+        }
+        else if (strcmp(name2, "blockerase") == 0 && isSection(node2)) {
+          for (auto node3 = node2.first_child(); node3;
+               node3 = node3.next_sibling()) {
+            LOAD_NAME_UINT_TYPE(node3, NAME_FGC_PARALLEL_BLOCK_ERASE,
+                                Granularity, fgcBlockEraseLevel);
+            LOAD_NAME_UINT_TYPE(node3, NAME_BGC_PARALLEL_BLOCK_ERASE,
+                                Granularity, bgcBlockEraseLevel);
           }
         }
       }
@@ -134,6 +150,10 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(node2, NAME_GC_EVICT_POLICY, gcBlockSelection);
   STORE_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
 
+  STORE_SECTION(node, "blockerase", node2);
+  STORE_NAME_UINT(node2, NAME_FGC_PARALLEL_BLOCK_ERASE, fgcBlockEraseLevel);
+  STORE_NAME_UINT(node2, NAME_BGC_PARALLEL_BLOCK_ERASE, bgcBlockEraseLevel);
+
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
@@ -150,6 +170,10 @@ void Config::update() noexcept {
   panic_if((uint8_t)fillingMode > 2, "Invalid FillingMode.");
   panic_if((uint8_t)gcMode > 2, "Invalid GCMode.");
   panic_if((uint8_t)gcBlockSelection > 3, "Invalid VictimSelectionPolicy.");
+  panic_if((uint8_t)fgcBlockEraseLevel > 4,
+           "Invalid ForegroundBlockEraseLevel.");
+  panic_if((uint8_t)bgcBlockEraseLevel > 4,
+           "Invalid BackgroundBlockEraseLevel.");
 
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
@@ -200,6 +224,12 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
       break;
     case SuperpageAllocation:
       ret = superpageAllocation;
+      break;
+    case ForegroundBlockEraseLevel:
+      ret = (uint64_t)fgcBlockEraseLevel;
+      break;
+    case BackgroundBlockEraseLevel:
+      ret = (uint64_t)bgcBlockEraseLevel;
       break;
     case IdleTimeForBackgroundGC:
       ret = bgcIdletime;
@@ -264,6 +294,12 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
       break;
     case SuperpageAllocation:
       superpageAllocation = (uint8_t)value;
+      break;
+    case ForegroundBlockEraseLevel:
+      fgcBlockEraseLevel = (Granularity)value;
+      break;
+    case BackgroundBlockEraseLevel:
+      bgcBlockEraseLevel = (Granularity)value;
       break;
     case IdleTimeForBackgroundGC:
       bgcIdletime = value;
