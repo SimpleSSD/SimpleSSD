@@ -260,7 +260,7 @@ void NaiveGC::gc_doWrite(uint64_t now, uint32_t idx) {
   for (uint32_t i = 0; i < superpage; i++) {
     pFIL->program(
         FIL::Request(static_cast<LPN>(lpn + i), static_cast<PPN>(ppn + i),
-                     makeBufferAddress(i, ctx.pageIndex), eventWriteDone, 0ul));
+                     makeBufferAddress(i, ctx.pageIndex), eventWriteDone, idx));
   }
 
   targetBlock.writeCounter += superpage;  // Do not overwrite
@@ -294,7 +294,7 @@ void NaiveGC::gc_writeDone(uint64_t now, uint32_t idx) {
     }
 
     // Go back to read
-    scheduleNow(eventDoRead);
+    scheduleNow(eventDoRead, idx);
   }
 }
 
