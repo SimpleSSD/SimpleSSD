@@ -22,7 +22,6 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   state = State::Idle;
 
   auto nandConfig = object.config->getNANDStructure();
-  auto pagesInBlock = nandConfig->page;
   auto param = ftlobject.pMapping->getInfo();
 
   pageSize = param->pageSize;
@@ -55,7 +54,7 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   // Resize copy context
   targetBlocks.reserve(ncontext);
 
-  auto sbsize = pagesInBlock * superpage * pageSize * ncontext;
+  auto sbsize = superpage * pageSize * ncontext;
 
   // Try SRAM
   if (object.memory->allocate(sbsize, Memory::MemoryType::SRAM, "", true) ==
@@ -165,13 +164,12 @@ void NaiveGC::gc_doRead(uint64_t now, uint32_t idx) {
       if (i == 0) {
         ctx.request.setTag(idx);
         ctx.request.setPPN(ppn);
-        ctx.request.setDRAMAddress(makeBufferAddress(i, ctx.pageIndex));
+        ctx.request.setDRAMAddress(makeBufferAddress(idx, i));
 
         pFIL->read(FIL::Request(&ctx.request, eventDoTranslate));
       }
       else {
-        pFIL->read(FIL::Request(invlpn, ppn,
-                                makeBufferAddress(i, ctx.pageIndex),
+        pFIL->read(FIL::Request(invlpn, ppn, makeBufferAddress(idx, i),
                                 eventDoTranslate, idx));
       }
     }
@@ -258,9 +256,9 @@ void NaiveGC::gc_doWrite(uint64_t now, uint32_t idx) {
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
-    pFIL->program(
-        FIL::Request(static_cast<LPN>(lpn + i), static_cast<PPN>(ppn + i),
-                     makeBufferAddress(i, ctx.pageIndex), eventWriteDone, idx));
+    pFIL->program(FIL::Request(static_cast<LPN>(lpn + i),
+                               static_cast<PPN>(ppn + i),
+                               makeBufferAddress(idx, i), eventWriteDone, idx));
   }
 
   targetBlock.writeCounter += superpage;  // Do not overwrite

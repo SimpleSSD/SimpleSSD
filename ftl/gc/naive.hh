@@ -58,10 +58,8 @@ class NaiveGC : public AbstractGC {
   // For penalty calculation
   uint64_t firstRequestArrival;
 
-  inline uint64_t makeBufferAddress(uint32_t superpageIndex,
-                                    uint32_t pageIndex) {
-    return bufferBaseAddress +
-           (superpageIndex * superpage + pageIndex) * pageSize;
+  inline uint64_t makeBufferAddress(uint32_t idx, uint32_t superpageIndex) {
+    return bufferBaseAddress + (idx * superpage + superpageIndex) * pageSize;
   }
 
   inline void updatePenalty(uint64_t now) {
