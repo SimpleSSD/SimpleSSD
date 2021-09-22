@@ -16,7 +16,8 @@ namespace SimpleSSD::FTL::GC {
 
 class PreemptibleGC : public AdvancedGC {
  protected:
-  uint64_t pendingFIL;  // Pending FIL requests (read/program/erase)
+  std::vector<uint64_t>
+      pendingFILs;  // Pending FIL requests (read/program/erase)
 
   void triggerBackground(uint64_t) override;
 
@@ -24,11 +25,23 @@ class PreemptibleGC : public AdvancedGC {
     return firstRequestArrival < std::numeric_limits<uint64_t>::max();
   }
 
-  inline void increasePendingFIL() { pendingFIL += superpage; }
-  inline void decreasePendingFIL() { pendingFIL--; }
+  inline void increasePendingFIL(uint32_t idx) {
+    pendingFILs[idx] += superpage;
+  }
+
+  inline void decreasePendingFIL(uint32_t idx) { pendingFILs[idx]--; }
 
   virtual inline void checkPreemptible() {
-    if (UNLIKELY(pendingFIL == 0)) {
+    bool allstop = true;
+
+    for (auto &iter : pendingFILs) {
+      if (iter != 0) {
+        allstop = false;
+        break;
+      }
+    }
+
+    if (UNLIKELY(allstop)) {
       state = State::Paused;
 
       debugprint(logid, "GC    | Preempted");
@@ -42,12 +55,13 @@ class PreemptibleGC : public AdvancedGC {
 
   void resumePaused();
 
-  void gc_checkDone(uint64_t) override;
-  void gc_doRead(uint64_t) override;
-  void gc_doTranslate(uint64_t) override;
-  void gc_doWrite(uint64_t) override;
-  void gc_writeDone(uint64_t) override;
-  void gc_eraseDone(uint64_t) override;
+  void gc_trigger() override;
+  void gc_doRead(uint64_t, uint32_t) override;
+  void gc_doTranslate(uint64_t, uint32_t) override;
+  void gc_doWrite(uint64_t, uint32_t) override;
+  void gc_writeDone(uint64_t, uint32_t) override;
+  void gc_eraseDone(uint64_t, uint32_t) override;
+  void gc_checkDone(uint64_t, uint32_t) override;
 
  public:
   PreemptibleGC(ObjectData &, FTLObjectData &, FIL::FIL *);

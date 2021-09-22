@@ -12,7 +12,7 @@
 namespace SimpleSSD::FTL::GC {
 
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : AdvancedGC(o, fo, f), pendingFIL(0) {
+    : AdvancedGC(o, fo, f) {
   logid = Log::DebugID::FTL_PreemptibleGC;
 }
 
@@ -49,64 +49,80 @@ void PreemptibleGC::triggerForeground() {
 }
 
 void PreemptibleGC::resumePaused() {
-  if (LIKELY(targetBlock.blockID.isValid())) {
-    debugprint(logid, "GC    | Resume from preempted state");
+  bool msg = false;
 
-    panic_if(targetBlock.writeCounter != 0 || targetBlock.readCounter != 0,
-             "Unexpected GC preemption state");
+  const uint32_t size = targetBlocks.size();
 
-    if (targetBlock.pageWriteIndex == targetBlock.pageReadIndex) {
-      scheduleNow(eventDoRead);
-    }
-    else {
-      panic("Unexpected GC preemption state");
+  for (uint32_t idx = 0; idx < size; idx++) {
+    auto &targetBlock = targetBlocks[idx];
+
+    if (LIKELY(targetBlock.blockID.isValid())) {
+      if (!msg) {
+        debugprint(logid, "GC    | Resume from preempted state");
+        msg = true;
+      }
+
+      panic_if(targetBlock.writeCounter != 0 || targetBlock.readCounter != 0,
+               "Unexpected GC preemption state");
+
+      if (targetBlock.pageWriteIndex == targetBlock.pageReadIndex) {
+        scheduleNow(eventDoRead, idx);
+      }
+      else {
+        panic("Unexpected GC preemption state");
+      }
     }
   }
 }
 
-void PreemptibleGC::gc_checkDone(uint64_t now) {
+void PreemptibleGC::gc_trigger() {
+  AdvancedGC::gc_trigger();
+
+  pendingFILs.resize(targetBlocks.size());
+}
+
+void PreemptibleGC::gc_checkDone(uint64_t now, uint32_t idx) {
   // Maybe GC is completed while waiting for pending requests
   if (UNLIKELY(preemptRequested())) {
     checkPreemptible();
   }
 
-  AdvancedGC::gc_checkDone(now);
+  AdvancedGC::gc_checkDone(now, idx);
 }
 
-void PreemptibleGC::gc_doRead(uint64_t now) {
+void PreemptibleGC::gc_doRead(uint64_t now, uint32_t idx) {
   if (LIKELY(!preemptRequested() || state == State::Foreground)) {
-    // Don't use AdvancedGC::gc_doRead
-    NaiveGC::gc_doRead(now);
+    AdvancedGC::gc_doRead(now, idx);
 
-    increasePendingFIL();
+    increasePendingFIL(idx);
   }
   else {
     checkPreemptible();
   }
 }
 
-void PreemptibleGC::gc_doTranslate(uint64_t now) {
-  decreasePendingFIL();
+void PreemptibleGC::gc_doTranslate(uint64_t now, uint32_t idx) {
+  decreasePendingFIL(idx);
 
-  AdvancedGC::gc_doTranslate(now);
+  AdvancedGC::gc_doTranslate(now, idx);
 }
 
-void PreemptibleGC::gc_doWrite(uint64_t now) {
-  AdvancedGC::gc_doWrite(now);
+void PreemptibleGC::gc_doWrite(uint64_t now, uint32_t idx) {
+  AdvancedGC::gc_doWrite(now, idx);
 
-  increasePendingFIL();
+  increasePendingFIL(idx);
 }
 
-void PreemptibleGC::gc_writeDone(uint64_t now) {
-  decreasePendingFIL();
+void PreemptibleGC::gc_writeDone(uint64_t now, uint32_t idx) {
+  decreasePendingFIL(idx);
 
-  AdvancedGC::gc_writeDone(now);
+  AdvancedGC::gc_writeDone(now, idx);
 }
 
-void PreemptibleGC::gc_eraseDone(uint64_t now) {
-  decreasePendingFIL();
+void PreemptibleGC::gc_eraseDone(uint64_t now, uint32_t idx) {
+  decreasePendingFIL(idx);
 
-  AdvancedGC::gc_eraseDone(now);
+  AdvancedGC::gc_eraseDone(now, idx);
 }
 
 void PreemptibleGC::requestArrived(Request *req) {
@@ -122,13 +138,21 @@ void PreemptibleGC::requestArrived(Request *req) {
 void PreemptibleGC::createCheckpoint(std::ostream &out) const noexcept {
   AdvancedGC::createCheckpoint(out);
 
-  BACKUP_SCALAR(out, pendingFIL);
+  for (const auto &iter : pendingFILs) {
+    BACKUP_SCALAR(out, iter);
+  }
 }
 
 void PreemptibleGC::restoreCheckpoint(std::istream &in) noexcept {
   AdvancedGC::restoreCheckpoint(in);
 
-  RESTORE_SCALAR(in, pendingFIL);
+  uint64_t size = targetBlocks.size();
+
+  pendingFILs.resize(size);
+
+  for (uint64_t i = 0; i < size; i++) {
+    RESTORE_SCALAR(in, pendingFILs[i]);
+  }
 }
 
 }  // namespace SimpleSSD::FTL::GC

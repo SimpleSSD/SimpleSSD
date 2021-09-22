@@ -56,24 +56,38 @@ void AdvancedGC::requestArrived(Request *req) {
 }
 
 void AdvancedGC::gc_trigger() {
-  // Get blocks to erase
-  ftlobject.pAllocator->getVictimBlocks(targetBlock, eventStart);
+  bool fgc = false;  // For message
 
   if (ftlobject.pAllocator->checkForegroundGCThreshold()) {
     stat.fgcCount++;
     state = State::Foreground;
 
-    debugprint(logid, "GC    | Foreground");
+    targetBlocks.resize(fgcBlocksToErase);
+    fgc = true;
   }
   else if (state == State::Background) {
     stat.bgcCount++;
     state = State::Background;
 
-    debugprint(logid, "GC    | Background");
+    targetBlocks.resize(bgcBlocksToErase);
+  }
+
+  // Get blocks to erase
+  for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
+    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
+  }
+
+  if (fgc) {
+    debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);
+  }
+  else {
+    debugprint(logid, "GC    | Background | %u blocks", bgcBlocksToErase);
   }
 }
 
-void AdvancedGC::gc_checkDone(uint64_t now) {
+void AdvancedGC::gc_checkDone(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   // Triggered GC completed
   if (state == State::Foreground) {
     debugprint(logid,
@@ -87,10 +101,6 @@ void AdvancedGC::gc_checkDone(uint64_t now) {
   }
 
   targetBlock.blockID.invalidate();
-  state = State::Idle;
-
-  // Check threshold
-  triggerForeground();
 }
 
 void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
