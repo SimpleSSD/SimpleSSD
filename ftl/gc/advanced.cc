@@ -71,10 +71,7 @@ void AdvancedGC::gc_trigger() {
     state = State::Background;
 
     size = bgcBlocksToErase;
-    targetBlocks.resize(bgcBlocksToErase);
   }
-
-  targetBlocks.resize(size);
 
   for (uint32_t idx = 0; idx < size; idx++) {
     ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);

@@ -52,7 +52,7 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   auto ncontext = MAX(fgcBlocksToErase, bgcBlocksToErase);
 
   // Resize copy context
-  targetBlocks.reserve(ncontext);
+  targetBlocks.resize(ncontext);
 
   auto sbsize = superpage * pageSize * ncontext;
 
@@ -124,8 +124,6 @@ void NaiveGC::gc_trigger() {
   stat.fgcCount++;
 
   // Get blocks to erase
-  targetBlocks.resize(fgcBlocksToErase);
-
   for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
     ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
   }
