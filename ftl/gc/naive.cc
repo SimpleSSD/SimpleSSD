@@ -366,10 +366,8 @@ void NaiveGC::gc_checkDone(uint64_t now) {
     // Calculate penalty
     updatePenalty(now);
 
-    if (state == State::Idle) {
-      // Foreground GC was not triggered
-      ftlobject.pFTL->restartStalledRequests();
-    }
+    // As we got new freeblock, restart `some of` stalled requests
+    ftlobject.pFTL->restartStalledRequests();
   }
 }
 
