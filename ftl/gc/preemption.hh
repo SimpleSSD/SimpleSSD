@@ -61,7 +61,7 @@ class PreemptibleGC : public AdvancedGC {
   void gc_doWrite(uint64_t, uint32_t) override;
   void gc_writeDone(uint64_t, uint32_t) override;
   void gc_eraseDone(uint64_t, uint32_t) override;
-  void gc_checkDone(uint64_t, uint32_t) override;
+  void gc_done(uint64_t, uint32_t) override;
 
  public:
   PreemptibleGC(ObjectData &, FTLObjectData &, FIL::FIL *);

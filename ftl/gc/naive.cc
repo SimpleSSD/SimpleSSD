@@ -327,46 +327,50 @@ void NaiveGC::gc_eraseDone(uint64_t now, uint32_t idx) {
 }
 
 void NaiveGC::gc_done(uint64_t now, uint32_t idx) {
-  gc_checkDone(now, idx);
-
-  // Check all GC has been completed
-  {
-    bool allinvalid = true;
-
-    for (auto &iter : targetBlocks) {
-      if (iter.blockID.isValid()) {
-        allinvalid = false;
-        break;
-      }
-    }
-
-    if (allinvalid) {
-      state = State::Idle;
-
-      // Check threshold
-      triggerForeground();
-
-      // Calculate penalty
-      updatePenalty(now);
-
-      if (state == State::Idle) {
-        // Foreground GC was not triggered
-        ftlobject.pFTL->restartStalledRequests();
-      }
-    }
-  }
-}
-
-void NaiveGC::gc_checkDone(uint64_t now, uint32_t idx) {
   auto &targetBlock = targetBlocks[idx];
 
-  // Triggered GC completed
-  debugprint(logid,
-             "GC    | Foreground | block %u | %" PRIu64 " - %" PRIu64
-             " (%" PRIu64 ")",
-             idx, beginAt, now, now - beginAt);
-
   targetBlock.blockID.invalidate();
+
+  // Check all GC has been completed
+  gc_checkDone(now);
+}
+
+void NaiveGC::gc_checkDone(uint64_t now) {
+  bool allinvalid = true;
+
+  for (auto &iter : targetBlocks) {
+    if (iter.blockID.isValid()) {
+      allinvalid = false;
+      break;
+    }
+  }
+
+  if (allinvalid) {
+    // Triggered GC completed
+    if (state == State::Foreground) {
+      debugprint(logid,
+                 "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+    else if (state == State::Background) {
+      debugprint(logid,
+                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+
+    state = State::Idle;
+
+    // Check threshold
+    triggerForeground();
+
+    // Calculate penalty
+    updatePenalty(now);
+
+    if (state == State::Idle) {
+      // Foreground GC was not triggered
+      ftlobject.pFTL->restartStalledRequests();
+    }
+  }
 }
 
 void NaiveGC::getStatList(std::vector<Stat> &list,

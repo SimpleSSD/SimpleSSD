@@ -81,13 +81,13 @@ void PreemptibleGC::gc_trigger() {
   pendingFILs.resize(targetBlocks.size());
 }
 
-void PreemptibleGC::gc_checkDone(uint64_t now, uint32_t idx) {
+void PreemptibleGC::gc_done(uint64_t now, uint32_t idx) {
   // Maybe GC is completed while waiting for pending requests
   if (UNLIKELY(preemptRequested())) {
     checkPreemptible();
   }
 
-  AdvancedGC::gc_checkDone(now, idx);
+  AdvancedGC::gc_done(now, idx);
 }
 
 void PreemptibleGC::gc_doRead(uint64_t now, uint32_t idx) {

@@ -88,24 +88,6 @@ void AdvancedGC::gc_trigger() {
   }
 }
 
-void AdvancedGC::gc_checkDone(uint64_t now, uint32_t idx) {
-  auto &targetBlock = targetBlocks[idx];
-
-  // Triggered GC completed
-  if (state == State::Foreground) {
-    debugprint(logid,
-               "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-               beginAt, now, now - beginAt);
-  }
-  else if (state == State::Background) {
-    debugprint(logid,
-               "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-               beginAt, now, now - beginAt);
-  }
-
-  targetBlock.blockID.invalidate();
-}
-
 void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
   NaiveGC::createCheckpoint(out);
 

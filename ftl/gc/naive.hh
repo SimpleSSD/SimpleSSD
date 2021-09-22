@@ -100,7 +100,8 @@ class NaiveGC : public AbstractGC {
 
   Event eventDone;
   virtual void gc_done(uint64_t, uint32_t);
-  virtual void gc_checkDone(uint64_t, uint32_t);
+
+  void gc_checkDone(uint64_t);
 
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);
