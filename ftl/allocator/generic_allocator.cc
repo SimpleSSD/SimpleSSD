@@ -345,7 +345,8 @@ bool GenericAllocator::checkWriteStall() {
   return freeBlockCount <= parallelism;
 }
 
-void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid) {
+void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid,
+                                       uint64_t data) {
   CPU::Function fstat;
 
   fstat = victimSelectionFunction(lastErased++, ctx);
@@ -354,10 +355,10 @@ void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid) {
     lastErased = 0;
   }
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
 }
 
-void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid) {
+void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid, uint64_t data) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -377,7 +378,7 @@ void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid) {
   freeBlocks[idx].emplace(iter, blockID);
   freeBlockCount++;
 
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, fstat);
+  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
 }
 
 void GenericAllocator::getStatList(std::vector<Stat> &list,

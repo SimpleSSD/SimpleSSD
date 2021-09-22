@@ -35,7 +35,10 @@ class NaiveGC : public AbstractGC {
   uint64_t bufferBaseAddress;
   uint64_t beginAt;
 
-  CopyContext targetBlock;
+  uint32_t fgcBlocksToErase;
+  uint32_t bgcBlocksToErase;
+
+  std::vector<CopyContext> targetBlocks;
 
   struct {
     uint64_t fgcCount;        // Foreground GC invoked count
@@ -78,26 +81,26 @@ class NaiveGC : public AbstractGC {
   virtual void gc_trigger();
 
   Event eventStart;
-  virtual void gc_start();
+  virtual void gc_start(uint32_t);
 
   Event eventDoRead;
-  virtual void gc_doRead(uint64_t);
+  virtual void gc_doRead(uint64_t, uint32_t);
 
   Event eventDoTranslate;
-  virtual void gc_doTranslate(uint64_t);
+  virtual void gc_doTranslate(uint64_t, uint32_t);
 
   Event eventDoWrite;
-  virtual void gc_doWrite(uint64_t);
+  virtual void gc_doWrite(uint64_t, uint32_t);
 
   Event eventWriteDone;
-  virtual void gc_writeDone(uint64_t);
+  virtual void gc_writeDone(uint64_t, uint32_t);
 
   Event eventEraseDone;
-  virtual void gc_eraseDone(uint64_t);
+  virtual void gc_eraseDone(uint64_t, uint32_t);
 
   Event eventDone;
-  virtual void gc_done(uint64_t);
-  virtual void gc_checkDone(uint64_t);
+  virtual void gc_done(uint64_t, uint32_t);
+  virtual void gc_checkDone(uint64_t, uint32_t);
 
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);

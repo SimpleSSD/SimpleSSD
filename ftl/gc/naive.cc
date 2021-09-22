@@ -21,13 +21,41 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
   logid = Log::DebugID::FTL_NaiveGC;
   state = State::Idle;
 
-  auto pagesInBlock = object.config->getNANDStructure()->page;
+  auto nandConfig = object.config->getNANDStructure();
+  auto pagesInBlock = nandConfig->page;
   auto param = ftlobject.pMapping->getInfo();
 
   pageSize = param->pageSize;
   superpage = param->superpage;
 
-  auto sbsize = pagesInBlock * superpage * pageSize;
+  // Check parallel block erase
+  auto superpageMask = (uint8_t)readConfigUint(
+      Section::FlashTranslation, Config::Key::SuperpageAllocation);
+  auto fgcErase = readConfigUint(Section::FlashTranslation,
+                                 Config::Key::ForegroundBlockEraseLevel);
+  auto bgcErase = readConfigUint(Section::FlashTranslation,
+                                 Config::Key::BackgroundBlockEraseLevel);
+
+  fgcBlocksToErase = 1;
+  bgcBlocksToErase = 1;
+
+  for (uint8_t i = 0; i < 4; i++) {
+    if (!(superpageMask & nandConfig->pageAllocation[i])) {
+      if (i < fgcErase) {
+        fgcBlocksToErase *= param->parallelismLevel[i];
+      }
+      if (i < bgcErase) {
+        bgcBlocksToErase *= param->parallelismLevel[i];
+      }
+    }
+  }
+
+  auto ncontext = MAX(fgcBlocksToErase, bgcBlocksToErase);
+
+  // Resize copy context
+  targetBlocks.reserve(ncontext);
+
+  auto sbsize = pagesInBlock * superpage * pageSize * ncontext;
 
   // Try SRAM
   if (object.memory->allocate(sbsize, Memory::MemoryType::SRAM, "", true) ==
@@ -42,22 +70,23 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
   eventTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
                              "FTL::GC::eventTrigger");
-  eventStart = createEvent([this](uint64_t, uint64_t) { gc_start(); },
+  eventStart = createEvent([this](uint64_t, uint64_t i) { gc_start(i); },
                            "FTL::GC::eventStart");
-  eventDoRead = createEvent([this](uint64_t t, uint64_t) { gc_doRead(t); },
+  eventDoRead = createEvent([this](uint64_t t, uint64_t i) { gc_doRead(t, i); },
                             "FTL::GC::eventDoRead");
   eventDoTranslate =
-      createEvent([this](uint64_t t, uint64_t) { gc_doTranslate(t); },
+      createEvent([this](uint64_t t, uint64_t i) { gc_doTranslate(t, i); },
                   "FTL::GC::eventDoTranslate");
-  eventDoWrite = createEvent([this](uint64_t t, uint64_t) { gc_doWrite(t); },
-                             "FTL::GC::eventDoWrite");
+  eventDoWrite =
+      createEvent([this](uint64_t t, uint64_t i) { gc_doWrite(t, i); },
+                  "FTL::GC::eventDoWrite");
   eventWriteDone =
-      createEvent([this](uint64_t t, uint64_t) { gc_writeDone(t); },
+      createEvent([this](uint64_t t, uint64_t i) { gc_writeDone(t, i); },
                   "FTL::GC::eventWriteDone");
   eventEraseDone =
-      createEvent([this](uint64_t t, uint64_t) { gc_eraseDone(t); },
+      createEvent([this](uint64_t t, uint64_t i) { gc_eraseDone(t, i); },
                   "FTL::GC::eventEraseDone");
-  eventDone = createEvent([this](uint64_t t, uint64_t) { gc_done(t); },
+  eventDone = createEvent([this](uint64_t t, uint64_t i) { gc_done(t, i); },
                           "FTL::GC::eventEraseDone");
 
   resetStatValues();
@@ -96,17 +125,23 @@ void NaiveGC::gc_trigger() {
   stat.fgcCount++;
 
   // Get blocks to erase
-  ftlobject.pAllocator->getVictimBlocks(targetBlock, eventStart);
+  targetBlocks.resize(fgcBlocksToErase);
 
-  debugprint(logid, "GC    | Foreground");
+  for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
+    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
+  }
+
+  debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);
 }
 
-void NaiveGC::gc_start() {
+void NaiveGC::gc_start(uint32_t idx) {
   // Request copy context
-  ftlobject.pMapping->getCopyContext(targetBlock, eventDoRead);
+  ftlobject.pMapping->getCopyContext(targetBlocks[idx], eventDoRead, idx);
 }
 
-void NaiveGC::gc_doRead(uint64_t now) {
+void NaiveGC::gc_doRead(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   LPN invlpn;
 
   if (LIKELY(targetBlock.pageReadIndex < targetBlock.copyList.size())) {
@@ -128,6 +163,7 @@ void NaiveGC::gc_doRead(uint64_t now) {
 
       // Fill request
       if (i == 0) {
+        ctx.request.setTag(idx);
         ctx.request.setPPN(ppn);
         ctx.request.setDRAMAddress(makeBufferAddress(i, ctx.pageIndex));
 
@@ -136,7 +172,7 @@ void NaiveGC::gc_doRead(uint64_t now) {
       else {
         pFIL->read(FIL::Request(invlpn, ppn,
                                 makeBufferAddress(i, ctx.pageIndex),
-                                eventDoTranslate, 0ul));
+                                eventDoTranslate, idx));
       }
     }
 
@@ -159,7 +195,7 @@ void NaiveGC::gc_doRead(uint64_t now) {
 
     for (uint32_t i = 0; i < superpage; i++) {
       pFIL->erase(FIL::Request(invlpn, param->makePPN(psbn, i, 0), 0,
-                               eventEraseDone, 0ul));
+                               eventEraseDone, idx));
     }
 
     targetBlock.beginAt = now;
@@ -168,7 +204,9 @@ void NaiveGC::gc_doRead(uint64_t now) {
   }
 }
 
-void NaiveGC::gc_doTranslate(uint64_t now) {
+void NaiveGC::gc_doTranslate(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   targetBlock.readCounter--;
 
   if (targetBlock.readCounter == 0) {
@@ -199,7 +237,8 @@ void NaiveGC::gc_doTranslate(uint64_t now) {
   }
 }
 
-void NaiveGC::gc_doWrite(uint64_t now) {
+void NaiveGC::gc_doWrite(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
   auto &ctx = targetBlock.copyList.at(targetBlock.pageWriteIndex++);
   auto lpn = ctx.request.getLPN();
   auto ppn = ctx.request.getPPN();
@@ -228,7 +267,9 @@ void NaiveGC::gc_doWrite(uint64_t now) {
   ctx.beginAt = now;
 }
 
-void NaiveGC::gc_writeDone(uint64_t now) {
+void NaiveGC::gc_writeDone(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   targetBlock.writeCounter--;
 
   if (targetBlock.writeCounter == 0) {
@@ -257,7 +298,9 @@ void NaiveGC::gc_writeDone(uint64_t now) {
   }
 }
 
-void NaiveGC::gc_eraseDone(uint64_t now) {
+void NaiveGC::gc_eraseDone(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   targetBlock.writeCounter--;
 
   if (targetBlock.writeCounter == 0) {
@@ -279,33 +322,51 @@ void NaiveGC::gc_eraseDone(uint64_t now) {
 
     // Mark table/block as erased
     ftlobject.pMapping->markBlockErased(psbn);
-    ftlobject.pAllocator->reclaimBlocks(psbn, eventDone);
+    ftlobject.pAllocator->reclaimBlocks(psbn, eventDone, idx);
   }
 }
 
-void NaiveGC::gc_done(uint64_t now) {
-  gc_checkDone(now);
+void NaiveGC::gc_done(uint64_t now, uint32_t idx) {
+  gc_checkDone(now, idx);
 
-  // Calculate penalty
-  updatePenalty(now);
+  // Check all GC has been completed
+  {
+    bool allinvalid = true;
 
-  if (state == State::Idle) {
-    // Not triggered
-    ftlobject.pFTL->restartStalledRequests();
+    for (auto &iter : targetBlocks) {
+      if (iter.blockID.isValid()) {
+        allinvalid = false;
+        break;
+      }
+    }
+
+    if (allinvalid) {
+      state = State::Idle;
+
+      // Check threshold
+      triggerForeground();
+
+      // Calculate penalty
+      updatePenalty(now);
+
+      if (state == State::Idle) {
+        // Foreground GC was not triggered
+        ftlobject.pFTL->restartStalledRequests();
+      }
+    }
   }
 }
 
-void NaiveGC::gc_checkDone(uint64_t now) {
+void NaiveGC::gc_checkDone(uint64_t now, uint32_t idx) {
+  auto &targetBlock = targetBlocks[idx];
+
   // Triggered GC completed
   debugprint(logid,
-             "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-             beginAt, now, now - beginAt);
+             "GC    | Foreground | block %u | %" PRIu64 " - %" PRIu64
+             " (%" PRIu64 ")",
+             idx, beginAt, now, now - beginAt);
 
   targetBlock.blockID.invalidate();
-  state = State::Idle;
-
-  // Check threshold
-  triggerForeground();
 }
 
 void NaiveGC::getStatList(std::vector<Stat> &list,
@@ -352,10 +413,18 @@ void NaiveGC::resetStatValues() noexcept {
 }
 
 void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
-  targetBlock.createCheckpoint(out);
+  size_t size = targetBlocks.size();
+
+  BACKUP_SCALAR(out, size);
+
+  for (const auto &iter : targetBlocks) {
+    iter.createCheckpoint(out);
+  }
 
   BACKUP_SCALAR(out, stat);
   BACKUP_SCALAR(out, firstRequestArrival);
+  BACKUP_SCALAR(out, fgcBlocksToErase);
+  BACKUP_SCALAR(out, bgcBlocksToErase);
 
   BACKUP_EVENT(out, eventTrigger);
   BACKUP_EVENT(out, eventStart);
@@ -368,10 +437,20 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
-  targetBlock.restoreCheckpoint(in);
+  size_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  targetBlocks.resize(size);
+
+  for (auto &iter : targetBlocks) {
+    iter.restoreCheckpoint(in);
+  }
 
   RESTORE_SCALAR(in, stat);
   RESTORE_SCALAR(in, firstRequestArrival);
+  RESTORE_SCALAR(in, fgcBlocksToErase);
+  RESTORE_SCALAR(in, bgcBlocksToErase);
 
   RESTORE_EVENT(in, eventTrigger);
   RESTORE_EVENT(in, eventStart);

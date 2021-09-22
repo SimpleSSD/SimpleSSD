@@ -64,8 +64,8 @@ class GenericAllocator : public AbstractAllocator {
   bool checkForegroundGCThreshold() override;
   bool checkBackgroundGCThreshold() override;
   bool checkWriteStall() override;
-  void getVictimBlocks(CopyContext &, Event) override;
-  void reclaimBlocks(PSBN, Event) override;
+  void getVictimBlocks(CopyContext &, Event, uint64_t) override;
+  void reclaimBlocks(PSBN, Event, uint64_t) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

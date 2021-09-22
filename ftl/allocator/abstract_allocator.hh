@@ -95,18 +95,20 @@ class AbstractAllocator : public Object {
    *
    * Return physical block address to erase.
    *
-   * \param[in] ctx CopyContext
-   * \param[in] eid Callback event
+   * \param[in] ctx   CopyContext
+   * \param[in] eid   Callback event
+   * \param[in] data  Event data
    */
-  virtual void getVictimBlocks(CopyContext &ctx, Event eid) = 0;
+  virtual void getVictimBlocks(CopyContext &ctx, Event eid, uint64_t data) = 0;
 
   /**
    * \brief Mark block as erased
    *
    * \param[in] psbn  Physical Superblock Number
    * \param[in] eid   Callback event
+   * \param[in] data  Event data
    */
-  virtual void reclaimBlocks(PSBN psbn, Event eid) = 0;
+  virtual void reclaimBlocks(PSBN psbn, Event eid, uint64_t data) = 0;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
