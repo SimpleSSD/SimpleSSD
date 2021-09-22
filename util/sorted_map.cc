@@ -334,8 +334,8 @@ typename map_list<Key, T>::iterator map_list<Key, T>::erase(
     iterator iter) noexcept {
   list_item *next = iter.cur->next;
 
-  eraseMap(iter.cur->field.first);
   eraseList(iter.cur);
+  eraseMap(iter.cur->field.first);
 
   return make_iterator(next);
 }
@@ -345,8 +345,8 @@ typename map_list<Key, T>::iterator map_list<Key, T>::erase(
     const_iterator iter) noexcept {
   list_item *next = iter.cur->next;
 
-  eraseMap(iter.cur->field.first);
   eraseList(iter.cur);
+  eraseMap(iter.cur->field.first);
 
   return make_iterator(next);
 }
