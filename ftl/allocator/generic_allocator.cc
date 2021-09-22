@@ -95,21 +95,16 @@ CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
   CPU::markFunction(fstat);
 
   auto &currentList = fullBlocks[idx];
-  std::vector<std::pair<std::list<PSBN>::iterator, uint32_t>> valid;
-
-  // Collect valid pages
-  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    valid.emplace_back(iter, ftlobject.pMapping->getValidPages(*iter));
-  }
-
-  // Find min value
-  auto minIndex = currentList.end();
+  auto minIndex = currentList.begin();
   uint32_t min = std::numeric_limits<uint32_t>::max();
 
-  for (auto &iter : valid) {
-    if (min > iter.second) {
-      min = iter.second;
-      minIndex = iter.first;
+  // Collect valid pages and find min value
+  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
+    auto valid = ftlobject.pMapping->getValidPages(*iter);
+
+    if (min > valid) {
+      min = valid;
+      minIndex = iter;
     }
   }
 
@@ -129,25 +124,18 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(uint64_t idx,
   const uint32_t pageCount = object.config->getNANDStructure()->page;
 
   auto &currentList = fullBlocks[idx];
-  std::vector<std::pair<std::list<PSBN>::iterator, float>> valid;
+  auto minIndex = currentList.begin();
+  float min = std::numeric_limits<float>::max();
 
-  // Collect valid pages
+  // Collect valid pages and find min value
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
     float util = (float)ftlobject.pMapping->getValidPages(*iter) / pageCount;
 
     util = util / ((1.f - util) * ftlobject.pMapping->getAge(*iter));
 
-    valid.emplace_back(iter, util);
-  }
-
-  // Find min value
-  auto minIndex = currentList.end();
-  float min = std::numeric_limits<float>::max();
-
-  for (auto &iter : valid) {
-    if (min > iter.second) {
-      min = iter.second;
-      minIndex = iter.first;
+    if (min > util) {
+      min = util;
+      minIndex = iter;
     }
   }
 
