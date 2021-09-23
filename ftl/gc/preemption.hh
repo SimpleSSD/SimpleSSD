@@ -16,8 +16,8 @@ namespace SimpleSSD::FTL::GC {
 
 class PreemptibleGC : public AdvancedGC {
  protected:
-  std::vector<uint64_t>
-      pendingFILs;  // Pending FIL requests (read/program/erase)
+  // Pending FIL requests (read/program/erase)
+  std::vector<uint64_t> pendingFILs;
 
   void triggerBackground(uint64_t) override;
 
@@ -55,7 +55,6 @@ class PreemptibleGC : public AdvancedGC {
 
   void resumePaused();
 
-  void gc_trigger() override;
   void gc_doRead(uint64_t, uint32_t) override;
   void gc_doTranslate(uint64_t, uint32_t) override;
   void gc_doWrite(uint64_t, uint32_t) override;

@@ -14,6 +14,8 @@ namespace SimpleSSD::FTL::GC {
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
     : AdvancedGC(o, fo, f) {
   logid = Log::DebugID::FTL_PreemptibleGC;
+
+  pendingFILs.resize(targetBlocks.size());
 }
 
 PreemptibleGC::~PreemptibleGC() {}
@@ -73,12 +75,6 @@ void PreemptibleGC::resumePaused() {
       }
     }
   }
-}
-
-void PreemptibleGC::gc_trigger() {
-  AdvancedGC::gc_trigger();
-
-  pendingFILs.resize(targetBlocks.size());
 }
 
 void PreemptibleGC::gc_done(uint64_t now, uint32_t idx) {
