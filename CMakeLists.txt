@@ -42,6 +42,9 @@ set(FW_CROSS_COMPILE "" CACHE STRING "Set cross-compiler prefix. E.g.: -DFW_CROS
 set(FW_TARGET "" CACHE STRING "Set compile target (clang++ --target=<FW_TARGET>). E.g.: arm-eabi")
 set(FW_CPU "" CACHE STRING "Set CPU to use (clang++ -mcpu=<FW_CPU>). E.g.: cortex-r52")
 
+# Add options for sanitizer
+option(USE_SANITIZER "Use sanitizer." OFF)
+
 # Set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -464,11 +467,25 @@ if (MSVC)
   target_compile_definitions(simplessd PRIVATE -D_CRT_SECURE_NO_WARNINGS)
   target_compile_options(simplessd PRIVATE /wd4819)  # Surpress unicode warning
 else ()
-  target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror -Wno-attributes)
+  if (USE_SANITIZER)
+    set(SANFLAG
+      -fsanitize=address
+      -fsanitize=undefined
+      -fno-sanitize-recover=all
+      -fsanitize=float-divide-by-zero
+      -fsanitize=float-cast-overflow
+      -fno-sanitize=null
+      -fno-sanitize=alignment
+    )
+  else ()
+    set(SANFLAG "")
+  endif ()
+
+  target_compile_options(simplessd PRIVATE -g -Wall -Wextra -Werror -Wno-attributes ${SANFLAG})
 
   set(CMAKE_CXX_FLAGS "-D__FILENAME__='\"$(subst ${PROJECT_SOURCE_DIR}/,,$(abspath $<))\"' ${CMAKE_CXX_FLAGS}")
 
-  target_link_libraries(simplessd stdc++fs)
+  target_link_libraries(simplessd stdc++fs ${SANFLAG})
   target_link_libraries(test_simplessd stdc++fs)
 
   if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
