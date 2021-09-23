@@ -342,7 +342,7 @@ bool GenericAllocator::checkWriteStall() {
    * level, stop write when we have free (super)blocks less or equal to
    * parallelism level.
    */
-  return freeBlockCount <= parallelism;
+  return freeBlockCount <= parallelism * 2;
 }
 
 void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid,
