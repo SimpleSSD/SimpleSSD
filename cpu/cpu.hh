@@ -118,7 +118,7 @@ class CPU {
     uint64_t data;
     uint64_t delay;
 
-    Job(Event e, uint64_t d) : eid(e), data(d) {}
+    Job(Event e, uint64_t d) : eid(e), data(d), delay(0) {}
     Job(Event e, uint64_t d, uint64_t t) : eid(e), data(d), delay(t) {}
   };
 
