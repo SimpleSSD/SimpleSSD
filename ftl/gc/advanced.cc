@@ -13,7 +13,7 @@
 namespace SimpleSSD::FTL::GC {
 
 AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : NaiveGC(o, fo, f) {
+    : NaiveGC(o, fo, f), lastScheduledAt(0) {
   logid = Log::DebugID::FTL_AdvancedGC;
 
   idletime = readConfigUint(Section::FlashTranslation,
@@ -25,7 +25,7 @@ AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
                   "FTL::GC::eventBackgroundGC");
 
   // Schedule
-  scheduleRel(eventBackgroundGC, 0, idletime);
+  rescheduleBackgroundGC();
 }
 
 AdvancedGC::~AdvancedGC() {}
@@ -46,12 +46,7 @@ void AdvancedGC::requestArrived(Request *req) {
 
   // Not scheduled
   if (LIKELY(state < State::Foreground)) {
-    // Reschedule GC check
-    if (isScheduled(eventBackgroundGC)) {
-      deschedule(eventBackgroundGC);
-    }
-
-    scheduleRel(eventBackgroundGC, 0, idletime);
+    rescheduleBackgroundGC();
   }
 }
 
@@ -88,12 +83,14 @@ void AdvancedGC::gc_trigger() {
 void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
   NaiveGC::createCheckpoint(out);
 
+  BACKUP_SCALAR(out, lastScheduledAt);
   BACKUP_EVENT(out, eventBackgroundGC);
 }
 
 void AdvancedGC::restoreCheckpoint(std::istream &in) noexcept {
   NaiveGC::restoreCheckpoint(in);
 
+  RESTORE_SCALAR(in, lastScheduledAt);
   RESTORE_EVENT(in, eventBackgroundGC);
 }
 
