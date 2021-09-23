@@ -171,6 +171,7 @@ class CPU {
   std::vector<Core> coreList;
   std::vector<Event> eventList;
   std::multimap<uint64_t, Job> jobQueue;
+  std::multimap<uint64_t, Job>::iterator dispatchPointer;
 
   std::unordered_map<Event, Event> oldEventList;  //!< For restoring Event
 

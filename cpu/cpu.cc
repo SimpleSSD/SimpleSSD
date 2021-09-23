@@ -569,10 +569,15 @@ void CPU::dispatch(uint64_t now) {
       EventData *eptr = iter->second.eid;
       uint64_t data = iter->second.data;
 
-      iter = jobQueue.erase(iter);
+      // dispatchPointer points next jobQueue item
+      dispatchPointer = jobQueue.erase(iter);
 
       eptr->deschedule();
       eptr->func(now, data);
+
+      // Maybe eptr->func removed dispatchPointer by deschedule()
+      // deschedule() should update iterator correctly
+      iter = dispatchPointer;
     }
     else {
       break;
@@ -687,7 +692,14 @@ void CPU::deschedule(Event eid) noexcept {
 
   for (auto iter = jobQueue.begin(); iter != jobQueue.end(); ++iter) {
     if (iter->second.eid == eid) {
-      jobQueue.erase(iter);
+      if (UNLIKELY(iter == dispatchPointer)) {
+        // We are erasing next dispatch item, update iterator correctly
+        dispatchPointer = jobQueue.erase(iter);
+      }
+      else {
+        // Just remove it
+        jobQueue.erase(iter);
+      }
 
       break;
     }
