@@ -168,6 +168,7 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
 
     RESTORE_SCALAR(in, eid);
     eid = parent->restoreEventID(eid);
+    eid->schedule();
 
     RESTORE_SCALAR(in, data);
     RESTORE_SCALAR(in, delay);
@@ -839,6 +840,9 @@ void CPU::restoreCheckpoint(std::istream &in) noexcept {
 
   for (uint64_t i = 0; i < size; i++) {
     RESTORE_SCALAR(in, eid);
+
+    // Clear schedule status, as we will clear jobQueue
+    eventList[i]->clear();
 
     oldEventList.emplace(eid, eventList[i]);
   }

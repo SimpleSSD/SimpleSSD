@@ -308,6 +308,7 @@ class EventData {
   inline bool isScheduled() { return scheduled > 0; }
   inline void deschedule() { scheduled--; }
   inline void schedule() { scheduled++; }
+  inline void clear() { scheduled = 0; }
 
  public:
 #ifdef SIMPLESSD_DEBUG
