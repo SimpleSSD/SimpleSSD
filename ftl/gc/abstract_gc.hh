@@ -45,11 +45,6 @@ class AbstractGC : public Object {
    * \brief Notify request arrived (background GC)
    */
   virtual void requestArrived(Request *) = 0;
-
-  /**
-   * \brief Check write request should be stalled
-   */
-  virtual bool checkWriteStall() = 0;
 };
 
 }  // namespace SimpleSSD::FTL::GC

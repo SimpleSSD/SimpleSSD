@@ -114,14 +114,14 @@ bool PageLevelFTL::write(Request *cmd) {
   CPU::markFunction(fstat);
 
   if (UNLIKELY(stalledRequestList.size() > 0 ||
-               ftlobject.pGC->checkWriteStall())) {
+               ftlobject.pAllocator->checkForegroundGCThreshold())) {
     // We have stalled request, so push cmd back to end of list
     if (LIKELY(cmd)) {
       stalledRequestList.emplace_back(cmd);
     }
 
     // As pop-front command should be pushed to front (not back), check here
-    if (!ftlobject.pGC->checkWriteStall()) {
+    if (!ftlobject.pAllocator->checkForegroundGCThreshold()) {
       bool print = false;
       if (UNLIKELY(cmd == nullptr)) {
         print = true;

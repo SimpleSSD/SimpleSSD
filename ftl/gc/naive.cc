@@ -116,10 +116,6 @@ void NaiveGC::requestArrived(Request *) {
   }
 }
 
-bool NaiveGC::checkWriteStall() {
-  return ftlobject.pAllocator->checkWriteStall();
-}
-
 void NaiveGC::gc_trigger() {
   stat.fgcCount++;
 

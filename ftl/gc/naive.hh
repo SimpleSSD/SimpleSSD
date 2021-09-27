@@ -110,8 +110,6 @@ class NaiveGC : public AbstractGC {
   void triggerForeground() override;
   void requestArrived(Request *) override;
 
-  bool checkWriteStall() override;
-
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
