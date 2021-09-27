@@ -437,16 +437,6 @@ CacheTag *SetAssociative::getTag(uint64_t offset) noexcept {
   return cacheline.data() + offset;
 }
 
-void SetAssociative::getGCHint(FTL::GC::HintContext &ctx) noexcept {
-  for (auto &iter : cacheline) {
-    if (!iter.valid ||
-        (iter.valid && !iter.dirty && !iter.dmaPending && !iter.nvmPending)) {
-      // Empty or Clean
-      ctx.allocatableBytes += cacheDataSize;
-    }
-  }
-}
-
 void SetAssociative::getStatList(std::vector<Stat> &, std::string) noexcept {}
 
 void SetAssociative::getStatValues(std::vector<double> &) noexcept {}

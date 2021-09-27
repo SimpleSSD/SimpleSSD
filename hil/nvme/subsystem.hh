@@ -141,7 +141,7 @@ class Subsystem : public AbstractSubsystem {
   ControllerID createController(Interface *) noexcept override;
   AbstractController *getController(ControllerID) noexcept override;
 
-  void getGCHint(FTL::GC::HintContext &) noexcept override;
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept override;
 
   // Command interface
   HIL *getHIL() const;

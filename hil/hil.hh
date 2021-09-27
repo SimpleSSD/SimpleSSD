@@ -136,10 +136,8 @@ class HIL : public Object {
   //! Get SubRequest from tag
   SubRequest *getSubRequest(uint64_t);
 
-  //! Get GC hint
-  inline void getGCHint(FTL::GC::HintContext &ctx) noexcept {
-    parent->getGCHint(ctx);
-  }
+  //! Get queue status
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

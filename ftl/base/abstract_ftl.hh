@@ -47,12 +47,7 @@ class AbstractFTL : public Object {
    */
   Request *getRequest(uint64_t);
 
-  /**
-   * \brief Get hint data from HIL/ICL
-   *
-   * \param[out] ctx  GC::HintContext structure
-   */
-  void getGCHint(GC::HintContext &ctx) noexcept;
+  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
 
   /**
    * \brief FTL initialization function

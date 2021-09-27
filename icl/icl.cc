@@ -134,9 +134,8 @@ HIL::SubRequest *ICL::getSubRequest(uint64_t tag) {
   return pHIL->getSubRequest(tag);
 }
 
-void ICL::getGCHint(FTL::GC::HintContext &ctx) noexcept {
-  pHIL->getGCHint(ctx);
-  pCache->getGCHint(ctx);
+void ICL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
+  pHIL->getQueueStatus(nw, nh);
 }
 
 void ICL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {

@@ -173,8 +173,8 @@ void FTL::invalidate(Request &&req) {
   ftlobject.pFTL->invalidate(preq);
 }
 
-void FTL::getGCHint(GC::HintContext &ctx) noexcept {
-  pICL->getGCHint(ctx);
+void FTL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
+  pICL->getQueueStatus(nw, nh);
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
