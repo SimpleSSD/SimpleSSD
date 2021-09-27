@@ -47,8 +47,6 @@ class AbstractFTL : public Object {
    */
   Request *getRequest(uint64_t);
 
-  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
-
   /**
    * \brief FTL initialization function
    *
