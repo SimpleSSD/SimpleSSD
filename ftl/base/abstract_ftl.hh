@@ -96,7 +96,7 @@ class AbstractFTL : public Object {
    *
    * Restart stalled write request. If GC module reclaims block, it will call
    * this function to restart some write requests. You must stop submitting
-   * when AbstractGC::checkWriteStall returns true.
+   * when AbstractAllocator::checkForegroundGCThreshold returns true.
    */
   virtual void restartStalledRequests() = 0;
 
