@@ -12,7 +12,6 @@
 
 #include "fil/fil.hh"
 #include "ftl/def.hh"
-#include "ftl/gc/hint.hh"
 #include "ftl/object.hh"
 #include "sim/object.hh"
 

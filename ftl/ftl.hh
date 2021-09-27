@@ -14,19 +14,10 @@
 #include <deque>
 
 #include "ftl/def.hh"
-#include "ftl/gc/hint.hh"
 #include "ftl/object.hh"
 #include "hil/request.hh"
 
-namespace SimpleSSD {
-
-namespace ICL {
-
-class ICL;
-
-}
-
-namespace FTL {
+namespace SimpleSSD::FTL {
 
 /**
  * \brief FTL (Flash Translation Layer) class
@@ -35,8 +26,6 @@ namespace FTL {
  */
 class FTL : public Object {
  private:
-  ICL::ICL *pICL;
-
   FIL::FIL *pFIL;
 
   FTLObjectData ftlobject;
@@ -48,7 +37,7 @@ class FTL : public Object {
   Request *insertRequest(Request &&);
 
  public:
-  FTL(ObjectData &, ICL::ICL *);
+  FTL(ObjectData &);
   ~FTL();
 
   void initialize();
@@ -63,8 +52,6 @@ class FTL : public Object {
   void write(Request &&);
   void invalidate(Request &&);
 
-  void getQueueStatus(uint64_t &, uint64_t &) noexcept;
-
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
@@ -73,8 +60,6 @@ class FTL : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace FTL
-
-}  // namespace SimpleSSD
+}  // namespace SimpleSSD::FTL
 
 #endif

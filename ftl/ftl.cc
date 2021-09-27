@@ -19,7 +19,7 @@
 
 namespace SimpleSSD::FTL {
 
-FTL::FTL(ObjectData &o, ICL::ICL *p) : Object(o), pICL(p), requestCounter(0) {
+FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
   pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
@@ -171,10 +171,6 @@ void FTL::invalidate(Request &&req) {
   debugprint(Log::DebugID::FTL, "INVAL | LPN %" PRIu64, preq->lpn);
 
   ftlobject.pFTL->invalidate(preq);
-}
-
-void FTL::getQueueStatus(uint64_t &nw, uint64_t &nh) noexcept {
-  pICL->getQueueStatus(nw, nh);
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
