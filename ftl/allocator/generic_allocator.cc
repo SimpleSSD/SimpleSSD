@@ -335,16 +335,6 @@ bool GenericAllocator::checkBackgroundGCThreshold() {
   return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
-bool GenericAllocator::checkWriteStall() {
-  /*
-   * GC also requires freeblock, so we need to secure some portion of
-   * (super)blocks. As GenericAllocator allocates block spread in parallelism
-   * level, stop write when we have free (super)blocks less or equal to
-   * parallelism level.
-   */
-  return freeBlockCount <= parallelism * 2;
-}
-
 void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid,
                                        uint64_t data) {
   CPU::Function fstat;

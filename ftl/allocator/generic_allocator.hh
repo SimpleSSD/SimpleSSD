@@ -63,7 +63,6 @@ class GenericAllocator : public AbstractAllocator {
 
   bool checkForegroundGCThreshold() override;
   bool checkBackgroundGCThreshold() override;
-  bool checkWriteStall() override;
   void getVictimBlocks(CopyContext &, Event, uint64_t) override;
   void reclaimBlocks(PSBN, Event, uint64_t) override;
 

@@ -82,15 +82,6 @@ class AbstractAllocator : public Object {
   virtual bool checkBackgroundGCThreshold() = 0;
 
   /**
-   * \brief Check free block count and stall the write
-   *
-   * Return true if there are no free blocks.
-   *
-   * \return True if there is a free block
-   */
-  virtual bool checkWriteStall() = 0;
-
-  /**
    * \brief Select block to erase
    *
    * Return physical block address to erase.

@@ -546,9 +546,6 @@
           0: Naive GC (Only performs foreground GC)
           1: Advanced GC (Performs both foreground & background GC)
           2: Preemptible GC (Advanced GC + stop GC when request arrives)
-          3: Preemptible GC + Idle time detection
-             See [USENIX Middleware'12] Taking Garbage Collection Overheads off
-             the Critical Path in SSDs.
        -->
       <config name="GCMode">0</config>
       <!-- GC trigger configuration -->
