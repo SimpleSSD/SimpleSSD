@@ -45,10 +45,6 @@ AbstractController *Subsystem::getController(ControllerID ctrlid) noexcept {
   return nullptr;
 }
 
-void Subsystem::getGCHint(FTL::GC::HintContext &) noexcept {
-  // Do nothing. HIL interface does not have any queue
-}
-
 void Subsystem::getStatList(std::vector<Stat> &list,
                             std::string prefix) noexcept {
   auto nprefix = prefix + "hil.none.";

@@ -33,8 +33,6 @@ class Subsystem : public AbstractSubsystem {
   ControllerID createController(Interface *) noexcept override;
   AbstractController *getController(ControllerID) noexcept override;
 
-  void getGCHint(FTL::GC::HintContext &ctx) noexcept override;
-
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
   void resetStatValues() noexcept override;
