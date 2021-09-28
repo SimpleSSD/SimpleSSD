@@ -37,6 +37,7 @@ class AdvancedGC : public NaiveGC {
   virtual void triggerBackground(uint64_t);
 
   void gc_trigger() override;
+  void gc_done(uint64_t, uint32_t) override;
 
  public:
   AdvancedGC(ObjectData &, FTLObjectData &, FIL::FIL *);

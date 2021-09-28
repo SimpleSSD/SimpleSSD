@@ -44,10 +44,8 @@ void AdvancedGC::requestArrived(Request *req) {
   // Penalty calculation
   NaiveGC::requestArrived(req);
 
-  // Not scheduled
-  if (LIKELY(state < State::Foreground)) {
-    rescheduleBackgroundGC();
-  }
+  // Restart background GC timer
+  rescheduleBackgroundGC();
 }
 
 void AdvancedGC::gc_trigger() {
@@ -77,6 +75,15 @@ void AdvancedGC::gc_trigger() {
   }
   else {
     debugprint(logid, "GC    | Background | %u blocks", bgcBlocksToErase);
+  }
+}
+
+void AdvancedGC::gc_done(uint64_t now, uint32_t idx) {
+  NaiveGC::gc_done(now, idx);
+
+  if (state == State::Idle) {
+    // Current GC session is completed and no foreground GC invoked
+    triggerBackground(now);
   }
 }
 
