@@ -79,11 +79,19 @@ void AdvancedGC::gc_trigger() {
 }
 
 void AdvancedGC::gc_done(uint64_t now, uint32_t idx) {
+  bool conflicted = firstRequestArrival != std::numeric_limits<uint64_t>::max();
+
   NaiveGC::gc_done(now, idx);
 
   if (state == State::Idle) {
-    // Current GC session is completed and no foreground GC invoked
-    triggerBackground(now);
+    if (conflicted) {
+      // Reschedule timer
+      rescheduleBackgroundGC();
+    }
+    else {
+      // As no request is submitted while GC, continue for background GC
+      triggerBackground(now);
+    }
   }
 }
 
