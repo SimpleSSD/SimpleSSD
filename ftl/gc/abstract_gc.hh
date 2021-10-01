@@ -31,7 +31,7 @@ class AbstractGC : public AbstractJob {
   void trigger_readDone(Request *) final {}
   void trigger_writeMapping(Request *req) final { requestArrived(req); }
   void trigger_writeSubmit(Request *) final {}
-  void trigger_writeDone(Request *req) final { triggerForeground(); }
+  void trigger_writeDone(Request *) final { triggerForeground(); }
 
   /**
    * \brief GC initialization function
