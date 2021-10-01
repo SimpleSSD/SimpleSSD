@@ -21,39 +21,39 @@ void JobManager::addJob(AbstractJob *pjob) {
   jobs.emplace_back(pjob);
 }
 
-void JobManager::trigger_readMapping() {
+void JobManager::trigger_readMapping(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_readMapping();
+    iter->trigger_readMapping(req);
   }
 }
 
-void JobManager::trigger_readSubmit() {
+void JobManager::trigger_readSubmit(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_readSubmit();
+    iter->trigger_readSubmit(req);
   }
 }
 
-void JobManager::trigger_readDone() {
+void JobManager::trigger_readDone(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_readDone();
+    iter->trigger_readDone(req);
   }
 }
 
-void JobManager::trigger_writeMapping() {
+void JobManager::trigger_writeMapping(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_writeMapping();
+    iter->trigger_writeMapping(req);
   }
 }
 
-void JobManager::trigger_writeSubmit() {
+void JobManager::trigger_writeSubmit(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_writeSubmit();
+    iter->trigger_writeSubmit(req);
   }
 }
 
-void JobManager::trigger_writeDone() {
+void JobManager::trigger_writeDone(Request *req) {
   for (auto &iter : jobs) {
-    iter->trigger_writeDone();
+    iter->trigger_writeDone(req);
   }
 }
 

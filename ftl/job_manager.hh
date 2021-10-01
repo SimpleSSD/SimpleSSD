@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_FTL_JOB_MANAGER_HH__
 #define __SIMPLESSD_FTL_JOB_MANAGER_HH__
 
+#include "ftl/def.hh"
 #include "ftl/object.hh"
 #include "sim/object.hh"
 
@@ -23,12 +24,12 @@ class AbstractJob : public Object {
   AbstractJob(ObjectData &o, FTLObjectData &fo) : Object(o), ftlobject(fo) {}
   virtual ~AbstractJob() {}
 
-  virtual void trigger_readMapping() {}
-  virtual void trigger_readSubmit() {}
-  virtual void trigger_readDone() {}
-  virtual void trigger_writeMapping() {}
-  virtual void trigger_writeSubmit() {}
-  virtual void trigger_writeDone() {}
+  virtual void trigger_readMapping(Request *) {}
+  virtual void trigger_readSubmit(Request *) {}
+  virtual void trigger_readDone(Request *) {}
+  virtual void trigger_writeMapping(Request *) {}
+  virtual void trigger_writeSubmit(Request *) {}
+  virtual void trigger_writeDone(Request *) {}
 };
 
 class JobManager : public Object {
@@ -46,12 +47,12 @@ class JobManager : public Object {
    */
   void addJob(AbstractJob *);
 
-  void trigger_readMapping();
-  void trigger_readSubmit();
-  void trigger_readDone();
-  void trigger_writeMapping();
-  void trigger_writeSubmit();
-  void trigger_writeDone();
+  void trigger_readMapping(Request *);
+  void trigger_readSubmit(Request *);
+  void trigger_readDone(Request *);
+  void trigger_writeMapping(Request *);
+  void trigger_writeSubmit(Request *);
+  void trigger_writeDone(Request *);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
