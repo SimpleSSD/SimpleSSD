@@ -194,6 +194,7 @@ set(SRC_FTL
   ftl/def.cc
   ftl/filling.cc
   ftl/ftl.cc
+  ftl/job_manager.cc
 )
 set(SRC_FTL_ALLOC
   ftl/allocator/abstract_allocator.cc
