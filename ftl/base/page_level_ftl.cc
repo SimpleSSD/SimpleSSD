@@ -87,7 +87,7 @@ PageLevelFTL::getRMWContext(uint64_t tag) {
 }
 
 void PageLevelFTL::read(Request *cmd) {
-  ftlobject.pGC->requestArrived(cmd);
+  ftlobject.jobManager.trigger_readMapping(cmd);
   ftlobject.pMapping->readMapping(cmd, eventReadSubmit);
 }
 
@@ -95,6 +95,7 @@ void PageLevelFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   if (LIKELY(req->getResponse() == Response::Success)) {
+    ftlobject.jobManager.trigger_readSubmit(req);
     pFIL->read(FIL::Request(req, eventReadDone));
   }
   else {
@@ -105,6 +106,8 @@ void PageLevelFTL::read_submit(uint64_t tag) {
 
 void PageLevelFTL::read_done(uint64_t tag) {
   auto req = getRequest(tag);
+
+  ftlobject.jobManager.trigger_readDone(req);
 
   completeRequest(req);
 }
@@ -145,8 +148,6 @@ bool PageLevelFTL::write(Request *cmd) {
                    "WRITE | LPN %" PRIx64 "h | Stopped by GC | Tag %" PRIu64,
                    cmd->getLPN(), cmd->getTag());
       }
-
-      ftlobject.pGC->triggerForeground();
 
       return false;
     }
@@ -224,13 +225,13 @@ bool PageLevelFTL::write(Request *cmd) {
     else {
       auto &ret = writeList.emplace_back(std::move(pendingList));
 
+      ftlobject.jobManager.trigger_writeMapping(ret.front());
+
       // No need for loop
       ftlobject.pMapping->writeMapping(ret.front(), eventWriteSubmit);
     }
 
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
-
-    ftlobject.pGC->requestArrived(cmd);
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, InvalidEventID, fstat);
@@ -246,6 +247,8 @@ void PageLevelFTL::write_submit(uint64_t tag) {
   auto ppn = req->getPPN();
   uint32_t offset = 0;
 
+  ftlobject.jobManager.trigger_writeSubmit(req);
+
   for (auto &req : *list) {
     if (LIKELY(req->getResponse() == Response::Success)) {
       pFIL->program(FIL::Request(
@@ -260,12 +263,12 @@ void PageLevelFTL::write_submit(uint64_t tag) {
   }
 
   writeList.erase(list);
-
-  ftlobject.pGC->triggerForeground();
 }
 
 void PageLevelFTL::write_done(uint64_t tag) {
   auto req = getRequest(tag);
+
+  ftlobject.jobManager.trigger_writeDone(req);
 
   completeRequest(req);
 }
@@ -382,8 +385,6 @@ void PageLevelFTL::rmw_writeSubmit(uint64_t now, uint64_t tag) {
 
     rmw_writeDone(now, tag);
   }
-
-  ftlobject.pGC->triggerForeground();
 }
 
 void PageLevelFTL::rmw_writeDone(uint64_t now, uint64_t tag) {
