@@ -29,8 +29,8 @@ class FTL : public Object {
  private:
   FIL::FIL *pFIL;
 
-  FTLObjectData ftlobject;
   JobManager jobManager;
+  FTLObjectData ftlobject;
 
   uint64_t requestCounter;
 

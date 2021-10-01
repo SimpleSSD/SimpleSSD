@@ -19,7 +19,8 @@
 
 namespace SimpleSSD::FTL {
 
-FTL::FTL(ObjectData &o) : Object(o), jobManager(o), requestCounter(0) {
+FTL::FTL(ObjectData &o)
+    : Object(o), jobManager(o), ftlobject(jobManager), requestCounter(0) {
   pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
