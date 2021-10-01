@@ -38,7 +38,7 @@ class AbstractGC : public AbstractJob {
    *
    * Immediately call AbstractGC::initialize() when you override this function.
    */
-  virtual void initialize();
+  void initialize() override;
 
   /**
    * \brief Trigger foreground GC if condition met

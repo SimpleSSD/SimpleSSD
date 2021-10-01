@@ -21,6 +21,12 @@ void JobManager::addJob(AbstractJob *pjob) {
   jobs.emplace_back(pjob);
 }
 
+void JobManager::initialize() {
+  for (auto &iter : jobs) {
+    iter->initialize();
+  }
+}
+
 void JobManager::trigger_readMapping(Request *req) {
   for (auto &iter : jobs) {
     iter->trigger_readMapping(req);

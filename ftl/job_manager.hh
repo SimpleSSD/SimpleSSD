@@ -24,6 +24,8 @@ class AbstractJob : public Object {
   AbstractJob(ObjectData &o, FTLObjectData &fo) : Object(o), ftlobject(fo) {}
   virtual ~AbstractJob() {}
 
+  virtual void initialize() {}
+
   virtual void trigger_readMapping(Request *) {}
   virtual void trigger_readSubmit(Request *) {}
   virtual void trigger_readDone(Request *) {}
@@ -46,6 +48,11 @@ class JobManager : public Object {
    * This function must call in constructor of FTL.
    */
   void addJob(AbstractJob *);
+
+  /**
+   * \brief Initialize all jobs
+   */
+  void initialize();
 
   void trigger_readMapping(Request *);
   void trigger_readSubmit(Request *);
