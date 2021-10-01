@@ -26,18 +26,11 @@ class AbstractAllocator;
 
 }
 
-namespace GC {
-
-class AbstractGC;
-
-}
-
 //! Encapsulates all FTL models
 struct FTLObjectData {
   AbstractFTL *pFTL;
   Mapping::AbstractMapping *pMapping;
   BlockAllocator::AbstractAllocator *pAllocator;
-  GC::AbstractGC *pGC;
 
   FTLObjectData()
       : pFTL(nullptr), pMapping(nullptr), pAllocator(nullptr), pGC(nullptr) {}

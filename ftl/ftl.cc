@@ -19,7 +19,7 @@
 
 namespace SimpleSSD::FTL {
 
-FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
+FTL::FTL(ObjectData &o) : Object(o), jobManager(o), requestCounter(0) {
   pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
@@ -53,17 +53,19 @@ FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
   }
 
   // GC algorithm
+  AbstractJob *gcjob = nullptr;
+
   switch (gcmode) {
     case Config::GCType::Naive:
-      ftlobject.pGC = new GC::NaiveGC(object, ftlobject, pFIL);
+      gcjob = new GC::NaiveGC(object, ftlobject, pFIL);
 
       break;
     case Config::GCType::Advanced:
-      ftlobject.pGC = new GC::AdvancedGC(object, ftlobject, pFIL);
+      gcjob = new GC::AdvancedGC(object, ftlobject, pFIL);
 
       break;
     case Config::GCType::Preemptible:
-      ftlobject.pGC = new GC::PreemptibleGC(object, ftlobject, pFIL);
+      gcjob = new GC::PreemptibleGC(object, ftlobject, pFIL);
 
       break;
     default:
@@ -71,6 +73,8 @@ FTL::FTL(ObjectData &o) : Object(o), requestCounter(0) {
 
       break;
   }
+
+  jobManager.addJob(gcjob);
 
   // Base FTL routine
   switch (mapping) {
@@ -89,7 +93,6 @@ FTL::~FTL() {
   delete pFIL;
   delete ftlobject.pMapping;
   delete ftlobject.pAllocator;
-  delete ftlobject.pGC;
   delete ftlobject.pFTL;
 }
 
@@ -107,7 +110,8 @@ void FTL::initialize() {
   // Initialize all
   ftlobject.pAllocator->initialize();
   ftlobject.pMapping->initialize();
-  ftlobject.pGC->initialize();
+
+  jobManager.initialize();
 
   ftlobject.pFTL->initialize();
 
@@ -174,26 +178,26 @@ void FTL::invalidate(Request &&req) {
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
+  jobManager.getStatList(list, prefix + "ftl.job.");
   ftlobject.pFTL->getStatList(list, prefix + "ftl.base.");
   ftlobject.pMapping->getStatList(list, prefix + "ftl.mapper.");
   ftlobject.pAllocator->getStatList(list, prefix + "ftl.allocator.");
-  ftlobject.pGC->getStatList(list, prefix + "ftl.gc.");
   pFIL->getStatList(list, prefix);
 }
 
 void FTL::getStatValues(std::vector<double> &values) noexcept {
+  jobManager.getStatValues(values);
   ftlobject.pFTL->getStatValues(values);
   ftlobject.pMapping->getStatValues(values);
   ftlobject.pAllocator->getStatValues(values);
-  ftlobject.pGC->getStatValues(values);
   pFIL->getStatValues(values);
 }
 
 void FTL::resetStatValues() noexcept {
+  jobManager.resetStatValues();
   ftlobject.pFTL->resetStatValues();
   ftlobject.pMapping->resetStatValues();
   ftlobject.pAllocator->resetStatValues();
-  ftlobject.pGC->resetStatValues();
   pFIL->resetStatValues();
 }
 
@@ -208,10 +212,10 @@ void FTL::createCheckpoint(std::ostream &out) const noexcept {
     iter.second.createCheckpoint(out);
   }
 
+  jobManager.createCheckpoint(out);
   ftlobject.pFTL->createCheckpoint(out);
   ftlobject.pMapping->createCheckpoint(out);
   ftlobject.pAllocator->createCheckpoint(out);
-  ftlobject.pGC->createCheckpoint(out);
   pFIL->createCheckpoint(out);
 }
 
@@ -231,10 +235,10 @@ void FTL::restoreCheckpoint(std::istream &in) noexcept {
     requestQueue.emplace(tag, std::move(req));
   }
 
+  jobManager.restoreCheckpoint(in);
   ftlobject.pFTL->restoreCheckpoint(in);
   ftlobject.pMapping->restoreCheckpoint(in);
   ftlobject.pAllocator->restoreCheckpoint(in);
-  ftlobject.pGC->restoreCheckpoint(in);
   pFIL->restoreCheckpoint(in);
 }
 
