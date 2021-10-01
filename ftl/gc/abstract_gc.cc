@@ -12,7 +12,7 @@
 namespace SimpleSSD::FTL::GC {
 
 AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
-    : Object(o), ftlobject(fo), pFIL(fil), param(nullptr) {}
+    : AbstractJob(o, fo), pFIL(fil), param(nullptr) {}
 
 AbstractGC::~AbstractGC() {}
 

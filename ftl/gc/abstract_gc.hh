@@ -12,14 +12,12 @@
 
 #include "fil/fil.hh"
 #include "ftl/def.hh"
-#include "ftl/object.hh"
-#include "sim/object.hh"
+#include "ftl/job_manager.hh"
 
 namespace SimpleSSD::FTL::GC {
 
-class AbstractGC : public Object {
+class AbstractGC : public AbstractJob {
  protected:
-  FTLObjectData &ftlobject;
   FIL::FIL *pFIL;
 
   const Parameter *param;
@@ -27,6 +25,13 @@ class AbstractGC : public Object {
  public:
   AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractGC();
+
+  void trigger_readMapping(Request *req) final { requestArrived(req); }
+  void trigger_readSubmit(Request *) final {}
+  void trigger_readDone(Request *) final {}
+  void trigger_writeMapping(Request *req) final { requestArrived(req); }
+  void trigger_writeSubmit(Request *) final {}
+  void trigger_writeDone(Request *req) final { triggerForeground(); }
 
   /**
    * \brief GC initialization function
