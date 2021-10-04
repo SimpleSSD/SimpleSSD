@@ -43,7 +43,8 @@ class PALOLD : public AbstractPAL {
   Event flushEvent;
   EventFunction flushFunction;
 
-  uint8_t lastResetTick;
+  uint64_t lastResetTick;
+  uint64_t planeMultiplier;
 
   struct {
     uint64_t readCount;

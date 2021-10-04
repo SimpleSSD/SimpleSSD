@@ -55,6 +55,13 @@ PALOLD::PALOLD(Parameter &p, ConfigReader &c)
       break;
   }
 
+  if (conf.readBoolean(CONFIG_PAL, NAND_USE_MULTI_PLANE_OP)) {
+    planeMultiplier = param.plane;
+  }
+  else {
+    planeMultiplier = 1;
+  }
+
   debugprint(LOG_PAL_OLD, "NAND timing:");
   debugprint(LOG_PAL_OLD, "Operation |     LSB    |     CSB    |     MSB    |  "
                           "  DMA 0   |    DMA ");
@@ -480,9 +487,10 @@ void PALOLD::getStatValues(std::vector<double> &values) {
   values.push_back(stat.writeCount);
   values.push_back(stat.eraseCount);
 
-  values.push_back(stat.readCount * param.pageSize);
-  values.push_back(stat.writeCount * param.pageSize);
-  values.push_back(stat.eraseCount * param.pageSize * param.page);
+  values.push_back(stat.readCount * param.pageSize * planeMultiplier);
+  values.push_back(stat.writeCount * param.pageSize * planeMultiplier);
+  values.push_back(stat.eraseCount * param.pageSize * param.page *
+                   planeMultiplier);
 
   stats->getReadBreakdown(breakdown);
   values.push_back(breakdown.dma0wait);
