@@ -113,11 +113,7 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
 
   pspn = param.makePSPN(blockID, bmeta->nextPageToWrite++);
 
-  bmeta->markAsWrite();
   bmeta->insertedAt = getTick();
-  insertMemoryAddress(
-      false, makeMetadataAddress(blockID) + bmeta->offsetofWriteCount(), 4,
-      !init);
 
   // Write entry
   entry = makeTableEntry(pspn, 1);
