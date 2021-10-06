@@ -185,21 +185,7 @@ class LeastErasedVictimSelection : public AbstractVictimSelection {
     CPU::Function fstat;
     CPU::markFunction(fstat);
 
-    auto &currentList = pAllocator->getBlockListAtParallelismIndex(idx);
-
-    uint32_t min = std::numeric_limits<uint32_t>::max();
-
-    minIndex = currentList.begin();
-
-    // Collect valid pages and find min value
-    for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-      auto erased = pAllocator->getBlockMetadata(*iter).erasedCount;
-
-      if (min > erased) {
-        min = erased;
-        minIndex = iter;
-      }
-    }
+    minIndex = pAllocator->getBlockListAtParallelismIndex(idx).begin();
 
     return fstat;
   }
@@ -244,21 +230,8 @@ class MostErasedVictimSelection : public AbstractVictimSelection {
     CPU::Function fstat;
     CPU::markFunction(fstat);
 
-    auto &currentList = pAllocator->getBlockListAtParallelismIndex(idx);
-
-    uint32_t max = 0;
-
-    maxIndex = currentList.begin();
-
-    // Collect valid pages and find min value
-    for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-      auto erased = pAllocator->getBlockMetadata(*iter).erasedCount;
-
-      if (max < erased) {
-        max = erased;
-        maxIndex = iter;
-      }
-    }
+    maxIndex = pAllocator->getBlockListAtParallelismIndex(idx).end();
+    --maxIndex;
 
     return fstat;
   }
