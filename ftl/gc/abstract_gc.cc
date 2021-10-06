@@ -12,7 +12,37 @@
 namespace SimpleSSD::FTL::GC {
 
 AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
-    : AbstractJob(o, fo), pFIL(fil), state(State::Idle), param(nullptr) {}
+    : AbstractJob(o, fo), pFIL(fil), state(State::Idle), param(nullptr) {
+  auto mode = (Config::VictimSelectionMode)readConfigUint(
+      Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
+
+  switch (mode) {
+    case Config::VictimSelectionMode::Random:
+      method = BlockAllocator::getVictimSelectionAlgorithm(
+          BlockAllocator::VictimSelectionID::Random);
+
+      break;
+    case Config::VictimSelectionMode::Greedy:
+      method = BlockAllocator::getVictimSelectionAlgorithm(
+          BlockAllocator::VictimSelectionID::Greedy);
+
+      break;
+    case Config::VictimSelectionMode::CostBenefit:
+      method = BlockAllocator::getVictimSelectionAlgorithm(
+          BlockAllocator::VictimSelectionID::CostBenefit);
+
+      break;
+    case Config::VictimSelectionMode::DChoice:
+      method = BlockAllocator::getVictimSelectionAlgorithm(
+          BlockAllocator::VictimSelectionID::DChoice);
+
+      break;
+    default:
+      panic("Unexpected victim block selection mode.");
+
+      break;
+  }
+}
 
 AbstractGC::~AbstractGC() {}
 

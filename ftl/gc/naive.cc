@@ -118,7 +118,8 @@ void NaiveGC::gc_trigger() {
 
   // Get blocks to erase
   for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
-    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventDoRead, idx);
+    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], method,
+                                          eventDoRead, idx);
   }
 
   debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);

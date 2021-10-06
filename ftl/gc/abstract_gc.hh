@@ -11,6 +11,7 @@
 #define __SIMPLESSD_FTL_GC_ABSTRACT_GC_HH__
 
 #include "fil/fil.hh"
+#include "ftl/allocator/victim_selection.hh"
 #include "ftl/def.hh"
 #include "ftl/job_manager.hh"
 
@@ -32,6 +33,7 @@ class AbstractGC : public AbstractJob {
   State state;
 
   const Parameter *param;
+  BlockAllocator::AbstractVictimSelection *method;
 
  public:
   AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
