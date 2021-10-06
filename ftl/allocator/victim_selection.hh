@@ -35,6 +35,35 @@ class AbstractVictimSelection {
   virtual CPU::Function getVictim(uint32_t idx, PSBN &psbn) noexcept = 0;
 };
 
+enum class VictimSelectionID {
+  /* GC must uses following four algorithms */
+
+  Random,       // Select victim block randomly in full block pool.
+  Greedy,       // Select block with a largest number of invalid blocks.
+  CostBenefit,  // Cost-benefit victim block selection algorithm.
+  DChoice,      // D-Choice victim block selection algorithm.
+
+  /* Below functions may return invalid PSBN */
+
+  LeastErased,        // Select block with smallest P/E cycle.
+  LeastRead,          // Select block with smallest read count after erase.
+  MostErased,         // Select block with largest P/E cycle.
+  MostRead,           // Select block with largest read count after erase.
+  LeastRecentlyUsed,  // Select least recently accessed block after erase.
+  MostRecentlyUsed,   // Select most recently accessed block after erase.
+};
+
+/**
+ * \brief Get the Victim Selection Algorithm object
+ *
+ * This function returns victim selection algorithm object.
+ * See comments of each object for more details.
+ *
+ * \param id Algorithm ID.
+ * \return Victim selection algorithm.
+ */
+AbstractVictimSelection *GetVictimSelectionAlgorithm(VictimSelectionID id);
+
 }  // namespace SimpleSSD::FTL::BlockAllocator
 
 #endif
