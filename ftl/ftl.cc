@@ -9,6 +9,7 @@
 #include "ftl/ftl.hh"
 
 #include "ftl/allocator/generic_allocator.hh"
+#include "ftl/allocator/victim_selection.hh"
 #include "ftl/base/page_level_ftl.hh"
 #include "ftl/filling.hh"
 #include "ftl/gc/advanced.hh"
@@ -53,6 +54,10 @@ FTL::FTL(ObjectData &o)
       break;
   }
 
+  // Initialize algorithms before creating background jobs
+  BlockAllocator::initializeVictimSelectionAlgorithms(object,
+                                                      ftlobject.pAllocator);
+
   // GC algorithm
   AbstractJob *gcjob = nullptr;
 
@@ -95,6 +100,8 @@ FTL::~FTL() {
   delete ftlobject.pMapping;
   delete ftlobject.pAllocator;
   delete ftlobject.pFTL;
+
+  BlockAllocator::finalizeVictimSelectionAlgorithms();
 }
 
 Request *FTL::insertRequest(Request &&req) {
