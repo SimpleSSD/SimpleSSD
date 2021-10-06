@@ -228,7 +228,7 @@ bool PageLevelFTL::write(Request *cmd) {
       ftlobject.jobManager.trigger_writeMapping(ret.front());
 
       // No need for loop
-      ftlobject.pMapping->writeMapping(ret.front(), eventWriteSubmit);
+      ftlobject.pMapping->writeMapping(ret.front(), eventWriteSubmit, false);
     }
 
     pendingList = std::vector<Request *>(minMappingSize, nullptr);
@@ -335,7 +335,7 @@ void PageLevelFTL::rmw_readDone(uint64_t now, uint64_t tag) {
     auto cmd = ctx.list.at(ctx.chunkBegin - ctx.alignedBegin);
 
     // Write translation
-    ftlobject.pMapping->writeMapping(cmd, eventPartialWriteSubmit);
+    ftlobject.pMapping->writeMapping(cmd, eventPartialWriteSubmit, false);
   }
 }
 

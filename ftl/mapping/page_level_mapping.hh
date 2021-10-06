@@ -48,7 +48,7 @@ class PageLevelMapping : public AbstractMapping {
   uint64_t getPageUsage(LPN, uint64_t) override;
 
   void readMapping(Request *, Event) override;
-  void writeMapping(Request *, Event, bool = false) override;
+  void writeMapping(Request *, Event, bool) override;
   void writeMapping(LSPN, PSPN &) override;
   void invalidateMapping(Request *, Event) override;
 

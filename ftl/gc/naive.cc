@@ -217,7 +217,7 @@ void NaiveGC::gc_doTranslate(uint64_t now, uint32_t idx) {
           targetBlock.blockID, ppn, lpn, ctx.beginAt, now, now - ctx.beginAt);
     }
 
-    ftlobject.pMapping->writeMapping(&ctx.request, eventDoWrite);
+    ftlobject.pMapping->writeMapping(&ctx.request, eventDoWrite, true);
   }
 }
 
