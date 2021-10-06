@@ -256,7 +256,7 @@ void PageLevelMapping::readMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
-void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
+void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -269,7 +269,7 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
-  fstat += writeMappingInternal(lspn, pspn);
+  fstat += writeMappingInternal(lspn, pspn, fixed);
 
   cmd->setPPN(param.makePPN(pspn, superpageIndex));
 
@@ -282,23 +282,6 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
 
 void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn) {
   writeMappingInternal(lspn, pspn, false, true);
-}
-
-void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn, Event eid,
-                                    uint64_t data) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  requestedWriteCount++;
-  writeLPNCount += param.superpage;
-
-  fstat += writeMappingInternal(lspn, pspn, true, false);
-
-  debugprint(Log::DebugID::FTL_PageLevel,
-             "Write | Internal | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h", lspn,
-             pspn);
-
-  requestMemoryAccess(eid, data, fstat);
 }
 
 void PageLevelMapping::invalidateMapping(Request *cmd, Event eid) {
