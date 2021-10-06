@@ -40,7 +40,7 @@ class AbstractFTL : public Object {
   /**
    * \brief Get FTL::Request from tag id
    *
-   * This functino is public because of ReadModifyWriteContext
+   * This function is public because of ReadModifyWriteContext
    *
    * \return Pointer to FTL::Request
    */
