@@ -357,14 +357,14 @@ void NaiveGC::gc_checkDone(uint64_t now) {
 
 void NaiveGC::getStatList(std::vector<Stat> &list,
                           std::string prefix) noexcept {
-  list.emplace_back(prefix + "foreground", "Total Foreground GC count");
-  list.emplace_back(prefix + "background", "Total Background GC count");
-  list.emplace_back(prefix + "block", "Total reclaimed blocks in GC");
-  list.emplace_back(prefix + "copy", "Total valid page copy");
-  list.emplace_back(prefix + "penalty.average", "Averagy penalty / GC");
-  list.emplace_back(prefix + "penalty.min", "Minimum penalty");
-  list.emplace_back(prefix + "penalty.max", "Maximum penalty");
-  list.emplace_back(prefix + "penalty.count", "# penalty calculation");
+  list.emplace_back(prefix + "gc.foreground", "Total Foreground GC count");
+  list.emplace_back(prefix + "gc.background", "Total Background GC count");
+  list.emplace_back(prefix + "gc.block", "Total reclaimed blocks in GC");
+  list.emplace_back(prefix + "gc.copy", "Total valid page copy");
+  list.emplace_back(prefix + "gc.penalty.average", "Averagy penalty / GC");
+  list.emplace_back(prefix + "gc.penalty.min", "Minimum penalty");
+  list.emplace_back(prefix + "gc.penalty.max", "Maximum penalty");
+  list.emplace_back(prefix + "gc.penalty.count", "# penalty calculation");
 }
 
 void NaiveGC::getStatValues(std::vector<double> &values) noexcept {
