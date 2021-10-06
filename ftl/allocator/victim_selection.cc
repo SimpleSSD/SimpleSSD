@@ -373,7 +373,7 @@ void finalizeVictimSelectionAlgorithms() {
   }
 }
 
-AbstractVictimSelection *GetVictimSelectionAlgorithm(
+AbstractVictimSelection *getVictimSelectionAlgorithm(
     VictimSelectionID id) noexcept {
   auto _id = static_cast<uint64_t>(id);
 

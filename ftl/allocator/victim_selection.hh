@@ -63,7 +63,7 @@ enum class VictimSelectionID {
  * \param id Algorithm ID.
  * \return Victim selection algorithm.
  */
-AbstractVictimSelection *GetVictimSelectionAlgorithm(
+AbstractVictimSelection *getVictimSelectionAlgorithm(
     VictimSelectionID id) noexcept;
 
 void initializeVictimSelectionAlgorithms(ObjectData &object,
