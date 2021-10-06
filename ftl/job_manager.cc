@@ -27,89 +27,24 @@ void JobManager::initialize() {
   }
 }
 
-bool JobManager::trigger_readMapping(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_readMapping(req);
-
-    if (triggered) {
-      break;
-    }
+#define DEFINE_TRIGGER(funcname)                                               \
+  bool JobManager::funcname(Request *req) {                                    \
+    bool triggered = false;                                                    \
+    for (auto &iter : jobs) {                                                  \
+      triggered = iter->funcname(req);                                         \
+      if (triggered) {                                                         \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    return triggered;                                                          \
   }
 
-  return triggered;
-}
-
-bool JobManager::trigger_readSubmit(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_readSubmit(req);
-
-    if (triggered) {
-      break;
-    }
-  }
-
-  return triggered;
-}
-
-bool JobManager::trigger_readDone(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_readDone(req);
-
-    if (triggered) {
-      break;
-    }
-  }
-
-  return triggered;
-}
-
-bool JobManager::trigger_writeMapping(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_writeMapping(req);
-
-    if (triggered) {
-      break;
-    }
-  }
-
-  return triggered;
-}
-
-bool JobManager::trigger_writeSubmit(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_writeSubmit(req);
-
-    if (triggered) {
-      break;
-    }
-  }
-
-  return triggered;
-}
-
-bool JobManager::trigger_writeDone(Request *req) {
-  bool triggered = false;
-
-  for (auto &iter : jobs) {
-    triggered = iter->trigger_writeDone(req);
-
-    if (triggered) {
-      break;
-    }
-  }
-
-  return triggered;
-}
+DEFINE_TRIGGER(trigger_readMapping)
+DEFINE_TRIGGER(trigger_readSubmit)
+DEFINE_TRIGGER(trigger_readDone)
+DEFINE_TRIGGER(trigger_writeMapping)
+DEFINE_TRIGGER(trigger_writeSubmit)
+DEFINE_TRIGGER(trigger_writeDone)
 
 void JobManager::getStatList(std::vector<Stat> &list,
                              std::string prefix) noexcept {
