@@ -138,14 +138,11 @@ void CPU::Core::createCheckpoint(std::ostream &out) const {
 
   BACKUP_EVENT(out, jobEvent);
 
-  uint64_t size = jobQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &job : jobQueue) {
+  BACKUP_STL(out, jobQueue, job, {
     BACKUP_EVENT(out, job.eid);
     BACKUP_SCALAR(out, job.data);
     BACKUP_SCALAR(out, job.delay);
-  }
+  });
 }
 
 void CPU::Core::restoreCheckpoint(std::istream &in) {
@@ -158,10 +155,7 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
   RESTORE_SCALAR(in, jobEvent);
   jobEvent = parent->restoreEventID(jobEvent);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     Event eid;
     uint64_t data;
     uint64_t delay;
@@ -174,7 +168,7 @@ void CPU::Core::restoreCheckpoint(std::istream &in) {
     RESTORE_SCALAR(in, delay);
 
     jobQueue.emplace_back(Job(eid, data, delay));
-  }
+  });
 }
 
 CPU::CPU(Engine *e, ConfigReader *c, Log *l)
@@ -794,25 +788,17 @@ void CPU::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, iclCore);
   BACKUP_SCALAR(out, ftlCore);
 
-  uint64_t size = eventList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : eventList) {
-    BACKUP_SCALAR(out, iter);
-  }
+  BACKUP_STL(out, eventList, iter, BACKUP_SCALAR(out, iter));
 
   for (auto &core : coreList) {
     core.createCheckpoint(out);
   }
 
-  size = jobQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &job : jobQueue) {
+  BACKUP_STL(out, jobQueue, job, {
     BACKUP_SCALAR(out, job.first);
     BACKUP_EVENT(out, job.second.eid);
     BACKUP_SCALAR(out, job.second.data);
-  }
+  });
 }
 
 void CPU::restoreCheckpoint(std::istream &in) noexcept {

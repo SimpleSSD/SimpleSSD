@@ -205,13 +205,11 @@ void FTL::resetStatValues() noexcept {
 void FTL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, requestCounter);
 
-  uint64_t size = requestQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (const auto &iter : requestQueue) {
+  BACKUP_STL(out, requestQueue, iter, {
     BACKUP_SCALAR(out, iter.first);
+
     iter.second.createCheckpoint(out);
-  }
+  });
 
   jobManager.createCheckpoint(out);
   ftlobject.pFTL->createCheckpoint(out);
@@ -223,18 +221,15 @@ void FTL::createCheckpoint(std::ostream &out) const noexcept {
 void FTL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, requestCounter);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, requestQueue, i, {
     uint64_t tag;
-    Request req(PPN{});
 
     RESTORE_SCALAR(in, tag);
-    req.restoreCheckpoint(in, object);
 
-    requestQueue.emplace(tag, std::move(req));
-  }
+    auto iter = requestQueue.emplace(tag, Request{PPN{}});
+
+    iter.first->second.restoreCheckpoint(in, object);
+  });
 
   jobManager.restoreCheckpoint(in);
   ftlobject.pFTL->restoreCheckpoint(in);

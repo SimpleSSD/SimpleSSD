@@ -461,23 +461,12 @@ void HIL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventNVMCompletion);
   BACKUP_EVENT(out, eventDMACompletion);
 
-  uint64_t size = requestQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : requestQueue) {
-    BACKUP_SCALAR(out, iter.first);
-  }
-
-  size = subrequestQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : subrequestQueue) {
+  BACKUP_STL(out, requestQueue, iter, BACKUP_SCALAR(out, iter.first));
+  BACKUP_STL(out, subrequestQueue, iter, {
     BACKUP_SCALAR(out, iter.first);
 
     iter.second.createCheckpoint(out);
-  }
+  });
 
   readStat.createCheckpoint(out);
   writeStat.createCheckpoint(out);
@@ -491,30 +480,25 @@ void HIL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventNVMCompletion);
   RESTORE_EVENT(in, eventDMACompletion);
 
-  uint64_t size, tag;
-  Request *req;
+  uint64_t tag;
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, requestQueue, i, {
     RESTORE_SCALAR(in, tag);
 
-    req = parent->restoreRequest(tag);
+    auto req = parent->restoreRequest(tag);
 
     panic_if(req == nullptr, "Invalid request while restore.");
 
     requestQueue.emplace(tag, req);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, subrequestQueue, i, {
     RESTORE_SCALAR(in, tag);
 
-    SubRequest sreq;
+    auto iter = subrequestQueue.emplace(tag, SubRequest{});
 
-    sreq.restoreCheckpoint(in, this);
-  }
+    iter.first->second.restoreCheckpoint(in, this);
+  });
 
   readStat.restoreCheckpoint(in);
   writeStat.restoreCheckpoint(in);

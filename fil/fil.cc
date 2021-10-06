@@ -126,6 +126,7 @@ void FIL::createCheckpoint(std::ostream &out) const noexcept {
   pNVM->createCheckpoint(out);
   pScheduler->createCheckpoint(out);
 }
+
 void FIL::restoreCheckpoint(std::istream &in) noexcept {
   pNVM->restoreCheckpoint(in);
   pScheduler->restoreCheckpoint(in);

@@ -521,15 +521,12 @@ void FIFO::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, counter);
 
-  uint64_t size = readCompletion.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : readCompletion) {
+  BACKUP_STL(out, readCompletion, iter, {
     BACKUP_SCALAR(out, iter.id);
     BACKUP_SCALAR(out, iter.insertEndAt);
     BACKUP_SCALAR(out, iter.dmaEndAt);
     BACKUP_SCALAR(out, iter.latency);
-  }
+  });
 }
 
 void FIFO::restoreCheckpoint(std::istream &in) noexcept {
@@ -543,17 +540,14 @@ void FIFO::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, counter);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     readCompletion.emplace_back(ReadEntry());
 
     RESTORE_SCALAR(in, readCompletion.back().id);
     RESTORE_SCALAR(in, readCompletion.back().insertEndAt);
     RESTORE_SCALAR(in, readCompletion.back().dmaEndAt);
     RESTORE_SCALAR(in, readCompletion.back().latency);
-  }
+  });
 }
 
 }  // namespace SimpleSSD

@@ -305,15 +305,12 @@ struct CopyContext {
   void createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, blockID);
 
-    uint64_t size = copyList.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : copyList) {
+    BACKUP_STL(out, copyList, iter, {
       BACKUP_SCALAR(out, iter.request.lpn);
       BACKUP_SCALAR(out, iter.request.ppn);
       BACKUP_SCALAR(out, iter.pageIndex);
       BACKUP_SCALAR(out, iter.beginAt);
-    }
+    });
 
     BACKUP_SCALAR(out, readCounter);
     BACKUP_SCALAR(out, writeCounter);
@@ -323,10 +320,7 @@ struct CopyContext {
   void restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, blockID);
 
-    uint64_t size;
-    RESTORE_SCALAR(in, size);
-
-    for (uint64_t i = 0; i < size; i++) {
+    RESTORE_STL_RESERVE(in, copyList, i, {
       LPN lpn;
       PPN ppn;
       uint32_t idx;
@@ -338,7 +332,7 @@ struct CopyContext {
       auto &ret = copyList.emplace_back(PageContext(lpn, ppn, idx));
 
       RESTORE_SCALAR(in, ret.beginAt);
-    }
+    });
 
     RESTORE_SCALAR(in, readCounter);
     RESTORE_SCALAR(in, writeCounter);

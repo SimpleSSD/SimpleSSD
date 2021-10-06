@@ -885,10 +885,7 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
   }
 
   // Store list
-  auto size = requestQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : requestQueue) {
+  BACKUP_STL(out, requestQueue, iter, {
     BACKUP_BLOB(out, iter.second->entry.data, 64);
     BACKUP_SCALAR(out, iter.second->commandID);
     BACKUP_SCALAR(out, iter.second->sqID);
@@ -897,12 +894,9 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second->useSGL);
     BACKUP_SCALAR(out, iter.second->dispatched);
     BACKUP_SCALAR(out, iter.second->completed);
-  }
+  });
 
-  size = dispatchedQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : dispatchedQueue) {
+  BACKUP_STL(out, dispatchedQueue, iter, {
     BACKUP_BLOB(out, iter.second->entry.data, 64);
     BACKUP_SCALAR(out, iter.second->commandID);
     BACKUP_SCALAR(out, iter.second->sqID);
@@ -911,41 +905,29 @@ void Arbitrator::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second->useSGL);
     BACKUP_SCALAR(out, iter.second->dispatched);
     BACKUP_SCALAR(out, iter.second->completed);
-  }
+  });
 
-  size = completionQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : completionQueue) {
+  BACKUP_STL(out, completionQueue, iter, {
     BACKUP_BLOB(out, iter->entry.data, 16);
     BACKUP_SCALAR(out, iter->cqID);
-  }
+  });
 
-  size = collectQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : collectQueue) {
+  BACKUP_STL(out, collectQueue, iter, {
     // For collecting queue, only data is used
     BACKUP_BLOB(out, iter->entry.data, 64);
-  }
+  });
 
-  size = abortSQList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : abortSQList) {
+  BACKUP_STL(out, abortSQList, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_EVENT(out, iter.second.first);
     BACKUP_SCALAR(out, iter.second.second);
-  }
+  });
 
-  size = abortCommandList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : abortCommandList) {
+  BACKUP_STL(out, abortCommandList, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_EVENT(out, iter.second.first);
     BACKUP_SCALAR(out, iter.second.second);
-  }
+  });
 }
 
 void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
@@ -987,10 +969,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
   }
 
   // Restore list by pushing all entries
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, requestQueue, i, {
     auto iter = new SQContext();
 
     RESTORE_BLOB(in, iter->entry.data, 64);
@@ -1003,11 +982,9 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->completed);
 
     requestQueue.push_back(iter->getCCID(), iter);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, dispatchedQueue, i, {
     auto iter = new SQContext();
 
     RESTORE_BLOB(in, iter->entry.data, 64);
@@ -1020,32 +997,26 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, iter->completed);
 
     dispatchedQueue.push_back(iter->getCCID(), iter);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     auto iter = new CQContext();
 
     RESTORE_BLOB(in, iter->entry.data, 16);
     RESTORE_SCALAR(in, iter->cqID);
 
     completionQueue.emplace_back(iter);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     auto iter = new SQContext();
 
     RESTORE_BLOB(in, iter->entry.data, 64);
 
     collectQueue.emplace_back(iter);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     uint16_t id;
     Event eid;
     uint64_t gcid;
@@ -1055,11 +1026,9 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, gcid);
 
     abortSQList.emplace(id, std::make_pair(eid, gcid));
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     uint32_t id;
     Event eid;
     uint64_t gcid;
@@ -1069,7 +1038,7 @@ void Arbitrator::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, gcid);
 
     abortCommandList.emplace(id, std::make_pair(eid, gcid));
-  }
+  });
 }
 
 SQContext *Arbitrator::restoreRequest(uint32_t id) {

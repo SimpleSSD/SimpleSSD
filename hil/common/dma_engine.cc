@@ -714,21 +714,15 @@ void DMAEngine::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_EVENT(out, eventPRPReadDone);
   BACKUP_EVENT(out, eventSGLReadDone);
 
-  uint64_t size = tagList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : tagList) {
+  BACKUP_STL(out, tagList, iter, {
     BACKUP_DMATAG(out, iter);
 
-    uint64_t size = iter->prList.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &pr : iter->prList) {
+    BACKUP_STL(out, iter->prList, pr, {
       BACKUP_SCALAR(out, pr.address);
       BACKUP_SCALAR(out, pr.size);
       BACKUP_SCALAR(out, pr.ignore);
-    }
-  }
+    });
+  });
 
   /**
    * DMA Sessions cannot be checkpointed(serialized). Because it has buffer
@@ -751,33 +745,22 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
   uint64_t size;
   DMATag oldTag, newTag;
 
-  RESTORE_SCALAR(in, size);
-
-  oldTagList.reserve(size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, oldTagList, i, {
     newTag = new DMAData();
 
     RESTORE_SCALAR(in, oldTag);
 
-    uint64_t list;
-    RESTORE_SCALAR(in, list);
-
-    newTag->prList.reserve(list);
-
-    for (uint64_t j = 0; j < list; j++) {
-      PhysicalRegion pr;
+    RESTORE_STL_RESERVE(in, newTag->prList, j, {
+      auto &pr = newTag->prList.emplace_back(PhysicalRegion{});
 
       RESTORE_SCALAR(in, pr.address);
       RESTORE_SCALAR(in, pr.size);
       RESTORE_SCALAR(in, pr.ignore);
-
-      newTag->prList.emplace_back(pr);
-    }
+    });
 
     tagList.emplace(newTag);
     oldTagList.emplace(oldTag, newTag);
-  }
+  });
 }
 
 DMATag DMAEngine::restoreDMATag(DMATag oldTag) noexcept {

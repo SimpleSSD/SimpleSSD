@@ -164,15 +164,12 @@ void InterruptManager::createCheckpoint(std::ostream &out) const noexcept {
 
   // Store list by poping all elements
   // Larger one first - for faster restore
-  auto size = coalesceMap.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : coalesceMap) {
+  BACKUP_STL(out, coalesceMap, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second.pending);
     BACKUP_SCALAR(out, iter.second.currentRequestCount);
     BACKUP_SCALAR(out, iter.second.nextDeadline);
-  }
+  });
 }
 
 void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
@@ -182,20 +179,18 @@ void InterruptManager::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventTimer);
 
   // Load list by pushping all elements
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, coalesceMap, i, {
     uint16_t iv;
-    CoalesceData iter;
+    CoalesceData data;
 
     RESTORE_SCALAR(in, iv);
-    RESTORE_SCALAR(in, iter.pending);
-    RESTORE_SCALAR(in, iter.currentRequestCount);
-    RESTORE_SCALAR(in, iter.nextDeadline);
 
-    coalesceMap.insert(iv, iter);
-  }
+    auto iter = coalesceMap.insert(iv, data);
+
+    RESTORE_SCALAR(in, iter.first->second.pending);
+    RESTORE_SCALAR(in, iter.first->second.currentRequestCount);
+    RESTORE_SCALAR(in, iter.first->second.nextDeadline);
+  });
 }
 
 }  // namespace SimpleSSD::HIL

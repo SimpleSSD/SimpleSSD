@@ -389,15 +389,8 @@ void SimpleDRAM::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, burstSize);
   BACKUP_SCALAR(out, burstInRow);
 
-  uint32_t size = (uint32_t)scheduler.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : scheduler) {
-    iter->createCheckpoint(out);
-  }
-
-  BACKUP_BLOB(out, rowOpened.data(), size * sizeof(uint32_t));
+  BACKUP_STL(out, scheduler, iter, iter->createCheckpoint(out););
+  BACKUP_BLOB(out, rowOpened.data(), rowOpened.size() * sizeof(uint32_t));
 }
 
 void SimpleDRAM::restoreCheckpoint(std::istream &in) noexcept {

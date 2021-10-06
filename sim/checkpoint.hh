@@ -44,6 +44,15 @@ namespace SimpleSSD {
 
 #define BACKUP_DMATAG(os, tag) BACKUP_SCALAR(os, tag)
 
+#define BACKUP_STL(os, container, iter, expr)                                  \
+  {                                                                            \
+    uint64_t size = container.size();                                          \
+    BACKUP_SCALAR(os, size);                                                   \
+    for (const auto &iter : container) {                                       \
+      expr                                                                     \
+    }                                                                          \
+  }
+
 #define RESTORE_SCALAR(is, value)                                              \
   {                                                                            \
     uint32_t _length = sizeof(value);                                          \
@@ -90,6 +99,35 @@ namespace SimpleSSD {
   {                                                                            \
     RESTORE_SCALAR(is, value);                                                 \
     value = (dmaengine)->restoreDMATag(value);                                 \
+  }
+
+#define RESTORE_STL(is, iter, expr)                                            \
+  {                                                                            \
+    uint64_t size;                                                             \
+    RESTORE_SCALAR(is, size);                                                  \
+    for (uint64_t iter = 0; iter < size; iter++) {                             \
+      expr                                                                     \
+    }                                                                          \
+  }
+
+#define RESTORE_STL_RESERVE(is, container, iter, expr)                         \
+  {                                                                            \
+    uint64_t size;                                                             \
+    RESTORE_SCALAR(is, size);                                                  \
+    container.reserve(size);                                                   \
+    for (uint64_t iter = 0; iter < size; iter++) {                             \
+      expr                                                                     \
+    }                                                                          \
+  }
+
+#define RESTORE_STL_RESIZE(is, container, iter, expr)                          \
+  {                                                                            \
+    uint64_t size;                                                             \
+    RESTORE_SCALAR(is, size);                                                  \
+    container.resize(size);                                                    \
+    for (auto &iter : container) {                                             \
+      expr                                                                     \
+    }                                                                          \
   }
 
 inline bool write_checkpoint(std::ostream &os, uint32_t length, void *ptr) {

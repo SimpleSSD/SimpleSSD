@@ -156,13 +156,10 @@ void ICL::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalPages);
   BACKUP_SCALAR(out, logicalPageSize);
 
-  uint64_t size = prefetchQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : prefetchQueue) {
+  BACKUP_STL(out, prefetchQueue, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second);
-  }
+  });
 
   BACKUP_EVENT(out, eventPrefetch)
 
@@ -175,10 +172,7 @@ void ICL::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, totalLogicalPages);
   RESTORE_SCALAR(in, logicalPageSize);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     LPN l;
     uint32_t s;
 
@@ -186,7 +180,7 @@ void ICL::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, s);
 
     prefetchQueue.emplace_back(l, s);
-  }
+  });
 
   RESTORE_EVENT(in, eventPrefetch);
 

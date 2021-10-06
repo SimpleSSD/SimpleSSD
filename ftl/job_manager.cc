@@ -70,12 +70,18 @@ void JobManager::resetStatValues() noexcept {
 }
 
 void JobManager::createCheckpoint(std::ostream &out) const noexcept {
-  for (auto &iter : jobs) {
-    iter->createCheckpoint(out);
-  }
+  BACKUP_STL(out, jobs, iter, { iter->createCheckpoint(out); });
 }
 
 void JobManager::restoreCheckpoint(std::istream &in) noexcept {
+  uint64_t size;
+
+  RESTORE_SCALAR(in, size);
+
+  panic_if(
+      size != jobs.size(),
+      "Unexpected number of background jobs while restore from checkpoint.");
+
   for (auto &iter : jobs) {
     iter->restoreCheckpoint(in);
   }

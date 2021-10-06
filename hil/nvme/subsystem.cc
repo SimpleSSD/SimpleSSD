@@ -929,38 +929,23 @@ void Subsystem::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_BLOB(out, health.data, 0x200);
 
-  uint64_t size = controllerList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : controllerList) {
+  BACKUP_STL(out, controllerList, iter, {
     // Only store controller ID, data must be reconstructed
     BACKUP_SCALAR(out, iter.first);
 
     iter.second->controller->createCheckpoint(out);
-  }
+  });
 
-  size = namespaceList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : namespaceList) {
+  BACKUP_STL(out, namespaceList, iter, {
     BACKUP_SCALAR(out, iter.second->getInfo()->commandSetIdentifier);
 
     iter.second->createCheckpoint(out);
-  }
+  });
 
-  size = attachmentTable.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : attachmentTable) {
+  BACKUP_STL(out, attachmentTable, iter, {
     BACKUP_SCALAR(out, iter.first);
-
-    size = iter.second.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &set : iter.second) {
-      BACKUP_SCALAR(out, set);
-    }
-  }
+    BACKUP_STL(out, iter.second, nsid, BACKUP_SCALAR(out, nsid));
+  });
 
   // Store command status
   commandDeleteSQ.createCheckpoint(out);
@@ -997,11 +982,7 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_BLOB(in, health.data, 0x200);
 
-  uint64_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     ControllerID id;
 
     RESTORE_SCALAR(in, id);
@@ -1012,14 +993,11 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
              "Invalid controller Id while recover controller.");
 
     iter->second->controller->restoreCheckpoint(in);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  CommandSetIdentifier csi = CommandSetIdentifier::Invalid;
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     AbstractNamespace *ns = nullptr;
+    CommandSetIdentifier csi;
 
     RESTORE_SCALAR(in, csi);
 
@@ -1043,11 +1021,9 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
     else {
       namespaceList.emplace(ns->getNSID(), ns);
     }
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     ControllerID id;
     uint64_t length = 0;
 
@@ -1060,15 +1036,13 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
       iter.first->second.clear();
     }
 
-    RESTORE_SCALAR(in, length);
-
-    for (uint64_t j = 0; j < length; j++) {
+    RESTORE_STL(in, j, {
       uint32_t nsid;
 
       RESTORE_SCALAR(in, nsid);
       iter.first->second.emplace(nsid);
-    }
-  }
+    });
+  });
 
   commandDeleteSQ.restoreCheckpoint(in);
   commandCreateSQ.restoreCheckpoint(in);

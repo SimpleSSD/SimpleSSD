@@ -134,21 +134,13 @@ void PreemptibleGC::requestArrived(Request *req) {
 void PreemptibleGC::createCheckpoint(std::ostream &out) const noexcept {
   AdvancedGC::createCheckpoint(out);
 
-  for (const auto &iter : pendingFILs) {
-    BACKUP_SCALAR(out, iter);
-  }
+  BACKUP_STL(out, pendingFILs, iter, BACKUP_SCALAR(out, iter));
 }
 
 void PreemptibleGC::restoreCheckpoint(std::istream &in) noexcept {
   AdvancedGC::restoreCheckpoint(in);
 
-  uint64_t size = targetBlocks.size();
-
-  pendingFILs.resize(size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    RESTORE_SCALAR(in, pendingFILs[i]);
-  }
+  RESTORE_STL_RESIZE(in, pendingFILs, i, RESTORE_SCALAR(in, pendingFILs[i]));
 }
 
 }  // namespace SimpleSSD::FTL::GC

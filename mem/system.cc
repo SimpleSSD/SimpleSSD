@@ -319,28 +319,21 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, DRAMbaseAddress);
   BACKUP_SCALAR(out, totalDRAMCapacity);
 
-  uint64_t size = allocatedAddressMap.size();
+  BACKUP_STL(out, allocatedAddressMap, iter, {
+    auto size = iter.name.length();
 
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : allocatedAddressMap) {
-    size = iter.name.length();
     BACKUP_SCALAR(out, size);
 
     BACKUP_BLOB(out, iter.name.data(), size);
 
     BACKUP_SCALAR(out, iter.base);
     BACKUP_SCALAR(out, iter.size);
-  }
+  });
 
   BACKUP_SCALAR(out, memoryTag);
   BACKUP_SCALAR(out, lastTag);
 
-  size = requestQueue.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : requestQueue) {
+  BACKUP_STL(out, requestQueue, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second.start);
     BACKUP_SCALAR(out, iter.second.npkt);
@@ -350,7 +343,7 @@ void System::createCheckpoint(std::ostream &out) const noexcept {
     BACKUP_SCALAR(out, iter.second.complete);
     BACKUP_EVENT(out, iter.second.eid);
     BACKUP_SCALAR(out, iter.second.data);
-  }
+  });
 
   BACKUP_SCALAR(out, pending);
 
@@ -371,14 +364,10 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, DRAMbaseAddress);
   RESTORE_SCALAR(in, totalDRAMCapacity);
 
-  uint64_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  allocatedAddressMap.reserve(size);
-
-  for (uint64_t i = 0; i < size; i++) {
-    uint64_t l, a, s;
+  RESTORE_STL_RESERVE(in, allocatedAddressMap, i, {
+    uint64_t l;
+    uint64_t a;
+    uint64_t s;
     std::string name;
 
     RESTORE_SCALAR(in, l);
@@ -390,14 +379,12 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, s);
 
     allocatedAddressMap.emplace_back(std::move(name), a, s);
-  }
+  });
 
   RESTORE_SCALAR(in, memoryTag);
   RESTORE_SCALAR(in, lastTag);
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     uint64_t tag;
     MemoryRequest req;
 
@@ -412,7 +399,7 @@ void System::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, req.data);
 
     requestQueue.emplace(tag, req);
-  }
+  });
 
   RESTORE_SCALAR(in, pending);
 

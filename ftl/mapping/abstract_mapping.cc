@@ -197,19 +197,13 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, writeLPNCount);
   BACKUP_SCALAR(out, invalidateLPNCount);
 
-  uint64_t size = pendingMemoryAccess.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : pendingMemoryAccess) {
+  BACKUP_STL(out, pendingMemoryAccess, iter, {
     BACKUP_SCALAR(out, iter.read);
     BACKUP_SCALAR(out, iter.address);
     BACKUP_SCALAR(out, iter.size);
-  }
+  });
 
-  size = memoryCommandList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : memoryCommandList) {
+  BACKUP_STL(out, memoryCommandList, iter, {
     BACKUP_SCALAR(out, iter.first);
 
     BACKUP_EVENT(out, iter.second.eid);
@@ -217,15 +211,12 @@ void AbstractMapping::createCheckpoint(std::ostream &out) const noexcept {
 
     BACKUP_SCALAR(out, iter.second.fstat);
 
-    size = iter.second.cmdList.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iiter : iter.second.cmdList) {
+    BACKUP_STL(out, iter.second.cmdList, iiter, {
       BACKUP_SCALAR(out, iiter.read);
       BACKUP_SCALAR(out, iiter.address);
       BACKUP_SCALAR(out, iiter.size);
-    }
-  }
+    });
+  });
 
   BACKUP_SCALAR(out, memoryTag);
 
@@ -240,10 +231,7 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, writeLPNCount);
   RESTORE_SCALAR(in, invalidateLPNCount);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     bool r;
     uint64_t a;
     uint32_t s;
@@ -253,11 +241,9 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, s);
 
     pendingMemoryAccess.emplace_back(r, a, s);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, memoryCommandList, i, {
     uint64_t f;
     CommandList ctx;
 
@@ -268,10 +254,7 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
 
     RESTORE_SCALAR(in, ctx.fstat);
 
-    uint64_t ssize;
-    RESTORE_SCALAR(in, ssize);
-
-    for (uint64_t j = 0; j < ssize; j++) {
+    RESTORE_STL(in, j, {
       bool r;
       uint64_t a;
       uint32_t s;
@@ -281,10 +264,10 @@ void AbstractMapping::restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, s);
 
       ctx.cmdList.emplace_back(r, a, s);
-    }
+    });
 
     memoryCommandList.emplace(f, ctx);
-  }
+  });
 
   RESTORE_SCALAR(in, memoryTag);
 

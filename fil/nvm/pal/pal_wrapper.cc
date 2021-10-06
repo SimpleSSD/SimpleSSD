@@ -341,25 +341,19 @@ void PALOLD::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_BLOB(out, &stat, sizeof(stat));
   BACKUP_EVENT(out, completeEvent);
 
-  uint64_t size = completionQueue.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : completionQueue) {
+  BACKUP_STL(out, completionQueue, iter, {
     BACKUP_SCALAR(out, iter.second.id);
     BACKUP_SCALAR(out, iter.second.beginAt);
     BACKUP_SCALAR(out, iter.second.finishedAt);
-  }
+  });
 
-  size = spareList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : spareList) {
+  BACKUP_STL(out, spareList, iter, {
     BACKUP_SCALAR(out, iter.first);
 
     uint64_t len = iter.second.size();
     BACKUP_SCALAR(out, len);
     BACKUP_BLOB(out, iter.second.data(), len);
-  }
+  });
 
   lat->backup(out);
   stats->backup(out);
@@ -371,10 +365,7 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_BLOB(in, &stat, sizeof(stat));
   RESTORE_EVENT(in, completeEvent);
 
-  uint64_t size;
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, completionQueue, i, {
     Complete tmp;
 
     RESTORE_SCALAR(in, tmp.id);
@@ -382,11 +373,9 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tmp.finishedAt);
 
     completionQueue.emplace(tmp.finishedAt, tmp);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, spareList, i, {
     PPN ppn;
     uint64_t len;
     std::vector<uint8_t> vector;
@@ -399,7 +388,7 @@ void PALOLD::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_BLOB(in, vector.data(), len);
 
     spareList.emplace(ppn, std::move(vector));
-  }
+  });
 
   lat->restore(in);
   stats->restore(in);

@@ -564,39 +564,25 @@ void GenericCache::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, dirtyLines);
 
-  uint64_t size = lookupList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : lookupList) {
+  BACKUP_STL(out, lookupList, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second);
-  }
+  });
 
-  size = writebackList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : writebackList) {
+  BACKUP_STL(out, writebackList, iter, {
     BACKUP_SCALAR(out, iter.tag);
     BACKUP_SCALAR(out, iter.drainTag);
     BACKUP_SCALAR(out, iter.flush);
 
-    size = iter.lpnList.size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iiter : iter.lpnList) {
+    BACKUP_STL(out, iter.lpnList, iiter, {
       uint64_t offset = tagArray->getOffset(iiter.second);
 
       BACKUP_SCALAR(out, iiter.first);
       BACKUP_SCALAR(out, offset);
-    }
-  }
+    });
+  });
 
-  size = allocateList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : allocateList) {
-    BACKUP_SCALAR(out, iter);
-  }
+  BACKUP_STL(out, allocateList, iter, BACKUP_SCALAR(out, iter));
 
   BACKUP_EVENT(out, eventLookupDone);
   BACKUP_EVENT(out, eventCacheDone);
@@ -618,11 +604,7 @@ void GenericCache::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, dirtyLines);
 
-  uint64_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, lookupList, i, {
     LPN lpn;
     uint64_t tag;
 
@@ -630,41 +612,34 @@ void GenericCache::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, tag);
 
     lookupList.emplace(lpn, tag);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     WritebackRequest req;
     LPN lpn;
-    uint64_t ssize;
     uint64_t offset;
 
     RESTORE_SCALAR(in, req.tag);
     RESTORE_SCALAR(in, req.drainTag);
     RESTORE_SCALAR(in, req.flush);
 
-    RESTORE_SCALAR(in, ssize);
-
-    for (uint64_t j = 0; j < ssize; j++) {
+    RESTORE_STL_RESERVE(in, req.lpnList, j, {
       RESTORE_SCALAR(in, lpn);
       RESTORE_SCALAR(in, offset);
 
       req.lpnList.emplace(lpn, tagArray->getTag(offset));
-    }
+    });
 
     writebackList.emplace_back(req);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     uint64_t tag;
 
     RESTORE_SCALAR(in, tag);
 
     allocateList.emplace_back(tag);
-  }
+  });
 
   RESTORE_EVENT(in, eventLookupDone);
   RESTORE_EVENT(in, eventCacheDone);

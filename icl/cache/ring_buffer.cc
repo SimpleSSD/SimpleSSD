@@ -366,13 +366,10 @@ void RingBuffer::createCheckpoint(std::ostream &out) const noexcept {
     iter.createCheckpoint(out);
   }
 
-  uint64_t size = tagHashTable.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : tagHashTable) {
+  BACKUP_STL(out, tagHashTable, iter, {
     BACKUP_SCALAR(out, iter.first);
     BACKUP_SCALAR(out, iter.second);
-  }
+  });
 
   BACKUP_EVENT(out, eventReadTagAll);
 }
@@ -387,9 +384,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     iter.restoreCheckpoint(in);
   }
 
-  RESTORE_SCALAR(in, tmp64);
-
-  for (uint64_t i = 0; i < tmp64; i++) {
+  RESTORE_STL_RESERVE(in, tagHashTable, i, {
     LPN lpn;
     uint64_t idx;
 
@@ -397,7 +392,7 @@ void RingBuffer::restoreCheckpoint(std::istream &in) noexcept {
     RESTORE_SCALAR(in, idx);
 
     tagHashTable.emplace(lpn, idx);
-  }
+  });
 
   RESTORE_EVENT(in, eventReadTagAll);
 }

@@ -471,21 +471,12 @@ void PageLevelFTL::resetStatValues() noexcept {
 
 void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
   bool exist;
-  uint64_t size;
 
   backupSuperRequest(out, pendingList);
 
-  size = writeList.size();
-  BACKUP_SCALAR(out, size);
+  BACKUP_STL(out, writeList, iter, { backupSuperRequest(out, iter); });
 
-  for (auto &iter : writeList) {
-    backupSuperRequest(out, iter);
-  }
-
-  size = rmwList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : rmwList) {
+  BACKUP_STL(out, rmwList, iter, {
     BACKUP_SCALAR(out, iter.first);
 
     iter.second.createCheckpoint(out);
@@ -506,16 +497,13 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
         break;
       }
     }
-  }
+  });
 
-  size = stalledRequestList.size();
-  BACKUP_SCALAR(out, size);
-
-  for (auto &iter : stalledRequestList) {
+  BACKUP_STL(out, stalledRequestList, iter, {
     auto tag = iter->getTag();
 
     BACKUP_SCALAR(out, tag);
-  }
+  });
 
   BACKUP_SCALAR(out, stat);
   BACKUP_EVENT(out, eventReadSubmit);
@@ -531,25 +519,19 @@ void PageLevelFTL::createCheckpoint(std::ostream &out) const noexcept {
 
 void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
   bool exist;
-  uint64_t size;
 
   restoreSuperRequest(in, pendingList, this);
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     SuperRequest list;
 
     restoreSuperRequest(in, list, this);
 
     writeList.emplace_back(std::move(list));
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  ReadModifyWriteContext cur;
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL_RESERVE(in, rmwList, i, {
+    ReadModifyWriteContext cur;
     uint64_t tag;
 
     RESTORE_SCALAR(in, tag);
@@ -572,17 +554,15 @@ void PageLevelFTL::restoreCheckpoint(std::istream &in) noexcept {
     }
 
     rmwList.emplace(tag, cur);
-  }
+  });
 
-  RESTORE_SCALAR(in, size);
-
-  for (uint64_t i = 0; i < size; i++) {
+  RESTORE_STL(in, i, {
     uint64_t tag;
 
     RESTORE_SCALAR(in, tag);
 
     stalledRequestList.emplace_back(getRequest(tag));
-  }
+  });
 
   RESTORE_SCALAR(in, stat);
   RESTORE_EVENT(in, eventReadSubmit);

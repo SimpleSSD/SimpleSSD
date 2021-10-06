@@ -412,13 +412,7 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, fgcBlocksToErase);
   BACKUP_SCALAR(out, bgcBlocksToErase);
 
-  size_t size = targetBlocks.size();
-
-  BACKUP_SCALAR(out, size);
-
-  for (const auto &iter : targetBlocks) {
-    iter.createCheckpoint(out);
-  }
+  BACKUP_STL(out, targetBlocks, iter, { iter.createCheckpoint(out); });
 
   BACKUP_SCALAR(out, stat);
   BACKUP_SCALAR(out, firstRequestArrival);
@@ -440,15 +434,7 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, fgcBlocksToErase);
   RESTORE_SCALAR(in, bgcBlocksToErase);
 
-  size_t size;
-
-  RESTORE_SCALAR(in, size);
-
-  targetBlocks.resize(size);
-
-  for (auto &iter : targetBlocks) {
-    iter.restoreCheckpoint(in);
-  }
+  RESTORE_STL_RESIZE(in, targetBlocks, iter, { iter.restoreCheckpoint(in); });
 
   RESTORE_SCALAR(in, stat);
   RESTORE_SCALAR(in, firstRequestArrival);
