@@ -11,20 +11,17 @@
 #define __SIMPLESSD_UTIL_PATH_HH__
 
 #include <cinttypes>
+#include <filesystem>
 #include <string>
 
 #include "sim/object.hh"
 
-namespace SimpleSSD::Path {
-
-std::string makeOutputFilename(ObjectData &obj, const std::string &filename);
-std::string makeOutputFilename(ObjectData &obj, const char *filename);
-std::string joinPath(const char *path, const char *filename);
+namespace SimpleSSD {
 
 void *openFileMapping(const char *path, uint64_t *psize, bool create = false,
                       bool cow = true);
 void closeFileMapping(void *ptr, uint64_t size);
 
-}  // namespace SimpleSSD::Path
+}  // namespace SimpleSSD
 
 #endif

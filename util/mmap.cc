@@ -5,9 +5,7 @@
  * Author: Donghyun Gouk <kukdh1@camelab.org>
  */
 
-#include "util/path.hh"
-
-#include <filesystem>
+#include "util/mmap.hh"
 
 #ifdef _MSC_VER
 #else
@@ -21,28 +19,7 @@
 
 #endif
 
-namespace SimpleSSD::Path {
-
-std::string makeOutputFilename(ObjectData &object,
-                               const std::string &filename) {
-  return makeOutputFilename(object, filename.c_str());
-}
-
-std::string makeOutputFilename(ObjectData &object, const char *filename) {
-  std::filesystem::path outdir = object.config->readString(
-      Section::Simulation, Config::Key::OutputDirectory);
-
-  // Append!
-  outdir /= filename;
-
-  return outdir.string();
-}
-
-std::string joinPath(const char *path, const char *filename) {
-  std::filesystem::path fspath(path);
-
-  return (fspath / filename).string();
-}
+namespace SimpleSSD {
 
 #ifdef _MSC_VER
 #else
@@ -119,4 +96,4 @@ void closeFileMapping(void *ptr, uint64_t size) {
 
 #endif
 
-}  // namespace SimpleSSD::Path
+}  // namespace SimpleSSD

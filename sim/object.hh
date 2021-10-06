@@ -153,6 +153,14 @@ class Object {
     return object.config->writeBoolean(s, k, v);
   }
 
+  inline std::filesystem::path makeOutputFilename(
+      const std::filesystem::path &path) {
+    std::filesystem::path ret = object.config->readString(
+        Section::Simulation, Config::Key::OutputDirectory);
+
+    return ret / path;
+  }
+
   /* Helper APIs for Log */
 
   template <class... T>
