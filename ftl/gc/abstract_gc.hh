@@ -77,6 +77,9 @@ class AbstractGC : public AbstractJob {
    * \brief Notify request arrived (background GC)
    */
   virtual void requestArrived(Request *) = 0;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::GC

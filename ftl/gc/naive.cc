@@ -406,6 +406,12 @@ void NaiveGC::resetStatValues() noexcept {
 }
 
 void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractGC::createCheckpoint(out);
+
+  BACKUP_SCALAR(out, beginAt);
+  BACKUP_SCALAR(out, fgcBlocksToErase);
+  BACKUP_SCALAR(out, bgcBlocksToErase);
+
   size_t size = targetBlocks.size();
 
   BACKUP_SCALAR(out, size);
@@ -416,8 +422,6 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
 
   BACKUP_SCALAR(out, stat);
   BACKUP_SCALAR(out, firstRequestArrival);
-  BACKUP_SCALAR(out, fgcBlocksToErase);
-  BACKUP_SCALAR(out, bgcBlocksToErase);
 
   BACKUP_EVENT(out, eventTrigger);
   BACKUP_EVENT(out, eventStart);
@@ -430,6 +434,12 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractGC::restoreCheckpoint(in);
+
+  RESTORE_SCALAR(in, beginAt);
+  RESTORE_SCALAR(in, fgcBlocksToErase);
+  RESTORE_SCALAR(in, bgcBlocksToErase);
+
   size_t size;
 
   RESTORE_SCALAR(in, size);
@@ -442,8 +452,6 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_SCALAR(in, stat);
   RESTORE_SCALAR(in, firstRequestArrival);
-  RESTORE_SCALAR(in, fgcBlocksToErase);
-  RESTORE_SCALAR(in, bgcBlocksToErase);
 
   RESTORE_EVENT(in, eventTrigger);
   RESTORE_EVENT(in, eventStart);

@@ -20,4 +20,12 @@ void AbstractGC::initialize() {
   param = ftlobject.pMapping->getInfo();
 }
 
+void AbstractGC::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, state);
+}
+
+void AbstractGC::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, state);
+}
+
 }  // namespace SimpleSSD::FTL::GC
