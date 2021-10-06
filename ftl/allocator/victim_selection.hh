@@ -19,10 +19,10 @@ class AbstractAllocator;
 
 class AbstractVictimSelection {
  protected:
-  FTLObjectData &ftlobject;
+  AbstractAllocator *pAllocator;
 
  public:
-  AbstractVictimSelection(FTLObjectData &);
+  AbstractVictimSelection(AbstractAllocator *);
   virtual ~AbstractVictimSelection();
 
   /**

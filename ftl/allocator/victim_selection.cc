@@ -11,8 +11,8 @@
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
-AbstractVictimSelection::AbstractVictimSelection(FTLObjectData &fo)
-    : ftlobject(fo) {}
+AbstractVictimSelection::AbstractVictimSelection(AbstractAllocator *p)
+    : pAllocator(p) {}
 
 AbstractAllocator::~AbstractAllocator() {}
 
