@@ -26,12 +26,12 @@ class AbstractJob : public Object {
 
   virtual void initialize() {}
 
-  virtual void trigger_readMapping(Request *) {}
-  virtual void trigger_readSubmit(Request *) {}
-  virtual void trigger_readDone(Request *) {}
-  virtual void trigger_writeMapping(Request *) {}
-  virtual void trigger_writeSubmit(Request *) {}
-  virtual void trigger_writeDone(Request *) {}
+  virtual bool trigger_readMapping(Request *) {}
+  virtual bool trigger_readSubmit(Request *) {}
+  virtual bool trigger_readDone(Request *) {}
+  virtual bool trigger_writeMapping(Request *) {}
+  virtual bool trigger_writeSubmit(Request *) {}
+  virtual bool trigger_writeDone(Request *) {}
 };
 
 class JobManager : public Object {
@@ -54,12 +54,12 @@ class JobManager : public Object {
    */
   void initialize();
 
-  void trigger_readMapping(Request *);
-  void trigger_readSubmit(Request *);
-  void trigger_readDone(Request *);
-  void trigger_writeMapping(Request *);
-  void trigger_writeSubmit(Request *);
-  void trigger_writeDone(Request *);
+  bool trigger_readMapping(Request *);
+  bool trigger_readSubmit(Request *);
+  bool trigger_readDone(Request *);
+  bool trigger_writeMapping(Request *);
+  bool trigger_writeSubmit(Request *);
+  bool trigger_writeDone(Request *);
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

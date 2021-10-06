@@ -27,40 +27,88 @@ void JobManager::initialize() {
   }
 }
 
-void JobManager::trigger_readMapping(Request *req) {
+bool JobManager::trigger_readMapping(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_readMapping(req);
+    triggered = iter->trigger_readMapping(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
-void JobManager::trigger_readSubmit(Request *req) {
+bool JobManager::trigger_readSubmit(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_readSubmit(req);
+    triggered = iter->trigger_readSubmit(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
-void JobManager::trigger_readDone(Request *req) {
+bool JobManager::trigger_readDone(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_readDone(req);
+    triggered = iter->trigger_readDone(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
-void JobManager::trigger_writeMapping(Request *req) {
+bool JobManager::trigger_writeMapping(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_writeMapping(req);
+    triggered = iter->trigger_writeMapping(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
-void JobManager::trigger_writeSubmit(Request *req) {
+bool JobManager::trigger_writeSubmit(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_writeSubmit(req);
+    triggered = iter->trigger_writeSubmit(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
-void JobManager::trigger_writeDone(Request *req) {
+bool JobManager::trigger_writeDone(Request *req) {
+  bool triggered = false;
+
   for (auto &iter : jobs) {
-    iter->trigger_writeDone(req);
+    triggered = iter->trigger_writeDone(req);
+
+    if (triggered) {
+      break;
+    }
   }
+
+  return triggered;
 }
 
 void JobManager::getStatList(std::vector<Stat> &list,
