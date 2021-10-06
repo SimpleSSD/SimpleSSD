@@ -10,6 +10,8 @@
 #ifndef __SIMPLESSD_SIM_SIMPLESSD_HH__
 #define __SIMPLESSD_SIM_SIMPLESSD_HH__
 
+#include <filesystem>
+
 #include "sim/abstract_controller.hh"
 #include "sim/config_reader.hh"
 #include "sim/engine.hh"
@@ -69,8 +71,8 @@ class SimpleSSD {
   void getStatValues(std::vector<double> &) noexcept;
   void resetStatValues() noexcept;
 
-  void createCheckpoint(std::string) const noexcept;
-  void restoreCheckpoint(std::string) noexcept;
+  void createCheckpoint(const std::filesystem::path &) const noexcept;
+  void restoreCheckpoint(const std::filesystem::path &) noexcept;
 };
 
 }  // namespace SimpleSSD

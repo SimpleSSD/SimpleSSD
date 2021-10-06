@@ -7,14 +7,12 @@
 
 #include "sim/simplessd.hh"
 
-#include <filesystem>
 #include <iostream>
 
 #include "hil/none/subsystem.hh"
 #include "hil/nvme/subsystem.hh"
 #include "mem/system.hh"
 #include "sim/version.hh"
-#include "util/path.hh"
 
 #define SIMPLESSD_CHECKPOINT_NAME "simplessd.bin"
 #define SIMPLESSD_CHECKPOINT_CONFIG "config.xml"
@@ -58,9 +56,9 @@ std::ostream *SimpleSSD::openStream(std::string &prefix,
     os = &std::cerr;
   }
   else if (path.length() > 0) {
-    std::string filepath = Path::joinPath(prefix.c_str(), path.c_str());
+    std::filesystem::path filepath = prefix;
 
-    os = new std::ofstream(filepath);
+    os = new std::ofstream(filepath / path);
 
     if (!((std::ofstream *)os)->is_open()) {
       // Log system not initialized yet
@@ -298,11 +296,10 @@ void SimpleSSD::resetStatValues() noexcept {
   object.memory->resetStatValues();
 }
 
-void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
-  std::string cpt_file =
-      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_NAME);
-  std::string cpt_config =
-      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_CONFIG);
+void SimpleSSD::createCheckpoint(
+    const std::filesystem::path &cpt_dir) const noexcept {
+  auto cpt_file = cpt_dir / SIMPLESSD_CHECKPOINT_NAME;
+  auto cpt_config = cpt_dir / SIMPLESSD_CHECKPOINT_CONFIG;
 
   // Try to open file at path
   std::ofstream file(cpt_file, std::ios::binary);
@@ -333,9 +330,9 @@ void SimpleSSD::createCheckpoint(std::string cpt_dir) const noexcept {
   file.close();
 }
 
-void SimpleSSD::restoreCheckpoint(std::string cpt_dir) noexcept {
-  std::string cpt_file =
-      Path::joinPath(cpt_dir.c_str(), SIMPLESSD_CHECKPOINT_NAME);
+void SimpleSSD::restoreCheckpoint(
+    const std::filesystem::path &cpt_dir) noexcept {
+  auto cpt_file = cpt_dir / SIMPLESSD_CHECKPOINT_NAME;
 
   // Try to open file
   std::ifstream file(cpt_file, std::ios::binary);

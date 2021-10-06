@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_SIM_CONFIG_READER_HH__
 #define __SIMPLESSD_SIM_CONFIG_READER_HH__
 
+#include <filesystem>
 #include <functional>
 #include <string>
 
@@ -61,13 +62,9 @@ class ConfigReader {
   ConfigReader &operator=(const ConfigReader &) = delete;
   ConfigReader &operator=(ConfigReader &&) = default;
 
-  void load(const char *, std::function<bool(pugi::xml_node &)>,
-            bool = false) noexcept;
-  void load(std::string &, std::function<bool(pugi::xml_node &)>,
-            bool = false) noexcept;
-
-  void save(const char *) noexcept;
-  void save(std::string &) noexcept;
+  void load(const std::filesystem::path &,
+            std::function<bool(pugi::xml_node &)>, bool = false) noexcept;
+  void save(const std::filesystem::path &) noexcept;
 
   int64_t readInt(Section, uint32_t) const noexcept;
   uint64_t readUint(Section, uint32_t) const noexcept;

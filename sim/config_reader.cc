@@ -25,11 +25,12 @@ ConfigReader::~ConfigReader() {}
  *
  * \param[in] path Input file path
  */
-void ConfigReader::load(const char *path,
+void ConfigReader::load(const std::filesystem::path &path,
                         std::function<bool(pugi::xml_node &)> cb,
                         bool test) noexcept {
-  auto result = file.load_file(
-      path, pugi::parse_default | pugi::parse_trim_pcdata, pugi::encoding_utf8);
+  auto result = file.load_file(path.c_str(),
+                               pugi::parse_default | pugi::parse_trim_pcdata,
+                               pugi::encoding_utf8);
 
   if (!result) {
     std::cerr << "Failed to parse configuration file: " << result.description()
@@ -106,19 +107,12 @@ void ConfigReader::load(const char *path,
   file.reset();
 }
 
-//! Load configuration from file
-void ConfigReader::load(std::string &path,
-                        std::function<bool(pugi::xml_node &)> cb,
-                        bool test) noexcept {
-  load(path.c_str(), cb, test);
-}
-
 /**
  * \brief Save configuration to file
  *
  * \param[in] path Output file path
  */
-void ConfigReader::save(const char *path) noexcept {
+void ConfigReader::save(const std::filesystem::path &path) noexcept {
   // Create simplessd node
   auto config = file.append_child(CONFIG_NODE_NAME);
   config.append_attribute("version").set_value(SIMPLESSD_VERSION);
@@ -147,8 +141,8 @@ void ConfigReader::save(const char *path) noexcept {
   STORE_SECTION(config, filConfig.getSectionName(), section)
   filConfig.storeTo(section);
 
-  auto result =
-      file.save_file(path, "  ", pugi::format_default, pugi::encoding_utf8);
+  auto result = file.save_file(path.c_str(), "  ", pugi::format_default,
+                               pugi::encoding_utf8);
 
   if (!result) {
     std::cerr << "Failed to save configuration file" << std::endl;
@@ -158,11 +152,6 @@ void ConfigReader::save(const char *path) noexcept {
 
   // Close
   file.reset();
-}
-
-//! Save configuration to file
-void ConfigReader::save(std::string &path) noexcept {
-  save(path.c_str());
 }
 
 //! Read configuration as int64
