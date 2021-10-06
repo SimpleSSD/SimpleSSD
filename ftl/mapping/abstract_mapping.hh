@@ -18,22 +18,6 @@
 
 namespace SimpleSSD::FTL::Mapping {
 
-template <class T>
-struct BlockMetadata {
-  T blockID;
-
-  uint32_t nextPageToWrite;
-  uint64_t insertedAt;
-  Bitset validPages;
-
-  BlockMetadata() : nextPageToWrite(0), insertedAt(0) {}
-  BlockMetadata(T id, uint32_t s)
-      : blockID(std::forward<T>(id)),
-        nextPageToWrite(0),
-        insertedAt(0),
-        validPages(s) {}
-};
-
 class AbstractMapping : public Object {
  protected:
   using ReadEntryFunction = std::function<uint64_t(uint8_t *, uint64_t)>;
@@ -224,22 +208,6 @@ class AbstractMapping : public Object {
   AbstractMapping(ObjectData &, FTLObjectData &);
   virtual ~AbstractMapping() {}
 
-  /* Functions for AbstractAllocator */
-
-  /**
-   * Return valid page count of specific block.
-   *
-   * \param[in] psbn  Physical Superblock Number.
-   */
-  virtual uint32_t getValidPages(PSBN psbn) = 0;
-
-  /**
-   * Return age (inserted time) of specific block.
-   *
-   * \param[in] psbn  Physical Superblock Number.
-   */
-  virtual uint64_t getAge(PSBN psbn) = 0;
-
   /* Functions for AbstractFTL */
 
   /**
@@ -323,37 +291,6 @@ class AbstractMapping : public Object {
    * \param[out]  prefer  Preferred mapping granularity
    */
   virtual void getMappingSize(uint64_t *min, uint64_t *prefer = nullptr) = 0;
-
-  /**
-   * \brief Get physical page status (Only for filling phase)
-   *
-   * Return # of valid pages and # of invalid pages in underlying NAND flash.
-   *
-   * \param[out] valid    Return # of valid physical (super)pages
-   * \param[out] invalid  Return # of invalid physical (super)pages
-   */
-  virtual void getPageStatistics(uint64_t &valid, uint64_t &invalid) = 0;
-
-  /**
-   * \brief Retrive page copy list
-   *
-   * Fill copyList of CopyContext. Each entry of copyList represents pair of
-   * LPN and pageIndex.
-   *
-   * \param[in] ctx   CopyContext structure
-   * \param[in] eid   Callback event
-   * \param[in] data  Event data
-   */
-  virtual void getCopyContext(CopyContext &ctx, Event eid, uint64_t data) = 0;
-
-  /**
-   * \brief Mark block as erased
-   *
-   * Mark block as erased in block metadata.
-   *
-   * \param[in] psbn  Physical Superblock Number
-   */
-  virtual void markBlockErased(PSBN psbn) = 0;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
