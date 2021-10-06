@@ -262,7 +262,7 @@ struct ReadModifyWriteContext {
 };
 
 struct PageContext {
-  Request request;  // We need LPN only, but just use full-sized Request struct
+  Request request;
 
   uint32_t pageIndex;
   uint64_t beginAt;
