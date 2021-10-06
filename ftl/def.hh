@@ -356,14 +356,12 @@ struct BlockMetadata {
       : nextPageToWrite(0),
         erasedCount(0),
         readCountAfterErase(0),
-        writeCountAfterErase(0),
         insertedAt(0) {}
   BlockMetadata(uint32_t pages)
       : validPages(pages),
         nextPageToWrite(0),
         erasedCount(0),
         readCountAfterErase(0),
-        writeCountAfterErase(0),
         insertedAt(0) {}
 
   /* Helper functions for metadata updates */
