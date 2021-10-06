@@ -17,6 +17,8 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
       totalSuperblock(0),
       superpage(0),
       parallelism(0),
+      metadataBaseAddress(0),
+      metadataEntrySize(0),
       mtengine(rd()) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
@@ -220,7 +222,6 @@ void GenericAllocator::initialize() {
   AbstractAllocator::initialize();
 
   {
-    // Special handling...
     auto &_totalSuperblock = const_cast<uint64_t &>(totalSuperblock);
     auto &_superpage = const_cast<uint32_t &>(superpage);
     auto &_parallelism = const_cast<uint32_t &>(parallelism);
@@ -228,6 +229,24 @@ void GenericAllocator::initialize() {
     _superpage = param->superpage;
     _parallelism = param->parallelism / superpage;
     _totalSuperblock = param->totalPhysicalBlocks / superpage;
+  }
+
+  {
+    auto &_addr = const_cast<uint64_t &>(metadataBaseAddress);
+    auto &_size = const_cast<uint64_t &>(metadataEntrySize);
+
+    auto filparam = object.config->getNANDStructure();
+
+    _size = BlockMetadata::sizeofMetadata(filparam->page);
+    _addr = object.memory->allocate(
+        totalSuperblock * metadataEntrySize, Memory::MemoryType::DRAM,
+        "FTL::Mapping::PageLevelMapping::BlockMeta");
+
+    blockMetadata.resize(totalSuperblock);
+
+    for (uint64_t i = 0; i < totalSuperblock; i++) {
+      blockMetadata[i] = BlockMetadata(filparam->page);
+    }
   }
 
   freeBlockCount = totalSuperblock;

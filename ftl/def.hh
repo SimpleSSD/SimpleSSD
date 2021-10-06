@@ -381,12 +381,14 @@ struct BlockMetadata {
 
   /* Helper functions for memory access insertion */
 
-  inline constexpr uint32_t offsetofPageIndex() { return 0; }
-  inline constexpr uint32_t offsetofErasedCount() { return 4; }
-  inline constexpr uint32_t offsetofReadCount() { return 8; }
-  inline uint32_t offsetofBitmap(uint32_t index) { return 12 + index / 8; }
-  inline uint32_t sizeofMetadata() {
-    return 12 + DIVCEIL(validPages.size(), 8);
+  static inline constexpr uint32_t offsetofPageIndex() { return 0; }
+  static inline constexpr uint32_t offsetofErasedCount() { return 4; }
+  static inline constexpr uint32_t offsetofReadCount() { return 8; }
+  static inline uint32_t offsetofBitmap(const uint32_t index) {
+    return 12 + index / 8;
+  }
+  static inline uint32_t sizeofMetadata(const uint32_t pages) {
+    return 12 + DIVCEIL(pages, 8);
   }
 
   /* Helper functions for checkpointing API */

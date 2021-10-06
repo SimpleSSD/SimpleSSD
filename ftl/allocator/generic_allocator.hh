@@ -27,8 +27,8 @@ class GenericAllocator : public AbstractAllocator {
   const uint32_t parallelism;
 
   std::vector<BlockMetadata> blockMetadata;
-  uint64_t metadataBaseAddress;
-  uint64_t metadataEntrySize;
+  const uint64_t metadataBaseAddress;
+  const uint64_t metadataEntrySize;
 
   inline uint64_t makeMetadataAddress(PSBN block) {
     return metadataBaseAddress + block * metadataEntrySize;
