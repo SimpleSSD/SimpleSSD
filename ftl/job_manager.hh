@@ -26,12 +26,12 @@ class AbstractJob : public Object {
 
   virtual void initialize() {}
 
-  virtual bool trigger_readMapping(Request *) {}
-  virtual bool trigger_readSubmit(Request *) {}
-  virtual bool trigger_readDone(Request *) {}
-  virtual bool trigger_writeMapping(Request *) {}
-  virtual bool trigger_writeSubmit(Request *) {}
-  virtual bool trigger_writeDone(Request *) {}
+  virtual bool trigger_readMapping(Request *) { return false; }
+  virtual bool trigger_readSubmit(Request *) { return false; }
+  virtual bool trigger_readDone(Request *) { return false; }
+  virtual bool trigger_writeMapping(Request *) { return false; }
+  virtual bool trigger_writeSubmit(Request *) { return false; }
+  virtual bool trigger_writeDone(Request *) { return false; }
 };
 
 class JobManager : public Object {
