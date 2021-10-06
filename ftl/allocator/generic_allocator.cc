@@ -232,6 +232,13 @@ void GenericAllocator::getPageStatistics(uint64_t &valid,
   }
 }
 
+std::list<PSBN> &GenericAllocator::getBlockListAtParallelismIndex(
+    uint32_t idx) noexcept {
+  panic_if(idx >= parallelism, "Parallelism index out-of-range.");
+
+  return sortedBlockList[idx].fullBlocks;
+}
+
 void GenericAllocator::getStatList(std::vector<Stat> &list,
                                    std::string prefix) noexcept {
   list.emplace_back(prefix + "wear_leveling.factor", "Wear-leveling factor");
