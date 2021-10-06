@@ -7,6 +7,8 @@
 
 #include "ftl/mapping/abstract_mapping.hh"
 
+#include "ftl/allocator/abstract_allocator.hh"
+
 namespace SimpleSSD::FTL::Mapping {
 
 AbstractMapping::AbstractMapping(ObjectData &o, FTLObjectData &fo)
@@ -132,6 +134,22 @@ void AbstractMapping::requestMemoryAccess(Event eid, uint64_t data,
   ret.first->second.cmdList = std::move(pendingMemoryAccess);
 
   handleMemoryCommand(memtag);
+}
+
+BlockMetadata &AbstractMapping::getBlockMetadata(PSBN &psbn) {
+  return ftlobject.pAllocator->getBlockMetadata(psbn);
+}
+
+uint64_t AbstractMapping::makeMetadataAddress(PSBN &psbn) {
+  return ftlobject.pAllocator->getMemoryAddressOfBlockMetadata(psbn);
+}
+
+PSBN AbstractMapping::getFreeBlockAt(uint32_t index) {
+  return ftlobject.pAllocator->getFreeBlockAt(index);
+}
+
+CPU::Function AbstractMapping::allocateFreeBlock(PSBN &psbn) {
+  return ftlobject.pAllocator->allocateFreeBlock(psbn);
 }
 
 void AbstractMapping::initialize() {}

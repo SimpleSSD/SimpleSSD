@@ -19,15 +19,13 @@ PageLevelMapping::PageLevelMapping(ObjectData &o, FTLObjectData &fo)
       totalPhysicalSuperPages(param.totalPhysicalPages / param.superpage),
       totalPhysicalSuperBlocks(param.totalPhysicalBlocks / param.superpage),
       totalLogicalSuperPages(param.totalLogicalPages / param.superpage),
-      table(nullptr),
-      blockMetadata(nullptr) {
+      table(nullptr) {
   // Check spare size
   panic_if(filparam->spareSize < sizeof(LPN), "NAND spare area is too small.");
 }
 
 PageLevelMapping::~PageLevelMapping() {
   free(table);
-  delete[] blockMetadata;
 }
 
 CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
@@ -47,9 +45,14 @@ CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
 
     // Update accessed time
     PSBN block = param.getPSBNFromPSPN(pspn);
-    blockMetadata[block].insertedAt = getTick();
 
-    insertMemoryAddress(false, makeMetadataAddress(block), 2);
+    auto &bmeta = getBlockMetadata(block);
+
+    bmeta.markAsRead();
+    bmeta.insertedAt = getTick();
+
+    insertMemoryAddress(
+        false, makeMetadataAddress(block) + bmeta.offsetofReadCount(), 4);
   }
   else {
     pspn.invalidate();
@@ -77,41 +80,44 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
     PSBN block = param.getPSBNFromPSPN(old);
     uint32_t page = param.getPageIndexFromPSPN(old);
 
-    blockMetadata[block].validPages.reset(page);
+    auto &bmeta = getBlockMetadata(block);
+
+    bmeta.validPages.reset(page);
 
     // Memory timing after demand paging
-    insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1,
-                        !init);
+    insertMemoryAddress(false,
+                        makeMetadataAddress(block) + bmeta.offsetofBitmap(page),
+                        1, !init);
   }
 
   // Get block from allocated block pool
-  PSBN blockID =
-      ftlobject.pAllocator->getBlockAt(std::numeric_limits<uint32_t>::max());
-
-  auto block = &blockMetadata[blockID];
+  PSBN blockID = getFreeBlockAt(std::numeric_limits<uint32_t>::max());
+  auto bmeta = &getBlockMetadata(blockID);
 
   // Check we have to get new block
-  if (block->nextPageToWrite == filparam->page) {
+  if (bmeta->isFull()) {
     // Get a new block
-    fstat += ftlobject.pAllocator->allocateBlock(blockID);
+    fstat += allocateFreeBlock(blockID);
 
-    block = &blockMetadata[blockID];
+    bmeta = &getBlockMetadata(blockID);
 
-    panic_if(block->nextPageToWrite == filparam->page,
-             "BlockAllocator corrupted.");
+    panic_if(bmeta->isFull(), "BlockAllocator corrupted.");
   }
 
   // Get new page
-  block->validPages.set(block->nextPageToWrite);
+  bmeta->validPages.set(bmeta->nextPageToWrite);
+  insertMemoryAddress(false,
+                      makeMetadataAddress(blockID) +
+                          bmeta->offsetofBitmap(bmeta->nextPageToWrite),
+                      1, !init);
+
+  pspn = param.makePSPN(blockID, bmeta->nextPageToWrite++);
+
+  bmeta->markAsWrite();
+  bmeta->insertedAt = getTick();
   insertMemoryAddress(
-      false,
-      makeMetadataAddress(block->blockID) + 4 + block->nextPageToWrite / 8, 1,
+      false, makeMetadataAddress(blockID) + bmeta->offsetofWriteCount(), 4,
       !init);
-
-  pspn = param.makePSPN(block->blockID, block->nextPageToWrite++);
-
-  block->insertedAt = getTick();
-  insertMemoryAddress(false, makeMetadataAddress(block->blockID), 4, !init);
 
   // Write entry
   entry = makeTableEntry(pspn, 1);
@@ -140,8 +146,11 @@ CPU::Function PageLevelMapping::invalidateMappingInternal(LSPN lspn,
     PSBN block = param.getPSBNFromPSPN(pspn);
     uint32_t page = param.getPageIndexFromPSPN(pspn);
 
-    blockMetadata[block].validPages.reset(page);
-    insertMemoryAddress(false, makeMetadataAddress(block) + 4 + page / 8, 1);
+    auto &bmeta = getBlockMetadata(block);
+
+    bmeta.validPages.reset(page);
+    insertMemoryAddress(
+        false, makeMetadataAddress(block) + bmeta.offsetofBitmap(page), 1);
 
     insertMemoryAddress(false, makeTableAddress(lspn), entrySize);
 
@@ -162,17 +171,8 @@ void PageLevelMapping::initialize() {
                             writeTableEntry, parseTableEntry, makeTableEntry);
 
   table = (uint8_t *)calloc(totalLogicalSuperPages, entrySize);
-  blockMetadata = new BlockMetadata<PSBN>[totalPhysicalSuperBlocks]();
 
   panic_if(!table, "Memory mapping for mapping table failed.");
-  panic_if(!blockMetadata, "Memory mapping for block metadata failed.");
-
-  // Valid page bits (packed) + 2byte clock + 2byte page offset
-  metadataEntrySize = DIVCEIL(filparam->page, 8) + 4;
-
-  metadataBaseAddress = object.memory->allocate(
-      totalPhysicalSuperBlocks * metadataEntrySize, Memory::MemoryType::DRAM,
-      "FTL::Mapping::PageLevelMapping::BlockMeta");
 
   tableBaseAddress = object.memory->allocate(
       totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
@@ -183,24 +183,16 @@ void PageLevelMapping::initialize() {
       totalLogicalSuperPages * entrySize, Memory::MemoryType::DRAM,
       "FTL::Mapping::PageLevelMapping::Table");
 
-  // Fill metadata
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    blockMetadata[i] =
-        BlockMetadata<PSBN>(static_cast<PSBN>(i), filparam->page);
-  }
-
   // Memory usage information
-  debugprint(Log::DebugID::FTL_PageLevel, "Memory usage:");
-  debugprint(Log::DebugID::FTL_PageLevel, " Mapping table: %" PRIu64,
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "Size of mapping table: %" PRIu64 " bytes",
              totalLogicalSuperPages * entrySize);
-  debugprint(Log::DebugID::FTL_PageLevel, " Block metatdata: %" PRIu64,
-             totalPhysicalSuperBlocks * metadataEntrySize);
 
   // Make free block pool in ftlobject.pAllocator
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
     PSBN tmp;
 
-    ftlobject.pAllocator->allocateBlock(tmp);
+    allocateFreeBlock(tmp);
   }
 }
 
@@ -224,14 +216,6 @@ uint64_t PageLevelMapping::getPageUsage(LPN slpn, uint64_t nlp) {
 
   // Convert to LPN
   return count * param.superpage;
-}
-
-uint32_t PageLevelMapping::getValidPages(PSBN psbn) {
-  return (uint32_t)blockMetadata[psbn].validPages.count();
-}
-
-uint64_t PageLevelMapping::getAge(PSBN psbn) {
-  return blockMetadata[psbn].insertedAt;
 }
 
 void PageLevelMapping::readMapping(Request *cmd, Event eid) {
@@ -311,47 +295,6 @@ void PageLevelMapping::getMappingSize(uint64_t *min, uint64_t *pre) {
   }
 }
 
-void PageLevelMapping::getPageStatistics(uint64_t &valid, uint64_t &invalid) {
-  valid = 0;
-  invalid = 0;
-
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    auto &block = blockMetadata[i];
-
-    if (block.nextPageToWrite > 0) {
-      valid += block.validPages.count();
-
-      for (uint32_t i = 0; i < block.nextPageToWrite; i++) {
-        if (!block.validPages.test(i)) {
-          ++invalid;
-        }
-      }
-    }
-  }
-}
-
-void PageLevelMapping::getCopyContext(CopyContext &ctx, Event eid,
-                                      uint64_t data) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  auto &block = blockMetadata[ctx.blockID];
-
-  for (uint32_t i = 0; i < filparam->page; i++) {
-    if (block.validPages.test(i)) {
-      ctx.copyList.emplace_back(i);
-    }
-  }
-
-  scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
-}
-
-void PageLevelMapping::markBlockErased(PSBN blockId) {
-  blockMetadata[blockId].validPages.reset();
-  blockMetadata[blockId].nextPageToWrite = 0;
-  blockMetadata[blockId].insertedAt = 0;
-}
-
 void PageLevelMapping::getStatList(std::vector<Stat> &list,
                                    std::string prefix) noexcept {
   AbstractMapping::getStatList(list, prefix);
@@ -373,13 +316,6 @@ void PageLevelMapping::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, totalLogicalSuperPages);
   BACKUP_SCALAR(out, entrySize);
   BACKUP_BLOB64(out, table, totalLogicalSuperPages * entrySize);
-
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    BACKUP_SCALAR(out, blockMetadata[i].nextPageToWrite);
-    BACKUP_SCALAR(out, blockMetadata[i].insertedAt);
-
-    blockMetadata[i].validPages.createCheckpoint(out);
-  }
 }
 
 void PageLevelMapping::restoreCheckpoint(std::istream &in) noexcept {
@@ -403,13 +339,6 @@ void PageLevelMapping::restoreCheckpoint(std::istream &in) noexcept {
   panic_if(tmp64 != entrySize, "Invalid FTL configuration while restore.");
 
   RESTORE_BLOB64(in, table, totalLogicalSuperPages * entrySize);
-
-  for (uint64_t i = 0; i < totalPhysicalSuperBlocks; i++) {
-    RESTORE_SCALAR(in, blockMetadata[i].nextPageToWrite);
-    RESTORE_SCALAR(in, blockMetadata[i].insertedAt);
-
-    blockMetadata[i].validPages.restoreCheckpoint(in);
-  }
 }
 
 }  // namespace SimpleSSD::FTL::Mapping

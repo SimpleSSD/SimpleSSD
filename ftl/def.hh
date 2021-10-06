@@ -356,25 +356,28 @@ struct BlockMetadata {
 
   uint32_t erasedCount;          // P/E Cycle
   uint32_t readCountAfterErase;  // For read reclaim and read refresh
-  uint64_t insertedAt;           // For Cost-benefit GC
+  uint32_t writeCountAfterErase;
+  uint64_t insertedAt;  // For Cost-benefit GC
 
   BlockMetadata()
       : nextPageToWrite(0),
         erasedCount(0),
         readCountAfterErase(0),
+        writeCountAfterErase(0),
         insertedAt(0) {}
   BlockMetadata(uint32_t pages)
       : validPages(pages),
         nextPageToWrite(0),
         erasedCount(0),
         readCountAfterErase(0),
+        writeCountAfterErase(0),
         insertedAt(0) {}
 
   /* Helper functions for metadata updates */
 
   inline void markAsErased() { erasedCount++, readCountAfterErase = 0; }
   inline void markAsRead() { readCountAfterErase++; }
-  inline void markAsWrite() { nextPageToWrite++; }
+  inline void markAsWrite() { writeCountAfterErase++; }
   inline bool isEmpty() { return nextPageToWrite == 0; }
   inline bool isFull() { return nextPageToWrite == validPages.size(); }
   inline bool isOpen() { return nextPageToWrite > 0 && !isFull(); }
@@ -384,7 +387,7 @@ struct BlockMetadata {
   inline constexpr uint32_t offsetofPageIndex() { return 0; }
   inline constexpr uint32_t offsetofErasedCount() { return 4; }
   inline constexpr uint32_t offsetofReadCount() { return 8; }
-  inline constexpr uint32_t offsetofInsertedAt() { return 12; }
+  inline constexpr uint32_t offsetofWriteCount() { return 12; }
   inline uint32_t offsetofBitmap(uint32_t index) { return 16 + index / 8; }
   inline uint32_t sizeofMetadata() {
     return 16 + DIVCEIL(validPages.size(), 8);

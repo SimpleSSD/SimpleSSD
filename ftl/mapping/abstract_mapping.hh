@@ -173,6 +173,13 @@ class AbstractMapping : public Object {
    */
   void requestMemoryAccess(Event eid, uint64_t data, CPU::Function &fstat);
 
+  /* Helper functions */
+
+  BlockMetadata &getBlockMetadata(PSBN &);
+  uint64_t makeMetadataAddress(PSBN &);
+  PSBN getFreeBlockAt(uint32_t);
+  CPU::Function allocateFreeBlock(PSBN &);
+
  private:
   struct MemoryCommand {
     uint64_t address;
