@@ -19,7 +19,6 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
       beginAt(0),
       firstRequestArrival(std::numeric_limits<uint64_t>::max()) {
   logid = Log::DebugID::FTL_NaiveGC;
-  state = State::Idle;
 
   auto nandConfig = object.config->getNANDStructure();
   auto param = ftlobject.pMapping->getInfo();

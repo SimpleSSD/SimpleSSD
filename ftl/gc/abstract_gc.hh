@@ -16,9 +16,20 @@
 
 namespace SimpleSSD::FTL::GC {
 
+enum class State : uint32_t {
+  /* Idle states */
+  Idle,    // GC is not triggered
+  Paused,  // GC has been suepended
+
+  /* Active states */
+  Foreground,  // GC triggered as foreground
+  Background,  // GC triggered as background
+};
+
 class AbstractGC : public AbstractJob {
  protected:
   FIL::FIL *pFIL;
+  State state;
 
   const Parameter *param;
 
@@ -26,12 +37,29 @@ class AbstractGC : public AbstractJob {
   AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractGC();
 
-  void trigger_readMapping(Request *req) final { requestArrived(req); }
-  void trigger_readSubmit(Request *) final {}
-  void trigger_readDone(Request *) final {}
-  void trigger_writeMapping(Request *req) final { requestArrived(req); }
-  void trigger_writeSubmit(Request *) final {}
-  void trigger_writeDone(Request *) final { triggerForeground(); }
+  bool trigger_readMapping(Request *req) final {
+    requestArrived(req);
+
+    return state >= State::Foreground;
+  }
+
+  bool trigger_readSubmit(Request *) final { return false; }
+
+  bool trigger_readDone(Request *) final { return false; }
+
+  bool trigger_writeMapping(Request *req) final {
+    requestArrived(req);
+
+    return state >= State::Foreground;
+  }
+
+  bool trigger_writeSubmit(Request *) final { return false; }
+
+  bool trigger_writeDone(Request *) final {
+    triggerForeground();
+
+    return state >= State::Foreground;
+  }
 
   /**
    * \brief GC initialization function
