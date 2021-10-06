@@ -199,6 +199,7 @@ set(SRC_FTL
 set(SRC_FTL_ALLOC
   ftl/allocator/abstract_allocator.cc
   ftl/allocator/generic_allocator.cc
+  ftl/allocator/victim_selection.cc
 )
 set(SRC_FTL_BASE
   ftl/base/abstract_ftl.cc
