@@ -12,7 +12,6 @@
 #define __SIMPLESSD_FTL_ALLOCATOR_GENERIC_ALLOCATOR_HH__
 
 #include <list>
-#include <random>
 
 #include "ftl/allocator/abstract_allocator.hh"
 
@@ -20,8 +19,6 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 class GenericAllocator : public AbstractAllocator {
  protected:
-  using BlockSelection = std::function<CPU::Function(uint64_t, CopyContext &)>;
-
   const uint64_t totalSuperblock;
   const uint32_t superpage;
   const uint32_t parallelism;
@@ -72,22 +69,8 @@ class GenericAllocator : public AbstractAllocator {
 
   std::vector<AllocationMetadata> sortedBlockList;
 
-  // TODO: REVISE BELOW!!
-
-  Config::VictimSelectionMode selectionMode;
   float fgcThreshold;
   float bgcThreshold;
-  uint64_t dchoice;
-
-  std::random_device rd;
-  std::mt19937 mtengine;
-
-  BlockSelection victimSelectionFunction;
-
-  CPU::Function randomVictimSelection(uint64_t, CopyContext &);
-  CPU::Function greedyVictimSelection(uint64_t, CopyContext &);
-  CPU::Function costbenefitVictimSelection(uint64_t, CopyContext &);
-  CPU::Function dchoiceVictimSelection(uint64_t, CopyContext &);
 
  public:
   GenericAllocator(ObjectData &, FTLObjectData &);
@@ -110,7 +93,8 @@ class GenericAllocator : public AbstractAllocator {
 
   bool checkForegroundGCThreshold() noexcept override;
   bool checkBackgroundGCThreshold() noexcept override;
-  void getVictimBlocks(CopyContext &, Event, uint64_t) override;
+  void getVictimBlocks(CopyContext &, AbstractVictimSelection *, Event,
+                       uint64_t) override;
   void reclaimBlocks(PSBN, Event, uint64_t) override;
 
   void getPageStatistics(uint64_t &, uint64_t &) noexcept override;

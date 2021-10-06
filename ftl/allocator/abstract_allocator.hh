@@ -11,6 +11,7 @@
 #ifndef __SIMPLESSD_FTL_ALLOCATOR_ABSTRACT_ALLOCATOR_HH__
 #define __SIMPLESSD_FTL_ALLOCATOR_ABSTRACT_ALLOCATOR_HH__
 
+#include "ftl/allocator/victim_selection.hh"
 #include "ftl/def.hh"
 #include "ftl/object.hh"
 #include "sim/object.hh"
@@ -103,11 +104,14 @@ class AbstractAllocator : public Object {
    *
    * Return physical block address to erase.
    *
-   * \param[in] ctx   CopyContext
-   * \param[in] eid   Callback event
-   * \param[in] data  Event data
+   * \param[in] ctx     CopyContext
+   * \param[in] method  Victim block selection algorithm
+   * \param[in] eid     Callback event
+   * \param[in] data    Event data
    */
-  virtual void getVictimBlocks(CopyContext &ctx, Event eid, uint64_t data) = 0;
+  virtual void getVictimBlocks(CopyContext &ctx,
+                               AbstractVictimSelection *method, Event eid,
+                               uint64_t data) = 0;
 
   /**
    * \brief Mark block as erased

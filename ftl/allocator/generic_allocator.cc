@@ -18,205 +18,14 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
       superpage(0),
       parallelism(0),
       metadataBaseAddress(0),
-      metadataEntrySize(0),
-      mtengine(rd()) {
-  selectionMode = (Config::VictimSelectionMode)readConfigUint(
-      Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
-  dchoice =
-      readConfigUint(Section::FlashTranslation, Config::Key::SamplingFactor);
+      metadataEntrySize(0) {
   fgcThreshold = readConfigFloat(Section::FlashTranslation,
                                  Config::Key::ForegroundGCThreshold);
   bgcThreshold = readConfigFloat(Section::FlashTranslation,
                                  Config::Key::BackgroundGCThreshold);
-
-  switch (selectionMode) {
-    case Config::VictimSelectionMode::Random:
-      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
-        return randomVictimSelection(idx, ctx);
-      };
-
-      break;
-    case Config::VictimSelectionMode::Greedy:
-      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
-        return greedyVictimSelection(idx, ctx);
-      };
-
-      break;
-    case Config::VictimSelectionMode::CostBenefit:
-      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
-        return costbenefitVictimSelection(idx, ctx);
-      };
-
-      break;
-    case Config::VictimSelectionMode::DChoice:
-      victimSelectionFunction = [this](uint64_t idx, CopyContext &ctx) {
-        return dchoiceVictimSelection(idx, ctx);
-      };
-
-      break;
-    default:
-      panic("Unexpected victim block selection mode.");
-
-      break;
-  }
 }
 
 GenericAllocator::~GenericAllocator() {}
-
-CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
-                                                      CopyContext &ctx) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  auto &currentList = sortedBlockList[idx].fullBlocks;
-  std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
-
-  // Select one block from current full block list
-  uint64_t ridx = dist(mtengine);
-
-  // Get block ID from list
-  auto iter = currentList.begin();
-
-  // O(n)
-  std::advance(iter, ridx);
-
-  ctx.blockID = *iter;
-  currentList.erase(iter);
-  fullBlockCount--;
-
-  return fstat;
-}
-
-CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
-                                                      CopyContext &ctx) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  auto &currentList = sortedBlockList[idx].fullBlocks;
-  auto minIndex = currentList.begin();
-  uint32_t min = std::numeric_limits<uint32_t>::max();
-
-  // Collect valid pages and find min value
-  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    auto valid = blockMetadata[*iter].validPages.count();
-
-    if (min > valid) {
-      min = valid;
-      minIndex = iter;
-    }
-  }
-
-  // Get block ID from sorted list
-  ctx.blockID = *minIndex;
-  currentList.erase(minIndex);
-  fullBlockCount--;
-
-  return fstat;
-}
-
-CPU::Function GenericAllocator::costbenefitVictimSelection(uint64_t idx,
-                                                           CopyContext &ctx) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  const uint32_t pageCount = object.config->getNANDStructure()->page;
-
-  auto &currentList = sortedBlockList[idx].fullBlocks;
-  auto minIndex = currentList.begin();
-  float min = std::numeric_limits<float>::max();
-
-  // Collect valid pages and find min value
-  for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    float util = (float)blockMetadata[*iter].validPages.count() / pageCount;
-
-    util = util / ((1.f - util) * blockMetadata[*iter].insertedAt);
-
-    if (min > util) {
-      min = util;
-      minIndex = iter;
-    }
-  }
-
-  // Get block ID from sorted list
-  ctx.blockID = *minIndex;
-  currentList.erase(minIndex);
-  fullBlockCount--;
-
-  return fstat;
-}
-
-CPU::Function GenericAllocator::dchoiceVictimSelection(uint64_t idx,
-                                                       CopyContext &ctx) {
-  CPU::Function fstat;
-  CPU::markFunction(fstat);
-
-  auto &currentList = sortedBlockList[idx].fullBlocks;
-
-  if (UNLIKELY(currentList.size() <= dchoice)) {
-    // Just return least erased blocks
-    ctx.blockID = currentList.front();
-
-    currentList.pop_front();
-    fullBlockCount--;
-
-    return fstat;
-  }
-
-  std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
-  std::vector<uint64_t> offsets;
-  std::vector<std::pair<std::list<PSBN>::iterator, uint32_t>> valid;
-
-  // Select dchoice number of blocks from current full block list
-  offsets.reserve(dchoice);
-
-  while (offsets.size() < dchoice) {
-    uint64_t ridx = dist(mtengine);
-    bool unique = true;
-
-    for (auto &iter : offsets) {
-      if (iter == ridx) {
-        unique = false;
-
-        break;
-      }
-    }
-
-    if (unique) {
-      offsets.emplace_back(ridx);
-    }
-  }
-
-  std::sort(offsets.begin(), offsets.end());
-
-  // Get block ID
-  auto iter = currentList.begin();
-
-  for (uint64_t i = 0; i < currentList.size(); i++) {
-    if (i == offsets.at(valid.size())) {
-      valid.emplace_back(iter, blockMetadata[*iter].validPages.count());
-    }
-
-    ++iter;
-  }
-
-  // Greedy
-  auto minIndex = currentList.end();
-  uint32_t min = std::numeric_limits<uint32_t>::max();
-
-  for (auto &iter : valid) {
-    if (min > iter.second) {
-      min = iter.second;
-      minIndex = iter.first;
-    }
-  }
-
-  // Get block ID from sorted list
-  ctx.blockID = *minIndex;
-  currentList.erase(minIndex);
-  fullBlockCount--;
-
-  return fstat;
-}
 
 void GenericAllocator::initialize() {
   AbstractAllocator::initialize();
@@ -349,16 +158,24 @@ bool GenericAllocator::checkBackgroundGCThreshold() noexcept {
   return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
-void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid,
-                                       uint64_t data) {
+void GenericAllocator::getVictimBlocks(CopyContext &ctx,
+                                       AbstractVictimSelection *method,
+                                       Event eid, uint64_t data) {
   CPU::Function fstat;
+  auto &ameta = sortedBlockList[lastErased];
+  std::list<PSBN>::iterator iter;
 
   // Select block
-  fstat = victimSelectionFunction(lastErased++, ctx);
+  fstat = method->getVictim(lastErased++, iter);
 
   if (lastErased == parallelism) {
     lastErased = 0;
   }
+
+  // Erase block from full block pool
+  ctx.blockID = *iter;
+  ameta.fullBlocks.erase(iter);
+  fullBlockCount--;
 
   // Fill copy context
   const auto &bmeta = blockMetadata[ctx.blockID];
