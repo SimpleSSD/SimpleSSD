@@ -16,7 +16,6 @@
 #include "fil/nvm/pal/PAL2.h"
 #include "fil/nvm/pal/PALStatistics.h"
 #include "util/algorithm.hh"
-#include "util/path.hh"
 
 namespace SimpleSSD::FIL::NVM {
 
@@ -281,7 +280,8 @@ void PALOLD::getStatValues(std::vector<double> &values) noexcept {
   double e = 0.;
 
   e += lat->GetPower(OPER_READ, BUSY_DMA0) * active_ch.average * stats->channel;
-  e += lat->GetPower(OPER_READ, BUSY_MEM) * active_die.average * stats->totalDie;
+  e +=
+      lat->GetPower(OPER_READ, BUSY_MEM) * active_die.average * stats->totalDie;
 
   // uJ = uW * ps / 1e+12
   values.push_back(e / 1e+12);
