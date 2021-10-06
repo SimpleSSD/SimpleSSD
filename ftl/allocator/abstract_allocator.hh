@@ -30,6 +30,22 @@ class AbstractAllocator : public Object {
   /* Functions for AbstractMapping */
 
   /**
+   * \brief Get block metadata at index
+   *
+   * \param psbn Physical Superblock Number.
+   * \return reference to block metadata.
+   */
+  virtual BlockMetadata &getBlockMetadata(PSBN &psbn) = 0;
+
+  /**
+   * \brief Get memory address of block metadata
+   *
+   * \param psbn Physical Superblock Number.
+   * \return uint64_t Memory address of block metadata
+   */
+  virtual uint64_t getMemoryAddressOfBlockMetadata(PSBN &psbn) = 0;
+
+  /**
    * \brief Allocate new free block
    *
    * Return new freeblock at parallelism index of provided physical page
@@ -38,7 +54,7 @@ class AbstractAllocator : public Object {
    * \param[in] psbn  Physical Superblock Number.
    * \return Return CPU firmware execution information.
    */
-  virtual CPU::Function allocateBlock(PSBN &psbn) = 0;
+  virtual CPU::Function allocateFreeBlock(PSBN &psbn) = 0;
 
   /**
    * \brief Get previously allocated free block
@@ -48,7 +64,7 @@ class AbstractAllocator : public Object {
    *
    * \param[in] pidx  Parallelism Index
    */
-  virtual PSBN getBlockAt(uint32_t psbn) = 0;
+  virtual PSBN getFreeBlockAt(uint32_t psbn) = 0;
 
   /* Functions for AbstractFTL */
 
@@ -100,6 +116,16 @@ class AbstractAllocator : public Object {
    * \param[in] data  Event data
    */
   virtual void reclaimBlocks(PSBN psbn, Event eid, uint64_t data) = 0;
+
+  /**
+   * \brief Get physical page status (Only for filling phase)
+   *
+   * Return # of valid pages and # of invalid pages in underlying NAND flash.
+   *
+   * \param[out] valid    Return # of valid physical (super)pages
+   * \param[out] invalid  Return # of invalid physical (super)pages
+   */
+  virtual void getPageStatistics(uint64_t &valid, uint64_t &invalid) = 0;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
