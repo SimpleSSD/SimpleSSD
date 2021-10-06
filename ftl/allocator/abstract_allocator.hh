@@ -35,7 +35,7 @@ class AbstractAllocator : public Object {
    * \param psbn Physical Superblock Number.
    * \return reference to block metadata.
    */
-  virtual BlockMetadata &getBlockMetadata(PSBN &psbn) = 0;
+  virtual BlockMetadata &getBlockMetadata(const PSBN &psbn) = 0;
 
   /**
    * \brief Get memory address of block metadata
@@ -43,7 +43,7 @@ class AbstractAllocator : public Object {
    * \param psbn Physical Superblock Number.
    * \return uint64_t Memory address of block metadata
    */
-  virtual uint64_t getMemoryAddressOfBlockMetadata(PSBN &psbn) = 0;
+  virtual uint64_t getMemoryAddressOfBlockMetadata(const PSBN &psbn) = 0;
 
   /**
    * \brief Allocate new free block

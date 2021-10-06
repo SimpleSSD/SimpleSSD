@@ -14,9 +14,10 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
     : AbstractAllocator(o, fo),
-      inUseBlockMap(nullptr),
-      freeBlocks(nullptr),
-      mtengine(rd()) {
+      mtengine(rd()),
+      totalSuperblock(0),
+      superpage(0),
+      parallelism(0) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
   dchoice =
@@ -58,19 +59,14 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
   }
 }
 
-GenericAllocator::~GenericAllocator() {
-  delete[] eraseCountList;
-  delete[] inUseBlockMap;
-  delete[] freeBlocks;
-  delete[] fullBlocks;
-}
+GenericAllocator::~GenericAllocator() {}
 
 CPU::Function GenericAllocator::randomVictimSelection(uint64_t idx,
                                                       CopyContext &ctx) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  auto &currentList = fullBlocks[idx];
+  auto &currentList = sortedBlockList[idx].fullBlocks;
   std::uniform_int_distribution<uint64_t> dist(0, currentList.size() - 1);
 
   // Select one block from current full block list
@@ -94,13 +90,13 @@ CPU::Function GenericAllocator::greedyVictimSelection(uint64_t idx,
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  auto &currentList = fullBlocks[idx];
+  auto &currentList = sortedBlockList[idx].fullBlocks;
   auto minIndex = currentList.begin();
   uint32_t min = std::numeric_limits<uint32_t>::max();
 
   // Collect valid pages and find min value
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    auto valid = ftlobject.pMapping->getValidPages(*iter);
+    auto valid = blockMetadata[*iter].validPages.count();
 
     if (min > valid) {
       min = valid;
@@ -123,15 +119,15 @@ CPU::Function GenericAllocator::costbenefitVictimSelection(uint64_t idx,
 
   const uint32_t pageCount = object.config->getNANDStructure()->page;
 
-  auto &currentList = fullBlocks[idx];
+  auto &currentList = sortedBlockList[idx].fullBlocks;
   auto minIndex = currentList.begin();
   float min = std::numeric_limits<float>::max();
 
   // Collect valid pages and find min value
   for (auto iter = currentList.begin(); iter != currentList.end(); ++iter) {
-    float util = (float)ftlobject.pMapping->getValidPages(*iter) / pageCount;
+    float util = (float)blockMetadata[*iter].validPages.count() / pageCount;
 
-    util = util / ((1.f - util) * ftlobject.pMapping->getAge(*iter));
+    util = util / ((1.f - util) * blockMetadata[*iter].insertedAt);
 
     if (min > util) {
       min = util;
@@ -152,7 +148,7 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(uint64_t idx,
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
-  auto &currentList = fullBlocks[idx];
+  auto &currentList = sortedBlockList[idx].fullBlocks;
 
   if (UNLIKELY(currentList.size() <= dchoice)) {
     // Just return least erased blocks
@@ -195,7 +191,7 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(uint64_t idx,
 
   for (uint64_t i = 0; i < currentList.size(); i++) {
     if (i == offsets.at(valid.size())) {
-      valid.emplace_back(iter, ftlobject.pMapping->getValidPages(*iter));
+      valid.emplace_back(iter, blockMetadata[*iter].validPages.count());
     }
 
     ++iter;
@@ -223,9 +219,17 @@ CPU::Function GenericAllocator::dchoiceVictimSelection(uint64_t idx,
 void GenericAllocator::initialize() {
   AbstractAllocator::initialize();
 
-  superpage = param->superpage;
-  parallelism = param->parallelism / superpage;
-  totalSuperblock = param->totalPhysicalBlocks / superpage;
+  {
+    // Special handling...
+    auto &_totalSuperblock = const_cast<uint64_t &>(totalSuperblock);
+    auto &_superpage = const_cast<uint32_t &>(superpage);
+    auto &_parallelism = const_cast<uint32_t &>(parallelism);
+
+    _superpage = param->superpage;
+    _parallelism = param->parallelism / superpage;
+    _totalSuperblock = param->totalPhysicalBlocks / superpage;
+  }
+
   freeBlockCount = totalSuperblock;
   fullBlockCount = 0;
 
@@ -236,10 +240,7 @@ void GenericAllocator::initialize() {
   }
 
   // Allocate data
-  eraseCountList = new uint32_t[totalSuperblock]();
-  inUseBlockMap = new PSBN[parallelism]();
-  freeBlocks = new std::list<PSBN>[parallelism]();
-  fullBlocks = new std::list<PSBN>[parallelism]();
+  sortedBlockList.resize(parallelism);
 
   lastErased = 0;
   lastAllocated = 0;
@@ -249,33 +250,37 @@ void GenericAllocator::initialize() {
 
   for (uint32_t i = 0; i < parallelism; i++) {
     for (uint64_t j = 0; j < left; j++) {
-      freeBlocks[i].emplace_back(i + j * parallelism);
+      sortedBlockList[i].freeBlocks.emplace_back(i + j * parallelism);
     }
   }
 }
 
-CPU::Function GenericAllocator::allocateBlock(PSBN &blockUsed) {
+CPU::Function GenericAllocator::allocateFreeBlock(PSBN &blockUsed) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
+  AllocationMetadata *ameta = nullptr;
   uint64_t idx = lastAllocated;
 
   if (LIKELY(blockUsed.isValid())) {
     idx = param->getParallelismIndexFromPSBN(blockUsed);
 
-    panic_if(inUseBlockMap[idx] != blockUsed, "Unexpected block ID.");
+    ameta = &sortedBlockList[idx];
+
+    panic_if(ameta->inUse != blockUsed, "Unexpected block ID.");
+
+    auto &bmeta = blockMetadata[blockUsed];
 
     // Insert to full block list
-    uint32_t erased = eraseCountList[blockUsed];
-    auto iter = fullBlocks[idx].begin();
+    auto iter = ameta->fullBlocks.begin();
 
-    for (; iter != fullBlocks[idx].end(); ++iter) {
-      if (eraseCountList[*iter] > erased) {
+    for (; iter != ameta->fullBlocks.end(); ++iter) {
+      if (blockMetadata[*iter].erasedCount > bmeta.erasedCount) {
         break;
       }
     }
 
-    fullBlocks[idx].emplace(iter, blockUsed);
+    ameta->fullBlocks.emplace(iter, blockUsed);
     fullBlockCount++;
   }
   else {
@@ -286,22 +291,24 @@ CPU::Function GenericAllocator::allocateBlock(PSBN &blockUsed) {
     }
   }
 
-  panic_if(freeBlocks[idx].size() == 0, "No more free blocks at ID %" PRIu64,
+  ameta = &sortedBlockList[idx];
+
+  panic_if(ameta->freeBlocks.size() == 0, "No more free blocks at ID %" PRIu64,
            idx);
 
   // Allocate new block
-  inUseBlockMap[idx] = freeBlocks[idx].front();
-  blockUsed = inUseBlockMap[idx];
+  ameta->inUse = ameta->freeBlocks.front();
+  blockUsed = ameta->inUse;
 
-  freeBlocks[idx].pop_front();
+  ameta->freeBlocks.pop_front();
   freeBlockCount--;
 
   return fstat;
 }
 
-PSBN GenericAllocator::getBlockAt(uint32_t idx) {
+PSBN GenericAllocator::getFreeBlockAt(uint32_t idx) {
   if (idx >= parallelism) {
-    auto psbn = inUseBlockMap[lastAllocated++];
+    auto psbn = sortedBlockList[lastAllocated++].inUse;
 
     if (lastAllocated == parallelism) {
       lastAllocated = 0;
@@ -312,7 +319,7 @@ PSBN GenericAllocator::getBlockAt(uint32_t idx) {
 
   panic_if(idx >= parallelism, "Invalid parallelism index.");
 
-  return inUseBlockMap[idx];
+  return sortedBlockList[idx].inUse;
 }
 
 bool GenericAllocator::checkForegroundGCThreshold() {
@@ -327,10 +334,20 @@ void GenericAllocator::getVictimBlocks(CopyContext &ctx, Event eid,
                                        uint64_t data) {
   CPU::Function fstat;
 
+  // Select block
   fstat = victimSelectionFunction(lastErased++, ctx);
 
   if (lastErased == parallelism) {
     lastErased = 0;
+  }
+
+  // Fill copy context
+  const auto &bmeta = blockMetadata[ctx.blockID];
+
+  for (uint32_t i = 0; i < bmeta.validPages.size(); i++) {
+    if (bmeta.validPages.test(i)) {
+      ctx.copyList.emplace_back(i);
+    }
   }
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
@@ -344,16 +361,21 @@ void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid, uint64_t data) {
 
   // Insert PPN to free block list
   uint32_t idx = param->getParallelismIndexFromPSBN(blockID);
-  uint32_t erased = ++eraseCountList[blockID];
-  auto iter = freeBlocks[idx].begin();
 
-  for (; iter != freeBlocks[idx].end(); ++iter) {
-    if (eraseCountList[*iter] > erased) {
+  auto &ameta = sortedBlockList[blockID];
+  auto &bmeta = blockMetadata[blockID];
+
+  bmeta.markAsErased();
+
+  auto iter = ameta.freeBlocks.begin();
+
+  for (; iter != ameta.freeBlocks.end(); ++iter) {
+    if (blockMetadata[*iter].erasedCount > bmeta.erasedCount) {
       break;
     }
   }
 
-  freeBlocks[idx].emplace(iter, blockID);
+  ameta.freeBlocks.emplace(iter, blockID);
   freeBlockCount++;
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
@@ -385,10 +407,12 @@ void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
 
   // TODO: Do I need to speed-up this function?
   for (uint64_t i = 0; i < totalSuperblock; i++) {
-    total += (double)eraseCountList[i];
-    square += pow((double)eraseCountList[i], 2.);
-    min = MIN(min, eraseCountList[i]);
-    max = MAX(max, eraseCountList[i]);
+    auto erased = blockMetadata[i].erasedCount;
+
+    total += (double)erased;
+    square += pow((double)erased, 2.);
+    min = MIN(min, erased);
+    max = MAX(max, erased);
   }
 
   if (square > 0.) {
@@ -408,81 +432,34 @@ void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
 void GenericAllocator::resetStatValues() noexcept {}
 
 void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
-  BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, totalSuperblock);
+  BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, lastErased);
   BACKUP_SCALAR(out, lastAllocated);
-  BACKUP_BLOB(out, eraseCountList, sizeof(uint32_t) * totalSuperblock);
-  BACKUP_BLOB(out, inUseBlockMap, sizeof(PPN) * parallelism);
   BACKUP_SCALAR(out, freeBlockCount);
   BACKUP_SCALAR(out, fullBlockCount);
 
-  uint64_t size;
-
-  for (uint64_t i = 0; i < parallelism; i++) {
-    size = freeBlocks[i].size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : freeBlocks[i]) {
-      BACKUP_SCALAR(out, iter);
-    }
-  }
-
-  for (uint64_t i = 0; i < parallelism; i++) {
-    size = fullBlocks[i].size();
-    BACKUP_SCALAR(out, size);
-
-    for (auto &iter : fullBlocks[i]) {
-      BACKUP_SCALAR(out, iter);
-    }
-  }
+  BACKUP_STL(out, blockMetadata, iter, { iter.createCheckpoint(out); });
+  BACKUP_STL(out, sortedBlockList, iter, { iter.createCheckpoint(out); });
 }
 
 void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   uint32_t tmp32;
   uint64_t tmp64;
 
-  RESTORE_SCALAR(in, tmp32);
-  panic_if(tmp32 != parallelism, "FTL configuration mismatch.");
-
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != totalSuperblock, "FTL configuration mismatch.");
 
+  RESTORE_SCALAR(in, tmp32);
+  panic_if(tmp32 != parallelism, "FTL configuration mismatch.");
+
   RESTORE_SCALAR(in, lastErased);
   RESTORE_SCALAR(in, lastAllocated);
-  RESTORE_BLOB(in, eraseCountList, sizeof(uint32_t) * totalSuperblock);
-  RESTORE_BLOB(in, inUseBlockMap, sizeof(PSBN) * parallelism);
   RESTORE_SCALAR(in, freeBlockCount);
   RESTORE_SCALAR(in, fullBlockCount);
 
-  uint64_t size;
-
-  for (uint64_t i = 0; i < parallelism; i++) {
-    // Clear previous data
-    freeBlocks[i].clear();
-
-    RESTORE_SCALAR(in, size);
-
-    for (uint64_t j = 0; j < size; j++) {
-      PSBN id;
-
-      RESTORE_SCALAR(in, id);
-
-      freeBlocks[i].emplace_back(id);
-    }
-  }
-
-  for (uint64_t i = 0; i < parallelism; i++) {
-    RESTORE_SCALAR(in, size);
-
-    for (uint64_t j = 0; j < size; j++) {
-      PSBN id;
-
-      RESTORE_SCALAR(in, id);
-
-      fullBlocks[i].emplace_back(id);
-    }
-  }
+  RESTORE_STL_RESIZE(in, blockMetadata, iter, { iter.restoreCheckpoint(in); });
+  RESTORE_STL_RESIZE(in, sortedBlockList, iter, { iter.restoreCheckpoint(in); })
 }
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
