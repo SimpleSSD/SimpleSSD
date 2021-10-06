@@ -153,7 +153,7 @@ void Filling::start() noexcept {
   }
 
   // Report
-  ftlobject.pMapping->getPageStatistics(valid, invalid);
+  ftlobject.pAllocator->getPageStatistics(valid, invalid);
 
   debugprint(Log::DebugID::FTL, "Filling finished. Page status:");
   debugprint(Log::DebugID::FTL,

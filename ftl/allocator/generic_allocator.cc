@@ -14,10 +14,10 @@ namespace SimpleSSD::FTL::BlockAllocator {
 
 GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
     : AbstractAllocator(o, fo),
-      mtengine(rd()),
       totalSuperblock(0),
       superpage(0),
-      parallelism(0) {
+      parallelism(0),
+      mtengine(rd()) {
   selectionMode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
   dchoice =
@@ -362,7 +362,7 @@ void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid, uint64_t data) {
   // Insert PPN to free block list
   uint32_t idx = param->getParallelismIndexFromPSBN(blockID);
 
-  auto &ameta = sortedBlockList[blockID];
+  auto &ameta = sortedBlockList[idx];
   auto &bmeta = blockMetadata[blockID];
 
   bmeta.markAsErased();

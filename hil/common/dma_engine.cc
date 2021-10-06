@@ -742,7 +742,6 @@ void DMAEngine::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_EVENT(in, eventPRPReadDone);
   RESTORE_EVENT(in, eventSGLReadDone);
 
-  uint64_t size;
   DMATag oldTag, newTag;
 
   RESTORE_STL_RESERVE(in, oldTagList, i, {

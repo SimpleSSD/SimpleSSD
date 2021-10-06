@@ -1025,7 +1025,6 @@ void Subsystem::restoreCheckpoint(std::istream &in) noexcept {
 
   RESTORE_STL(in, i, {
     ControllerID id;
-    uint64_t length = 0;
 
     RESTORE_SCALAR(in, id);
 

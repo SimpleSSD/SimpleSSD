@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_FTL_FILLING_HH__
 #define __SIMPLESSD_FTL_FILLING_HH__
 
+#include "ftl/allocator/abstract_allocator.hh"
 #include "ftl/mapping/abstract_mapping.hh"
 
 namespace SimpleSSD::FTL {
