@@ -29,10 +29,11 @@ class AbstractVictimSelection {
    * \brief Select victim block
    *
    * \param idx   Parallelism index.
-   * \param psbn  Physical superblock number.
+   * \param iter  Iterator of selected block.
    * \return Firmware execution information.
    */
-  virtual CPU::Function getVictim(uint32_t idx, PSBN &psbn) noexcept = 0;
+  virtual CPU::Function getVictim(uint32_t idx,
+                                  std::list<PSBN>::iterator &iter) noexcept = 0;
 };
 
 enum class VictimSelectionID {
@@ -62,7 +63,12 @@ enum class VictimSelectionID {
  * \param id Algorithm ID.
  * \return Victim selection algorithm.
  */
-AbstractVictimSelection *GetVictimSelectionAlgorithm(VictimSelectionID id);
+AbstractVictimSelection *GetVictimSelectionAlgorithm(
+    VictimSelectionID id) noexcept;
+
+void initializeVictimSelectionAlgorithms(ObjectData &object,
+                                         AbstractAllocator *pAllocator);
+void finalizeVictimSelectionAlgorithms();
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
 

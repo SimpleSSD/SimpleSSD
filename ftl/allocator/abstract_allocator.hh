@@ -128,6 +128,17 @@ class AbstractAllocator : public Object {
    */
   virtual void getPageStatistics(uint64_t &valid,
                                  uint64_t &invalid) noexcept = 0;
+
+  /* Functions for AbstractVictimSelection */
+
+  /**
+   * \brief Get full block list at specified parallelism index
+   *
+   * \param index Parallelism Index.
+   * \return List of full blocks.
+   */
+  virtual std::list<PSBN> &getBlockListAtParallelismIndex(
+      uint32_t index) noexcept = 0;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
