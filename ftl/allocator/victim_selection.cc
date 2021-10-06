@@ -16,7 +16,7 @@ namespace SimpleSSD::FTL::BlockAllocator {
 AbstractVictimSelection::AbstractVictimSelection(AbstractAllocator *p)
     : pAllocator(p) {}
 
-AbstractAllocator::~AbstractAllocator() {}
+AbstractVictimSelection::~AbstractVictimSelection() {}
 
 class RandomVictimSelection : public AbstractVictimSelection {
  protected:
