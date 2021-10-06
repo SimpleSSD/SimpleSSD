@@ -215,8 +215,6 @@ class AbstractMapping : public Object {
   AbstractMapping(ObjectData &, FTLObjectData &);
   virtual ~AbstractMapping() {}
 
-  /* Functions for AbstractFTL */
-
   /**
    * \brief FTL initialization function
    *
@@ -275,8 +273,30 @@ class AbstractMapping : public Object {
    */
   virtual void writeMapping(Request *req, Event eid) = 0;
 
-  //! Filling-phase only function
-  virtual void writeMapping(LSPN, PSPN &) = 0;
+  /**
+   * \brief Perform FTL write translation (Filling-phase only)
+   *
+   * This function must be used in filling-phase.
+   *
+   * \param[in]  lspn Logical superpage number.
+   * \param[out] pspn Physical superpage number.
+   */
+  virtual void writeMapping(LSPN lspn, PSPN &pspn) = 0;
+
+  /**
+   * \brief Perform FTL write translation (Background job only)
+   *
+   * This function must be used in background job (e.g., GC).
+   * As background jobs copies pages in single block, pspn indicates which
+   * physical superblock is used for copy.
+   *
+   * \param[in]    lspn Logical superpage number.
+   * \param[inout] pspn Physical superpage number.
+   * \param[in]    eid  Callback event.
+   * \param[in]    data Event context.
+   */
+  virtual void writeMapping(LSPN lspn, PSPN &pspn, Event eid,
+                            uint64_t data) = 0;
 
   /**
    * \brief Perform FTL invalidation

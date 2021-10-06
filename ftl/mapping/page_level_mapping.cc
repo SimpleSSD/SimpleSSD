@@ -62,6 +62,7 @@ CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
 }
 
 CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
+                                                     bool fixedIndex,
                                                      bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
@@ -91,7 +92,16 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
   }
 
   // Get block from allocated block pool
-  PSBN blockID = getFreeBlockAt(std::numeric_limits<uint32_t>::max());
+  uint32_t blockIndex = std::numeric_limits<uint32_t>::max();
+
+  if (fixedIndex) {
+    panic_if(!pspn.isValid(), "Invalid PPN while write.");
+
+    auto psbn = param.getPSBNFromPSPN(pspn);
+    blockIndex = param.getParallelismIndexFromPSBN(psbn);
+  }
+
+  PSBN blockID = getFreeBlockAt(blockIndex);
   auto bmeta = &getBlockMetadata(blockID);
 
   // Check we have to get new block
@@ -271,7 +281,24 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid) {
 }
 
 void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn) {
-  writeMappingInternal(lspn, pspn, true);
+  writeMappingInternal(lspn, pspn, false, true);
+}
+
+void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn, Event eid,
+                                    uint64_t data) {
+  CPU::Function fstat;
+  CPU::markFunction(fstat);
+
+  requestedWriteCount++;
+  writeLPNCount += param.superpage;
+
+  fstat += writeMappingInternal(lspn, pspn, true, false);
+
+  debugprint(Log::DebugID::FTL_PageLevel,
+             "Write | Internal | LSPN %" PRIx64 "h -> PSPN %" PRIx64 "h", lspn,
+             pspn);
+
+  requestMemoryAccess(eid, data, fstat);
 }
 
 void PageLevelMapping::invalidateMapping(Request *cmd, Event eid) {
