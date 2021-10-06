@@ -67,9 +67,6 @@ class NaiveGC : public AbstractGC {
   Event eventTrigger;
   virtual void gc_trigger();
 
-  Event eventStart;
-  virtual void gc_start(uint32_t);
-
   Event eventDoRead;
   virtual void gc_doRead(uint64_t, uint32_t);
 

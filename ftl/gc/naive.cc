@@ -68,8 +68,6 @@ NaiveGC::NaiveGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
   eventTrigger = createEvent([this](uint64_t, uint64_t) { gc_trigger(); },
                              "FTL::GC::eventTrigger");
-  eventStart = createEvent([this](uint64_t, uint64_t i) { gc_start(i); },
-                           "FTL::GC::eventStart");
   eventDoRead = createEvent([this](uint64_t t, uint64_t i) { gc_doRead(t, i); },
                             "FTL::GC::eventDoRead");
   eventDoTranslate =
@@ -120,15 +118,10 @@ void NaiveGC::gc_trigger() {
 
   // Get blocks to erase
   for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
-    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
+    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventDoRead, idx);
   }
 
   debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);
-}
-
-void NaiveGC::gc_start(uint32_t idx) {
-  // Request copy context
-  ftlobject.pMapping->getCopyContext(targetBlocks[idx], eventDoRead, idx);
 }
 
 void NaiveGC::gc_doRead(uint64_t now, uint32_t idx) {
@@ -312,7 +305,6 @@ void NaiveGC::gc_eraseDone(uint64_t now, uint32_t idx) {
     }
 
     // Mark table/block as erased
-    ftlobject.pMapping->markBlockErased(psbn);
     ftlobject.pAllocator->reclaimBlocks(psbn, eventDone, idx);
   }
 }
@@ -418,7 +410,6 @@ void NaiveGC::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, firstRequestArrival);
 
   BACKUP_EVENT(out, eventTrigger);
-  BACKUP_EVENT(out, eventStart);
   BACKUP_EVENT(out, eventDoRead);
   BACKUP_EVENT(out, eventDoTranslate);
   BACKUP_EVENT(out, eventDoWrite);
@@ -440,7 +431,6 @@ void NaiveGC::restoreCheckpoint(std::istream &in) noexcept {
   RESTORE_SCALAR(in, firstRequestArrival);
 
   RESTORE_EVENT(in, eventTrigger);
-  RESTORE_EVENT(in, eventStart);
   RESTORE_EVENT(in, eventDoRead);
   RESTORE_EVENT(in, eventDoTranslate);
   RESTORE_EVENT(in, eventDoWrite);

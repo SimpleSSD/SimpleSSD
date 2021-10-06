@@ -67,7 +67,7 @@ void AdvancedGC::gc_trigger() {
   }
 
   for (uint32_t idx = 0; idx < size; idx++) {
-    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventStart, idx);
+    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], eventDoRead, idx);
   }
 
   if (fgc) {
