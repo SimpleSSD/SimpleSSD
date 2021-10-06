@@ -346,6 +346,71 @@ struct CopyContext {
   }
 };
 
+struct BlockMetadata {
+  /* Necessary metadata */
+
+  Bitset validPages;
+  uint32_t nextPageToWrite;
+
+  /* Metadata for background operations */
+
+  uint32_t erasedCount;          // P/E Cycle
+  uint32_t readCountAfterErase;  // For read reclaim and read refresh
+  uint64_t insertedAt;           // For Cost-benefit GC
+
+  BlockMetadata()
+      : nextPageToWrite(0),
+        erasedCount(0),
+        readCountAfterErase(0),
+        insertedAt(0) {}
+  BlockMetadata(uint32_t pages)
+      : validPages(pages),
+        nextPageToWrite(0),
+        erasedCount(0),
+        readCountAfterErase(0),
+        insertedAt(0) {}
+
+  /* Helper functions for metadata updates */
+
+  inline void markAsErased() { erasedCount++, readCountAfterErase = 0; }
+  inline void markAsRead() { readCountAfterErase++; }
+  inline void markAsWrite() { nextPageToWrite++; }
+  inline bool isEmpty() { return nextPageToWrite == 0; }
+  inline bool isFull() { return nextPageToWrite == validPages.size(); }
+  inline bool isOpen() { return nextPageToWrite > 0 && !isFull(); }
+
+  /* Helper functions for memory access insertion */
+
+  inline constexpr uint32_t offsetofPageIndex() { return 0; }
+  inline constexpr uint32_t offsetofErasedCount() { return 4; }
+  inline constexpr uint32_t offsetofReadCount() { return 8; }
+  inline constexpr uint32_t offsetofInsertedAt() { return 12; }
+  inline uint32_t offsetofBitmap(uint32_t index) { return 16 + index / 8; }
+  inline uint32_t sizeofMetadata() {
+    return 16 + DIVCEIL(validPages.size(), 8);
+  }
+
+  /* Helper functions for checkpointing API */
+
+  void createCheckpoint(std::ostream &out) const noexcept {
+    validPages.createCheckpoint(out);
+
+    BACKUP_SCALAR(out, nextPageToWrite);
+    BACKUP_SCALAR(out, erasedCount);
+    BACKUP_SCALAR(out, readCountAfterErase);
+    BACKUP_SCALAR(out, insertedAt);
+  }
+
+  void restoreCheckpoint(std::istream &in) noexcept {
+    validPages.restoreCheckpoint(in);
+
+    RESTORE_SCALAR(in, nextPageToWrite);
+    RESTORE_SCALAR(in, erasedCount);
+    RESTORE_SCALAR(in, readCountAfterErase);
+    RESTORE_SCALAR(in, insertedAt);
+  }
+};
+
 }  // namespace SimpleSSD::FTL
 
 #endif
