@@ -35,7 +35,7 @@ class AbstractAllocator : public Object {
    * \param psbn Physical Superblock Number.
    * \return reference to block metadata.
    */
-  virtual BlockMetadata &getBlockMetadata(const PSBN &psbn) = 0;
+  virtual BlockMetadata &getBlockMetadata(const PSBN &psbn) noexcept = 0;
 
   /**
    * \brief Get memory address of block metadata
@@ -43,7 +43,8 @@ class AbstractAllocator : public Object {
    * \param psbn Physical Superblock Number.
    * \return uint64_t Memory address of block metadata
    */
-  virtual uint64_t getMemoryAddressOfBlockMetadata(const PSBN &psbn) = 0;
+  virtual uint64_t getMemoryAddressOfBlockMetadata(
+      const PSBN &psbn) noexcept = 0;
 
   /**
    * \brief Allocate new free block
@@ -64,7 +65,7 @@ class AbstractAllocator : public Object {
    *
    * \param[in] pidx  Parallelism Index
    */
-  virtual PSBN getFreeBlockAt(uint32_t psbn) = 0;
+  virtual PSBN getFreeBlockAt(uint32_t psbn) noexcept = 0;
 
   /* Functions for AbstractFTL */
 
@@ -88,14 +89,14 @@ class AbstractAllocator : public Object {
    *
    * \return True if Foreground GC should be invoked.
    */
-  virtual bool checkForegroundGCThreshold() = 0;
+  virtual bool checkForegroundGCThreshold() noexcept = 0;
 
   /**
    * \brief Check Background GC trigger threshold.
    *
    * \return True if Background GC should be invoked.
    */
-  virtual bool checkBackgroundGCThreshold() = 0;
+  virtual bool checkBackgroundGCThreshold() noexcept = 0;
 
   /**
    * \brief Select block to erase
@@ -125,7 +126,8 @@ class AbstractAllocator : public Object {
    * \param[out] valid    Return # of valid physical (super)pages
    * \param[out] invalid  Return # of invalid physical (super)pages
    */
-  virtual void getPageStatistics(uint64_t &valid, uint64_t &invalid) = 0;
+  virtual void getPageStatistics(uint64_t &valid,
+                                 uint64_t &invalid) noexcept = 0;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator

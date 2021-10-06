@@ -306,7 +306,7 @@ CPU::Function GenericAllocator::allocateFreeBlock(PSBN &blockUsed) {
   return fstat;
 }
 
-PSBN GenericAllocator::getFreeBlockAt(uint32_t idx) {
+PSBN GenericAllocator::getFreeBlockAt(uint32_t idx) noexcept {
   if (idx >= parallelism) {
     auto psbn = sortedBlockList[lastAllocated++].inUse;
 
@@ -322,11 +322,11 @@ PSBN GenericAllocator::getFreeBlockAt(uint32_t idx) {
   return sortedBlockList[idx].inUse;
 }
 
-bool GenericAllocator::checkForegroundGCThreshold() {
+bool GenericAllocator::checkForegroundGCThreshold() noexcept {
   return (float)freeBlockCount / totalSuperblock < fgcThreshold;
 }
 
-bool GenericAllocator::checkBackgroundGCThreshold() {
+bool GenericAllocator::checkBackgroundGCThreshold() noexcept {
   return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
@@ -379,6 +379,21 @@ void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid, uint64_t data) {
   freeBlockCount++;
 
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
+}
+
+void GenericAllocator::getPageStatistics(uint64_t &valid,
+                                         uint64_t &invalid) noexcept {
+  valid = 0;
+  invalid = 0;
+
+  for (uint64_t i = 0; i < totalSuperblock; i++) {
+    auto &block = blockMetadata[i];
+
+    if (block.nextPageToWrite > 0) {
+      valid += block.validPages.count();
+      invalid += block.nextPageToWrite - valid;
+    }
+  }
 }
 
 void GenericAllocator::getStatList(std::vector<Stat> &list,

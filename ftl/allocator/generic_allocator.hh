@@ -95,25 +95,25 @@ class GenericAllocator : public AbstractAllocator {
 
   void initialize() override;
 
-  BlockMetadata &getBlockMetadata(const PSBN &psbn) override {
+  BlockMetadata &getBlockMetadata(const PSBN &psbn) noexcept override {
     panic_if(psbn >= totalSuperblock, "Block ID out-of-range.");
 
     return blockMetadata.at(psbn);
   }
 
-  uint64_t getMemoryAddressOfBlockMetadata(const PSBN &psbn) override {
+  uint64_t getMemoryAddressOfBlockMetadata(const PSBN &psbn) noexcept override {
     return makeMetadataAddress(psbn);
   }
 
   CPU::Function allocateFreeBlock(PSBN &) override;
-  PSBN getFreeBlockAt(uint32_t) override;
+  PSBN getFreeBlockAt(uint32_t) noexcept override;
 
-  bool checkForegroundGCThreshold() override;
-  bool checkBackgroundGCThreshold() override;
+  bool checkForegroundGCThreshold() noexcept override;
+  bool checkBackgroundGCThreshold() noexcept override;
   void getVictimBlocks(CopyContext &, Event, uint64_t) override;
   void reclaimBlocks(PSBN, Event, uint64_t) override;
 
-  void getPageStatistics(uint64_t &, uint64_t &) override;
+  void getPageStatistics(uint64_t &, uint64_t &) noexcept override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;
