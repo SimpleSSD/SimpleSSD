@@ -192,24 +192,6 @@ TEST_CASE("ConfigReader") {
       // Section::FlashTranslation
       reader.writeUint(Section::FlashTranslation, FTL::Config::Key::MappingMode,
                        utest);
-      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::FillingMode,
-                       utest);
-      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::GCMode,
-                       utest);
-      reader.writeFloat(Section::FlashTranslation, FTL::Config::Key::FillRatio,
-                        ftest);
-      reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::InvalidFillRatio, ftest);
-      reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::VictimSelectionPolicy, utest);
-      reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::SamplingFactor, utest);
-      reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::ForegroundGCThreshold, ftest);
-      reader.writeFloat(Section::FlashTranslation,
-                        FTL::Config::Key::BackgroundGCThreshold, ftest * 2.f);
-      reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::IdleTimeForBackgroundGC, utest);
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::OverProvisioningRatio, ftest);
       reader.writeUint(Section::FlashTranslation,
@@ -217,6 +199,36 @@ TEST_CASE("ConfigReader") {
                        FIL::PageAllocation::Way | FIL::PageAllocation::Die);
       reader.writeBoolean(Section::FlashTranslation,
                           FTL::Config::Key::MergeReadModifyWrite, btest);
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::FillingMode,
+                       utest);
+      reader.writeFloat(Section::FlashTranslation, FTL::Config::Key::FillRatio,
+                        ftest);
+      reader.writeFloat(Section::FlashTranslation,
+                        FTL::Config::Key::InvalidFillRatio, ftest);
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::EraseCount,
+                       utest);
+      reader.writeUint(Section::FlashTranslation, FTL::Config::Key::GCMode,
+                       utest);
+      reader.writeFloat(Section::FlashTranslation,
+                        FTL::Config::Key::ForegroundGCThreshold, ftest);
+      reader.writeFloat(Section::FlashTranslation,
+                        FTL::Config::Key::BackgroundGCThreshold, ftest * 2.f);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::IdleTimeForBackgroundGC, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::VictimSelectionPolicy, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::SamplingFactor, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::ForegroundBlockEraseLevel, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::BackgroundBlockEraseLevel, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::WearLevelingMode, utest);
+      reader.writeFloat(Section::FlashTranslation,
+                        FTL::Config::Key::StaticWearLevelingThreshold, ftest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::ReadReclaimMode, utest);
 
       // Section::FlashInterface
       reader.writeUint(Section::FlashInterface, FIL::Config::Key::Channel,
@@ -461,28 +473,6 @@ TEST_CASE("ConfigReader") {
       // Section::FlashTranslation
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::MappingMode) == utest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::FillingMode) == utest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::GCMode) == utest);
-      REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::FillRatio) == ftest);
-      REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::InvalidFillRatio) == ftest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::VictimSelectionPolicy) ==
-              utest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::SamplingFactor) == utest);
-      REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::ForegroundGCThreshold) ==
-              ftest);
-      REQUIRE(reader.readFloat(Section::FlashTranslation,
-                               FTL::Config::Key::BackgroundGCThreshold) ==
-              ftest * 2.f);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::IdleTimeForBackgroundGC) ==
-              utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
                                FTL::Config::Key::OverProvisioningRatio) ==
               ftest);
@@ -493,6 +483,43 @@ TEST_CASE("ConfigReader") {
       REQUIRE(reader.readBoolean(Section::FlashTranslation,
                                  FTL::Config::Key::MergeReadModifyWrite) ==
               btest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::FillingMode) == utest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::FillRatio) == ftest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::InvalidFillRatio) == ftest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::EraseCount) == utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::GCMode) == utest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::ForegroundGCThreshold) ==
+              ftest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::BackgroundGCThreshold) ==
+              ftest * 2.f);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::IdleTimeForBackgroundGC) ==
+              utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::VictimSelectionPolicy) ==
+              utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::SamplingFactor) == utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::ForegroundBlockEraseLevel) ==
+              utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::BackgroundBlockEraseLevel) ==
+              utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::WearLevelingMode) == utest);
+      REQUIRE(reader.readFloat(Section::FlashTranslation,
+                               FTL::Config::Key::StaticWearLevelingThreshold) ==
+              ftest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::ReadReclaimMode) == utest);
 
       // Section::FlashInterface
       REQUIRE(reader.readUint(Section::FlashInterface,
