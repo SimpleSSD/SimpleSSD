@@ -11,22 +11,6 @@ namespace SimpleSSD::FTL {
 
 const char NAME_MAPPING_MODE[] = "MappingMode";
 
-// gc section
-const char NAME_GC_MODE[] = "GCMode";
-
-// gc > trigger section
-const char NAME_FGC_THRESHOLD[] = "ForegroundThreshold";
-const char NAME_BGC_THRESHOLD[] = "BackgroundThreshold";
-const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
-
-// gc > blockselection section
-const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
-const char NAME_GC_D_CHOICE_PARAM[] = "SamplingFactor";
-
-// gc > erase strategy
-const char NAME_FGC_PARALLEL_BLOCK_ERASE[] = "ForegroundBlockEraseLevel";
-const char NAME_BGC_PARALLEL_BLOCK_ERASE[] = "BackgroundBlockEraseLevel";
-
 // common section
 const char NAME_OVERPROVISION_RATIO[] = "OverProvisioningRatio";
 const char NAME_SUPERPAGE_ALLOCATION[] = "SuperpageAllocation";
@@ -36,6 +20,25 @@ const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_FILLING_MODE[] = "FillingMode";
 const char NAME_FILL_RATIO[] = "FillRatio";
 const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
+
+// background section
+const char NAME_MODE[] = "Mode";
+
+// background > gc > trigger section
+const char NAME_FGC_THRESHOLD[] = "ForegroundThreshold";
+const char NAME_BGC_THRESHOLD[] = "BackgroundThreshold";
+const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
+
+// background > gc > blockselection section
+const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
+const char NAME_GC_D_CHOICE_PARAM[] = "SamplingFactor";
+
+// background > gc > blockerase strategy
+const char NAME_FGC_PARALLEL_BLOCK_ERASE[] = "ForegroundBlockEraseLevel";
+const char NAME_BGC_PARALLEL_BLOCK_ERASE[] = "BackgroundBlockEraseLevel";
+
+// background > wearleveling
+const char NAME_WEAR_LEVELING_THRESHOLD[] = "StaticThreshold";
 
 Config::Config() {
   mappingMode = MappingType::PageLevelFTL;
@@ -55,9 +58,66 @@ Config::Config() {
   fgcBlockEraseLevel = Granularity::ThirdLevel;
   bgcBlockEraseLevel = Granularity::None;
 
+  wlMode = WearLevelingType::None;
+  staticWearLevelingThreshold = 0.7f;
+
+  rrMode = ReadReclaimType::None;
+
   mergeRMW = false;
 
   superpageAllocation = FIL::PageAllocation::None;
+}
+
+void Config::loadGC(pugi::xml_node &section) noexcept {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    auto name = node.attribute("name").value();
+
+    LOAD_NAME_UINT_TYPE(node, NAME_MODE, GCType, gcMode);
+
+    if (strcmp(name, "trigger") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
+        LOAD_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
+        LOAD_NAME_TIME(node2, NAME_BGC_IDLETIME, bgcIdletime);
+      }
+    }
+    else if (strcmp(name, "blockselection") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT_TYPE(node2, NAME_GC_EVICT_POLICY, VictimSelectionMode,
+                            gcBlockSelection);
+        LOAD_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
+      }
+    }
+    else if (strcmp(name, "blockerase") == 0 && isSection(node)) {
+      for (auto node2 = node.first_child(); node2;
+           node2 = node2.next_sibling()) {
+        LOAD_NAME_UINT_TYPE(node2, NAME_FGC_PARALLEL_BLOCK_ERASE, Granularity,
+                            fgcBlockEraseLevel);
+        LOAD_NAME_UINT_TYPE(node2, NAME_BGC_PARALLEL_BLOCK_ERASE, Granularity,
+                            bgcBlockEraseLevel);
+      }
+    }
+  }
+}
+
+void Config::loadWearLeveling(pugi::xml_node &section) noexcept {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    auto name = node.attribute("name").value();
+
+    LOAD_NAME_UINT_TYPE(node, NAME_MODE, WearLevelingType, wlMode);
+    LOAD_NAME_FLOAT(node, NAME_WEAR_LEVELING_THRESHOLD,
+                    staticWearLevelingThreshold);
+  }
+}
+
+void Config::loadReadReclaim(pugi::xml_node &section) noexcept {
+  for (auto node = section.first_child(); node; node = node.next_sibling()) {
+    auto name = node.attribute("name").value();
+
+    LOAD_NAME_UINT_TYPE(node, NAME_MODE, ReadReclaimType, rrMode);
+  }
 }
 
 void Config::loadFrom(pugi::xml_node &section) noexcept {
@@ -66,37 +126,19 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
 
     LOAD_NAME_UINT_TYPE(node, NAME_MAPPING_MODE, MappingType, mappingMode);
 
-    if (strcmp(name, "gc") == 0 && isSection(node)) {
+    if (strcmp(name, "background") == 0 && isSection(node)) {
       for (auto node2 = node.first_child(); node2;
            node2 = node2.next_sibling()) {
         auto name2 = node2.attribute("name").value();
 
-        LOAD_NAME_UINT_TYPE(node2, NAME_GC_MODE, GCType, gcMode);
-
-        if (strcmp(name2, "trigger") == 0 && isSection(node2)) {
-          for (auto node3 = node2.first_child(); node3;
-               node3 = node3.next_sibling()) {
-            LOAD_NAME_FLOAT(node3, NAME_FGC_THRESHOLD, fgcThreshold);
-            LOAD_NAME_FLOAT(node3, NAME_BGC_THRESHOLD, bgcThreshold);
-            LOAD_NAME_TIME(node3, NAME_BGC_IDLETIME, bgcIdletime);
-          }
+        if (strcmp(name2, "gc") == 0 && isSection(node2)) {
+          loadGC(node2);
         }
-        else if (strcmp(name2, "blockselection") == 0 && isSection(node2)) {
-          for (auto node3 = node2.first_child(); node3;
-               node3 = node3.next_sibling()) {
-            LOAD_NAME_UINT_TYPE(node3, NAME_GC_EVICT_POLICY,
-                                VictimSelectionMode, gcBlockSelection);
-            LOAD_NAME_UINT(node3, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-          }
+        else if (strcmp(name2, "wearleveling") == 0 && isSection(node2)) {
+          loadWearLeveling(node2);
         }
-        else if (strcmp(name2, "blockerase") == 0 && isSection(node2)) {
-          for (auto node3 = node2.first_child(); node3;
-               node3 = node3.next_sibling()) {
-            LOAD_NAME_UINT_TYPE(node3, NAME_FGC_PARALLEL_BLOCK_ERASE,
-                                Granularity, fgcBlockEraseLevel);
-            LOAD_NAME_UINT_TYPE(node3, NAME_BGC_PARALLEL_BLOCK_ERASE,
-                                Granularity, bgcBlockEraseLevel);
-          }
+        else if (strcmp(name2, "readreclaim") == 0 && isSection(node2)) {
+          loadReadReclaim(node2);
         }
       }
     }
@@ -119,6 +161,35 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
   }
 }
 
+void Config::storeGC(pugi::xml_node &section) noexcept {
+  pugi::xml_node node;
+
+  STORE_NAME_UINT(section, NAME_MODE, gcMode);
+
+  STORE_SECTION(section, "trigger", node);
+  STORE_NAME_FLOAT(node, NAME_FGC_THRESHOLD, fgcThreshold);
+  STORE_NAME_FLOAT(node, NAME_BGC_THRESHOLD, bgcThreshold);
+  STORE_NAME_TIME(node, NAME_BGC_IDLETIME, bgcIdletime);
+
+  STORE_SECTION(section, "blockselection", node);
+  STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
+  STORE_NAME_UINT(node, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
+
+  STORE_SECTION(section, "blockerase", node);
+  STORE_NAME_UINT(node, NAME_FGC_PARALLEL_BLOCK_ERASE, fgcBlockEraseLevel);
+  STORE_NAME_UINT(node, NAME_BGC_PARALLEL_BLOCK_ERASE, bgcBlockEraseLevel);
+}
+
+void Config::storeWearLeveling(pugi::xml_node &section) noexcept {
+  STORE_NAME_UINT(section, NAME_MODE, wlMode);
+  STORE_NAME_UINT(section, NAME_WEAR_LEVELING_THRESHOLD,
+                  staticWearLevelingThreshold);
+};
+
+void Config::storeReadReclaim(pugi::xml_node &section) noexcept {
+  STORE_NAME_UINT(section, NAME_MODE, rrMode);
+};
+
 void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node, node2;
 
@@ -138,26 +209,21 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
 
   STORE_NAME_UINT(section, NAME_MAPPING_MODE, mappingMode);
 
-  STORE_SECTION(section, "gc", node);
-  STORE_NAME_UINT(node, NAME_GC_MODE, gcMode);
-
-  STORE_SECTION(node, "trigger", node2);
-  STORE_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
-  STORE_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
-  STORE_NAME_TIME(node2, NAME_BGC_IDLETIME, bgcIdletime);
-
-  STORE_SECTION(node, "blockselection", node2);
-  STORE_NAME_UINT(node2, NAME_GC_EVICT_POLICY, gcBlockSelection);
-  STORE_NAME_UINT(node2, NAME_GC_D_CHOICE_PARAM, dChoiceParam);
-
-  STORE_SECTION(node, "blockerase", node2);
-  STORE_NAME_UINT(node2, NAME_FGC_PARALLEL_BLOCK_ERASE, fgcBlockEraseLevel);
-  STORE_NAME_UINT(node2, NAME_BGC_PARALLEL_BLOCK_ERASE, bgcBlockEraseLevel);
-
   STORE_SECTION(section, "common", node);
   STORE_NAME_FLOAT(node, NAME_OVERPROVISION_RATIO, overProvision);
   STORE_NAME_STRING(node, NAME_SUPERPAGE_ALLOCATION, superpage);
   STORE_NAME_BOOLEAN(node, NAME_MERGE_RMW, mergeRMW);
+
+  STORE_SECTION(section, "background", node);
+
+  STORE_SECTION(node, "gc", node2);
+  storeGC(node2);
+
+  STORE_SECTION(node, "wearleveling", node2);
+  storeWearLeveling(node2);
+
+  STORE_SECTION(node, "readreclaim", node2);
+  storeReadReclaim(node2);
 
   STORE_SECTION(section, "warmup", node);
   STORE_NAME_UINT(node, NAME_FILLING_MODE, fillingMode);
@@ -174,6 +240,13 @@ void Config::update() noexcept {
            "Invalid ForegroundBlockEraseLevel.");
   panic_if((uint8_t)bgcBlockEraseLevel > 4,
            "Invalid BackgroundBlockEraseLevel.");
+
+  panic_if((uint8_t)wlMode > 1, "Invalid WearLevelingMode.");
+  panic_if(
+      staticWearLevelingThreshold <= 0.f || staticWearLevelingThreshold >= 1.f,
+      "Invalid StaticThreshold.");
+
+  panic_if((uint8_t)rrMode > 1, "Invalid ReadReclaimMode.");
 
   panic_if(fillRatio < 0.f || fillRatio > 1.f, "Invalid FillingRatio.");
   panic_if(invalidFillRatio < 0.f || invalidFillRatio > 1.f,
@@ -234,6 +307,12 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
     case IdleTimeForBackgroundGC:
       ret = bgcIdletime;
       break;
+    case WearLevelingMode:
+      ret = (uint64_t)wlMode;
+      break;
+    case ReadReclaimMode:
+      ret = (uint64_t)rrMode;
+      break;
   }
 
   return ret;
@@ -257,6 +336,9 @@ float Config::readFloat(uint32_t idx) const noexcept {
       break;
     case BackgroundGCThreshold:
       ret = bgcThreshold;
+      break;
+    case StaticWearLevelingThreshold:
+      ret = staticWearLevelingThreshold;
       break;
   }
 
@@ -304,6 +386,12 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
     case IdleTimeForBackgroundGC:
       bgcIdletime = value;
       break;
+    case WearLevelingMode:
+      wlMode = (WearLevelingType)value;
+      break;
+    case ReadReclaimMode:
+      rrMode = (ReadReclaimType)value;
+      break;
     default:
       ret = false;
       break;
@@ -330,6 +418,9 @@ bool Config::writeFloat(uint32_t idx, float value) noexcept {
       break;
     case BackgroundGCThreshold:
       bgcThreshold = value;
+      break;
+    case StaticWearLevelingThreshold:
+      staticWearLevelingThreshold = value;
       break;
     default:
       ret = false;

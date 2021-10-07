@@ -20,11 +20,18 @@ class Config : public BaseConfig {
   enum Key : uint32_t {
     MappingMode,
 
+    // Common FTL setting
+    OverProvisioningRatio,
+    SuperpageAllocation,
+    MergeReadModifyWrite,
+
     // Filling
     FillingMode,
     FillRatio,
     InvalidFillRatio,
+    EraseCount,
 
+    // Background jobs
     // Garbage Collection
     GCMode,
     ForegroundGCThreshold,
@@ -35,10 +42,12 @@ class Config : public BaseConfig {
     ForegroundBlockEraseLevel,
     BackgroundBlockEraseLevel,
 
-    // Common FTL setting
-    OverProvisioningRatio,
-    SuperpageAllocation,
-    MergeReadModifyWrite,
+    // Wear-leveling
+    WearLevelingMode,
+    StaticWearLevelingThreshold,
+
+    // Read reclaim
+    ReadReclaimMode,
   };
 
   enum class MappingType : uint8_t {
@@ -56,6 +65,16 @@ class Config : public BaseConfig {
     Naive,
     Advanced,
     Preemptible,
+  };
+
+  enum class WearLevelingType : uint8_t {
+    None,
+    Static,
+  };
+
+  enum class ReadReclaimType : uint8_t {
+    None,
+    Basic,
   };
 
   enum class VictimSelectionMode : uint8_t {
@@ -92,8 +111,19 @@ class Config : public BaseConfig {
   bool mergeRMW;
   Granularity fgcBlockEraseLevel;
   Granularity bgcBlockEraseLevel;
+  WearLevelingType wlMode;
+  ReadReclaimType rrMode;
+
+  float staticWearLevelingThreshold;
 
   std::string superpage;
+
+  void loadGC(pugi::xml_node &) noexcept;
+  void loadWearLeveling(pugi::xml_node &) noexcept;
+  void loadReadReclaim(pugi::xml_node &) noexcept;
+  void storeGC(pugi::xml_node &) noexcept;
+  void storeWearLeveling(pugi::xml_node &) noexcept;
+  void storeReadReclaim(pugi::xml_node &) noexcept;
 
  public:
   Config();
