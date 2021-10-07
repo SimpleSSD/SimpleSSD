@@ -203,19 +203,19 @@ void Config::storeNANDStructure(pugi::xml_node &section) noexcept {
 }
 
 void Config::storeNANDTiming(pugi::xml_node &section) noexcept {
-  STORE_NAME_UINT(section, NAME_TADL, nandTiming.tADL);
-  STORE_NAME_UINT(section, NAME_TCS, nandTiming.tCS);
-  STORE_NAME_UINT(section, NAME_TDH, nandTiming.tDH);
-  STORE_NAME_UINT(section, NAME_TDS, nandTiming.tDS);
-  STORE_NAME_UINT(section, NAME_TRC, nandTiming.tRC);
-  STORE_NAME_UINT(section, NAME_TRR, nandTiming.tRR);
-  STORE_NAME_UINT(section, NAME_TWB, nandTiming.tWB);
-  STORE_NAME_UINT(section, NAME_TWC, nandTiming.tWC);
-  STORE_NAME_UINT(section, NAME_TWP, nandTiming.tWP);
-  STORE_NAME_UINT(section, NAME_TBERS, nandTiming.tBERS);
-  STORE_NAME_UINT(section, NAME_TCBSY, nandTiming.tCBSY);
-  STORE_NAME_UINT(section, NAME_TDBSY, nandTiming.tDBSY);
-  STORE_NAME_UINT(section, NAME_TRCBSY, nandTiming.tRCBSY);
+  STORE_NAME_TIME(section, NAME_TADL, nandTiming.tADL);
+  STORE_NAME_TIME(section, NAME_TCS, nandTiming.tCS);
+  STORE_NAME_TIME(section, NAME_TDH, nandTiming.tDH);
+  STORE_NAME_TIME(section, NAME_TDS, nandTiming.tDS);
+  STORE_NAME_TIME(section, NAME_TRC, nandTiming.tRC);
+  STORE_NAME_TIME(section, NAME_TRR, nandTiming.tRR);
+  STORE_NAME_TIME(section, NAME_TWB, nandTiming.tWB);
+  STORE_NAME_TIME(section, NAME_TWC, nandTiming.tWC);
+  STORE_NAME_TIME(section, NAME_TWP, nandTiming.tWP);
+  STORE_NAME_TIME(section, NAME_TBERS, nandTiming.tBERS);
+  STORE_NAME_TIME(section, NAME_TCBSY, nandTiming.tCBSY);
+  STORE_NAME_TIME(section, NAME_TDBSY, nandTiming.tDBSY);
+  STORE_NAME_TIME(section, NAME_TRCBSY, nandTiming.tRCBSY);
 
   for (uint8_t i = Level1; i <= Level3; i++) {
     auto _child = section.append_child(CONFIG_KEY_NAME);
@@ -223,7 +223,7 @@ void Config::storeNANDTiming(pugi::xml_node &section) noexcept {
     if (_child) {
       _child.append_attribute(CONFIG_ATTRIBUTE).set_value(NAME_TPROG);
       _child.append_attribute("level").set_value(i);
-      _child.text().set(nandTiming.tPROG[i]);
+      _child.text().set(formatTime(nandTiming.tPROG[i]).c_str());
     }
 
     _child = section.append_child(CONFIG_KEY_NAME);
@@ -231,7 +231,7 @@ void Config::storeNANDTiming(pugi::xml_node &section) noexcept {
     if (_child) {
       _child.append_attribute(CONFIG_ATTRIBUTE).set_value(NAME_TR);
       _child.append_attribute("level").set_value(i);
-      _child.text().set(nandTiming.tR[i]);
+      _child.text().set(formatTime(nandTiming.tR[i]).c_str());
     }
   }
 }

@@ -246,7 +246,7 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
 void Config::storeTo(pugi::xml_node &section) noexcept {
   pugi::xml_node node;
 
-  STORE_NAME_UINT(section, NAME_WORK_INTERVAL, workInterval);
+  STORE_NAME_TIME(section, NAME_WORK_INTERVAL, workInterval);
   STORE_NAME_UINT(section, NAME_FIFO_SIZE, requestQueueSize);
 
   STORE_SECTION(section, "interface", node);
