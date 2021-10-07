@@ -23,6 +23,7 @@ enum class State : uint32_t {
   Idle,
 
   Foreground,  // Invoked by reported RBER
+  Background,
 };
 
 class AbstractReadReclaim : public AbstractJob {
