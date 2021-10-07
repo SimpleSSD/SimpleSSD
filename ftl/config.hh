@@ -115,6 +115,7 @@ class Config : public BaseConfig {
   ReadReclaimType rrMode;
 
   float staticWearLevelingThreshold;
+  uint32_t fillingEraseCount;
 
   std::string superpage;
 

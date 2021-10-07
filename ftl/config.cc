@@ -20,6 +20,7 @@ const char NAME_MERGE_RMW[] = "MergeReadModifyWrite";
 const char NAME_FILLING_MODE[] = "FillingMode";
 const char NAME_FILL_RATIO[] = "FillRatio";
 const char NAME_INVALID_PAGE_RATIO[] = "InvalidFillRatio";
+const char NAME_FILL_ERASE_COUNT[] = "EraseCount";
 
 // background section
 const char NAME_MODE[] = "Mode";
@@ -46,6 +47,7 @@ Config::Config() {
   fillingMode = FillingType::SequentialSequential;
   fillRatio = 1.f;
   invalidFillRatio = 0.f;
+  fillingEraseCount = 0;
 
   gcMode = GCType::Naive;
 
@@ -156,6 +158,8 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
         LOAD_NAME_UINT_TYPE(node2, NAME_FILLING_MODE, FillingType, fillingMode);
         LOAD_NAME_FLOAT(node2, NAME_FILL_RATIO, fillRatio);
         LOAD_NAME_FLOAT(node2, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
+        LOAD_NAME_UINT_TYPE(node2, NAME_FILL_ERASE_COUNT, uint32_t,
+                            fillingEraseCount);
       }
     }
   }
@@ -229,6 +233,7 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(node, NAME_FILLING_MODE, fillingMode);
   STORE_NAME_FLOAT(node, NAME_FILL_RATIO, fillRatio);
   STORE_NAME_FLOAT(node, NAME_INVALID_PAGE_RATIO, invalidFillRatio);
+  STORE_NAME_UINT(node, NAME_FILL_ERASE_COUNT, fillingEraseCount);
 }
 
 void Config::update() noexcept {
@@ -285,6 +290,9 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
       break;
     case FillingMode:
       ret = (uint64_t)fillingMode;
+      break;
+    case EraseCount:
+      ret = fillingEraseCount;
       break;
     case GCMode:
       ret = (uint64_t)gcMode;
@@ -364,6 +372,9 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
       break;
     case FillingMode:
       fillingMode = (FillingType)value;
+      break;
+    case EraseCount:
+      fillingEraseCount = (uint32_t)value;
       break;
     case GCMode:
       gcMode = (GCType)value;
