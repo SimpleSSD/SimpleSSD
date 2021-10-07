@@ -23,10 +23,7 @@ AbstractReadReclaim::AbstractReadReclaim(ObjectData &o, FTLObjectData &fo,
 
 AbstractReadReclaim::~AbstractReadReclaim() {}
 
-uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PPN &ppn) {
-  auto pspn = param->getPSPNFromPPN(ppn);
-  auto psbn = param->getPSBNFromPSPN(pspn);
-
+uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PSBN &psbn) {
   auto &bmeta = ftlobject.pAllocator->getBlockMetadata(psbn);
 
   // TODO: Move this model to FIL

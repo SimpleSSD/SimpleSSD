@@ -22,8 +22,7 @@ namespace SimpleSSD::FTL::ReadReclaim {
 enum class State : uint32_t {
   Idle,
 
-  Check,  // Reading page in block to check bit errors
-  Copy,   // Copying block
+  Foreground,  // Invoked by reported RBER
 };
 
 class AbstractReadReclaim : public AbstractJob {
@@ -36,7 +35,7 @@ class AbstractReadReclaim : public AbstractJob {
 
   std::default_random_engine engine;
 
-  uint32_t estimateBitError(uint64_t now, const PPN &ppn);
+  uint32_t estimateBitError(uint64_t now, const PSBN &psbn);
 
  public:
   AbstractReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
