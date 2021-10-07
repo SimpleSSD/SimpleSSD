@@ -32,11 +32,14 @@ class Config : public BaseConfig {
     EraseCount,
 
     // Background jobs
+    // Idletime detection
+    IdleTimeMode,
+    IdleTimeThreshold,
+
     // Garbage Collection
     GCMode,
     ForegroundGCThreshold,
     BackgroundGCThreshold,
-    IdleTimeForBackgroundGC,
     VictimSelectionPolicy,
     SamplingFactor,
     ForegroundBlockEraseLevel,
@@ -59,6 +62,10 @@ class Config : public BaseConfig {
     SequentialSequential,
     SequentialRandom,
     RandomRandom,
+  };
+
+  enum class IdletimeType : uint8_t {
+    Threshold,
   };
 
   enum class GCType : uint8_t {
@@ -104,15 +111,17 @@ class Config : public BaseConfig {
 
   float fgcThreshold;
   float bgcThreshold;
-  uint64_t bgcIdletime;
   uint64_t dChoiceParam;
 
+  IdletimeType idletimeDetectionMode;
   uint8_t superpageAllocation;
   bool mergeRMW;
   Granularity fgcBlockEraseLevel;
   Granularity bgcBlockEraseLevel;
   WearLevelingType wlMode;
   ReadReclaimType rrMode;
+
+  uint64_t idletimeThreshold;
 
   float staticWearLevelingThreshold;
   uint32_t fillingEraseCount;

@@ -25,10 +25,12 @@ const char NAME_FILL_ERASE_COUNT[] = "EraseCount";
 // background section
 const char NAME_MODE[] = "Mode";
 
+// backgroud > idletime section
+const char NAME_IDLETIME_THRESHOLD[] = "IdletimeThreshold";
+
 // background > gc > trigger section
 const char NAME_FGC_THRESHOLD[] = "ForegroundThreshold";
 const char NAME_BGC_THRESHOLD[] = "BackgroundThreshold";
-const char NAME_BGC_IDLETIME[] = "IdletimeThreshold";
 
 // background > gc > blockselection section
 const char NAME_GC_EVICT_POLICY[] = "VictimSelectionPolicy";
@@ -49,14 +51,14 @@ Config::Config() {
   invalidFillRatio = 0.f;
   fillingEraseCount = 0;
 
-  gcMode = GCType::Naive;
+  idletimeDetectionMode = IdletimeType::Threshold;
+  idletimeThreshold = 5000000000000ul;
 
+  gcMode = GCType::Naive;
   gcBlockSelection = VictimSelectionMode::Greedy;
   dChoiceParam = 3;
   fgcThreshold = 0.05f;
   bgcThreshold = 0.1f;
-  bgcIdletime = 5000000000000ul;
-
   fgcBlockEraseLevel = Granularity::ThirdLevel;
   bgcBlockEraseLevel = Granularity::None;
 
@@ -81,7 +83,6 @@ void Config::loadGC(pugi::xml_node &section) noexcept {
            node2 = node2.next_sibling()) {
         LOAD_NAME_FLOAT(node2, NAME_FGC_THRESHOLD, fgcThreshold);
         LOAD_NAME_FLOAT(node2, NAME_BGC_THRESHOLD, bgcThreshold);
-        LOAD_NAME_TIME(node2, NAME_BGC_IDLETIME, bgcIdletime);
       }
     }
     else if (strcmp(name, "blockselection") == 0 && isSection(node)) {
@@ -138,6 +139,14 @@ void Config::loadFrom(pugi::xml_node &section) noexcept {
         else if (strcmp(name2, "readreclaim") == 0 && isSection(node2)) {
           loadReadReclaim(node2);
         }
+        else if (strcmp(name2, "idletime") == 0 && isSection(node2)) {
+          for (auto node3 = node2.first_child(); node3;
+               node3 = node3.next_sibling()) {
+            LOAD_NAME_UINT_TYPE(node3, NAME_MODE, IdletimeType,
+                                idletimeDetectionMode);
+            LOAD_NAME_TIME(node3, NAME_IDLETIME_THRESHOLD, idletimeThreshold);
+          }
+        }
       }
     }
     else if (strcmp(name, "common") == 0 && isSection(node)) {
@@ -169,7 +178,6 @@ void Config::storeGC(pugi::xml_node &section) noexcept {
   STORE_SECTION(section, "trigger", node);
   STORE_NAME_FLOAT(node, NAME_FGC_THRESHOLD, fgcThreshold);
   STORE_NAME_FLOAT(node, NAME_BGC_THRESHOLD, bgcThreshold);
-  STORE_NAME_TIME(node, NAME_BGC_IDLETIME, bgcIdletime);
 
   STORE_SECTION(section, "blockselection", node);
   STORE_NAME_UINT(node, NAME_GC_EVICT_POLICY, gcBlockSelection);
@@ -216,6 +224,10 @@ void Config::storeTo(pugi::xml_node &section) noexcept {
 
   STORE_SECTION(section, "background", node);
 
+  STORE_SECTION(node, "idletime", node2);
+  STORE_NAME_UINT(node2, NAME_MODE, idletimeDetectionMode);
+  STORE_NAME_TIME(node2, NAME_IDLETIME_THRESHOLD, idletimeThreshold);
+
   STORE_SECTION(node, "gc", node2);
   storeGC(node2);
 
@@ -241,6 +253,9 @@ void Config::update() noexcept {
            "Invalid ForegroundBlockEraseLevel.");
   panic_if((uint8_t)bgcBlockEraseLevel > 4,
            "Invalid BackgroundBlockEraseLevel.");
+
+  panic_if((uint8_t)idletimeDetectionMode > 0,
+           "Invalid IdletimeDetectionMode.");
 
   panic_if((uint8_t)wlMode > 1, "Invalid WearLevelingMode.");
   panic_if(
@@ -308,8 +323,11 @@ uint64_t Config::readUint(uint32_t idx) const noexcept {
     case BackgroundBlockEraseLevel:
       ret = (uint64_t)bgcBlockEraseLevel;
       break;
-    case IdleTimeForBackgroundGC:
-      ret = bgcIdletime;
+    case IdleTimeMode:
+      ret = (uint64_t)idletimeDetectionMode;
+      break;
+    case IdleTimeThreshold:
+      ret = idletimeThreshold;
       break;
     case WearLevelingMode:
       ret = (uint64_t)wlMode;
@@ -390,8 +408,11 @@ bool Config::writeUint(uint32_t idx, uint64_t value) noexcept {
     case BackgroundBlockEraseLevel:
       bgcBlockEraseLevel = (Granularity)value;
       break;
-    case IdleTimeForBackgroundGC:
-      bgcIdletime = value;
+    case IdleTimeMode:
+      idletimeDetectionMode = (IdletimeType)value;
+      break;
+    case IdleTimeThreshold:
+      idletimeThreshold = value;
       break;
     case WearLevelingMode:
       wlMode = (WearLevelingType)value;
