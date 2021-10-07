@@ -86,6 +86,8 @@ void BasicJobManager::triggerByUser(TriggerType when, Request *req) {
       rescheduleIdletimeDetection(now);
 
       break;
+    default:
+      break;
   }
 }
 

@@ -56,7 +56,10 @@ class AbstractJob : public Object {
    * \param when Trigger type.
    * \param req  Request that triggered this event.
    */
-  virtual void triggerByUser(TriggerType when, Request *req) {}
+  virtual void triggerByUser(TriggerType when, Request *req) {
+    (void)when;
+    (void)req;
+  }
 
   /**
    * \brief Triggered by SSD idleness
@@ -64,7 +67,10 @@ class AbstractJob : public Object {
    * \param now      Current simulation tick
    * \param deadline Expected timestamp of next user I/O
    */
-  virtual void triggerByIdle(uint64_t now, uint64_t deadline) {}
+  virtual void triggerByIdle(uint64_t now, uint64_t deadline) {
+    (void)now;
+    (void)deadline;
+  }
 };
 
 }  // namespace SimpleSSD::FTL

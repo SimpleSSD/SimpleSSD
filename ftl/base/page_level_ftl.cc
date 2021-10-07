@@ -8,6 +8,7 @@
 #include "ftl/base/page_level_ftl.hh"
 
 #include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/background_manager/abstract_job_manager.hh"
 #include "ftl/gc/abstract_gc.hh"
 #include "ftl/mapping/abstract_mapping.hh"
 
@@ -87,7 +88,7 @@ PageLevelFTL::getRMWContext(uint64_t tag) {
 }
 
 void PageLevelFTL::read(Request *cmd) {
-  ftlobject.jobManager.trigger_readMapping(cmd);
+  ftlobject.pJobManager->triggerByUser(TriggerType::ReadMapping, cmd);
   ftlobject.pMapping->readMapping(cmd, eventReadSubmit);
 }
 
@@ -95,7 +96,7 @@ void PageLevelFTL::read_submit(uint64_t tag) {
   auto req = getRequest(tag);
 
   if (LIKELY(req->getResponse() == Response::Success)) {
-    ftlobject.jobManager.trigger_readSubmit(req);
+    ftlobject.pJobManager->triggerByUser(TriggerType::ReadSubmit, req);
     pFIL->read(FIL::Request(req, eventReadDone));
   }
   else {
@@ -107,7 +108,7 @@ void PageLevelFTL::read_submit(uint64_t tag) {
 void PageLevelFTL::read_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  ftlobject.jobManager.trigger_readDone(req);
+  ftlobject.pJobManager->triggerByUser(TriggerType::ReadComplete, req);
 
   completeRequest(req);
 }
@@ -225,7 +226,8 @@ bool PageLevelFTL::write(Request *cmd) {
     else {
       auto &ret = writeList.emplace_back(std::move(pendingList));
 
-      ftlobject.jobManager.trigger_writeMapping(ret.front());
+      ftlobject.pJobManager->triggerByUser(TriggerType::WriteMapping,
+                                           ret.front());
 
       // No need for loop
       ftlobject.pMapping->writeMapping(ret.front(), eventWriteSubmit, false);
@@ -247,7 +249,7 @@ void PageLevelFTL::write_submit(uint64_t tag) {
   auto ppn = req->getPPN();
   uint32_t offset = 0;
 
-  ftlobject.jobManager.trigger_writeSubmit(req);
+  ftlobject.pJobManager->triggerByUser(TriggerType::WriteSubmit, req);
 
   for (auto &req : *list) {
     if (LIKELY(req->getResponse() == Response::Success)) {
@@ -268,7 +270,7 @@ void PageLevelFTL::write_submit(uint64_t tag) {
 void PageLevelFTL::write_done(uint64_t tag) {
   auto req = getRequest(tag);
 
-  ftlobject.jobManager.trigger_writeDone(req);
+  ftlobject.pJobManager->triggerByUser(TriggerType::WriteComplete, req);
 
   completeRequest(req);
 }

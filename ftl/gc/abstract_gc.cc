@@ -65,6 +65,8 @@ void AbstractGC::triggerByUser(TriggerType when, Request *req) {
       triggerForeground();
 
       break;
+    default:
+      break;
   }
 }
 
