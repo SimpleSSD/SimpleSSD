@@ -106,8 +106,6 @@ void Config::loadGC(pugi::xml_node &section) noexcept {
 
 void Config::loadWearLeveling(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    auto name = node.attribute("name").value();
-
     LOAD_NAME_UINT_TYPE(node, NAME_MODE, WearLevelingType, wlMode);
     LOAD_NAME_FLOAT(node, NAME_WEAR_LEVELING_THRESHOLD,
                     staticWearLevelingThreshold);
@@ -116,8 +114,6 @@ void Config::loadWearLeveling(pugi::xml_node &section) noexcept {
 
 void Config::loadReadReclaim(pugi::xml_node &section) noexcept {
   for (auto node = section.first_child(); node; node = node.next_sibling()) {
-    auto name = node.attribute("name").value();
-
     LOAD_NAME_UINT_TYPE(node, NAME_MODE, ReadReclaimType, rrMode);
   }
 }
