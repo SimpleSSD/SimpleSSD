@@ -535,94 +535,6 @@
         1: Block-level Mapping
      -->
     <config name="MappingMode">0</config>
-    <!-- Garbage Collection configuration -->
-    <section name="gc">
-      <!--
-        <int> GC algorithm
-
-        Select GC algorithm
-
-        Possible values:
-          0: Naive GC (Only performs foreground GC)
-          1: Advanced GC (Performs both foreground & background GC)
-          2: Preemptible GC (Advanced GC + stop GC when request arrives)
-       -->
-      <config name="GCMode">0</config>
-      <!-- GC trigger configuration -->
-      <section name="trigger">
-        <!--
-          <float> Foreground GC triggering threshold
-
-          If the number of free blocks left < [ForegroundThreshold] *
-          (total blocks), On-demand GC (Foreground GC) will triggered.
-         -->
-        <config name="ForegroundThreshold">0.05</config>
-        <!--
-          <float> Background GC triggering threshold
-
-          If the number of free blocks left < [BackgroundThreshold] *
-          (total blocks) and request does not issued in [IdletimeThreshold]
-          time, Background GC will be triggered.
-
-          This value should be larger than ForegroundThreshold.
-         -->
-        <config name="BackgroundThreshold">0.1</config>
-        <!--
-          <time> Background GC trigger option - Idle time
-
-          If no requests are issued by host, SSD assumes that request will not
-          submitted in near-future, triggers Background GC.
-         -->
-        <config name="IdletimeThreshold">5s</config>
-      </section>
-      <!-- Victim block selection configuration -->
-      <section name="blockselection">
-        <!--
-          <int:u8> Victim block selection algorithm
-
-          Possible values:
-            0: Greedy: Choose least utilized block (least number of valid pages)
-            1: Random: Choose random block
-            2: Cost-benefit: Choose block with lowest following value:
-              utilization / ((1 - utilization) * age)
-            3: D-Choice: Choose least utilized block in randomly sampled blocks
-               See [SIGMETRICS'13] Stochastic Modeling of Large-Scale
-               Solid-State Storage Systems: Analysis, Design Tradeoffs and
-               Optimization.
-         -->
-        <config name="VictimSelectionPolicy">0</config>
-        <!--
-          <int:u64> D-Choice (Randomized Greedy Algorithm) sampling factor
-
-          Sampling factor. (blocks to erase) * (this config value) blocks will
-          randomly sampled.
-         -->
-        <config name="SamplingFactor">3</config>
-      </section>
-      <!-- Victim block erase configuration -->
-      <section name="blockerase">
-        <!--
-          <int:u8> Foreground GC block erase granularity
-
-          Set # blocks should be erased in parallel.
-          For the definition of parallelism group, see FIL section.
-
-          Possible values:
-            0: Only one block will be erased in parallel
-            1: # blocks = size of first parallelism level
-            2: # blocks = size of 1~2 parallelism level
-            3: # blocks = size of 1~3 parallelism level
-            4: # blocks = size of all parallelism level
-         -->
-        <config name="ForegroundBlockEraseLevel">3</config>
-        <!--
-          <int:u8> Background GC block erase granularity
-
-          Same with Foreground GC block erase granularity, but for Background GC
-         -->
-        <config name="BackgroundBlockEraseLevel">0</config>
-      </section>
-    </section>
     <!--
       Common FTL algorithm configurations
 
@@ -661,6 +573,139 @@
        -->
       <config name="MergeReadModifyWrite">false</config>
     </section>
+    <!--
+      FTL Background Job configuration
+
+      All background jobs except garbage collection can be disabled
+     -->
+    <section name="background">
+      <!-- Garbage Collection configuration -->
+      <section name="gc">
+        <!--
+          <int:u8> GC algorithm
+
+          Select GC algorithm
+
+          Possible values:
+            0: Naive GC (Only performs foreground GC)
+            1: Advanced GC (Performs both foreground & background GC)
+            2: Preemptible GC (Advanced GC + stop GC when request arrives)
+        -->
+        <config name="Mode">0</config>
+        <!-- GC trigger configuration -->
+        <section name="trigger">
+          <!--
+            <float> Foreground GC triggering threshold
+
+            If the number of free blocks left < [ForegroundThreshold] *
+            (total blocks), On-demand GC (Foreground GC) will triggered.
+           -->
+          <config name="ForegroundThreshold">0.05</config>
+          <!--
+            <float> Background GC triggering threshold
+
+            If the number of free blocks left < [BackgroundThreshold] *
+            (total blocks) and request does not issued in [IdletimeThreshold]
+            time, Background GC will be triggered.
+
+            This value should be larger than ForegroundThreshold.
+           -->
+          <config name="BackgroundThreshold">0.1</config>
+          <!--
+            <time> Background GC trigger option - Idle time
+
+            If no requests are issued by host, SSD assumes that request will not
+            submitted in near-future, triggers Background GC.
+           -->
+          <config name="IdletimeThreshold">5s</config>
+        </section>
+        <!-- Victim block selection configuration -->
+        <section name="blockselection">
+          <!--
+            <int:u8> Victim block selection algorithm
+
+            Possible values:
+              0: Greedy: Choose least utilized block (least number of valid pages)
+              1: Random: Choose random block
+              2: Cost-benefit: Choose block with lowest following value:
+                utilization / ((1 - utilization) * age)
+              3: D-Choice: Choose least utilized block in randomly sampled blocks
+                See [SIGMETRICS'13] Stochastic Modeling of Large-Scale
+                Solid-State Storage Systems: Analysis, Design Tradeoffs and
+                Optimization.
+           -->
+          <config name="VictimSelectionPolicy">0</config>
+          <!--
+            <int:u64> D-Choice (Randomized Greedy Algorithm) sampling factor
+
+            Sampling factor. (blocks to erase) * (this config value) blocks will
+            randomly sampled.
+           -->
+          <config name="SamplingFactor">3</config>
+        </section>
+        <!-- Victim block erase configuration -->
+        <section name="blockerase">
+          <!--
+            <int:u8> Foreground GC block erase granularity
+
+            Set # blocks should be erased in parallel.
+            For the definition of parallelism group, see FIL section.
+
+            Possible values:
+              0: Only one block will be erased in parallel
+              1: # blocks = size of first parallelism level
+              2: # blocks = size of 1~2 parallelism level
+              3: # blocks = size of 1~3 parallelism level
+              4: # blocks = size of all parallelism level
+           -->
+          <config name="ForegroundBlockEraseLevel">3</config>
+          <!--
+            <int:u8> Background GC block erase granularity
+
+            Same with Foreground GC block erase granularity, but for Background GC
+           -->
+          <config name="BackgroundBlockEraseLevel">0</config>
+        </section>
+      </section>
+      <!-- Wear leveling configuration -->
+      <section name="wearleveling">
+        <!--
+          <int:u8> Wear-leveling algorithm
+
+          Select wear-leveling algorithm
+
+          Possible values:
+            0: Disable wear-leveling
+            1: Static wear-leveling
+         -->
+        <config name="Mode">0</config>
+        <!--
+          <float> Static wear-leveling trigger option
+
+          Trigger wear-leveling if wear-leveling factor is lower than below
+          threshold. Must be 0 < value < 1
+
+          See "Stochastic Modeling of Large-Scale Solid-State Storage Systems:
+          Analysis, Design Tradeoffs and Optimization," SIGMETRICS, 2013
+          for more details about wear-leveling factor.
+         -->
+        <config name="StaticThreshold">0.8</config>
+      </section>
+      <!-- Read reclaim configuration -->
+      <section name="readreclaim">
+        <!--
+          <int:u8> Read reclaim algorithm
+
+          Select read reclaim algorithm
+
+          Possible values:
+            0: Disable read reclaim
+            1: Basic read reclaim - performs read reclaim when NAND reports too
+               high error rates.
+         -->
+        <config name="Mode">0</config>
+      </section>
+    </section>
     <!-- Filling/Warm-up configuration -->
     <section name="warmup">
       <!--
@@ -698,6 +743,12 @@
         This value will be clipped to make GC not occured in warm-up phase.
        -->
       <config name="InvalidFillRatio">0.0</config>
+      <!--
+        <int:u32> Set erase count of blocks
+
+        Set P/E cycle of all blocks in SSD.
+       -->
+      <config name="EraseCount">0</config>
     </section>
   </section>
   <!--
