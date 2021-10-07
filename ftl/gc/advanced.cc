@@ -13,19 +13,8 @@
 namespace SimpleSSD::FTL::GC {
 
 AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : NaiveGC(o, fo, f), lastScheduledAt(0) {
+    : NaiveGC(o, fo, f) {
   logid = Log::DebugID::FTL_AdvancedGC;
-
-  idletime = readConfigUint(Section::FlashTranslation,
-                            Config::Key::IdleTimeForBackgroundGC);
-
-  // Create event
-  eventBackgroundGC =
-      createEvent([this](uint64_t t, uint64_t) { triggerBackground(t); },
-                  "FTL::GC::eventBackgroundGC");
-
-  // Schedule
-  rescheduleBackgroundGC();
 }
 
 AdvancedGC::~AdvancedGC() {}
@@ -40,12 +29,19 @@ void AdvancedGC::triggerBackground(uint64_t now) {
   }
 }
 
+void AdvancedGC::triggerByIdle(uint64_t now, uint64_t) {
+  if (UNLIKELY(state >= State::Foreground)) {
+    // GC in progress
+    firstRequestArrival == std::numeric_limits<uint64_t>::max();
+  }
+  else {
+    triggerBackground(now);
+  }
+}
+
 void AdvancedGC::requestArrived(Request *req) {
   // Penalty calculation
   NaiveGC::requestArrived(req);
-
-  // Restart background GC timer
-  rescheduleBackgroundGC();
 }
 
 void AdvancedGC::gc_trigger() {
@@ -85,29 +81,11 @@ void AdvancedGC::gc_done(uint64_t now, uint32_t idx) {
   NaiveGC::gc_done(now, idx);
 
   if (state == State::Idle) {
-    if (conflicted) {
-      // Reschedule timer
-      rescheduleBackgroundGC();
-    }
-    else {
+    if (!conflicted) {
       // As no request is submitted while GC, continue for background GC
       triggerBackground(now);
     }
   }
-}
-
-void AdvancedGC::createCheckpoint(std::ostream &out) const noexcept {
-  NaiveGC::createCheckpoint(out);
-
-  BACKUP_SCALAR(out, lastScheduledAt);
-  BACKUP_EVENT(out, eventBackgroundGC);
-}
-
-void AdvancedGC::restoreCheckpoint(std::istream &in) noexcept {
-  NaiveGC::restoreCheckpoint(in);
-
-  RESTORE_SCALAR(in, lastScheduledAt);
-  RESTORE_EVENT(in, eventBackgroundGC);
 }
 
 }  // namespace SimpleSSD::FTL::GC

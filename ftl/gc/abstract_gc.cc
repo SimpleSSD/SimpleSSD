@@ -50,6 +50,24 @@ void AbstractGC::initialize() {
   param = ftlobject.pMapping->getInfo();
 }
 
+bool AbstractGC::isRunning() {
+  return state >= State::Foreground;
+}
+
+void AbstractGC::triggerByUser(TriggerType when, Request *req) {
+  switch (when) {
+    case TriggerType::ReadMapping:
+    case TriggerType::WriteMapping:
+      requestArrived(req);
+
+      break;
+    case TriggerType::WriteComplete:
+      triggerForeground();
+
+      break;
+  }
+}
+
 void AbstractGC::createCheckpoint(std::ostream &out) const noexcept {
   BACKUP_SCALAR(out, state);
 }

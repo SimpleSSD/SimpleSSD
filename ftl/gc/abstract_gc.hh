@@ -12,8 +12,8 @@
 
 #include "fil/fil.hh"
 #include "ftl/allocator/victim_selection.hh"
+#include "ftl/background_manager/abstract_background_job.hh"
 #include "ftl/def.hh"
-#include "ftl/job_manager.hh"
 
 namespace SimpleSSD::FTL::GC {
 
@@ -39,36 +39,23 @@ class AbstractGC : public AbstractJob {
   AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractGC();
 
-  bool trigger_readMapping(Request *req) final {
-    requestArrived(req);
-
-    return state >= State::Foreground;
-  }
-
-  bool trigger_readSubmit(Request *) final { return false; }
-
-  bool trigger_readDone(Request *) final { return false; }
-
-  bool trigger_writeMapping(Request *req) final {
-    requestArrived(req);
-
-    return state >= State::Foreground;
-  }
-
-  bool trigger_writeSubmit(Request *) final { return false; }
-
-  bool trigger_writeDone(Request *) final {
-    triggerForeground();
-
-    return state >= State::Foreground;
-  }
-
   /**
    * \brief GC initialization function
    *
    * Immediately call AbstractGC::initialize() when you override this function.
    */
   void initialize() override;
+
+  /**
+   * \brief Return GC is running
+   *
+   * \return true if GC is in progress
+   */
+  bool isRunning() override;
+
+  void triggerByUser(TriggerType, Request *) override;
+
+  /* GC-specific APIs */
 
   /**
    * \brief Trigger foreground GC if condition met

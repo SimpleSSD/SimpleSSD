@@ -16,24 +16,6 @@ namespace SimpleSSD::FTL::GC {
 
 class AdvancedGC : public NaiveGC {
  protected:
-  uint64_t idletime;
-  uint64_t lastScheduledAt;
-
-  inline void rescheduleBackgroundGC() {
-    uint64_t tick = getTick() + idletime;
-
-    if (lastScheduledAt < tick) {
-      lastScheduledAt = tick;
-
-      if (isScheduled(eventBackgroundGC)) {
-        deschedule(eventBackgroundGC);
-      }
-
-      scheduleAbs(eventBackgroundGC, 0, lastScheduledAt);
-    }
-  }
-
-  Event eventBackgroundGC;
   virtual void triggerBackground(uint64_t);
 
   void gc_trigger() override;
@@ -43,10 +25,9 @@ class AdvancedGC : public NaiveGC {
   AdvancedGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AdvancedGC();
 
-  void requestArrived(Request *) override;
+  void triggerByIdle(uint64_t, uint64_t) override;
 
-  void createCheckpoint(std::ostream &) const noexcept override;
-  void restoreCheckpoint(std::istream &) noexcept override;
+  void requestArrived(Request *) override;
 };
 
 }  // namespace SimpleSSD::FTL::GC
