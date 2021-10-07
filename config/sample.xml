@@ -579,6 +579,25 @@
       All background jobs except garbage collection can be disabled
      -->
     <section name="background">
+      <!-- Idletime detection configuration -->
+      <section name="idletime">
+        <!--
+          <int:u8> Idletime detection algorithm
+
+          Select idletime detection algorithm
+
+          Possible values:
+            0: Threshold based
+         -->
+        <config name="Mode">0</config>
+        <!--
+          <time> Threshold of idletime detection
+
+          If no requests are issued by host, SSD assumes that request will not
+          submitted in near-future, triggers Background GC.
+         -->
+        <config name="IdletimeThreshold">1s</config>
+      </section>
       <!-- Garbage Collection configuration -->
       <section name="gc">
         <!--
@@ -611,13 +630,6 @@
             This value should be larger than ForegroundThreshold.
            -->
           <config name="BackgroundThreshold">0.1</config>
-          <!--
-            <time> Background GC trigger option - Idle time
-
-            If no requests are issued by host, SSD assumes that request will not
-            submitted in near-future, triggers Background GC.
-           -->
-          <config name="IdletimeThreshold">5s</config>
         </section>
         <!-- Victim block selection configuration -->
         <section name="blockselection">
