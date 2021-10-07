@@ -10,6 +10,7 @@
 
 #include "ftl/allocator/generic_allocator.hh"
 #include "ftl/allocator/victim_selection.hh"
+#include "ftl/background_manager/basic_job_manager.hh"
 #include "ftl/base/page_level_ftl.hh"
 #include "ftl/filling.hh"
 #include "ftl/gc/advanced.hh"
@@ -20,14 +21,26 @@
 
 namespace SimpleSSD::FTL {
 
-FTL::FTL(ObjectData &o)
-    : Object(o), jobManager(o), ftlobject(jobManager), requestCounter(0) {
+FTL::FTL(ObjectData &o) : Object(o), ftlobject(), requestCounter(0) {
   pFIL = new FIL::FIL(object);
 
   auto mapping = (Config::MappingType)readConfigUint(Section::FlashTranslation,
                                                      Config::Key::MappingMode);
   auto gcmode = (Config::GCType)readConfigUint(Section::FlashTranslation,
                                                Config::Key::GCMode);
+  auto idlemode = (Config::IdletimeType)readConfigUint(
+      Section::FlashTranslation, Config::Key::IdleTimeMode);
+
+  switch (idlemode) {
+    case Config::IdletimeType::Threshold:
+      ftlobject.pJobManager = new BasicJobManager(object);
+
+      break;
+    default:
+      panic("Unsupported idletime detection.");
+
+      break;
+  }
 
   // Mapping algorithm
   switch (mapping) {
@@ -80,7 +93,7 @@ FTL::FTL(ObjectData &o)
       break;
   }
 
-  jobManager.addJob(gcjob);
+  ftlobject.pJobManager->addBackgroundJob(gcjob);
 
   // Base FTL routine
   switch (mapping) {
@@ -100,6 +113,7 @@ FTL::~FTL() {
   delete ftlobject.pMapping;
   delete ftlobject.pAllocator;
   delete ftlobject.pFTL;
+  delete ftlobject.pJobManager;
 
   BlockAllocator::finalizeVictimSelectionAlgorithms();
 }
@@ -118,9 +132,7 @@ void FTL::initialize() {
   // Initialize all
   ftlobject.pAllocator->initialize();
   ftlobject.pMapping->initialize();
-
-  jobManager.initialize();
-
+  ftlobject.pJobManager->initialize();
   ftlobject.pFTL->initialize();
 
   if (UNLIKELY(
@@ -186,7 +198,7 @@ void FTL::invalidate(Request &&req) {
 }
 
 void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
-  jobManager.getStatList(list, prefix + "ftl.job.");
+  ftlobject.pJobManager->getStatList(list, prefix + "ftl.job.");
   ftlobject.pFTL->getStatList(list, prefix + "ftl.base.");
   ftlobject.pMapping->getStatList(list, prefix + "ftl.mapper.");
   ftlobject.pAllocator->getStatList(list, prefix + "ftl.allocator.");
@@ -194,7 +206,7 @@ void FTL::getStatList(std::vector<Stat> &list, std::string prefix) noexcept {
 }
 
 void FTL::getStatValues(std::vector<double> &values) noexcept {
-  jobManager.getStatValues(values);
+  ftlobject.pJobManager->getStatValues(values);
   ftlobject.pFTL->getStatValues(values);
   ftlobject.pMapping->getStatValues(values);
   ftlobject.pAllocator->getStatValues(values);
@@ -202,7 +214,7 @@ void FTL::getStatValues(std::vector<double> &values) noexcept {
 }
 
 void FTL::resetStatValues() noexcept {
-  jobManager.resetStatValues();
+  ftlobject.pJobManager->resetStatValues();
   ftlobject.pFTL->resetStatValues();
   ftlobject.pMapping->resetStatValues();
   ftlobject.pAllocator->resetStatValues();
@@ -218,7 +230,7 @@ void FTL::createCheckpoint(std::ostream &out) const noexcept {
     iter.second.createCheckpoint(out);
   });
 
-  jobManager.createCheckpoint(out);
+  ftlobject.pJobManager->createCheckpoint(out);
   ftlobject.pFTL->createCheckpoint(out);
   ftlobject.pMapping->createCheckpoint(out);
   ftlobject.pAllocator->createCheckpoint(out);
@@ -238,7 +250,7 @@ void FTL::restoreCheckpoint(std::istream &in) noexcept {
     iter.first->second.restoreCheckpoint(in, object);
   });
 
-  jobManager.restoreCheckpoint(in);
+  ftlobject.pJobManager->restoreCheckpoint(in);
   ftlobject.pFTL->restoreCheckpoint(in);
   ftlobject.pMapping->restoreCheckpoint(in);
   ftlobject.pAllocator->restoreCheckpoint(in);

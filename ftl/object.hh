@@ -13,7 +13,7 @@
 namespace SimpleSSD::FTL {
 
 class AbstractFTL;
-class JobManager;
+class AbstractJobManager;
 
 namespace Mapping {
 
@@ -32,10 +32,13 @@ struct FTLObjectData {
   AbstractFTL *pFTL;
   Mapping::AbstractMapping *pMapping;
   BlockAllocator::AbstractAllocator *pAllocator;
-  JobManager &jobManager;
+  AbstractJobManager *pJobManager;
 
-  FTLObjectData(JobManager &jm)
-      : pFTL(nullptr), pMapping(nullptr), pAllocator(nullptr), jobManager(jm) {}
+  FTLObjectData()
+      : pFTL(nullptr),
+        pMapping(nullptr),
+        pAllocator(nullptr),
+        pJobManager(nullptr) {}
 };
 
 }  // namespace SimpleSSD::FTL

@@ -14,7 +14,6 @@
 #include <deque>
 
 #include "ftl/def.hh"
-#include "ftl/job_manager.hh"
 #include "ftl/object.hh"
 #include "hil/request.hh"
 
@@ -29,7 +28,6 @@ class FTL : public Object {
  private:
   FIL::FIL *pFIL;
 
-  JobManager jobManager;
   FTLObjectData ftlobject;
 
   uint64_t requestCounter;
