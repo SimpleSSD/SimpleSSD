@@ -37,6 +37,7 @@ const std::string idPrefix[] = {
     "FTL::GC::NaiveGC",
     "FTL::GC::AdvancedGC",
     "FTL::GC::PreemptibleGC",
+    "FTL::ReadReclaim::BasicReadReclaim",
     "FIL",
     "FIL::PALOLD",
 };
@@ -301,6 +302,7 @@ class Log {
     FTL_NaiveGC,
     FTL_AdvancedGC,
     FTL_PreemptibleGC,
+    FTL_BasicReadReclaim,
     FIL,
     FIL_PALOLD,
   };
