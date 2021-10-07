@@ -194,7 +194,9 @@ set(SRC_FTL
   ftl/def.cc
   ftl/filling.cc
   ftl/ftl.cc
-  ftl/job_manager.cc
+)
+set(SRC_FTL_BACKGROUND_MANAGER
+  ftl/background_manager/basic_job_manager.cc
 )
 set(SRC_FTL_ALLOC
   ftl/allocator/abstract_allocator.cc
@@ -210,6 +212,10 @@ set(SRC_FTL_GC
   ftl/gc/advanced.cc
   ftl/gc/naive.cc
   ftl/gc/preemption.cc
+)
+set(SRC_FTL_READ_RECLAIM
+  ftl/read_reclaim/abstract_read_reclaim.cc
+  ftl/read_reclaim/basic_read_reclaim.cc
 )
 set(SRC_FTL_MAPPING
   ftl/mapping/abstract_mapping.cc
@@ -263,8 +269,10 @@ SOURCE_GROUP("Source Files\\icl\\cache" FILES ${SRC_ICL_CACHE})
 SOURCE_GROUP("Source Files\\icl\\manager" FILES ${SRC_ICL_MANAGER})
 SOURCE_GROUP("Source Files\\ftl" FILES ${SRC_FTL})
 SOURCE_GROUP("Source Files\\ftl\\allocator" FILES ${SRC_FTL_ALLOC})
+SOURCE_GROUP("Source Files\\ftl\\background_manager" FILES ${SRC_FTL_BACKGROUND_MANAGER})
 SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
 SOURCE_GROUP("Source Files\\ftl\\gc" FILES ${SRC_FTL_GC})
+SOURCE_GROUP("Source Files\\ftl\\read_reclaim" FILES ${SRC_FTL_READ_RECLAIM})
 SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
@@ -286,8 +294,10 @@ set(SRCS
   ${SRC_ICL_MANAGER}
   ${SRC_FTL}
   ${SRC_FTL_ALLOC}
+  ${SRC_FTL_BACKGROUND_MANAGER}
   ${SRC_FTL_BASE}
   ${SRC_FTL_GC}
+  ${SRC_FTL_READ_RECLAIM}
   ${SRC_FTL_MAPPING}
   ${SRC_FIL}
   ${SRC_FIL_NVM_PAL}
