@@ -114,13 +114,24 @@ namespace SimpleSSD {
     }                                                                          \
   }
 
+#define STORE_NAME_FORMAT(section, attr, formatter, type, in)                  \
+  {                                                                            \
+    auto _child = (section).append_child(CONFIG_KEY_NAME);                     \
+                                                                               \
+    if (_child) {                                                              \
+      _child.append_attribute(CONFIG_ATTRIBUTE).set_value(attr);               \
+      _child.text().set(formatter((type)in).c_str());                          \
+    }                                                                          \
+  }
+
 #define STORE_NAME_INT(section, attr, in)                                      \
-  STORE_NAME(section, attr, long long, in)
+  STORE_NAME_FORMAT(section, attr, formatInt, long long, in)
 
 #define STORE_NAME_UINT(section, attr, in)                                     \
-  STORE_NAME(section, attr, unsigned long long, in)
+  STORE_NAME_FORMAT(section, attr, formatUint, unsigned long long, in)
 
-#define STORE_NAME_TIME STORE_NAME_UINT
+#define STORE_NAME_TIME(section, attr, in)                                     \
+  STORE_NAME_FORMAT(section, attr, formatTime, unsigned long long, in)
 
 #define STORE_NAME_BOOLEAN(section, attr, in)                                  \
   STORE_NAME(section, attr, bool, in)
