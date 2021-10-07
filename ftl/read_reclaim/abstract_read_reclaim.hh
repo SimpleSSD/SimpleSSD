@@ -50,6 +50,9 @@ class AbstractReadReclaim : public AbstractJob {
   /* Read Reclaim APIs */
 
   virtual bool doErrorCheck(const PPN &);
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::ReadReclaim

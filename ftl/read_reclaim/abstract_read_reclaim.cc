@@ -71,4 +71,12 @@ void AbstractReadReclaim::triggerByUser(TriggerType when, Request *req) {
   }
 }
 
+void AbstractReadReclaim::createCheckpoint(std::ostream &out) const noexcept {
+  BACKUP_SCALAR(out, state);
+}
+
+void AbstractReadReclaim::restoreCheckpoint(std::istream &in) noexcept {
+  RESTORE_SCALAR(in, state);
+}
+
 }  // namespace SimpleSSD::FTL::ReadReclaim
