@@ -25,10 +25,16 @@ BaseConfig::BaseConfig() {}
 
 int64_t BaseConfig::convertInt(const char *value, bool *valid) noexcept {
   int64_t ret = 0;
+  bool negative = false;
   std::cmatch match;
 
   if (valid) {
     *valid = false;
+  }
+
+  if (value[0] == '-') {
+    value++;
+    negative = true;
   }
 
   if (std::regex_match(value, match, regexInteger)) {
@@ -66,6 +72,10 @@ int64_t BaseConfig::convertInt(const char *value, bool *valid) noexcept {
           break;
       }
     }
+  }
+
+  if (negative) {
+    return -ret;
   }
 
   return ret;
