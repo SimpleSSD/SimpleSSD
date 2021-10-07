@@ -214,8 +214,6 @@ TEST_CASE("ConfigReader") {
       reader.writeFloat(Section::FlashTranslation,
                         FTL::Config::Key::BackgroundGCThreshold, ftest * 2.f);
       reader.writeUint(Section::FlashTranslation,
-                       FTL::Config::Key::IdleTimeForBackgroundGC, utest);
-      reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::VictimSelectionPolicy, utest);
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::SamplingFactor, utest);
@@ -223,6 +221,10 @@ TEST_CASE("ConfigReader") {
                        FTL::Config::Key::ForegroundBlockEraseLevel, utest);
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::BackgroundBlockEraseLevel, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::IdleTimeMode, utest);
+      reader.writeUint(Section::FlashTranslation,
+                       FTL::Config::Key::IdleTimeThreshold, utest);
       reader.writeUint(Section::FlashTranslation,
                        FTL::Config::Key::WearLevelingMode, utest);
       reader.writeFloat(Section::FlashTranslation,
@@ -500,9 +502,6 @@ TEST_CASE("ConfigReader") {
                                FTL::Config::Key::BackgroundGCThreshold) ==
               ftest * 2.f);
       REQUIRE(reader.readUint(Section::FlashTranslation,
-                              FTL::Config::Key::IdleTimeForBackgroundGC) ==
-              utest);
-      REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::VictimSelectionPolicy) ==
               utest);
       REQUIRE(reader.readUint(Section::FlashTranslation,
@@ -513,6 +512,10 @@ TEST_CASE("ConfigReader") {
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::BackgroundBlockEraseLevel) ==
               utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::IdleTimeMode) == utest);
+      REQUIRE(reader.readUint(Section::FlashTranslation,
+                              FTL::Config::Key::IdleTimeThreshold) == utest);
       REQUIRE(reader.readUint(Section::FlashTranslation,
                               FTL::Config::Key::WearLevelingMode) == utest);
       REQUIRE(reader.readFloat(Section::FlashTranslation,
