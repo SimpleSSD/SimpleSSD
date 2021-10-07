@@ -182,8 +182,8 @@ void Config::storeGC(pugi::xml_node &section) noexcept {
 
 void Config::storeWearLeveling(pugi::xml_node &section) noexcept {
   STORE_NAME_UINT(section, NAME_MODE, wlMode);
-  STORE_NAME_UINT(section, NAME_WEAR_LEVELING_THRESHOLD,
-                  staticWearLevelingThreshold);
+  STORE_NAME_FLOAT(section, NAME_WEAR_LEVELING_THRESHOLD,
+                   staticWearLevelingThreshold);
 };
 
 void Config::storeReadReclaim(pugi::xml_node &section) noexcept {
