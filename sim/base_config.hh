@@ -151,6 +151,10 @@ class BaseConfig {
   uint64_t convertUint(const char *, bool * = nullptr) noexcept;
   uint64_t convertTime(const char *, bool * = nullptr) noexcept;
 
+  std::string formatInt(int64_t);
+  std::string formatUint(uint64_t);
+  std::string formatTime(uint64_t);
+
   static bool isSection(pugi::xml_node &) noexcept;
   static bool isKey(pugi::xml_node &) noexcept;
 

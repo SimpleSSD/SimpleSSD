@@ -168,6 +168,81 @@ uint64_t BaseConfig::convertTime(const char *value, bool *valid) noexcept {
   return ret;
 }
 
+std::string BaseConfig::formatInt(int64_t value) {
+  bool negative = value < 0;
+  std::string ret;
+
+  if (negative) {
+    ret += '-';
+  }
+
+  ret += formatUint(negative ? -value : value);
+
+  return ret;
+}
+
+std::string BaseConfig::formatUint(uint64_t value) {
+  char suffix = '\0';
+
+  if (value % 1099511627776ull == 0) {
+    value /= 1099511627776ull;
+    suffix = 'T';
+  }
+  else if (value % 1000000000000ull == 0) {
+    value /= 1000000000000ull;
+    suffix = 't';
+  }
+  else if (value % 1073741824ull == 0) {
+    value /= 1073741824ull;
+    suffix = 'G';
+  }
+  else if (value % 1000000000ull == 0) {
+    value /= 1000000000ull;
+    suffix = 'g';
+  }
+  else if (value % 1048576ull == 0) {
+    value /= 1048576ull;
+    suffix = 'M';
+  }
+  else if (value % 1000000ull == 0) {
+    value /= 1000000ull;
+    suffix = 'm';
+  }
+  else if (value % 1024ull == 0) {
+    value /= 1024ull;
+    suffix = 'K';
+  }
+  else if (value % 1000ull == 0) {
+    value /= 1000ull;
+    suffix = 'k';
+  }
+
+  return std::to_string(value) + suffix;
+}
+
+std::string BaseConfig::formatTime(uint64_t value) {
+  char *suffix = "\0";
+
+  if (value % 1000000000000ull == 0) {
+    value /= 1000000000000ull;
+    suffix = "s";
+  }
+  else if (value % 1000000000ull == 0) {
+    value /= 1000000000ull;
+    suffix = "ms";
+  }
+  else if (value % 1000000ull == 0) {
+    value /= 1000000ull;
+    suffix = "us";
+  }
+  else if (value % 1000ull == 0) {
+    value /= 1000ull;
+    suffix = "ns";
+  }
+
+  return std::to_string(value) + suffix;
+}
+
 bool BaseConfig::isSection(pugi::xml_node &node) noexcept {
   return strcmp(node.name(), CONFIG_SECTION_NAME) == 0;
 }
