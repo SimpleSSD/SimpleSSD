@@ -184,7 +184,10 @@ std::string BaseConfig::formatInt(int64_t value) {
 std::string BaseConfig::formatUint(uint64_t value) {
   char suffix = '\0';
 
-  if (value % 1099511627776ull == 0) {
+  if (value == 0) {
+    // Zero is special...
+  }
+  else if (value % 1099511627776ull == 0) {
     value /= 1099511627776ull;
     suffix = 'T';
   }
@@ -223,7 +226,10 @@ std::string BaseConfig::formatUint(uint64_t value) {
 std::string BaseConfig::formatTime(uint64_t value) {
   std::string suffix;
 
-  if (value % 1000000000000ull == 0) {
+  if (value == 0) {
+    // Zero is special...
+  }
+  else if (value % 1000000000000ull == 0) {
     value /= 1000000000000ull;
     suffix = "s";
   }
