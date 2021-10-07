@@ -103,6 +103,7 @@ class AbstractAllocator : public Object {
    * \brief Select block to erase
    *
    * Return physical block address to erase.
+   * If method is null, ctx.blockID must be valid and should be full block.
    *
    * \param[in] ctx     CopyContext
    * \param[in] method  Victim block selection algorithm

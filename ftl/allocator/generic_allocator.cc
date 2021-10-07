@@ -162,20 +162,40 @@ void GenericAllocator::getVictimBlocks(CopyContext &ctx,
                                        AbstractVictimSelection *method,
                                        Event eid, uint64_t data) {
   CPU::Function fstat;
-  auto &ameta = sortedBlockList[lastErased];
-  std::list<PSBN>::iterator iter;
 
-  // Select block
-  fstat = method->getVictim(lastErased++, iter);
+  if (LIKELY(method)) {
+    auto &ameta = sortedBlockList[lastErased];
+    std::list<PSBN>::iterator iter;
 
-  if (lastErased == parallelism) {
-    lastErased = 0;
+    // Select block
+    fstat = method->getVictim(lastErased++, iter);
+
+    if (lastErased == parallelism) {
+      lastErased = 0;
+    }
+
+    // Erase block from full block pool
+    ctx.blockID = *iter;
+    ameta.fullBlocks.erase(iter);
+    fullBlockCount--;
   }
+  else {
+    panic_if(!ctx.blockID.isValid(), "Invalid block ID encountered.");
 
-  // Erase block from full block pool
-  ctx.blockID = *iter;
-  ameta.fullBlocks.erase(iter);
-  fullBlockCount--;
+    uint32_t index = param->getParallelismIndexFromPSBN(ctx.blockID);
+    auto &ameta = sortedBlockList[index];
+
+    // Find block in full block pool
+    for (auto iter = ameta.fullBlocks.begin(); iter != ameta.fullBlocks.end();
+         ++iter) {
+      if (*iter == ctx.blockID) {
+        ameta.fullBlocks.erase(iter);
+        fullBlockCount--;
+
+        break;
+      }
+    }
+  }
 
   // Fill copy context
   const auto &bmeta = blockMetadata[ctx.blockID];
