@@ -221,7 +221,7 @@ std::string BaseConfig::formatUint(uint64_t value) {
 }
 
 std::string BaseConfig::formatTime(uint64_t value) {
-  char *suffix = "\0";
+  std::string suffix;
 
   if (value % 1000000000000ull == 0) {
     value /= 1000000000000ull;
