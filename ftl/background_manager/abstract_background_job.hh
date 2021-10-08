@@ -157,7 +157,7 @@ class AbstractBlockCopyJob : public AbstractJob {
   /**
    * \brief Completion handler of copy operation
    *
-   * This state checks termination condition.
+   * This state clears CopyContext and checks termination condition.
    */
   Event eventDone;
   virtual void done(uint64_t) = 0;
