@@ -20,7 +20,9 @@ BasicReadReclaim::BasicReadReclaim(ObjectData &o, FTLObjectData &fo,
 
 BasicReadReclaim::~BasicReadReclaim() {}
 
-void BasicReadReclaim::readPage(uint64_t now) {
+void BasicReadReclaim::readPage(uint64_t now, uint32_t) {
+  auto &targetBlock = targetBlocks[0];
+
   if (LIKELY(targetBlock.pageReadIndex < targetBlock.copyList.size())) {
     stat.copiedPages += superpage;
   }
@@ -28,10 +30,12 @@ void BasicReadReclaim::readPage(uint64_t now) {
     stat.erasedBlocks += superpage;
   }
 
-  AbstractBlockCopyJob::readPage(now);
+  AbstractBlockCopyJob::readPage(now, 0);
 }
 
-void BasicReadReclaim::done(uint64_t now) {
+void BasicReadReclaim::done(uint64_t now, uint32_t) {
+  auto &targetBlock = targetBlocks[0];
+
   targetBlock.blockID.invalidate();
 
   if (state == State::Foreground) {
@@ -60,6 +64,7 @@ void BasicReadReclaim::done(uint64_t now) {
 
 bool BasicReadReclaim::doErrorCheck(const PPN &ppn) {
   uint64_t now = getTick();
+  auto &targetBlock = targetBlocks[0];
 
   auto pspn = param->getPSPNFromPPN(ppn);
   auto psbn = param->getPSBNFromPSPN(pspn);

@@ -34,8 +34,8 @@ class BasicReadReclaim : public AbstractReadReclaim {
     return Log::DebugID::FTL_BasicReadReclaim;
   }
 
-  void readPage(uint64_t) override;
-  void done(uint64_t) override;
+  void readPage(uint64_t, uint32_t) override;
+  void done(uint64_t, uint32_t) override;
 
  public:
   BasicReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
