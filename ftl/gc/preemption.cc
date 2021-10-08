@@ -13,8 +13,6 @@ namespace SimpleSSD::FTL::GC {
 
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
     : AdvancedGC(o, fo, f) {
-  logid = Log::DebugID::FTL_PreemptibleGC;
-
   pendingFILs.resize(targetBlocks.size());
 }
 
@@ -68,7 +66,7 @@ void PreemptibleGC::resumePaused() {
                "Unexpected GC preemption state");
 
       if (targetBlock.pageWriteIndex == targetBlock.pageReadIndex) {
-        scheduleNow(eventDoRead, idx);
+        scheduleNow(eventReadPage, idx);
       }
       else {
         panic("Unexpected GC preemption state");
@@ -77,18 +75,18 @@ void PreemptibleGC::resumePaused() {
   }
 }
 
-void PreemptibleGC::gc_done(uint64_t now, uint32_t idx) {
+void PreemptibleGC::done(uint64_t now, uint32_t idx) {
   // Maybe GC is completed while waiting for pending requests
   if (UNLIKELY(preemptRequested())) {
     checkPreemptible();
   }
 
-  AdvancedGC::gc_done(now, idx);
+  AdvancedGC::done(now, idx);
 }
 
-void PreemptibleGC::gc_doRead(uint64_t now, uint32_t idx) {
+void PreemptibleGC::readPage(uint64_t now, uint32_t idx) {
   if (LIKELY(!preemptRequested() || state == State::Foreground)) {
-    AdvancedGC::gc_doRead(now, idx);
+    AdvancedGC::readPage(now, idx);
 
     increasePendingFIL(idx);
   }
@@ -97,28 +95,28 @@ void PreemptibleGC::gc_doRead(uint64_t now, uint32_t idx) {
   }
 }
 
-void PreemptibleGC::gc_doTranslate(uint64_t now, uint32_t idx) {
+void PreemptibleGC::updateMapping(uint64_t now, uint32_t idx) {
   decreasePendingFIL(idx);
 
-  AdvancedGC::gc_doTranslate(now, idx);
+  AdvancedGC::updateMapping(now, idx);
 }
 
-void PreemptibleGC::gc_doWrite(uint64_t now, uint32_t idx) {
-  AdvancedGC::gc_doWrite(now, idx);
+void PreemptibleGC::writePage(uint64_t now, uint32_t idx) {
+  AdvancedGC::writePage(now, idx);
 
   increasePendingFIL(idx);
 }
 
-void PreemptibleGC::gc_writeDone(uint64_t now, uint32_t idx) {
+void PreemptibleGC::writeDone(uint64_t now, uint32_t idx) {
   decreasePendingFIL(idx);
 
-  AdvancedGC::gc_writeDone(now, idx);
+  AdvancedGC::writeDone(now, idx);
 }
 
-void PreemptibleGC::gc_eraseDone(uint64_t now, uint32_t idx) {
+void PreemptibleGC::eraseDone(uint64_t now, uint32_t idx) {
   decreasePendingFIL(idx);
 
-  AdvancedGC::gc_eraseDone(now, idx);
+  AdvancedGC::eraseDone(now, idx);
 }
 
 void PreemptibleGC::requestArrived(Request *req) {

@@ -13,9 +13,7 @@
 namespace SimpleSSD::FTL::GC {
 
 AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : NaiveGC(o, fo, f) {
-  logid = Log::DebugID::FTL_AdvancedGC;
-}
+    : NaiveGC(o, fo, f) {}
 
 AdvancedGC::~AdvancedGC() {}
 
@@ -44,7 +42,7 @@ void AdvancedGC::requestArrived(Request *req) {
   NaiveGC::requestArrived(req);
 }
 
-void AdvancedGC::gc_trigger() {
+void AdvancedGC::trigger() {
   bool fgc = false;  // For message
   uint32_t size = 0;
 
@@ -63,8 +61,8 @@ void AdvancedGC::gc_trigger() {
   }
 
   for (uint32_t idx = 0; idx < size; idx++) {
-    ftlobject.pAllocator->getVictimBlock(targetBlocks[idx], method, eventDoRead,
-                                         idx);
+    ftlobject.pAllocator->getVictimBlock(targetBlocks[idx], method,
+                                         eventReadPage, idx);
   }
 
   if (fgc) {
@@ -75,10 +73,10 @@ void AdvancedGC::gc_trigger() {
   }
 }
 
-void AdvancedGC::gc_done(uint64_t now, uint32_t idx) {
+void AdvancedGC::done(uint64_t now, uint32_t idx) {
   bool conflicted = firstRequestArrival != std::numeric_limits<uint64_t>::max();
 
-  NaiveGC::gc_done(now, idx);
+  NaiveGC::done(now, idx);
 
   if (state == State::Idle) {
     if (!conflicted) {

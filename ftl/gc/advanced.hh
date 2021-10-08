@@ -16,10 +16,12 @@ namespace SimpleSSD::FTL::GC {
 
 class AdvancedGC : public NaiveGC {
  protected:
+  Log::DebugID getDebugLogID() override { return Log::DebugID::FTL_AdvancedGC; }
+
   virtual void triggerBackground(uint64_t);
 
-  void gc_trigger() override;
-  void gc_done(uint64_t, uint32_t) override;
+  void trigger() override;
+  void done(uint64_t, uint32_t) override;
 
  public:
   AdvancedGC(ObjectData &, FTLObjectData &, FIL::FIL *);

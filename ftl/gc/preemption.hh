@@ -19,6 +19,10 @@ class PreemptibleGC : public AdvancedGC {
   // Pending FIL requests (read/program/erase)
   std::vector<uint64_t> pendingFILs;
 
+  Log::DebugID getDebugLogID() override {
+    return Log::DebugID::FTL_PreemptibleGC;
+  }
+
   void triggerBackground(uint64_t) override;
 
   inline bool preemptRequested() {
@@ -55,12 +59,12 @@ class PreemptibleGC : public AdvancedGC {
 
   void resumePaused();
 
-  void gc_doRead(uint64_t, uint32_t) override;
-  void gc_doTranslate(uint64_t, uint32_t) override;
-  void gc_doWrite(uint64_t, uint32_t) override;
-  void gc_writeDone(uint64_t, uint32_t) override;
-  void gc_eraseDone(uint64_t, uint32_t) override;
-  void gc_done(uint64_t, uint32_t) override;
+  void readPage(uint64_t, uint32_t) override;
+  void updateMapping(uint64_t, uint32_t) override;
+  void writePage(uint64_t, uint32_t) override;
+  void writeDone(uint64_t, uint32_t) override;
+  void eraseDone(uint64_t, uint32_t) override;
+  void done(uint64_t, uint32_t) override;
 
  public:
   PreemptibleGC(ObjectData &, FTLObjectData &, FIL::FIL *);

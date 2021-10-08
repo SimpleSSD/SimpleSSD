@@ -27,12 +27,10 @@ enum class State : uint32_t {
   Background,  // GC triggered as background
 };
 
-class AbstractGC : public AbstractJob {
+class AbstractGC : public AbstractBlockCopyJob {
  protected:
-  FIL::FIL *pFIL;
   State state;
 
-  const Parameter *param;
   BlockAllocator::AbstractVictimSelection *method;
 
  public:

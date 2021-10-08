@@ -12,7 +12,7 @@
 namespace SimpleSSD::FTL::GC {
 
 AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
-    : AbstractJob(o, fo), pFIL(fil), state(State::Idle), param(nullptr) {
+    : AbstractBlockCopyJob(o, fo, fil), state(State::Idle) {
   auto mode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
 
@@ -46,9 +46,7 @@ AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
 
 AbstractGC::~AbstractGC() {}
 
-void AbstractGC::initialize() {
-  param = ftlobject.pMapping->getInfo();
-}
+void AbstractGC::initialize() {}
 
 bool AbstractGC::isRunning() {
   return state >= State::Foreground;
@@ -71,10 +69,14 @@ void AbstractGC::triggerByUser(TriggerType when, Request *req) {
 }
 
 void AbstractGC::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractBlockCopyJob::createCheckpoint(out);
+
   BACKUP_SCALAR(out, state);
 }
 
 void AbstractGC::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractBlockCopyJob::restoreCheckpoint(in);
+
   RESTORE_SCALAR(in, state);
 }
 

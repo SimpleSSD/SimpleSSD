@@ -17,17 +17,10 @@ namespace SimpleSSD::FTL::GC {
 
 class NaiveGC : public AbstractGC {
  protected:
-  Log::DebugID logid;
-
-  uint32_t superpage;
-  uint32_t pageSize;
-  uint64_t bufferBaseAddress;
   uint64_t beginAt;
 
   uint32_t fgcBlocksToErase;
   uint32_t bgcBlocksToErase;
-
-  std::vector<CopyContext> targetBlocks;
 
   struct {
     uint64_t fgcCount;        // Foreground GC invoked count
@@ -47,10 +40,6 @@ class NaiveGC : public AbstractGC {
   // For penalty calculation
   uint64_t firstRequestArrival;
 
-  inline uint64_t makeBufferAddress(uint32_t idx, uint32_t superpageIndex) {
-    return bufferBaseAddress + (idx * superpage + superpageIndex) * pageSize;
-  }
-
   inline void updatePenalty(uint64_t now) {
     if (firstRequestArrival < now) {
       auto penalty = now - firstRequestArrival;
@@ -64,34 +53,21 @@ class NaiveGC : public AbstractGC {
     }
   }
 
+  uint32_t getParallelBlockCount() override;
+  std::string getPrefix() override { return "FTL::GC"; }
+  const char *getLogPrefix() override { return "GC    "; }
+  Log::DebugID getDebugLogID() override { return Log::DebugID::FTL_NaiveGC; }
+
   Event eventTrigger;
-  virtual void gc_trigger();
+  virtual void trigger();
 
-  Event eventDoRead;
-  virtual void gc_doRead(uint64_t, uint32_t);
-
-  Event eventDoTranslate;
-  virtual void gc_doTranslate(uint64_t, uint32_t);
-
-  Event eventDoWrite;
-  virtual void gc_doWrite(uint64_t, uint32_t);
-
-  Event eventWriteDone;
-  virtual void gc_writeDone(uint64_t, uint32_t);
-
-  Event eventEraseDone;
-  virtual void gc_eraseDone(uint64_t, uint32_t);
-
-  Event eventDone;
-  virtual void gc_done(uint64_t, uint32_t);
-
-  void gc_checkDone(uint64_t);
+  void readPage(uint64_t, uint32_t) override;
+  void done(uint64_t, uint32_t) override;
+  void checkDone(uint64_t);
 
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~NaiveGC();
-
-  void initialize() override;
 
   void triggerForeground() override;
   void requestArrived(Request *) override;
