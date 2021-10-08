@@ -30,11 +30,15 @@ bool AbstractWearLeveling::isRunning() {
 }
 
 void AbstractWearLeveling::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractBlockCopyJob::createCheckpoint(out);
+
   BACKUP_SCALAR(out, state);
   BACKUP_EVENT(out, eventEraseCallback);
 }
 
 void AbstractWearLeveling::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractBlockCopyJob::restoreCheckpoint(in);
+
   RESTORE_SCALAR(in, state);
   RESTORE_EVENT(in, eventEraseCallback);
 }
