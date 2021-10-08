@@ -83,16 +83,32 @@ class AbstractBlockCopyJob : public AbstractJob {
   const char *const logprefix;
 
   //!< Get # of blocks to copy in parallel
-  virtual uint32_t getParallelBlockCount() = 0;
+  virtual uint32_t getParallelBlockCount() {
+    panic("AbstractBlockCopyJob::getParallelBlockCount() must be overriden.");
+
+    return 1;
+  }
 
   //!< Get prefix of objects
-  virtual std::string getPrefix() = 0;
+  virtual std::string getPrefix() {
+    panic("AbstractBlockCopyJob::getPrefix() must be overriden.");
+
+    return "";
+  }
 
   //!< Get prefix of log
-  virtual const char *getLogPrefix() = 0;
+  virtual const char *getLogPrefix() {
+    panic("AbstractBlockCopyJob::getLogPrefix() must be overriden.");
+
+    return "";
+  }
 
   //!< Get debug lod ID
-  virtual Log::DebugID getDebugLogID() = 0;
+  virtual Log::DebugID getDebugLogID() {
+    panic("AbstractBlockCopyJob::getDebugLogID() must be overriden.");
+
+    return Log::DebugID::Common;
+  };
 
   //!< Helper function to calculate offset of buffer
   inline uint64_t makeBufferAddress(uint32_t blockIndex,
