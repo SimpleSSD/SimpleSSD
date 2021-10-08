@@ -132,7 +132,6 @@ void FTL::initialize() {
   // Initialize all
   ftlobject.pAllocator->initialize();
   ftlobject.pMapping->initialize();
-  ftlobject.pJobManager->initialize();
   ftlobject.pFTL->initialize();
 
   if (UNLIKELY(
@@ -146,6 +145,9 @@ void FTL::initialize() {
 
     filler.start();
   }
+
+  // Initialize background jobs after filling
+  ftlobject.pJobManager->initialize();
 }
 
 const Parameter *FTL::getInfo() {
