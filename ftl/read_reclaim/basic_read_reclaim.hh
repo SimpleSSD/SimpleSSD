@@ -28,8 +28,6 @@ class BasicReadReclaim : public AbstractReadReclaim {
     uint64_t erasedBlocks;
   } stat;
 
-  std::string getPrefix() override { return "FTL::BasicReadReclaim"; }
-  const char *getLogPrefix() override { return "RR    "; }
   Log::DebugID getDebugLogID() override {
     return Log::DebugID::FTL_BasicReadReclaim;
   }
