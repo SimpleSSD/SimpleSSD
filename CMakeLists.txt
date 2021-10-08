@@ -195,14 +195,14 @@ set(SRC_FTL
   ftl/filling.cc
   ftl/ftl.cc
 )
-set(SRC_FTL_BACKGROUND_MANAGER
-  ftl/background_manager/abstract_background_job.cc
-  ftl/background_manager/basic_job_manager.cc
-)
 set(SRC_FTL_ALLOC
   ftl/allocator/abstract_allocator.cc
   ftl/allocator/generic_allocator.cc
   ftl/allocator/victim_selection.cc
+)
+set(SRC_FTL_BACKGROUND_MANAGER
+  ftl/background_manager/abstract_background_job.cc
+  ftl/background_manager/basic_job_manager.cc
 )
 set(SRC_FTL_BASE
   ftl/base/abstract_ftl.cc
@@ -214,13 +214,17 @@ set(SRC_FTL_GC
   ftl/gc/naive.cc
   ftl/gc/preemption.cc
 )
+set(SRC_FTL_MAPPING
+  ftl/mapping/abstract_mapping.cc
+  ftl/mapping/page_level_mapping.cc
+)
 set(SRC_FTL_READ_RECLAIM
   ftl/read_reclaim/abstract_read_reclaim.cc
   ftl/read_reclaim/basic_read_reclaim.cc
 )
-set(SRC_FTL_MAPPING
-  ftl/mapping/abstract_mapping.cc
-  ftl/mapping/page_level_mapping.cc
+set(SRC_FTL_WEAR_LEVELING
+  ftl/wear_leveling/abstract_wear_leveling.cc
+  ftl/wear_leveling/static_wear_leveling.cc
 )
 set(SRC_FIL
   fil/fil.cc
@@ -273,8 +277,9 @@ SOURCE_GROUP("Source Files\\ftl\\allocator" FILES ${SRC_FTL_ALLOC})
 SOURCE_GROUP("Source Files\\ftl\\background_manager" FILES ${SRC_FTL_BACKGROUND_MANAGER})
 SOURCE_GROUP("Source Files\\ftl\\base" FILES ${SRC_FTL_BASE})
 SOURCE_GROUP("Source Files\\ftl\\gc" FILES ${SRC_FTL_GC})
-SOURCE_GROUP("Source Files\\ftl\\read_reclaim" FILES ${SRC_FTL_READ_RECLAIM})
 SOURCE_GROUP("Source Files\\ftl\\mapping" FILES ${SRC_FTL_MAPPING})
+SOURCE_GROUP("Source Files\\ftl\\read_reclaim" FILES ${SRC_FTL_READ_RECLAIM})
+SOURCE_GROUP("Source Files\\ftl\\wear_leveling" FILES ${SRC_FTL_WEAR_LEVELING})
 SOURCE_GROUP("Source Files\\fil" FILES ${SRC_FIL})
 SOURCE_GROUP("Source Files\\fil\\nvm\\pal" FILES ${SRC_FIL_NVM_PAL})
 SOURCE_GROUP("Source Files\\fil\\scheduler" FILES ${SRC_FIL_SCHEDULER})
@@ -298,8 +303,9 @@ set(SRCS
   ${SRC_FTL_BACKGROUND_MANAGER}
   ${SRC_FTL_BASE}
   ${SRC_FTL_GC}
-  ${SRC_FTL_READ_RECLAIM}
   ${SRC_FTL_MAPPING}
+  ${SRC_FTL_READ_RECLAIM}
+  ${SRC_FTL_WEAR_LEVELING}
   ${SRC_FIL}
   ${SRC_FIL_NVM_PAL}
   ${SRC_FIL_SCHEDULER}
