@@ -165,6 +165,17 @@ void Filling::start() noexcept {
              " (%.2f %%, target: %" PRIu64 ", error: %" PRId64 ")",
              invalid, invalid * 100.f / totalLogicalSuperPages,
              nPagesToInvalidate, (int64_t)(invalid - nPagesToInvalidate));
+
+  // Filling P/E Cycles
+  uint32_t targetCycle =
+      readConfigUint(Section::FlashTranslation, Config::Key::EraseCount);
+
+  for (uint64_t psbn = 0; psbn < totalPhysicalSuperBlocks; psbn++) {
+    auto &bmeta = ftlobject.pAllocator->getBlockMetadata(PSBN{psbn});
+
+    bmeta.erasedCount = targetCycle;
+  }
+
   debugprint(Log::DebugID::FTL, "Initialization finished");
 }
 
