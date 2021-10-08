@@ -32,8 +32,8 @@ class AbstractJob : public Object {
   FTLObjectData &ftlobject;
 
  public:
-  AbstractJob(ObjectData &o, FTLObjectData &fo) : Object(o), ftlobject(fo) {}
-  virtual ~AbstractJob() {}
+  AbstractJob(ObjectData &, FTLObjectData &);
+  virtual ~AbstractJob();
 
   /**
    * \brief Initialize abstract job
@@ -41,14 +41,14 @@ class AbstractJob : public Object {
    * This function will be called after all objects in FTLObjectData have been
    * initialized.
    */
-  virtual void initialize() {}
+  virtual void initialize() = 0;
 
   /**
    * \brief Query job is running
    *
    * \return true if job is running
    */
-  virtual bool isRunning() { return false; }
+  virtual bool isRunning() = 0;
 
   /**
    * \brief Triggered by user I/O
@@ -56,10 +56,7 @@ class AbstractJob : public Object {
    * \param when Trigger type.
    * \param req  Request that triggered this event.
    */
-  virtual void triggerByUser(TriggerType when, Request *req) {
-    (void)when;
-    (void)req;
-  }
+  virtual void triggerByUser(TriggerType when, Request *req);
 
   /**
    * \brief Triggered by SSD idleness
@@ -67,10 +64,7 @@ class AbstractJob : public Object {
    * \param now      Current simulation tick
    * \param deadline Expected timestamp of next user I/O
    */
-  virtual void triggerByIdle(uint64_t now, uint64_t deadline) {
-    (void)now;
-    (void)deadline;
-  }
+  virtual void triggerByIdle(uint64_t now, uint64_t deadline);
 };
 
 }  // namespace SimpleSSD::FTL

@@ -196,6 +196,7 @@ set(SRC_FTL
   ftl/ftl.cc
 )
 set(SRC_FTL_BACKGROUND_MANAGER
+  ftl/background_manager/abstract_background_job.cc
   ftl/background_manager/basic_job_manager.cc
 )
 set(SRC_FTL_ALLOC
