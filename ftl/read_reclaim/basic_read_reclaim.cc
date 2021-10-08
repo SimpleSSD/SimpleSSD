@@ -271,7 +271,9 @@ bool BasicReadReclaim::doErrorCheck(const PPN &ppn) {
     }
     else {
       // Read reclaim in progress
-      pendingList.push_back(psbn, psbn);
+      if (LIKELY(targetBlock.blockID != psbn)) {
+        pendingList.push_back(psbn, psbn);
+      }
     }
 
     return true;
