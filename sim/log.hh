@@ -38,6 +38,7 @@ const std::string idPrefix[] = {
     "FTL::GC::AdvancedGC",
     "FTL::GC::PreemptibleGC",
     "FTL::ReadReclaim::BasicReadReclaim",
+    "FTL::WearLeveling::StaticWearLeveling",
     "FIL",
     "FIL::PALOLD",
 };
@@ -303,6 +304,7 @@ class Log {
     FTL_AdvancedGC,
     FTL_PreemptibleGC,
     FTL_BasicReadReclaim,
+    FTL_StaticWearLeveling,
     FIL,
     FIL_PALOLD,
   };
@@ -335,7 +337,7 @@ class Log {
   void deinit() noexcept;
 
   template <class... T>
-  void print(LogID id, const char *format, T &&... args) const noexcept {
+  void print(LogID id, const char *format, T &&...args) const noexcept {
     std::ostream *stream = nullptr;
 
     if (UNLIKELY(!inited)) {
@@ -389,7 +391,7 @@ class Log {
   }
 
   template <class... T>
-  void debugprint(DebugID id, const char *format, T &&... args) const noexcept {
+  void debugprint(DebugID id, const char *format, T &&...args) const noexcept {
     if (UNLIKELY(!inited)) {
       std::cerr << "panic: Log system not initialized" << std::endl;
 
