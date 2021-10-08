@@ -31,11 +31,14 @@ AbstractBlockCopyJob::AbstractBlockCopyJob(ObjectData &o, FTLObjectData &fo,
       pageSize(object.config->getNANDStructure()->pageSize),
       logid(getDebugLogID()),
       logprefix(getLogPrefix()) {
+  const auto size = getParallelBlockCount();
   auto prefix = getPrefix();
+
+  targetBlocks.resize(size);
 
   // Memory allocation
   auto &_bufferBaseAddress = const_cast<uint64_t &>(bufferBaseAddress);
-  auto required = superpage * pageSize;
+  auto required = superpage * pageSize * size;
 
   if (object.memory->allocate(required, Memory::MemoryType::SRAM, "", true) ==
       0) {
@@ -48,24 +51,30 @@ AbstractBlockCopyJob::AbstractBlockCopyJob(ObjectData &o, FTLObjectData &fo,
   }
 
   // Create events
-  eventReadPage = createEvent([this](uint64_t t, uint64_t) { readPage(t); },
-                              prefix + "::eventReadPage");
+  eventReadPage =
+      createEvent([this](uint64_t t, uint64_t d) { readPage(t, d); },
+                  prefix + "::eventReadPage");
   eventUpdateMapping =
-      createEvent([this](uint64_t t, uint64_t) { updateMapping(t); },
+      createEvent([this](uint64_t t, uint64_t d) { updateMapping(t, d); },
                   prefix + "::eventUpdateMapping");
-  eventWritePage = createEvent([this](uint64_t t, uint64_t) { writePage(t); },
-                               prefix + "::eventWritePage");
-  eventWriteDone = createEvent([this](uint64_t t, uint64_t) { writeDone(t); },
-                               prefix + "::eventWriteDone");
-  eventEraseDone = createEvent([this](uint64_t t, uint64_t) { eraseDone(t); },
-                               prefix + "::eventEraseDone");
-  eventDone = createEvent([this](uint64_t t, uint64_t) { done(t); },
+  eventWritePage =
+      createEvent([this](uint64_t t, uint64_t d) { writePage(t, d); },
+                  prefix + "::eventWritePage");
+  eventWriteDone =
+      createEvent([this](uint64_t t, uint64_t d) { writeDone(t, d); },
+                  prefix + "::eventWriteDone");
+  eventEraseDone =
+      createEvent([this](uint64_t t, uint64_t d) { eraseDone(t, d); },
+                  prefix + "::eventEraseDone");
+  eventDone = createEvent([this](uint64_t t, uint64_t d) { done(t, d); },
                           prefix + "::eventDone");
 }
 
 AbstractBlockCopyJob::~AbstractBlockCopyJob() {}
 
-void AbstractBlockCopyJob::readPage(uint64_t now) {
+void AbstractBlockCopyJob::readPage(uint64_t now, uint32_t blockIndex) {
+  auto &targetBlock = targetBlocks[blockIndex];
+
   if (LIKELY(targetBlock.pageReadIndex < targetBlock.copyList.size())) {
     auto &ctx = targetBlock.copyList.at(targetBlock.pageReadIndex++);
     auto ppn = param->makePPN(targetBlock.blockID, 0, ctx.pageIndex);
@@ -84,14 +93,15 @@ void AbstractBlockCopyJob::readPage(uint64_t now) {
 
       // Fill request
       if (i == 0) {
+        ctx.request.setTag(blockIndex);
         ctx.request.setPPN(ppn);
-        ctx.request.setDRAMAddress(makeBufferAddress(i));
+        ctx.request.setDRAMAddress(makeBufferAddress(blockIndex, i));
 
         pFIL->read(FIL::Request(&ctx.request, eventUpdateMapping));
       }
       else {
-        pFIL->read(FIL::Request(LPN{}, ppn, makeBufferAddress(i),
-                                eventUpdateMapping, 0));
+        pFIL->read(FIL::Request(LPN{}, ppn, makeBufferAddress(blockIndex, i),
+                                eventUpdateMapping, blockIndex));
       }
     }
 
@@ -113,7 +123,7 @@ void AbstractBlockCopyJob::readPage(uint64_t now) {
 
     for (uint32_t i = 0; i < superpage; i++) {
       pFIL->erase(FIL::Request(LPN{}, param->makePPN(psbn, i, 0), 0,
-                               eventEraseDone, 0));
+                               eventEraseDone, blockIndex));
     }
 
     targetBlock.beginAt = now;
@@ -121,7 +131,9 @@ void AbstractBlockCopyJob::readPage(uint64_t now) {
   }
 }
 
-void AbstractBlockCopyJob::updateMapping(uint64_t now) {
+void AbstractBlockCopyJob::updateMapping(uint64_t now, uint32_t blockIndex) {
+  auto &targetBlock = targetBlocks[blockIndex];
+
   targetBlock.readCounter--;
 
   if (targetBlock.readCounter == 0) {
@@ -153,7 +165,9 @@ void AbstractBlockCopyJob::updateMapping(uint64_t now) {
   }
 }
 
-void AbstractBlockCopyJob::writePage(uint64_t now) {
+void AbstractBlockCopyJob::writePage(uint64_t now, uint32_t blockIndex) {
+  auto &targetBlock = targetBlocks[blockIndex];
+
   auto &ctx = targetBlock.copyList.at(targetBlock.pageWriteIndex++);
   auto lpn = ctx.request.getLPN();
   auto ppn = ctx.request.getPPN();
@@ -173,16 +187,18 @@ void AbstractBlockCopyJob::writePage(uint64_t now) {
   }
 
   for (uint32_t i = 0; i < superpage; i++) {
-    pFIL->program(FIL::Request(static_cast<LPN>(lpn + i),
-                               static_cast<PPN>(ppn + i), makeBufferAddress(i),
-                               eventWriteDone, 0));
+    pFIL->program(FIL::Request(
+        static_cast<LPN>(lpn + i), static_cast<PPN>(ppn + i),
+        makeBufferAddress(blockIndex, i), eventWriteDone, blockIndex));
   }
 
   targetBlock.writeCounter += superpage;  // Do not overwrite
   ctx.beginAt = now;
 }
 
-void AbstractBlockCopyJob::writeDone(uint64_t now) {
+void AbstractBlockCopyJob::writeDone(uint64_t now, uint32_t blockIndex) {
+  auto &targetBlock = targetBlocks[blockIndex];
+
   targetBlock.writeCounter--;
 
   if (targetBlock.writeCounter == 0) {
@@ -208,11 +224,13 @@ void AbstractBlockCopyJob::writeDone(uint64_t now) {
     }
 
     // Go back to read
-    scheduleNow(eventReadPage);
+    scheduleNow(eventReadPage, blockIndex);
   }
 }
 
-void AbstractBlockCopyJob::eraseDone(uint64_t now) {
+void AbstractBlockCopyJob::eraseDone(uint64_t now, uint32_t blockIndex) {
+  auto &targetBlock = targetBlocks[blockIndex];
+
   targetBlock.writeCounter--;
 
   if (targetBlock.writeCounter == 0) {
@@ -233,12 +251,13 @@ void AbstractBlockCopyJob::eraseDone(uint64_t now) {
     }
 
     // Mark table/block as erased
-    ftlobject.pAllocator->reclaimBlock(targetBlock.blockID, eventDone, 0);
+    ftlobject.pAllocator->reclaimBlock(targetBlock.blockID, eventDone,
+                                       blockIndex);
   }
 }
 
 void AbstractBlockCopyJob::createCheckpoint(std::ostream &out) const noexcept {
-  targetBlock.createCheckpoint(out);
+  BACKUP_STL(out, targetBlocks, iter, iter.createCheckpoint(out););
 
   BACKUP_EVENT(out, eventReadPage);
   BACKUP_EVENT(out, eventUpdateMapping);
@@ -249,7 +268,7 @@ void AbstractBlockCopyJob::createCheckpoint(std::ostream &out) const noexcept {
 }
 
 void AbstractBlockCopyJob::restoreCheckpoint(std::istream &in) noexcept {
-  targetBlock.restoreCheckpoint(in);
+  RESTORE_STL_RESIZE(in, targetBlocks, iter, iter.restoreCheckpoint(in););
 
   RESTORE_EVENT(in, eventReadPage);
   RESTORE_EVENT(in, eventUpdateMapping);

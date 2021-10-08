@@ -72,7 +72,7 @@ class AbstractBlockCopyJob : public AbstractJob {
  protected:
   FIL::FIL *const pFIL;
 
-  CopyContext targetBlock;
+  std::vector<CopyContext> targetBlocks;
 
   const Parameter *const param;
   const uint64_t bufferBaseAddress;
@@ -81,6 +81,9 @@ class AbstractBlockCopyJob : public AbstractJob {
 
   const Log::DebugID logid;
   const char *const logprefix;
+
+  //!< Get # of blocks to copy in parallel
+  virtual uint32_t getParallelBlockCount() = 0;
 
   //!< Get prefix of objects
   virtual std::string getPrefix() = 0;
@@ -92,8 +95,10 @@ class AbstractBlockCopyJob : public AbstractJob {
   virtual Log::DebugID getDebugLogID() = 0;
 
   //!< Helper function to calculate offset of buffer
-  inline uint64_t makeBufferAddress(uint32_t superpageIndex) {
-    return bufferBaseAddress + superpageIndex * pageSize;
+  inline uint64_t makeBufferAddress(uint32_t blockIndex,
+                                    uint32_t superpageIndex) {
+    return bufferBaseAddress +
+           (blockIndex * superpage + superpageIndex) * pageSize;
   }
 
   /*
@@ -115,10 +120,11 @@ class AbstractBlockCopyJob : public AbstractJob {
    * Else:
    *   Issue Read request to FIL with completion handler of eventUpdateMapping.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventReadPage;
-  virtual void readPage(uint64_t now);
+  virtual void readPage(uint64_t now, uint32_t blockIndex);
 
   /**
    * \brief Perform mapping table update
@@ -126,20 +132,22 @@ class AbstractBlockCopyJob : public AbstractJob {
    * Ask mapping class to get where to write new page.
    * Issue writeMapping with completion handler of eventWritePage.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventUpdateMapping;
-  virtual void updateMapping(uint64_t now);
+  virtual void updateMapping(uint64_t now, uint32_t blockIndex);
 
   /**
    * \brief Perform write
    *
    * Issue Program request to FIL with completion handler of eventWriteDone.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventWritePage;
-  virtual void writePage(uint64_t now);
+  virtual void writePage(uint64_t now, uint32_t blockIndex);
 
   /**
    * \brief Completion handler of write
@@ -147,10 +155,11 @@ class AbstractBlockCopyJob : public AbstractJob {
    * This state handles multiple program requests caused by superpage
    * configuration. If all program requests are completed, go to eventReadPage.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventWriteDone;
-  virtual void writeDone(uint64_t now);
+  virtual void writeDone(uint64_t now, uint32_t blockIndex);
 
   /**
    * \brief Completion handler of erase
@@ -159,20 +168,22 @@ class AbstractBlockCopyJob : public AbstractJob {
    * configuration. If all erase requests are completed, reclaim block by
    * calling AbstractAllocator::reclaimBlock.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventEraseDone;
-  virtual void eraseDone(uint64_t now);
+  virtual void eraseDone(uint64_t now, uint32_t blockIndex);
 
   /**
    * \brief Completion handler of copy operation
    *
    * This state clears CopyContext and checks termination condition.
    *
-   * \param[in] now Current simulation tick
+   * \param[in] now         Current simulation tick
+   * \param[in] blockIndex  Index of copy context
    */
   Event eventDone;
-  virtual void done(uint64_t now) = 0;
+  virtual void done(uint64_t now, uint32_t blockIndex) = 0;
 
  public:
   AbstractBlockCopyJob(ObjectData &, FTLObjectData &, FIL::FIL *);
