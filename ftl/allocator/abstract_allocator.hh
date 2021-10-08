@@ -22,7 +22,16 @@ class AbstractAllocator : public Object {
  protected:
   FTLObjectData &ftlobject;
 
-  const Parameter *param;
+  const Parameter *const param;
+
+  std::vector<Event> eventList;
+
+  /**
+   * \brief Call registered events
+   *
+   * This function must be called when reclaimBlock() called.
+   */
+  void callEvents(const PSBN &);
 
  public:
   AbstractAllocator(ObjectData &, FTLObjectData &);
@@ -100,6 +109,19 @@ class AbstractAllocator : public Object {
   virtual bool checkBackgroundGCThreshold() noexcept = 0;
 
   /**
+   * \brief Get physical page status (Only for filling phase)
+   *
+   * Return # of valid pages and # of invalid pages in underlying NAND flash.
+   *
+   * \param[out] valid    Return # of valid physical (super)pages
+   * \param[out] invalid  Return # of invalid physical (super)pages
+   */
+  virtual void getPageStatistics(uint64_t &valid,
+                                 uint64_t &invalid) noexcept = 0;
+
+  /* Functions for background jobs */
+
+  /**
    * \brief Select block to erase
    *
    * Return physical block address to erase.
@@ -123,15 +145,14 @@ class AbstractAllocator : public Object {
   virtual void reclaimBlock(PSBN psbn, Event eid, uint64_t data) = 0;
 
   /**
-   * \brief Get physical page status (Only for filling phase)
+   * \brief Register event listener for block erase
    *
-   * Return # of valid pages and # of invalid pages in underlying NAND flash.
+   * Event will scheduled immediately when block is reclaimed.
+   * Event data will be physical superblock number.
    *
-   * \param[out] valid    Return # of valid physical (super)pages
-   * \param[out] invalid  Return # of invalid physical (super)pages
+   * \param[in] eid Callback event
    */
-  virtual void getPageStatistics(uint64_t &valid,
-                                 uint64_t &invalid) noexcept = 0;
+  void registerBlockEraseEventListener(Event eid);
 
   /* Functions for AbstractVictimSelection */
 
@@ -143,6 +164,9 @@ class AbstractAllocator : public Object {
    */
   virtual std::list<PSBN> &getBlockListAtParallelismIndex(
       uint32_t index) noexcept = 0;
+
+  void createCheckpoint(std::ostream &) const noexcept override;
+  void restoreCheckpoint(std::istream &) noexcept override;
 };
 
 }  // namespace SimpleSSD::FTL::BlockAllocator

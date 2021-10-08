@@ -234,6 +234,8 @@ void GenericAllocator::reclaimBlock(PSBN blockID, Event eid, uint64_t data) {
   ameta.freeBlocks.emplace(iter, blockID);
   freeBlockCount++;
 
+  callEvents(blockID);
+
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
 }
 
@@ -310,6 +312,8 @@ void GenericAllocator::getStatValues(std::vector<double> &values) noexcept {
 void GenericAllocator::resetStatValues() noexcept {}
 
 void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractAllocator::createCheckpoint(out);
+
   BACKUP_SCALAR(out, totalSuperblock);
   BACKUP_SCALAR(out, parallelism);
   BACKUP_SCALAR(out, lastErased);
@@ -324,6 +328,8 @@ void GenericAllocator::createCheckpoint(std::ostream &out) const noexcept {
 void GenericAllocator::restoreCheckpoint(std::istream &in) noexcept {
   uint32_t tmp32;
   uint64_t tmp64;
+
+  AbstractAllocator::restoreCheckpoint(in);
 
   RESTORE_SCALAR(in, tmp64);
   panic_if(tmp64 != totalSuperblock, "FTL configuration mismatch.");
