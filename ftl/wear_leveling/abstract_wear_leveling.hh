@@ -30,11 +30,10 @@ class AbstractWearLeveling : public AbstractBlockCopyJob {
  protected:
   State state;
 
-  uint32_t getParallelBlockCount() { return 1; }
-
   Event eventEraseCallback;
   virtual void blockEraseCallback(uint64_t now, const PSBN &erased);
 
+  uint32_t getParallelBlockCount() override { return 1; }
   std::string getPrefix() override { return "FTL::WearLeveling"; }
   const char *getLogPrefix() override { return "WL    "; }
 
