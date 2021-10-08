@@ -16,8 +16,7 @@ namespace SimpleSSD::FTL {
 Filling::Filling(ObjectData &o, FTLObjectData &fo) : Object(o), ftlobject(fo) {}
 
 void Filling::start() noexcept {
-  std::random_device rd;
-  std::mt19937_64 gen(rd());
+  std::default_random_engine gen(std::random_device{}());
 
   uint64_t totalLogicalSuperPages;
   uint64_t totalPhysicalSuperBlocks;
