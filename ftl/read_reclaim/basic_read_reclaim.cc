@@ -220,7 +220,7 @@ void BasicReadReclaim::eraseDone(uint64_t now) {
     }
 
     // Mark table/block as erased
-    ftlobject.pAllocator->reclaimBlocks(psbn, eventDone, 0);
+    ftlobject.pAllocator->reclaimBlock(psbn, eventDone, 0);
   }
 }
 
@@ -243,7 +243,7 @@ void BasicReadReclaim::done(uint64_t now) {
 
     pendingList.pop_front();
 
-    ftlobject.pAllocator->getVictimBlocks(targetBlock, nullptr, eventDoRead, 0);
+    ftlobject.pAllocator->getVictimBlock(targetBlock, nullptr, eventDoRead, 0);
   }
   else {
     state = State::Idle;
@@ -262,8 +262,8 @@ bool BasicReadReclaim::doErrorCheck(const PPN &ppn) {
     if (state < State::Foreground) {
       targetBlock.blockID = psbn;
 
-      ftlobject.pAllocator->getVictimBlocks(targetBlock, nullptr, eventDoRead,
-                                            0);
+      ftlobject.pAllocator->getVictimBlock(targetBlock, nullptr, eventDoRead,
+                                           0);
 
       state = State::Foreground;
       stat.foreground++;

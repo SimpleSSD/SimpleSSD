@@ -118,8 +118,8 @@ void NaiveGC::gc_trigger() {
 
   // Get blocks to erase
   for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
-    ftlobject.pAllocator->getVictimBlocks(targetBlocks[idx], method,
-                                          eventDoRead, idx);
+    ftlobject.pAllocator->getVictimBlock(targetBlocks[idx], method, eventDoRead,
+                                         idx);
   }
 
   debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);
@@ -306,7 +306,7 @@ void NaiveGC::gc_eraseDone(uint64_t now, uint32_t idx) {
     }
 
     // Mark table/block as erased
-    ftlobject.pAllocator->reclaimBlocks(psbn, eventDone, idx);
+    ftlobject.pAllocator->reclaimBlock(psbn, eventDone, idx);
   }
 }
 

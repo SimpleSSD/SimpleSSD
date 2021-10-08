@@ -93,9 +93,9 @@ class GenericAllocator : public AbstractAllocator {
 
   bool checkForegroundGCThreshold() noexcept override;
   bool checkBackgroundGCThreshold() noexcept override;
-  void getVictimBlocks(CopyContext &, AbstractVictimSelection *, Event,
-                       uint64_t) override;
-  void reclaimBlocks(PSBN, Event, uint64_t) override;
+  void getVictimBlock(CopyContext &, AbstractVictimSelection *, Event,
+                      uint64_t) override;
+  void reclaimBlock(PSBN, Event, uint64_t) override;
 
   void getPageStatistics(uint64_t &, uint64_t &) noexcept override;
 

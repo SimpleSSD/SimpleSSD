@@ -110,9 +110,8 @@ class AbstractAllocator : public Object {
    * \param[in] eid     Callback event
    * \param[in] data    Event data
    */
-  virtual void getVictimBlocks(CopyContext &ctx,
-                               AbstractVictimSelection *method, Event eid,
-                               uint64_t data) = 0;
+  virtual void getVictimBlock(CopyContext &ctx, AbstractVictimSelection *method,
+                              Event eid, uint64_t data) = 0;
 
   /**
    * \brief Mark block as erased
@@ -121,7 +120,7 @@ class AbstractAllocator : public Object {
    * \param[in] eid   Callback event
    * \param[in] data  Event data
    */
-  virtual void reclaimBlocks(PSBN psbn, Event eid, uint64_t data) = 0;
+  virtual void reclaimBlock(PSBN psbn, Event eid, uint64_t data) = 0;
 
   /**
    * \brief Get physical page status (Only for filling phase)

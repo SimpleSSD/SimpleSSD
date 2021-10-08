@@ -158,9 +158,9 @@ bool GenericAllocator::checkBackgroundGCThreshold() noexcept {
   return (float)freeBlockCount / totalSuperblock < bgcThreshold;
 }
 
-void GenericAllocator::getVictimBlocks(CopyContext &ctx,
-                                       AbstractVictimSelection *method,
-                                       Event eid, uint64_t data) {
+void GenericAllocator::getVictimBlock(CopyContext &ctx,
+                                      AbstractVictimSelection *method,
+                                      Event eid, uint64_t data) {
   CPU::Function fstat;
 
   if (LIKELY(method)) {
@@ -209,7 +209,7 @@ void GenericAllocator::getVictimBlocks(CopyContext &ctx,
   scheduleFunction(CPU::CPUGroup::FlashTranslationLayer, eid, data, fstat);
 }
 
-void GenericAllocator::reclaimBlocks(PSBN blockID, Event eid, uint64_t data) {
+void GenericAllocator::reclaimBlock(PSBN blockID, Event eid, uint64_t data) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
