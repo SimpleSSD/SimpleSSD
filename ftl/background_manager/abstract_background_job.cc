@@ -40,27 +40,27 @@ AbstractBlockCopyJob::AbstractBlockCopyJob(ObjectData &o, FTLObjectData &fo,
   if (object.memory->allocate(required, Memory::MemoryType::SRAM, "", true) ==
       0) {
     _bufferBaseAddress = object.memory->allocate(
-        required, Memory::MemoryType::SRAM, prefix + "Buffer");
+        required, Memory::MemoryType::SRAM, prefix + "::Buffer");
   }
   else {
     _bufferBaseAddress = object.memory->allocate(
-        required, Memory::MemoryType::DRAM, prefix + "Buffer");
+        required, Memory::MemoryType::DRAM, prefix + "::Buffer");
   }
 
   // Create events
   eventReadPage = createEvent([this](uint64_t t, uint64_t) { readPage(t); },
-                              prefix + "eventReadPage");
+                              prefix + "::eventReadPage");
   eventUpdateMapping =
       createEvent([this](uint64_t t, uint64_t) { updateMapping(t); },
-                  prefix + "eventUpdateMapping");
+                  prefix + "::eventUpdateMapping");
   eventWritePage = createEvent([this](uint64_t t, uint64_t) { writePage(t); },
-                               prefix + "eventWritePage");
+                               prefix + "::eventWritePage");
   eventWriteDone = createEvent([this](uint64_t t, uint64_t) { writeDone(t); },
-                               prefix + "eventWriteDone");
+                               prefix + "::eventWriteDone");
   eventEraseDone = createEvent([this](uint64_t t, uint64_t) { eraseDone(t); },
-                               prefix + "eventEraseDone");
+                               prefix + "::eventEraseDone");
   eventDone = createEvent([this](uint64_t t, uint64_t) { done(t); },
-                          prefix + "eventDone");
+                          prefix + "::eventDone");
 }
 
 AbstractBlockCopyJob::~AbstractBlockCopyJob() {}
