@@ -26,13 +26,9 @@ enum class State : uint32_t {
   Background,
 };
 
-class AbstractReadReclaim : public AbstractJob {
+class AbstractReadReclaim : public AbstractBlockCopyJob {
  protected:
-  FIL::FIL *pFIL;
   State state;
-
-  const uint32_t pageSize;
-  const Parameter *param;
 
   std::default_random_engine engine;
 

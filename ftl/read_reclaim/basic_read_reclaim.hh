@@ -17,13 +17,7 @@ namespace SimpleSSD::FTL::ReadReclaim {
 
 class BasicReadReclaim : public AbstractReadReclaim {
  protected:
-  Log::DebugID logid;
-
-  uint32_t superpage;
-  uint64_t bufferBaseAddress;
   uint64_t beginAt;
-
-  CopyContext targetBlock;
 
   map_list<uint64_t, PSBN> pendingList;
 
@@ -34,27 +28,14 @@ class BasicReadReclaim : public AbstractReadReclaim {
     uint64_t erasedBlocks;
   } stat;
 
-  inline uint64_t makeBufferAddress(uint32_t superpageIndex) {
-    return bufferBaseAddress + superpageIndex * pageSize;
+  std::string getPrefix() override { return "FTL::BasicReadReclaim"; }
+  const char *getLogPrefix() override { return "RR    "; }
+  Log::DebugID getDebugLogID() override {
+    return Log::DebugID::FTL_BasicReadReclaim;
   }
 
-  Event eventDoRead;
-  virtual void read(uint64_t);
-
-  Event eventDoTranslate;
-  virtual void translate(uint64_t);
-
-  Event eventDoWrite;
-  virtual void write(uint64_t);
-
-  Event eventWriteDone;
-  virtual void writeDone(uint64_t);
-
-  Event eventEraseDone;
-  virtual void eraseDone(uint64_t);
-
-  Event eventDone;
-  virtual void done(uint64_t);
+  void readPage(uint64_t) override;
+  void done(uint64_t) override;
 
  public:
   BasicReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);

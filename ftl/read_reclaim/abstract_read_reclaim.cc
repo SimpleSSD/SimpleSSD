@@ -14,11 +14,8 @@ namespace SimpleSSD::FTL::ReadReclaim {
 
 AbstractReadReclaim::AbstractReadReclaim(ObjectData &o, FTLObjectData &fo,
                                          FIL::FIL *fil)
-    : AbstractJob(o, fo),
-      pFIL(fil),
+    : AbstractBlockCopyJob(o, fo, fil),
       state(State::Idle),
-      pageSize(object.config->getNANDStructure()->pageSize),
-      param(nullptr),
       engine(std::random_device{}()) {}
 
 AbstractReadReclaim::~AbstractReadReclaim() {}
@@ -54,9 +51,7 @@ uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PSBN &psbn) {
   return std::binomial_distribution<uint32_t>{pageSize, rber}(engine);
 }
 
-void AbstractReadReclaim::initialize() {
-  param = ftlobject.pMapping->getInfo();
-}
+void AbstractReadReclaim::initialize() {}
 
 bool AbstractReadReclaim::isRunning() {
   return state > State::Idle;
@@ -69,10 +64,14 @@ void AbstractReadReclaim::triggerByUser(TriggerType when, Request *req) {
 }
 
 void AbstractReadReclaim::createCheckpoint(std::ostream &out) const noexcept {
+  AbstractBlockCopyJob::createCheckpoint(out);
+
   BACKUP_SCALAR(out, state);
 }
 
 void AbstractReadReclaim::restoreCheckpoint(std::istream &in) noexcept {
+  AbstractBlockCopyJob::restoreCheckpoint(in);
+
   RESTORE_SCALAR(in, state);
 }
 
