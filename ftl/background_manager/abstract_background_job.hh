@@ -114,35 +114,43 @@ class AbstractBlockCopyJob : public AbstractJob {
    *   Issue Erase request to FIL with completion handler of eventEraseDone.
    * Else:
    *   Issue Read request to FIL with completion handler of eventUpdateMapping.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventReadPage;
-  virtual void readPage(uint64_t);
+  virtual void readPage(uint64_t now);
 
   /**
    * \brief Perform mapping table update
    *
    * Ask mapping class to get where to write new page.
    * Issue writeMapping with completion handler of eventWritePage.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventUpdateMapping;
-  virtual void updateMapping(uint64_t);
+  virtual void updateMapping(uint64_t now);
 
   /**
    * \brief Perform write
    *
    * Issue Program request to FIL with completion handler of eventWriteDone.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventWritePage;
-  virtual void writePage(uint64_t);
+  virtual void writePage(uint64_t now);
 
   /**
    * \brief Completion handler of write
    *
    * This state handles multiple program requests caused by superpage
    * configuration. If all program requests are completed, go to eventReadPage.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventWriteDone;
-  virtual void writeDone(uint64_t);
+  virtual void writeDone(uint64_t now);
 
   /**
    * \brief Completion handler of erase
@@ -150,17 +158,21 @@ class AbstractBlockCopyJob : public AbstractJob {
    * This state handles multiple erase requests caused by superpage
    * configuration. If all erase requests are completed, reclaim block by
    * calling AbstractAllocator::reclaimBlock.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventEraseDone;
-  virtual void eraseDone(uint64_t);
+  virtual void eraseDone(uint64_t now);
 
   /**
    * \brief Completion handler of copy operation
    *
    * This state clears CopyContext and checks termination condition.
+   *
+   * \param[in] now Current simulation tick
    */
   Event eventDone;
-  virtual void done(uint64_t) = 0;
+  virtual void done(uint64_t now) = 0;
 
  public:
   AbstractBlockCopyJob(ObjectData &, FTLObjectData &, FIL::FIL *);
