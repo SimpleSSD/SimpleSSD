@@ -33,6 +33,9 @@ class AbstractGC : public AbstractBlockCopyJob {
 
   BlockAllocator::AbstractVictimSelection *method;
 
+  std::string getPrefix() override { return "FTL::GC"; }
+  const char *getLogPrefix() override { return "GC    "; }
+
  public:
   AbstractGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractGC();

@@ -54,8 +54,6 @@ class NaiveGC : public AbstractGC {
   }
 
   uint32_t getParallelBlockCount() override;
-  std::string getPrefix() override { return "FTL::GC"; }
-  const char *getLogPrefix() override { return "GC    "; }
   Log::DebugID getDebugLogID() override { return Log::DebugID::FTL_NaiveGC; }
 
   Event eventTrigger;
