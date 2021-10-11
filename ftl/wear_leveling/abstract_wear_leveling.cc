@@ -7,6 +7,9 @@
 
 #include "ftl/wear_leveling/abstract_wear_leveling.hh"
 
+#include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/mapping/abstract_mapping.hh"
+
 namespace SimpleSSD::FTL::WearLeveling {
 
 AbstractWearLeveling::AbstractWearLeveling(ObjectData &o, FTLObjectData &fo,
@@ -23,7 +26,16 @@ void AbstractWearLeveling::blockEraseCallback(uint64_t, const PSBN &) {
   panic("AbstractWearLeveling::blockEraseCallback() must be overriden.");
 }
 
-void AbstractWearLeveling::initialize() {}
+void AbstractWearLeveling::initialize() {
+  auto param = ftlobject.pMapping->getInfo();
+
+  for (uint64_t i = 0; i < param->parallelism; i += param->superpage) {
+    PSBN tmp;
+
+    ftlobject.pAllocator->allocateFreeBlock(
+        tmp, BlockAllocator::AllocationStrategy::HighestEraseCount);
+  }
+}
 
 bool AbstractWearLeveling::isRunning() {
   return state >= State::Foreground;
