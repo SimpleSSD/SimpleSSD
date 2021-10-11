@@ -18,6 +18,11 @@
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
+enum class AllocationStrategy {
+  LowestEraseCount,
+  HighestEraseCount,
+};
+
 class AbstractAllocator : public Object {
  protected:
   FTLObjectData &ftlobject;
@@ -62,10 +67,13 @@ class AbstractAllocator : public Object {
    * Return new freeblock at parallelism index of provided physical page
    * address. Return next freeblock if ppn is invalid.
    *
-   * \param[in] psbn  Physical Superblock Number.
-   * \return Return CPU firmware execution information.
+   * \param[inout] psbn     Physical Superblock Number.
+   * \param[in]    strategy Strategy of free block selection
+   * \return CPU firmware execution information.
    */
-  virtual CPU::Function allocateFreeBlock(PSBN &psbn) = 0;
+  virtual CPU::Function allocateFreeBlock(
+      PSBN &psbn,
+      AllocationStrategy strategy = AllocationStrategy::LowestEraseCount) = 0;
 
   /**
    * \brief Get previously allocated free block
@@ -74,8 +82,12 @@ class AbstractAllocator : public Object {
    * physical page address.
    *
    * \param[in] pidx  Parallelism Index
+   * \param[in] strategy Strategy of free block selection
+   * \return Physical superblock number
    */
-  virtual PSBN getFreeBlockAt(uint32_t psbn) noexcept = 0;
+  virtual PSBN getFreeBlockAt(
+      uint32_t pidx, AllocationStrategy strategy =
+                         AllocationStrategy::LowestEraseCount) noexcept = 0;
 
   /* Functions for AbstractFTL */
 

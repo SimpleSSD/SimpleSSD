@@ -33,12 +33,14 @@ class GenericAllocator : public AbstractAllocator {
 
   struct AllocationMetadata {
     PSBN inUse;  // Allocate freeblock at current index
+    PSBN inUseHighPE;
 
     std::list<PSBN> freeBlocks;  // Free blocks sorted in erased count
     std::list<PSBN> fullBlocks;  // Full blocks sorted in erased count;
 
     inline void createCheckpoint(std::ostream &out) const noexcept {
       BACKUP_SCALAR(out, inUse);
+      BACKUP_SCALAR(out, inUseHighPE);
 
       BACKUP_STL(out, freeBlocks, iter, BACKUP_SCALAR(out, iter));
       BACKUP_STL(out, fullBlocks, iter, BACKUP_SCALAR(out, iter));
@@ -46,6 +48,7 @@ class GenericAllocator : public AbstractAllocator {
 
     inline void restoreCheckpoint(std::istream &in) noexcept {
       RESTORE_SCALAR(in, inUse);
+      RESTORE_SCALAR(in, inUseHighPE);
 
       RESTORE_STL(in, i, {
         auto &iter = freeBlocks.emplace_back(PSBN{});
@@ -88,8 +91,8 @@ class GenericAllocator : public AbstractAllocator {
     return makeMetadataAddress(psbn);
   }
 
-  CPU::Function allocateFreeBlock(PSBN &) override;
-  PSBN getFreeBlockAt(uint32_t) noexcept override;
+  CPU::Function allocateFreeBlock(PSBN &, AllocationStrategy) override;
+  PSBN getFreeBlockAt(uint32_t, AllocationStrategy) noexcept override;
 
   bool checkForegroundGCThreshold() noexcept override;
   bool checkBackgroundGCThreshold() noexcept override;

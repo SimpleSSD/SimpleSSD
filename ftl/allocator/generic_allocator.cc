@@ -83,7 +83,8 @@ void GenericAllocator::initialize() {
   }
 }
 
-CPU::Function GenericAllocator::allocateFreeBlock(PSBN &blockUsed) {
+CPU::Function GenericAllocator::allocateFreeBlock(PSBN &blockUsed,
+                                                  AllocationStrategy strategy) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -125,29 +126,44 @@ CPU::Function GenericAllocator::allocateFreeBlock(PSBN &blockUsed) {
            idx);
 
   // Allocate new block
-  ameta->inUse = ameta->freeBlocks.front();
-  blockUsed = ameta->inUse;
+  switch (strategy) {
+    case AllocationStrategy::LowestEraseCount:
+      ameta->inUse = ameta->freeBlocks.front();
+      blockUsed = ameta->inUse;
 
-  ameta->freeBlocks.pop_front();
-  freeBlockCount--;
+      ameta->freeBlocks.pop_front();
+      freeBlockCount--;
+
+      break;
+    case AllocationStrategy::HighestEraseCount:
+      ameta->inUseHighPE = ameta->freeBlocks.back();
+      blockUsed = ameta->inUseHighPE;
+
+      ameta->freeBlocks.pop_back();
+      freeBlockCount--;
+
+      break;
+  }
 
   return fstat;
 }
 
-PSBN GenericAllocator::getFreeBlockAt(uint32_t idx) noexcept {
+PSBN GenericAllocator::getFreeBlockAt(uint32_t idx,
+                                      AllocationStrategy strategy) noexcept {
   if (idx >= parallelism) {
-    auto psbn = sortedBlockList[lastAllocated++].inUse;
+    idx = lastAllocated++;
 
     if (lastAllocated == parallelism) {
       lastAllocated = 0;
     }
-
-    return psbn;
   }
 
-  panic_if(idx >= parallelism, "Invalid parallelism index.");
-
-  return sortedBlockList[idx].inUse;
+  switch (strategy) {
+    case AllocationStrategy::LowestEraseCount:
+      return sortedBlockList[idx].inUse;
+    case AllocationStrategy::HighestEraseCount:
+      return sortedBlockList[idx].inUseHighPE;
+  }
 }
 
 bool GenericAllocator::checkForegroundGCThreshold() noexcept {
