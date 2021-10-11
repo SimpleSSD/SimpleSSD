@@ -17,6 +17,8 @@
 #include "ftl/gc/naive.hh"
 #include "ftl/gc/preemption.hh"
 #include "ftl/mapping/page_level_mapping.hh"
+#include "ftl/read_reclaim/basic_read_reclaim.hh"
+#include "ftl/wear_leveling/static_wear_leveling.hh"
 #include "icl/icl.hh"
 
 namespace SimpleSSD::FTL {
@@ -28,6 +30,10 @@ FTL::FTL(ObjectData &o) : Object(o), ftlobject(), requestCounter(0) {
                                                      Config::Key::MappingMode);
   auto gcmode = (Config::GCType)readConfigUint(Section::FlashTranslation,
                                                Config::Key::GCMode);
+  auto rrmode = (Config::ReadReclaimType)readConfigUint(
+      Section::FlashTranslation, Config::Key::ReadReclaimMode);
+  auto wlmode = (Config::WearLevelingType)readConfigUint(
+      Section::FlashTranslation, Config::Key::WearLevelingMode);
   auto idlemode = (Config::IdletimeType)readConfigUint(
       Section::FlashTranslation, Config::Key::IdleTimeMode);
 
@@ -94,6 +100,46 @@ FTL::FTL(ObjectData &o) : Object(o), ftlobject(), requestCounter(0) {
   }
 
   ftlobject.pJobManager->addBackgroundJob(gcjob);
+
+  // Read-reclaim
+  AbstractJob *rrjob = nullptr;
+
+  switch (rrmode) {
+    case Config::ReadReclaimType::None:
+      break;
+    case Config::ReadReclaimType::Basic:
+      rrjob = new ReadReclaim::BasicReadReclaim(object, ftlobject, pFIL);
+
+      break;
+    default:
+      panic("Unsupported Read-reclaim type.");
+
+      break;
+  }
+
+  if (rrjob) {
+    ftlobject.pJobManager->addBackgroundJob(rrjob);
+  }
+
+  // Wear-leveling
+  AbstractJob *wljob = nullptr;
+
+  switch (wlmode) {
+    case Config::WearLevelingType::None:
+      break;
+    case Config::WearLevelingType::Static:
+      wljob = new WearLeveling::StaticWearLeveling(object, ftlobject, pFIL);
+
+      break;
+    default:
+      panic("Unsupported Wear-leveling type.");
+
+      break;
+  }
+
+  if (wljob) {
+    ftlobject.pJobManager->addBackgroundJob(wljob);
+  }
 
   // Base FTL routine
   switch (mapping) {
