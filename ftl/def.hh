@@ -132,6 +132,11 @@ struct Parameter {
   }
 };
 
+enum class AllocationStrategy {
+  LowestEraseCount,
+  HighestEraseCount,
+};
+
 enum class Operation : uint8_t {
   None,
   Read,

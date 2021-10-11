@@ -105,9 +105,8 @@ void StaticWearLeveling::updateMapping(uint64_t now, uint32_t) {
                  now - ctx.beginAt);
     }
 
-    ftlobject.pMapping->writeMapping(
-        &ctx.request, eventWritePage, true,
-        BlockAllocator::AllocationStrategy::HighestEraseCount);
+    ftlobject.pMapping->writeMapping(&ctx.request, eventWritePage, true,
+                                     AllocationStrategy::HighestEraseCount);
   }
 }
 

@@ -161,9 +161,7 @@ void AbstractBlockCopyJob::updateMapping(uint64_t now, uint32_t blockIndex) {
                  now - ctx.beginAt);
     }
 
-    ftlobject.pMapping->writeMapping(
-        &ctx.request, eventWritePage, true,
-        BlockAllocator::AllocationStrategy::LowestEraseCount);
+    ftlobject.pMapping->writeMapping(&ctx.request, eventWritePage, true);
   }
 }
 

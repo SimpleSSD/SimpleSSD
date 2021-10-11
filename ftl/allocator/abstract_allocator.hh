@@ -18,11 +18,6 @@
 
 namespace SimpleSSD::FTL::BlockAllocator {
 
-enum class AllocationStrategy {
-  LowestEraseCount,
-  HighestEraseCount,
-};
-
 class AbstractAllocator : public Object {
  protected:
   FTLObjectData &ftlobject;

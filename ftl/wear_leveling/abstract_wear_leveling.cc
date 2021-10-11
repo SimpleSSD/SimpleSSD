@@ -33,7 +33,7 @@ void AbstractWearLeveling::initialize() {
     PSBN tmp;
 
     ftlobject.pAllocator->allocateFreeBlock(
-        tmp, BlockAllocator::AllocationStrategy::HighestEraseCount);
+        tmp, AllocationStrategy::HighestEraseCount);
   }
 }
 

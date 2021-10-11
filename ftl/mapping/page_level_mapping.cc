@@ -62,8 +62,8 @@ CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
 }
 
 CPU::Function PageLevelMapping::writeMappingInternal(
-    LSPN lspn, PSPN &pspn, bool fixedIndex,
-    BlockAllocator::AllocationStrategy strategy, bool init) {
+    LSPN lspn, PSPN &pspn, bool fixedIndex, AllocationStrategy strategy,
+    bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -198,8 +198,7 @@ void PageLevelMapping::initialize() {
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
     PSBN tmp;
 
-    allocateFreeBlock(tmp,
-                      BlockAllocator::AllocationStrategy::LowestEraseCount);
+    allocateFreeBlock(tmp, AllocationStrategy::LowestEraseCount);
   }
 }
 
@@ -257,9 +256,8 @@ void PageLevelMapping::readMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
-void PageLevelMapping::writeMapping(
-    Request *cmd, Event eid, bool fixed,
-    BlockAllocator::AllocationStrategy strategy) {
+void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed,
+                                    AllocationStrategy strategy) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -284,8 +282,7 @@ void PageLevelMapping::writeMapping(
 }
 
 void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn) {
-  writeMappingInternal(lspn, pspn, false,
-                       BlockAllocator::AllocationStrategy::LowestEraseCount,
+  writeMappingInternal(lspn, pspn, false, AllocationStrategy::LowestEraseCount,
                        true);
 }
 

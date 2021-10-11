@@ -32,8 +32,7 @@ class PageLevelMapping : public AbstractMapping {
   MakeEntryFunction makeTableEntry;
 
   CPU::Function readMappingInternal(LSPN, PSPN &);
-  CPU::Function writeMappingInternal(LSPN, PSPN &, bool,
-                                     BlockAllocator::AllocationStrategy,
+  CPU::Function writeMappingInternal(LSPN, PSPN &, bool, AllocationStrategy,
                                      bool = false);
   CPU::Function invalidateMappingInternal(LSPN, PSPN &);
 
@@ -50,8 +49,7 @@ class PageLevelMapping : public AbstractMapping {
   uint64_t getPageUsage(LPN, uint64_t) override;
 
   void readMapping(Request *, Event) override;
-  void writeMapping(Request *, Event, bool,
-                    BlockAllocator::AllocationStrategy) override;
+  void writeMapping(Request *, Event, bool, AllocationStrategy) override;
   void writeMapping(LSPN, PSPN &) override;
   void invalidateMapping(Request *, Event) override;
 

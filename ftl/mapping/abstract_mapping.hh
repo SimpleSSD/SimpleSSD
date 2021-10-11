@@ -16,15 +16,7 @@
 #include "hil/request.hh"
 #include "sim/object.hh"
 
-namespace SimpleSSD::FTL {
-
-namespace BlockAllocator {
-
-enum class AllocationStrategy;
-
-}
-
-namespace Mapping {
+namespace SimpleSSD::FTL ::Mapping {
 
 class AbstractMapping : public Object {
  protected:
@@ -185,8 +177,8 @@ class AbstractMapping : public Object {
 
   BlockMetadata &getBlockMetadata(PSBN &);
   uint64_t makeMetadataAddress(PSBN &);
-  PSBN getFreeBlockAt(uint32_t, BlockAllocator::AllocationStrategy);
-  CPU::Function allocateFreeBlock(PSBN &, BlockAllocator::AllocationStrategy);
+  PSBN getFreeBlockAt(uint32_t, AllocationStrategy);
+  CPU::Function allocateFreeBlock(PSBN &, AllocationStrategy);
 
  private:
   struct MemoryCommand {
@@ -284,8 +276,9 @@ class AbstractMapping : public Object {
    * \param[in] eid   Callback event. Event context should be req->getTag().
    * \param[in] fixed Write page to block with same parallelism index.
    */
-  virtual void writeMapping(Request *req, Event eid, bool fixed,
-                            BlockAllocator::AllocationStrategy strategy) = 0;
+  virtual void writeMapping(
+      Request *req, Event eid, bool fixed = false,
+      AllocationStrategy strategy = AllocationStrategy::LowestEraseCount) = 0;
 
   /**
    * \brief Perform FTL write translation (Filling-phase only)
@@ -326,8 +319,6 @@ class AbstractMapping : public Object {
   void restoreCheckpoint(std::istream &) noexcept override;
 };
 
-}  // namespace Mapping
-
-}  // namespace SimpleSSD::FTL
+}  // namespace SimpleSSD::FTL::Mapping
 
 #endif
