@@ -18,7 +18,11 @@ class StaticWearLeveling : public AbstractWearLeveling {
  protected:
   uint64_t beginAt;
 
+  BlockAllocator::AbstractVictimSelection *method;
+
   struct {
+    uint64_t foreground;
+    uint64_t background;
     uint64_t copiedPages;
     uint64_t erasedBlocks;
   } stat;
@@ -27,7 +31,13 @@ class StaticWearLeveling : public AbstractWearLeveling {
     return Log::DebugID::FTL_StaticWearLeveling;
   }
 
+  virtual void triggerForeground(uint64_t now);
+
   void blockEraseCallback(uint64_t now, const PSBN &erased) override;
+
+  void readPage(uint64_t, uint32_t) override;
+  void updateMapping(uint64_t, uint32_t) override;
+  void done(uint64_t, uint32_t) override;
 
  public:
   StaticWearLeveling(ObjectData &, FTLObjectData &, FIL::FIL *);
