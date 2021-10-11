@@ -144,12 +144,14 @@ uint64_t AbstractMapping::makeMetadataAddress(PSBN &psbn) {
   return ftlobject.pAllocator->getMemoryAddressOfBlockMetadata(psbn);
 }
 
-PSBN AbstractMapping::getFreeBlockAt(uint32_t index) {
-  return ftlobject.pAllocator->getFreeBlockAt(index);
+PSBN AbstractMapping::getFreeBlockAt(
+    uint32_t index, BlockAllocator::AllocationStrategy strategy) {
+  return ftlobject.pAllocator->getFreeBlockAt(index, strategy);
 }
 
-CPU::Function AbstractMapping::allocateFreeBlock(PSBN &psbn) {
-  return ftlobject.pAllocator->allocateFreeBlock(psbn);
+CPU::Function AbstractMapping::allocateFreeBlock(
+    PSBN &psbn, BlockAllocator::AllocationStrategy strategy) {
+  return ftlobject.pAllocator->allocateFreeBlock(psbn, strategy);
 }
 
 void AbstractMapping::initialize() {}

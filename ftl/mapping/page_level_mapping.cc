@@ -61,9 +61,9 @@ CPU::Function PageLevelMapping::readMappingInternal(LSPN lspn, PSPN &pspn) {
   return fstat;
 }
 
-CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
-                                                     bool fixedIndex,
-                                                     bool init) {
+CPU::Function PageLevelMapping::writeMappingInternal(
+    LSPN lspn, PSPN &pspn, bool fixedIndex,
+    BlockAllocator::AllocationStrategy strategy, bool init) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -101,13 +101,13 @@ CPU::Function PageLevelMapping::writeMappingInternal(LSPN lspn, PSPN &pspn,
     blockIndex = param.getParallelismIndexFromPSBN(psbn);
   }
 
-  PSBN blockID = getFreeBlockAt(blockIndex);
+  PSBN blockID = getFreeBlockAt(blockIndex, strategy);
   auto bmeta = &getBlockMetadata(blockID);
 
   // Check we have to get new block
   if (bmeta->isFull()) {
     // Get a new block
-    fstat += allocateFreeBlock(blockID);
+    fstat += allocateFreeBlock(blockID, strategy);
 
     bmeta = &getBlockMetadata(blockID);
 
@@ -198,7 +198,8 @@ void PageLevelMapping::initialize() {
   for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
     PSBN tmp;
 
-    allocateFreeBlock(tmp);
+    allocateFreeBlock(tmp,
+                      BlockAllocator::AllocationStrategy::LowestEraseCount);
   }
 }
 
@@ -256,7 +257,9 @@ void PageLevelMapping::readMapping(Request *cmd, Event eid) {
   requestMemoryAccess(eid, cmd->getTag(), fstat);
 }
 
-void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed) {
+void PageLevelMapping::writeMapping(
+    Request *cmd, Event eid, bool fixed,
+    BlockAllocator::AllocationStrategy strategy) {
   CPU::Function fstat;
   CPU::markFunction(fstat);
 
@@ -269,7 +272,7 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed) {
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
-  fstat += writeMappingInternal(lspn, pspn, fixed);
+  fstat += writeMappingInternal(lspn, pspn, fixed, strategy);
 
   cmd->setPPN(param.makePPN(pspn, superpageIndex));
 
@@ -281,7 +284,9 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed) {
 }
 
 void PageLevelMapping::writeMapping(LSPN lspn, PSPN &pspn) {
-  writeMappingInternal(lspn, pspn, false, true);
+  writeMappingInternal(lspn, pspn, false,
+                       BlockAllocator::AllocationStrategy::LowestEraseCount,
+                       true);
 }
 
 void PageLevelMapping::invalidateMapping(Request *cmd, Event eid) {
