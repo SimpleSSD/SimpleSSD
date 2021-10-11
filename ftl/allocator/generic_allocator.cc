@@ -164,6 +164,8 @@ PSBN GenericAllocator::getFreeBlockAt(uint32_t idx,
     case AllocationStrategy::HighestEraseCount:
       return sortedBlockList[idx].inUseHighPE;
   }
+
+  return PSBN{};
 }
 
 bool GenericAllocator::checkForegroundGCThreshold() noexcept {
