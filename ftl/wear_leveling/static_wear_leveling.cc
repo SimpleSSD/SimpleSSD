@@ -16,6 +16,9 @@ namespace SimpleSSD::FTL::WearLeveling {
 StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
                                        FIL::FIL *fil)
     : AbstractWearLeveling(o, fo, fil), beginAt(0) {
+  threshold = (double)readConfigFloat(Section::FlashTranslation,
+                                      Config::Key::StaticWearLevelingThreshold);
+
   method = BlockAllocator::getVictimSelectionAlgorithm(
       BlockAllocator::VictimSelectionID::LeastErased);
 
@@ -25,15 +28,31 @@ StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
 void StaticWearLeveling::triggerForeground(uint64_t now) {
   auto &targetBlock = targetBlocks[0];
 
-  // 1. Calculate wear leveling factor
-  // 2. Check threshold
-  // 3. If wear leveling factor <= threshold, do below
-  if (state < State::Foreground) {
-    ftlobject.pAllocator->getVictimBlock(targetBlock, method, eventReadPage, 0);
+  double total = 0.;
+  double square = 0.;
+  double result = 1.;
 
-    state = State::Foreground;
-    stat.foreground++;
-    beginAt = now;
+  for (uint64_t i = 0; i < param->totalPhysicalBlocks; i++) {
+    auto &bmeta = ftlobject.pAllocator->getBlockMetadata(PSBN{i});
+    auto cycle = (double)bmeta.erasedCount;
+
+    total += cycle;
+    square += cycle * cycle;
+  }
+
+  if (square > 0.) {
+    result = total * total / square / (double)param->totalPhysicalBlocks;
+  }
+
+  if (result <= threshold) {
+    if (state < State::Foreground) {
+      ftlobject.pAllocator->getVictimBlock(targetBlock, method, eventReadPage,
+                                           0);
+
+      state = State::Foreground;
+      stat.foreground++;
+      beginAt = now;
+    }
   }
 }
 

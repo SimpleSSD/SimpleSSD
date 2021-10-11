@@ -20,6 +20,8 @@ class StaticWearLeveling : public AbstractWearLeveling {
 
   BlockAllocator::AbstractVictimSelection *method;
 
+  double threshold;
+
   struct {
     uint64_t foreground;
     uint64_t background;
