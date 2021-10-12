@@ -60,6 +60,11 @@ bool BasicJobManager::isRunning() {
 }
 
 void BasicJobManager::triggerByUser(TriggerType when, Request *req) {
+  if (req->getSLPN() + req->getNLP() != req->getLPN() + 1) {
+    // Ignore
+    return;
+  }
+
   uint64_t now = getTick();
 
   for (auto &iter : jobs) {
