@@ -22,6 +22,8 @@ StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
   method = BlockAllocator::getVictimSelectionAlgorithm(
       BlockAllocator::VictimSelectionID::LeastErased);
 
+  ftlobject.pAllocator->registerBlockEraseEventListener(eventEraseCallback);
+
   resetStatValues();
 }
 
