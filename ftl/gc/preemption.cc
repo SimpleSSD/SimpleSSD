@@ -21,6 +21,8 @@ void PreemptibleGC::initialize() {
             getParallelBlockCount());
 
   pendingFILs.resize(targetBlocks.size());
+
+  AdvancedGC::initialize();
 }
 
 void PreemptibleGC::triggerBackground(uint64_t now) {

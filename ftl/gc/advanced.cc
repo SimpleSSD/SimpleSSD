@@ -20,6 +20,8 @@ AdvancedGC::~AdvancedGC() {}
 void AdvancedGC::initialize() {
   configure(Log::DebugID::FTL_AdvancedGC, "GC    ", "FTL::GC",
             getParallelBlockCount());
+
+  NaiveGC::initialize();
 }
 
 void AdvancedGC::triggerBackground(uint64_t now) {

@@ -220,6 +220,10 @@ void AbstractBlockCopyJob::eraseDone(uint64_t now, uint32_t blockIndex) {
 
 void AbstractBlockCopyJob::configure(const Log::DebugID logID, const char *log,
                                      const char *obj, const uint32_t size) {
+  if (UNLIKELY(logprefix)) {
+    return;
+  }
+
   std::string prefix = obj;
 
   {
