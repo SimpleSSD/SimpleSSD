@@ -12,15 +12,15 @@
 namespace SimpleSSD::FTL::GC {
 
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : AdvancedGC(o, fo, f) {
-  pendingFILs.resize(targetBlocks.size());
-}
+    : AdvancedGC(o, fo, f) {}
 
 PreemptibleGC::~PreemptibleGC() {}
 
 void PreemptibleGC::initialize() {
   configure(Log::DebugID::FTL_PreemptibleGC, "GC    ", "FTL::GC",
             getParallelBlockCount());
+
+  pendingFILs.resize(targetBlocks.size());
 }
 
 void PreemptibleGC::triggerBackground(uint64_t now) {
