@@ -270,6 +270,14 @@ void PageLevelMapping::writeMapping(Request *cmd, Event eid, bool fixed,
   requestedWriteCount++;
   writeLPNCount += param.superpage;
 
+  if (UNLIKELY(fixed)) {
+    PPN ppn = cmd->getPPN();
+
+    panic_if(!ppn.isValid(), "cmd->ppn must be valid when fixed is true.");
+
+    pspn = param.getPSPNFromPPN(ppn);
+  }
+
   fstat += writeMappingInternal(lspn, pspn, fixed, strategy);
 
   cmd->setPPN(param.makePPN(pspn, superpageIndex));
