@@ -14,9 +14,7 @@ namespace SimpleSSD::FTL::ReadReclaim {
 
 AbstractReadReclaim::AbstractReadReclaim(ObjectData &o, FTLObjectData &fo,
                                          FIL::FIL *fil)
-    : AbstractBlockCopyJob(o, fo, fil),
-      state(State::Idle),
-      engine(std::random_device{}()) {}
+    : AbstractBlockCopyJob(o, fo, fil), state(State::Idle) {}
 
 AbstractReadReclaim::~AbstractReadReclaim() {}
 
@@ -48,7 +46,7 @@ uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PSBN &psbn) {
            gamma * pow(cycles, p) * pow(reads, q);  // disturbance
   }
 
-  return std::binomial_distribution<uint32_t>{pageSize, rber}(engine);
+  return (uint32_t)(pageSize * rber);
 }
 
 void AbstractReadReclaim::initialize() {}

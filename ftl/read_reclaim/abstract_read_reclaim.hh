@@ -30,8 +30,6 @@ class AbstractReadReclaim : public AbstractBlockCopyJob {
  protected:
   State state;
 
-  std::default_random_engine engine;
-
   uint32_t estimateBitError(uint64_t now, const PSBN &psbn);
 
  public:
