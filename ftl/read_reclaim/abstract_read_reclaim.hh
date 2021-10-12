@@ -49,7 +49,7 @@ class AbstractReadReclaim : public AbstractBlockCopyJob {
 
   /* Read Reclaim APIs */
 
-  virtual bool doErrorCheck(const PPN &);
+  virtual bool doErrorCheck(const PPN &) = 0;
 
   void createCheckpoint(std::ostream &) const noexcept override;
   void restoreCheckpoint(std::istream &) noexcept override;
