@@ -170,10 +170,12 @@ void Filling::start() noexcept {
   uint32_t targetCycle =
       readConfigUint(Section::FlashTranslation, Config::Key::EraseCount);
 
-  for (uint64_t psbn = 0; psbn < totalPhysicalSuperBlocks; psbn++) {
-    auto &bmeta = ftlobject.pAllocator->getBlockMetadata(PSBN{psbn});
+  if (UNLIKELY(targetCycle > 0)) {
+    for (uint64_t psbn = 0; psbn < totalPhysicalSuperBlocks; psbn++) {
+      auto &bmeta = ftlobject.pAllocator->getBlockMetadata(PSBN{psbn});
 
-    bmeta.erasedCount = targetCycle;
+      bmeta.erasedCount = targetCycle;
+    }
   }
 
   debugprint(Log::DebugID::FTL, "Initialization finished");
