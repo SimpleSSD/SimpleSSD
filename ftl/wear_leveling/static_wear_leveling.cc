@@ -25,6 +25,13 @@ StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
   resetStatValues();
 }
 
+StaticWearLeveling::~StaticWearLeveling() {}
+
+void StaticWearLeveling::initialize() {
+  configure(Log::DebugID::FTL_StaticWearLeveling, "WL    ", "FTL::WearLeveling",
+            1);
+}
+
 void StaticWearLeveling::triggerForeground(uint64_t now) {
   auto &targetBlock = targetBlocks[0];
 
@@ -55,8 +62,6 @@ void StaticWearLeveling::triggerForeground(uint64_t now) {
     }
   }
 }
-
-StaticWearLeveling::~StaticWearLeveling() {}
 
 void StaticWearLeveling::blockEraseCallback(uint64_t now, const PSBN &) {
   triggerForeground(now);

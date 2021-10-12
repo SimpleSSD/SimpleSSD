@@ -61,6 +61,11 @@ void BasicReadReclaim::done(uint64_t now, uint32_t) {
   }
 }
 
+void BasicReadReclaim::initialize() {
+  configure(Log::DebugID::FTL_BasicReadReclaim, "RR    ",
+            "FTL::BasicReadReclaim", 1);
+}
+
 bool BasicReadReclaim::doErrorCheck(const PPN &ppn) {
   uint64_t now = getTick();
   auto &targetBlock = targetBlocks[0];

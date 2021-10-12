@@ -29,10 +29,6 @@ class StaticWearLeveling : public AbstractWearLeveling {
     uint64_t erasedBlocks;
   } stat;
 
-  Log::DebugID getDebugLogID() override {
-    return Log::DebugID::FTL_StaticWearLeveling;
-  }
-
   virtual void triggerForeground(uint64_t now);
 
   void blockEraseCallback(uint64_t now, const PSBN &erased) override;
@@ -44,6 +40,8 @@ class StaticWearLeveling : public AbstractWearLeveling {
  public:
   StaticWearLeveling(ObjectData &, FTLObjectData &, FIL::FIL *);
   ~StaticWearLeveling();
+
+  void initialize() override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

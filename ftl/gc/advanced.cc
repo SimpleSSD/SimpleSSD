@@ -17,6 +17,11 @@ AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
 AdvancedGC::~AdvancedGC() {}
 
+void AdvancedGC::initialize() {
+  configure(Log::DebugID::FTL_AdvancedGC, "GC    ", "FTL::GC",
+            getParallelBlockCount());
+}
+
 void AdvancedGC::triggerBackground(uint64_t now) {
   if (UNLIKELY(ftlobject.pAllocator->checkBackgroundGCThreshold() &&
                state == State::Idle)) {

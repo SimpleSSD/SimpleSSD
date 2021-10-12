@@ -54,6 +54,11 @@ uint32_t NaiveGC::getParallelBlockCount() {
   return MAX(fgcBlocksToErase, bgcBlocksToErase);
 }
 
+void NaiveGC::initialize() {
+  configure(Log::DebugID::FTL_NaiveGC, "GC    ", "FTL::GC",
+            getParallelBlockCount());
+}
+
 void NaiveGC::triggerForeground() {
   if (UNLIKELY(ftlobject.pAllocator->checkForegroundGCThreshold() &&
                state == State::Idle)) {

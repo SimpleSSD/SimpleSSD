@@ -34,10 +34,6 @@ class AbstractReadReclaim : public AbstractBlockCopyJob {
 
   uint32_t estimateBitError(uint64_t now, const PSBN &psbn);
 
-  uint32_t getParallelBlockCount() override { return 1; }
-  std::string getPrefix() override { return "FTL::BasicReadReclaim"; }
-  const char *getLogPrefix() override { return "RR    "; }
-
  public:
   AbstractReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractReadReclaim();

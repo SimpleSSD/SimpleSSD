@@ -18,6 +18,11 @@ PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
 PreemptibleGC::~PreemptibleGC() {}
 
+void PreemptibleGC::initialize() {
+  configure(Log::DebugID::FTL_PreemptibleGC, "GC    ", "FTL::GC",
+            getParallelBlockCount());
+}
+
 void PreemptibleGC::triggerBackground(uint64_t now) {
   if (UNLIKELY(ftlobject.pAllocator->checkBackgroundGCThreshold() &&
                state < State::Foreground)) {

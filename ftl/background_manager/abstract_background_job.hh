@@ -82,34 +82,6 @@ class AbstractBlockCopyJob : public AbstractJob {
   const Log::DebugID logid;
   const char *const logprefix;
 
-  //!< Get # of blocks to copy in parallel
-  virtual uint32_t getParallelBlockCount() {
-    panic("AbstractBlockCopyJob::getParallelBlockCount() must be overriden.");
-
-    return 1;
-  }
-
-  //!< Get prefix of objects
-  virtual std::string getPrefix() {
-    panic("AbstractBlockCopyJob::getPrefix() must be overriden.");
-
-    return "";
-  }
-
-  //!< Get prefix of log
-  virtual const char *getLogPrefix() {
-    panic("AbstractBlockCopyJob::getLogPrefix() must be overriden.");
-
-    return "";
-  }
-
-  //!< Get debug lod ID
-  virtual Log::DebugID getDebugLogID() {
-    panic("AbstractBlockCopyJob::getDebugLogID() must be overriden.");
-
-    return Log::DebugID::Common;
-  };
-
   //!< Helper function to calculate offset of buffer
   inline uint64_t makeBufferAddress(uint32_t blockIndex,
                                     uint32_t superpageIndex) {
@@ -200,6 +172,17 @@ class AbstractBlockCopyJob : public AbstractJob {
    */
   Event eventDone;
   virtual void done(uint64_t now, uint32_t blockIndex) = 0;
+
+  /**
+   * \brief Configure abstract job
+   *
+   * \param logID Debug log Id to use
+   * \param log   Log prefix to use
+   * \param obj   Object name to use
+   * \param size  Size of targetBlocks
+   */
+  void configure(const Log::DebugID logID, const char *log, const char *obj,
+                 const uint32_t size);
 
  public:
   AbstractBlockCopyJob(ObjectData &, FTLObjectData &, FIL::FIL *);

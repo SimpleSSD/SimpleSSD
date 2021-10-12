@@ -28,16 +28,14 @@ class BasicReadReclaim : public AbstractReadReclaim {
     uint64_t erasedBlocks;
   } stat;
 
-  Log::DebugID getDebugLogID() override {
-    return Log::DebugID::FTL_BasicReadReclaim;
-  }
-
   void readPage(uint64_t, uint32_t) override;
   void done(uint64_t, uint32_t) override;
 
  public:
   BasicReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
   ~BasicReadReclaim();
+
+  void initialize() override;
 
   bool doErrorCheck(const PPN &) override;
 

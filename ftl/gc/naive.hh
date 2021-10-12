@@ -53,8 +53,7 @@ class NaiveGC : public AbstractGC {
     }
   }
 
-  uint32_t getParallelBlockCount() override;
-  Log::DebugID getDebugLogID() override { return Log::DebugID::FTL_NaiveGC; }
+  uint32_t getParallelBlockCount();
 
   Event eventTrigger;
   virtual void trigger();
@@ -66,6 +65,8 @@ class NaiveGC : public AbstractGC {
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~NaiveGC();
+
+  void initialize() override;
 
   void triggerForeground() override;
   void requestArrived(Request *) override;

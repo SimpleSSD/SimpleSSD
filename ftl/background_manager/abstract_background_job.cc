@@ -29,46 +29,8 @@ AbstractBlockCopyJob::AbstractBlockCopyJob(ObjectData &o, FTLObjectData &fo,
       bufferBaseAddress(0),
       superpage(param->pageSize),
       pageSize(object.config->getNANDStructure()->pageSize),
-      logid(getDebugLogID()),
-      logprefix(getLogPrefix()) {
-  const auto size = getParallelBlockCount();
-  auto prefix = getPrefix();
-
-  targetBlocks.resize(size);
-
-  // Memory allocation
-  auto &_bufferBaseAddress = const_cast<uint64_t &>(bufferBaseAddress);
-  auto required = superpage * pageSize * size;
-
-  if (object.memory->allocate(required, Memory::MemoryType::SRAM, "", true) ==
-      0) {
-    _bufferBaseAddress = object.memory->allocate(
-        required, Memory::MemoryType::SRAM, prefix + "::Buffer");
-  }
-  else {
-    _bufferBaseAddress = object.memory->allocate(
-        required, Memory::MemoryType::DRAM, prefix + "::Buffer");
-  }
-
-  // Create events
-  eventReadPage =
-      createEvent([this](uint64_t t, uint64_t d) { readPage(t, d); },
-                  prefix + "::eventReadPage");
-  eventUpdateMapping =
-      createEvent([this](uint64_t t, uint64_t d) { updateMapping(t, d); },
-                  prefix + "::eventUpdateMapping");
-  eventWritePage =
-      createEvent([this](uint64_t t, uint64_t d) { writePage(t, d); },
-                  prefix + "::eventWritePage");
-  eventWriteDone =
-      createEvent([this](uint64_t t, uint64_t d) { writeDone(t, d); },
-                  prefix + "::eventWriteDone");
-  eventEraseDone =
-      createEvent([this](uint64_t t, uint64_t d) { eraseDone(t, d); },
-                  prefix + "::eventEraseDone");
-  eventDone = createEvent([this](uint64_t t, uint64_t d) { done(t, d); },
-                          prefix + "::eventDone");
-}
+      logid(Log::DebugID::Common),
+      logprefix(nullptr) {}
 
 AbstractBlockCopyJob::~AbstractBlockCopyJob() {}
 
@@ -254,6 +216,54 @@ void AbstractBlockCopyJob::eraseDone(uint64_t now, uint32_t blockIndex) {
     ftlobject.pAllocator->reclaimBlock(targetBlock.blockID, eventDone,
                                        blockIndex);
   }
+}
+
+void AbstractBlockCopyJob::configure(const Log::DebugID logID, const char *log,
+                                     const char *obj, const uint32_t size) {
+  std::string prefix = obj;
+
+  {
+    auto &_logid = const_cast<Log::DebugID &>(logid);
+    auto &_logprefix = const_cast<const char *&>(logprefix);
+
+    _logid = logID;
+    _logprefix = log;
+  }
+
+  targetBlocks.resize(size);
+
+  // Memory allocation
+  auto &_bufferBaseAddress = const_cast<uint64_t &>(bufferBaseAddress);
+  auto required = superpage * pageSize * size;
+
+  if (object.memory->allocate(required, Memory::MemoryType::SRAM, "", true) ==
+      0) {
+    _bufferBaseAddress = object.memory->allocate(
+        required, Memory::MemoryType::SRAM, prefix + "::Buffer");
+  }
+  else {
+    _bufferBaseAddress = object.memory->allocate(
+        required, Memory::MemoryType::DRAM, prefix + "::Buffer");
+  }
+
+  // Create events
+  eventReadPage =
+      createEvent([this](uint64_t t, uint64_t d) { readPage(t, d); },
+                  prefix + "::eventReadPage");
+  eventUpdateMapping =
+      createEvent([this](uint64_t t, uint64_t d) { updateMapping(t, d); },
+                  prefix + "::eventUpdateMapping");
+  eventWritePage =
+      createEvent([this](uint64_t t, uint64_t d) { writePage(t, d); },
+                  prefix + "::eventWritePage");
+  eventWriteDone =
+      createEvent([this](uint64_t t, uint64_t d) { writeDone(t, d); },
+                  prefix + "::eventWriteDone");
+  eventEraseDone =
+      createEvent([this](uint64_t t, uint64_t d) { eraseDone(t, d); },
+                  prefix + "::eventEraseDone");
+  eventDone = createEvent([this](uint64_t t, uint64_t d) { done(t, d); },
+                          prefix + "::eventDone");
 }
 
 void AbstractBlockCopyJob::createCheckpoint(std::ostream &out) const noexcept {
