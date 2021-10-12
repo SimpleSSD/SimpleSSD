@@ -27,7 +27,7 @@ AbstractBlockCopyJob::AbstractBlockCopyJob(ObjectData &o, FTLObjectData &fo,
       pFIL(fil),
       param(ftlobject.pMapping->getInfo()),
       bufferBaseAddress(0),
-      superpage(param->pageSize),
+      superpage(param->superpage),
       pageSize(object.config->getNANDStructure()->pageSize),
       logid(Log::DebugID::Common),
       logprefix(nullptr) {}
