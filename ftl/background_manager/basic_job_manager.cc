@@ -13,7 +13,8 @@ BasicJobManager::BasicJobManager(ObjectData &o)
     : AbstractJobManager(o),
       threshold(readConfigUint(Section::FlashTranslation,
                                Config::Key::IdleTimeThreshold)),
-      lastScheduledAt(0) {
+      lastScheduledAt(0),
+      lastCompleteAt(0) {
   eventIdletime =
       createEvent([this](uint64_t t, uint64_t) { idletimeEvent(t); },
                   "FTL::BasicJobManager::eventIdletime");
