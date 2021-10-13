@@ -94,6 +94,8 @@ class GenericAllocator : public AbstractAllocator {
   CPU::Function allocateFreeBlock(PSBN &, AllocationStrategy) override;
   PSBN getFreeBlockAt(uint32_t, AllocationStrategy) noexcept override;
 
+  void sortBlockList() noexcept override;
+
   bool checkForegroundGCThreshold() noexcept override;
   bool checkBackgroundGCThreshold() noexcept override;
   void getVictimBlock(CopyContext &, AbstractVictimSelection *, Event,

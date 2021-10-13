@@ -102,6 +102,15 @@ class AbstractAllocator : public Object {
   virtual void initialize();
 
   /**
+   * \brief Sort intermal block list data structure (Filling-phase only)
+   *
+   * This function is called after filling P/E cycle distribution.
+   * If your allocator maintain sorted list of blocks in erase count, you need
+   * to sort block list when this function is called.
+   */
+  virtual void sortBlockList() noexcept = 0;
+
+  /**
    * \brief Check Foreground GC trigger threshold.
    *
    * \return True if Foreground GC should be invoked.

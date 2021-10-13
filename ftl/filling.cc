@@ -178,6 +178,8 @@ void Filling::start() noexcept {
     }
   }
 
+  ftlobject.pAllocator->sortBlockList();
+
   debugprint(Log::DebugID::FTL, "Initialization finished");
 }
 
