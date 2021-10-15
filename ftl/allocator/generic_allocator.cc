@@ -168,6 +168,24 @@ PSBN GenericAllocator::getFreeBlockAt(uint32_t idx,
   return PSBN{};
 }
 
+void GenericAllocator::sortBlockList() noexcept {
+  for (auto &iter : sortedBlockList) {
+    iter.freeBlocks.sort([this](const PSBN &lhs, const PSBN &rhs) -> bool {
+      auto &lmeta = blockMetadata[lhs];
+      auto &rmeta = blockMetadata[rhs];
+
+      return lmeta.erasedCount < rmeta.erasedCount;
+    });
+
+    iter.fullBlocks.sort([this](const PSBN &lhs, const PSBN &rhs) -> bool {
+      auto &lmeta = blockMetadata[lhs];
+      auto &rmeta = blockMetadata[rhs];
+
+      return lmeta.erasedCount < rmeta.erasedCount;
+    });
+  }
+}
+
 bool GenericAllocator::checkForegroundGCThreshold() noexcept {
   return (float)freeBlockCount / totalSuperblock < fgcThreshold;
 }
