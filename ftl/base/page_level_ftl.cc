@@ -150,6 +150,9 @@ bool PageLevelFTL::write(Request *cmd) {
                    cmd->getLPN(), cmd->getTag());
       }
 
+      ftlobject.pJobManager->triggerByUser(TriggerType::ForegroundGCRequest,
+                                           cmd);
+
       return false;
     }
   }

@@ -60,6 +60,16 @@ bool BasicJobManager::isRunning() {
 }
 
 void BasicJobManager::triggerByUser(TriggerType when, Request *req) {
+  if (UNLIKELY(when == TriggerType::ForegroundGCRequest)) {
+    // TODO: We don't know which background job is GC
+    // Just invoke all jobs with ForegroundGCRequest
+    for (auto &iter : jobs) {
+      iter->triggerByUser(when, req);
+    }
+
+    return;
+  }
+
   if (req->getSLPN() + req->getNLP() != req->getLPN() + 1) {
     // Ignore
     return;

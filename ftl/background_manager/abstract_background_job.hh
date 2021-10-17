@@ -26,6 +26,9 @@ enum class TriggerType : uint32_t {
   WriteComplete,  // After FIL completion
 
   // TODO: TRIM/Format?
+
+  ForegroundGCRequest,  // This is special -- FTL requires forced GC invocation
+                        // Note: Pointer to Request may nullptr
 };
 
 class AbstractJob : public Object {

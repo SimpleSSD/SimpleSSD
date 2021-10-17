@@ -60,6 +60,7 @@ void AbstractGC::triggerByUser(TriggerType when, Request *req) {
 
       break;
     case TriggerType::WriteComplete:
+    case TriggerType::ForegroundGCRequest:
       triggerForeground();
 
       break;
