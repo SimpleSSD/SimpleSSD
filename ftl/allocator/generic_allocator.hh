@@ -50,11 +50,15 @@ class GenericAllocator : public AbstractAllocator {
       RESTORE_SCALAR(in, inUse);
       RESTORE_SCALAR(in, inUseHighPE);
 
+      freeBlocks.clear();
+
       RESTORE_STL(in, i, {
         auto &iter = freeBlocks.emplace_back(PSBN{});
 
         RESTORE_SCALAR(in, iter);
       });
+
+      fullBlocks.clear();
 
       RESTORE_STL(in, i, {
         auto &iter = fullBlocks.emplace_back(PSBN{});
