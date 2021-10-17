@@ -287,8 +287,10 @@ void GenericAllocator::getPageStatistics(uint64_t &valid,
     auto &block = blockMetadata[i];
 
     if (block.nextPageToWrite > 0) {
-      valid += block.validPages.count();
-      invalid += block.nextPageToWrite - valid;
+      const auto _valid = block.validPages.count();
+
+      valid += _valid;
+      invalid += block.nextPageToWrite - _valid;
     }
   }
 }
