@@ -29,9 +29,11 @@ StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
 
 StaticWearLeveling::~StaticWearLeveling() {}
 
-void StaticWearLeveling::initialize() {
+void StaticWearLeveling::initialize(bool restore) {
   configure(Log::DebugID::FTL_StaticWearLeveling, "WL    ", "FTL::WearLeveling",
             1);
+
+  AbstractWearLeveling::initialize(restore);
 }
 
 void StaticWearLeveling::triggerForeground(uint64_t now) {

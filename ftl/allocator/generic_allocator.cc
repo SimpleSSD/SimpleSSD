@@ -27,8 +27,8 @@ GenericAllocator::GenericAllocator(ObjectData &o, FTLObjectData &fo)
 
 GenericAllocator::~GenericAllocator() {}
 
-void GenericAllocator::initialize() {
-  AbstractAllocator::initialize();
+void GenericAllocator::initialize(bool restore) {
+  AbstractAllocator::initialize(restore);
 
   {
     auto &_totalSuperblock = const_cast<uint64_t &>(totalSuperblock);
@@ -73,12 +73,15 @@ void GenericAllocator::initialize() {
   lastErased = 0;
   lastAllocated = 0;
 
-  // Fill data
-  uint64_t left = totalSuperblock / parallelism;
+  // Only fills freeblock list when not restore from checkpoint
+  if (LIKELY(!restore)) {
+    // Fill data
+    uint64_t left = totalSuperblock / parallelism;
 
-  for (uint32_t i = 0; i < parallelism; i++) {
-    for (uint64_t j = 0; j < left; j++) {
-      sortedBlockList[i].freeBlocks.emplace_back(i + j * parallelism);
+    for (uint32_t i = 0; i < parallelism; i++) {
+      for (uint64_t j = 0; j < left; j++) {
+        sortedBlockList[i].freeBlocks.emplace_back(i + j * parallelism);
+      }
     }
   }
 }

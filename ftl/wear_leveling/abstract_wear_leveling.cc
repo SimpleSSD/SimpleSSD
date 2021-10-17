@@ -26,14 +26,16 @@ void AbstractWearLeveling::blockEraseCallback(uint64_t, const PSBN &) {
   panic("AbstractWearLeveling::blockEraseCallback() must be overriden.");
 }
 
-void AbstractWearLeveling::initialize() {
-  auto param = ftlobject.pMapping->getInfo();
+void AbstractWearLeveling::initialize(bool restore) {
+  if (LIKELY(!restore)) {
+    auto param = ftlobject.pMapping->getInfo();
 
-  for (uint64_t i = 0; i < param->parallelism; i += param->superpage) {
-    PSBN tmp;
+    for (uint64_t i = 0; i < param->parallelism; i += param->superpage) {
+      PSBN tmp;
 
-    ftlobject.pAllocator->allocateFreeBlock(
-        tmp, AllocationStrategy::HighestEraseCount);
+      ftlobject.pAllocator->allocateFreeBlock(
+          tmp, AllocationStrategy::HighestEraseCount);
+    }
   }
 }
 

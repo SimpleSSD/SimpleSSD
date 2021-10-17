@@ -28,8 +28,10 @@ class AbstractJobManager : public Object {
 
   /**
    * \brief Initialize registered background job
+   *
+   * \param[in] restore True if restore state from checkpoint
    */
-  virtual void initialize() = 0;
+  virtual void initialize(bool restore) = 0;
 
   /**
    * \brief Check any of background job is running

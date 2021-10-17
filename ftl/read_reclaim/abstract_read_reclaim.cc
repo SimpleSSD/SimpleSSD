@@ -49,7 +49,7 @@ uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PSBN &psbn) {
   return (uint32_t)(pageSize * rber);
 }
 
-void AbstractReadReclaim::initialize() {}
+void AbstractReadReclaim::initialize(bool) {}
 
 bool AbstractReadReclaim::isRunning() {
   return state > State::Idle;

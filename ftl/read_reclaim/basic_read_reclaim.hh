@@ -35,7 +35,7 @@ class BasicReadReclaim : public AbstractReadReclaim {
   BasicReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
   ~BasicReadReclaim();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   bool doErrorCheck(const PPN &) override;
 

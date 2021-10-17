@@ -44,7 +44,7 @@ class PageLevelMapping : public AbstractMapping {
   PageLevelMapping(ObjectData &, FTLObjectData &);
   ~PageLevelMapping();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   uint64_t getPageUsage(LPN, uint64_t) override;
 

@@ -175,14 +175,15 @@ Request *FTL::insertRequest(Request &&req) {
 }
 
 void FTL::initialize() {
-  // Initialize all
-  ftlobject.pAllocator->initialize();
-  ftlobject.pMapping->initialize();
-  ftlobject.pFTL->initialize();
+  bool restore = readConfigBoolean(
+      Section::Simulation, SimpleSSD::Config::Key::RestoreFromCheckpoint);
 
-  if (UNLIKELY(
-          readConfigBoolean(Section::Simulation,
-                            SimpleSSD::Config::Key::RestoreFromCheckpoint))) {
+  // Initialize all
+  ftlobject.pAllocator->initialize(restore);
+  ftlobject.pMapping->initialize(restore);
+  ftlobject.pFTL->initialize(restore);
+
+  if (UNLIKELY(restore)) {
     debugprint(Log::DebugID::FTL, "Restoring from checkpoint. Skip filling.");
   }
   else {
@@ -193,7 +194,7 @@ void FTL::initialize() {
   }
 
   // Initialize background jobs after filling
-  ftlobject.pJobManager->initialize();
+  ftlobject.pJobManager->initialize(restore);
 }
 
 const Parameter *FTL::getInfo() {

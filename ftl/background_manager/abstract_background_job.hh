@@ -41,8 +41,10 @@ class AbstractJob : public Object {
    *
    * This function will be called after all objects in FTLObjectData have been
    * initialized.
+   *
+   * \param[in] restore True if restore state from checkpoint
    */
-  virtual void initialize() = 0;
+  virtual void initialize(bool restore) = 0;
 
   /**
    * \brief Query job is running

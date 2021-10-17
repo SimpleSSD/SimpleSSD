@@ -16,7 +16,7 @@ AbstractAllocator::AbstractAllocator(ObjectData &o, FTLObjectData &fo)
 
 AbstractAllocator::~AbstractAllocator() {}
 
-void AbstractAllocator::initialize() {}
+void AbstractAllocator::initialize(bool) {}
 
 void AbstractAllocator::callEvents(const PSBN &psbn) {
   for (auto &iter : eventList) {

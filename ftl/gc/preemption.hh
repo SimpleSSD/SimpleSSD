@@ -66,7 +66,7 @@ class PreemptibleGC : public AdvancedGC {
   PreemptibleGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~PreemptibleGC();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   void triggerForeground() override;
   void requestArrived(Request *) override;

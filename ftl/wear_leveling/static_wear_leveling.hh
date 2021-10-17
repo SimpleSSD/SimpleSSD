@@ -41,7 +41,7 @@ class StaticWearLeveling : public AbstractWearLeveling {
   StaticWearLeveling(ObjectData &, FTLObjectData &, FIL::FIL *);
   ~StaticWearLeveling();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

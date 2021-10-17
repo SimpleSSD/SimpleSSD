@@ -17,11 +17,11 @@ AdvancedGC::AdvancedGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
 AdvancedGC::~AdvancedGC() {}
 
-void AdvancedGC::initialize() {
+void AdvancedGC::initialize(bool restore) {
   configure(Log::DebugID::FTL_AdvancedGC, "GC    ", "FTL::GC",
             getParallelBlockCount());
 
-  NaiveGC::initialize();
+  NaiveGC::initialize(restore);
 }
 
 void AdvancedGC::triggerBackground(uint64_t now) {

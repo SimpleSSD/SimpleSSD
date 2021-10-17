@@ -232,8 +232,10 @@ class AbstractMapping : public Object {
    *   // Your initialization code here.
    * }
    * \endcode
+   *
+   * \param[in] restore True if restore state from checkpoint
    */
-  virtual void initialize();
+  virtual void initialize(bool restore);
 
   //! Return FTL parameter structure
   const Parameter *getInfo();

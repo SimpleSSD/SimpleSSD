@@ -98,8 +98,10 @@ class AbstractAllocator : public Object {
    *   // Your initialization code here.
    * }
    * \endcode
+   *
+   * \param[in] restore True if restore state from checkpoint
    */
-  virtual void initialize();
+  virtual void initialize(bool restore);
 
   /**
    * \brief Sort intermal block list data structure (Filling-phase only)

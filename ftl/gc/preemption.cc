@@ -16,13 +16,13 @@ PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
 
 PreemptibleGC::~PreemptibleGC() {}
 
-void PreemptibleGC::initialize() {
+void PreemptibleGC::initialize(bool restore) {
   configure(Log::DebugID::FTL_PreemptibleGC, "GC    ", "FTL::GC",
             getParallelBlockCount());
 
   pendingFILs.resize(targetBlocks.size());
 
-  AdvancedGC::initialize();
+  AdvancedGC::initialize(restore);
 }
 
 void PreemptibleGC::triggerBackground(uint64_t now) {

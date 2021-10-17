@@ -66,7 +66,7 @@ class NaiveGC : public AbstractGC {
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~NaiveGC();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   void triggerForeground() override;
   void requestArrived(Request *) override;

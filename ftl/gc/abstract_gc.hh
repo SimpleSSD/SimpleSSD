@@ -42,7 +42,7 @@ class AbstractGC : public AbstractBlockCopyJob {
    *
    * Immediately call AbstractGC::initialize() when you override this function.
    */
-  void initialize() override;
+  void initialize(bool) override;
 
   /**
    * \brief Return GC is running

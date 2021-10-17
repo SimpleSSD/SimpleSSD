@@ -50,8 +50,10 @@ class AbstractFTL : public Object {
    * \brief FTL initialization function
    *
    * Immediately call AbstractFTL::initialize() when you override this function.
+   *
+   * \param[in] restore True if restore state from checkpoint
    */
-  virtual void initialize();
+  virtual void initialize(bool restore);
 
   /**
    * \brief Do Read I/O

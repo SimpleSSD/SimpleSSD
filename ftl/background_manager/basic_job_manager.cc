@@ -43,9 +43,9 @@ void BasicJobManager::addBackgroundJob(AbstractJob *pjob) {
   jobs.emplace_back(pjob);
 }
 
-void BasicJobManager::initialize() {
+void BasicJobManager::initialize(bool restore) {
   for (auto &iter : jobs) {
-    iter->initialize();
+    iter->initialize(restore);
   }
 }
 

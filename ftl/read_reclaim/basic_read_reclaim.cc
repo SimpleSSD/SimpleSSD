@@ -61,7 +61,7 @@ void BasicReadReclaim::done(uint64_t now, uint32_t) {
   }
 }
 
-void BasicReadReclaim::initialize() {
+void BasicReadReclaim::initialize(bool) {
   configure(Log::DebugID::FTL_BasicReadReclaim, "RR    ", "FTL::ReadReclaim",
             1);
 }

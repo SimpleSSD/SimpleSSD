@@ -46,7 +46,7 @@ AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
 
 AbstractGC::~AbstractGC() {}
 
-void AbstractGC::initialize() {}
+void AbstractGC::initialize(bool) {}
 
 bool AbstractGC::isRunning() {
   return state >= State::Foreground;

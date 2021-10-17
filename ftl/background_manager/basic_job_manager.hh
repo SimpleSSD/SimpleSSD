@@ -78,7 +78,7 @@ class BasicJobManager : public AbstractJobManager {
 
   void addBackgroundJob(AbstractJob *) override;
 
-  void initialize() override;
+  void initialize(bool) override;
   bool isRunning() override;
 
   void triggerByUser(TriggerType, Request *) override;

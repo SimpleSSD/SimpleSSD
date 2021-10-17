@@ -37,7 +37,7 @@ class AbstractWearLeveling : public AbstractBlockCopyJob {
   AbstractWearLeveling(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractWearLeveling();
 
-  void initialize() override;
+  void initialize(bool) override;
   bool isRunning() override;
 
   void createCheckpoint(std::ostream &) const noexcept override;

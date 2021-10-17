@@ -25,7 +25,7 @@ class AdvancedGC : public NaiveGC {
   AdvancedGC(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AdvancedGC();
 
-  void initialize() override;
+  void initialize(bool) override;
 
   void triggerByIdle(uint64_t, uint64_t) override;
 

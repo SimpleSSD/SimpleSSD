@@ -169,8 +169,8 @@ CPU::Function PageLevelMapping::invalidateMappingInternal(LSPN lspn,
   return fstat;
 }
 
-void PageLevelMapping::initialize() {
-  AbstractMapping::initialize();
+void PageLevelMapping::initialize(bool restore) {
+  AbstractMapping::initialize(restore);
 
   // Allocate table and block metadata
   entrySize = makeEntrySize(totalLogicalSuperPages, 1, readTableEntry,
@@ -194,11 +194,13 @@ void PageLevelMapping::initialize() {
              "Size of mapping table: %" PRIu64 " bytes",
              totalLogicalSuperPages * entrySize);
 
-  // Make free block pool in ftlobject.pAllocator
-  for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
-    PSBN tmp;
+  if (!restore) {
+    // Make free block pool in ftlobject.pAllocator
+    for (uint64_t i = 0; i < param.parallelism; i += param.superpage) {
+      PSBN tmp;
 
-    allocateFreeBlock(tmp, AllocationStrategy::LowestEraseCount);
+      allocateFreeBlock(tmp, AllocationStrategy::LowestEraseCount);
+    }
   }
 }
 

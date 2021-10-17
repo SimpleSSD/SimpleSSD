@@ -36,7 +36,7 @@ class AbstractReadReclaim : public AbstractBlockCopyJob {
   AbstractReadReclaim(ObjectData &, FTLObjectData &, FIL::FIL *);
   virtual ~AbstractReadReclaim();
 
-  void initialize() override;
+  void initialize(bool) override;
   bool isRunning() override;
 
   void triggerByUser(TriggerType, Request *) override;

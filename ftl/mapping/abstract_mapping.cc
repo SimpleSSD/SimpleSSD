@@ -154,7 +154,7 @@ CPU::Function AbstractMapping::allocateFreeBlock(PSBN &psbn,
   return ftlobject.pAllocator->allocateFreeBlock(psbn, strategy);
 }
 
-void AbstractMapping::initialize() {}
+void AbstractMapping::initialize(bool) {}
 
 const Parameter *AbstractMapping::getInfo() {
   return &param;
