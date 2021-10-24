@@ -12,7 +12,7 @@
 namespace SimpleSSD::FTL::GC {
 
 PreemptibleGC::PreemptibleGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *f)
-    : AdvancedGC(o, fo, f) {}
+    : AdvancedGC(o, fo, f), lastState(State::Idle) {}
 
 PreemptibleGC::~PreemptibleGC() {}
 
@@ -29,13 +29,14 @@ void PreemptibleGC::triggerBackground(uint64_t now) {
   if (UNLIKELY(ftlobject.pAllocator->checkBackgroundGCThreshold() &&
                state < State::Foreground)) {
     if (state == State::Paused) {
+      state = lastState;
+
       resumePaused();
     }
     else {
       scheduleNow(eventTrigger);
     }
 
-    state = State::Background;
     beginAt = now;
   }
 }
@@ -44,21 +45,28 @@ void PreemptibleGC::triggerForeground() {
   if (UNLIKELY(ftlobject.pAllocator->checkForegroundGCThreshold() &&
                state < State::Foreground)) {
     if (state == State::Paused) {
+      state = lastState;
+
       resumePaused();
     }
     else {
       scheduleNow(eventTrigger);
     }
 
-    state = State::Foreground;
     beginAt = getTick();
   }
 }
 
 void PreemptibleGC::resumePaused() {
   bool msg = false;
+  uint32_t size;
 
-  const uint32_t size = targetBlocks.size();
+  if (state == State::Foreground) {
+    size = fgcBlocksToErase;
+  }
+  else {
+    size = bgcBlocksToErase;
+  }
 
   for (uint32_t idx = 0; idx < size; idx++) {
     auto &targetBlock = targetBlocks[idx];
@@ -80,6 +88,8 @@ void PreemptibleGC::resumePaused() {
       }
     }
   }
+
+  panic_if(!msg, "Resumed from preempted state, but none of page is read.");
 }
 
 
@@ -132,12 +142,14 @@ void PreemptibleGC::createCheckpoint(std::ostream &out) const noexcept {
   AdvancedGC::createCheckpoint(out);
 
   BACKUP_STL(out, pendingFILs, iter, BACKUP_SCALAR(out, iter));
+  BACKUP_SCALAR(out, lastState);
 }
 
 void PreemptibleGC::restoreCheckpoint(std::istream &in) noexcept {
   AdvancedGC::restoreCheckpoint(in);
 
   RESTORE_STL_RESIZE(in, pendingFILs, i, RESTORE_SCALAR(in, pendingFILs[i]));
+  RESTORE_SCALAR(in, lastState);
 }
 
 }  // namespace SimpleSSD::FTL::GC

@@ -18,6 +18,7 @@ class PreemptibleGC : public AdvancedGC {
  protected:
   // Pending FIL requests (read/program/erase)
   std::vector<uint64_t> pendingFILs;
+  State lastState;  // state before preemption
 
   void triggerBackground(uint64_t) override;
 
@@ -42,6 +43,7 @@ class PreemptibleGC : public AdvancedGC {
     }
 
     if (UNLIKELY(allstop)) {
+      lastState = state;
       state = State::Paused;
 
       debugprint(logid, "GC    | Preempted");
