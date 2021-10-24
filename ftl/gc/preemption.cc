@@ -48,6 +48,21 @@ void PreemptibleGC::triggerForeground() {
       state = lastState;
 
       resumePaused();
+
+      if (lastState == State::Background &&
+          fgcBlocksToErase > bgcBlocksToErase) {
+        // Start more blocks
+        for (uint32_t idx = bgcBlocksToErase; idx < fgcBlocksToErase; idx++) {
+          ftlobject.pAllocator->getVictimBlock(targetBlocks[idx], method,
+                                               eventReadPage, idx);
+        }
+
+        // Mark as foreground
+        state = State::Foreground;
+
+        debugprint(logid, "GC    | Foreground | +%u blocks",
+                   fgcBlocksToErase - bgcBlocksToErase);
+      }
     }
     else {
       scheduleNow(eventTrigger);
@@ -91,7 +106,6 @@ void PreemptibleGC::resumePaused() {
 
   panic_if(!msg, "Resumed from preempted state, but none of page is read.");
 }
-
 
 void PreemptibleGC::readPage(uint64_t now, uint32_t idx) {
   if (LIKELY(!preemptRequested() || state == State::Foreground)) {
