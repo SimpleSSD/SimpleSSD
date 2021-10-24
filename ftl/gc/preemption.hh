@@ -60,7 +60,6 @@ class PreemptibleGC : public AdvancedGC {
   void writePage(uint64_t, uint32_t) override;
   void writeDone(uint64_t, uint32_t) override;
   void eraseDone(uint64_t, uint32_t) override;
-  void done(uint64_t, uint32_t) override;
 
  public:
   PreemptibleGC(ObjectData &, FTLObjectData &, FIL::FIL *);

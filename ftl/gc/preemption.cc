@@ -82,14 +82,6 @@ void PreemptibleGC::resumePaused() {
   }
 }
 
-void PreemptibleGC::done(uint64_t now, uint32_t idx) {
-  // Maybe GC is completed while waiting for pending requests
-  if (UNLIKELY(preemptRequested())) {
-    checkPreemptible();
-  }
-
-  AdvancedGC::done(now, idx);
-}
 
 void PreemptibleGC::readPage(uint64_t now, uint32_t idx) {
   if (LIKELY(!preemptRequested() || state == State::Foreground)) {
