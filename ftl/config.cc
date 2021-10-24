@@ -254,6 +254,10 @@ void Config::update() noexcept {
   panic_if((uint8_t)bgcBlockEraseLevel > 4,
            "Invalid BackgroundBlockEraseLevel.");
 
+  panic_if(
+      (uint8_t)bgcBlockEraseLevel > (uint8_t)fgcBlockEraseLevel,
+      "BackgroundBlockEraseLevel should be <= than ForegroundBlockEraseLevel.");
+
   panic_if((uint8_t)idletimeDetectionMode > 0,
            "Invalid IdletimeDetectionMode.");
 
