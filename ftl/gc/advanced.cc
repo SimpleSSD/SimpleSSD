@@ -50,19 +50,15 @@ void AdvancedGC::requestArrived(Request *req) {
 }
 
 void AdvancedGC::trigger() {
-  bool fgc = false;  // For message
   uint32_t size = 0;
 
-  if (ftlobject.pAllocator->checkForegroundGCThreshold()) {
+  if (state == State::Foreground) {
     stat.fgcCount++;
-    state = State::Foreground;
 
     size = fgcBlocksToErase;
-    fgc = true;
   }
   else {
     stat.bgcCount++;
-    state = State::Background;
 
     size = bgcBlocksToErase;
   }
@@ -72,7 +68,7 @@ void AdvancedGC::trigger() {
                                          eventReadPage, idx);
   }
 
-  if (fgc) {
+  if (state == State::Foreground) {
     debugprint(logid, "GC    | Foreground | %u blocks", fgcBlocksToErase);
   }
   else {

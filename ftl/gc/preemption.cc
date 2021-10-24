@@ -34,6 +34,8 @@ void PreemptibleGC::triggerBackground(uint64_t now) {
       resumePaused();
     }
     else {
+      state = State::Background;
+
       scheduleNow(eventTrigger);
     }
 
@@ -65,6 +67,8 @@ void PreemptibleGC::triggerForeground() {
       }
     }
     else {
+      state = State::Foreground;
+
       scheduleNow(eventTrigger);
     }
 
