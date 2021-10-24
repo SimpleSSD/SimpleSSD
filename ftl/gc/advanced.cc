@@ -60,7 +60,7 @@ void AdvancedGC::trigger() {
     size = fgcBlocksToErase;
     fgc = true;
   }
-  else if (state == State::Background) {
+  else {
     stat.bgcCount++;
     state = State::Background;
 

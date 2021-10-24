@@ -62,7 +62,6 @@ void NaiveGC::initialize(bool) {
 void NaiveGC::triggerForeground() {
   if (UNLIKELY(ftlobject.pAllocator->checkForegroundGCThreshold() &&
                state == State::Idle)) {
-    state = State::Foreground;
     beginAt = getTick();
 
     scheduleNow(eventTrigger);
@@ -80,6 +79,7 @@ void NaiveGC::requestArrived(Request *) {
 
 void NaiveGC::trigger() {
   stat.fgcCount++;
+  state = State::Foreground;
 
   // Get blocks to erase
   for (uint32_t idx = 0; idx < fgcBlocksToErase; idx++) {
