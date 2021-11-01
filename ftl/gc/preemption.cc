@@ -149,7 +149,7 @@ void PreemptibleGC::eraseDone(uint64_t now, uint32_t idx) {
 void PreemptibleGC::done(uint64_t now, uint32_t idx) {
   AdvancedGC::done(now, idx);
 
-  if (UNLIKELY(preemptRequested())) {
+  if (UNLIKELY(preemptRequested() && state != State::Idle)) {
     checkPreemptible();
   }
 }
