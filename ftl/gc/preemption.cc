@@ -146,6 +146,14 @@ void PreemptibleGC::eraseDone(uint64_t now, uint32_t idx) {
   AdvancedGC::eraseDone(now, idx);
 }
 
+void PreemptibleGC::done(uint64_t now, uint32_t idx) {
+  AdvancedGC::done(now, idx);
+
+  if (UNLIKELY(preemptRequested())) {
+    checkPreemptible();
+  }
+}
+
 void PreemptibleGC::requestArrived(Request *req) {
   // Request preemption
   if (UNLIKELY(state >= State::Background && !preemptRequested())) {
