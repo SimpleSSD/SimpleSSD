@@ -104,17 +104,12 @@ void NaiveGC::readPage(uint64_t now, uint32_t idx) {
 }
 
 void NaiveGC::done(uint64_t now, uint32_t idx) {
+  bool allinvalid = true;
   auto &targetBlock = targetBlocks[idx];
 
   targetBlock.blockID.invalidate();
 
   // Check all GC has been completed
-  checkDone(now);
-}
-
-void NaiveGC::checkDone(uint64_t now) {
-  bool allinvalid = true;
-
   for (auto &iter : targetBlocks) {
     if (iter.blockID.isValid()) {
       allinvalid = false;
@@ -129,21 +124,14 @@ void NaiveGC::checkDone(uint64_t now) {
                  "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
                  beginAt, now, now - beginAt);
     }
-    else if (state == State::Background) {
-      debugprint(logid,
-                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
-                 beginAt, now, now - beginAt);
-    }
 
     state = State::Idle;
-
-    // Check threshold
-    triggerForeground();
 
     // Calculate penalty
     updatePenalty(now);
 
     // As we got new freeblock, restart `some of` stalled requests
+    // This will trigger foreground GC again if necessary
     ftlobject.pFTL->restartStalledRequests();
   }
 }

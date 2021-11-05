@@ -60,7 +60,6 @@ class NaiveGC : public AbstractGC {
 
   void readPage(uint64_t, uint32_t) override;
   void done(uint64_t, uint32_t) override;
-  void checkDone(uint64_t);
 
  public:
   NaiveGC(ObjectData &, FTLObjectData &, FIL::FIL *);

@@ -77,14 +77,51 @@ void AdvancedGC::trigger() {
 }
 
 void AdvancedGC::done(uint64_t now, uint32_t idx) {
+  bool allinvalid = true;
+  auto &targetBlock = targetBlocks[idx];
+
+  // True if we got request while in GC
   bool conflicted = firstRequestArrival != std::numeric_limits<uint64_t>::max();
 
-  NaiveGC::done(now, idx);
+  targetBlock.blockID.invalidate();
 
-  if (state == State::Idle) {
-    if (!conflicted) {
-      // As no request is submitted while GC, continue for background GC
-      triggerBackground(now);
+  // Check all GC has been completed
+  for (auto &iter : targetBlocks) {
+    if (iter.blockID.isValid()) {
+      allinvalid = false;
+      break;
+    }
+  }
+
+  if (allinvalid) {
+    // Triggered GC completed
+    if (state == State::Foreground) {
+      debugprint(logid,
+                 "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+    else if (state == State::Background) {
+      debugprint(logid,
+                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+
+    state = State::Idle;
+
+    // Calculate penalty
+    updatePenalty(now);
+
+    // As we got new freeblock, restart `some of` stalled requests
+    // This will trigger foreground GC again if necessary
+    ftlobject.pFTL->restartStalledRequests();
+
+    // If foreground GC was not invoked,
+    if (state == State::Idle) {
+      // and we are still in idle,
+      if (!conflicted) {
+        // continue for background GC
+        triggerBackground(now);
+      }
     }
   }
 }

@@ -8,6 +8,7 @@
 #include "ftl/gc/preemption.hh"
 
 #include "ftl/allocator/abstract_allocator.hh"
+#include "ftl/base/abstract_ftl.hh"
 
 namespace SimpleSSD::FTL::GC {
 
@@ -147,11 +148,63 @@ void PreemptibleGC::eraseDone(uint64_t now, uint32_t idx) {
 }
 
 void PreemptibleGC::done(uint64_t now, uint32_t idx) {
-  if (UNLIKELY(preemptRequested())) {
-    checkPreemptible();
+  bool allinvalid = true;
+  auto &targetBlock = targetBlocks[idx];
+  bool conflicted = preemptRequested();
+
+  targetBlock.blockID.invalidate();
+
+  // Check all GC has been completed
+  for (auto &iter : targetBlocks) {
+    if (iter.blockID.isValid()) {
+      allinvalid = false;
+      break;
+    }
   }
 
-  AdvancedGC::done(now, idx);
+  if (allinvalid) {
+    // Triggered GC completed
+    if (state == State::Foreground) {
+      debugprint(logid,
+                 "GC    | Foreground | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+    else if (state == State::Background) {
+      debugprint(logid,
+                 "GC    | Background | %" PRIu64 " - %" PRIu64 " (%" PRIu64 ")",
+                 beginAt, now, now - beginAt);
+    }
+
+    state = State::Idle;
+
+    // Calculate penalty
+    updatePenalty(now);
+
+    // If preemption not requested
+    if (!conflicted) {
+      // As we got new freeblock, restart `some of` stalled requests
+      // This will trigger foreground GC again if necessary
+      ftlobject.pFTL->restartStalledRequests();
+
+      // If foreground GC was not invoked,
+      if (state == State::Idle) {
+        // and we are still in idle,
+        if (!conflicted) {
+          // continue for background GC
+          triggerBackground(now);
+        }
+      }
+    }
+    else {
+      // Preemption was requested but GC is completed
+      debugprint(logid, "GC    | Preempted");
+
+      firstRequestArrival = std::numeric_limits<uint64_t>::max();
+    }
+  }
+  else if (UNLIKELY(conflicted)) {
+    checkPreemptible();
+  }
 }
 
 void PreemptibleGC::requestArrived(Request *req) {
