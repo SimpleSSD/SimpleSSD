@@ -182,14 +182,14 @@ void PreemptibleGC::done(uint64_t now, uint32_t idx) {
 
     // As we got new freeblock, restart `some of` stalled requests
     // This will trigger foreground GC again if necessary
-    ftlobject.pFTL->restartStalledRequests();
+    auto restarted = ftlobject.pFTL->restartStalledRequests();
 
     // If preemption not requested
     if (!conflicted) {
       // If foreground GC was not invoked,
       if (state == State::Idle) {
         // and we are still in idle,
-        if (!conflicted) {
+        if (!conflicted && !restarted) {
           // continue for background GC
           triggerBackground(now);
         }
