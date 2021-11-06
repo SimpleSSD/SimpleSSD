@@ -35,11 +35,7 @@ void AdvancedGC::triggerBackground(uint64_t now) {
 }
 
 void AdvancedGC::triggerByIdle(uint64_t now, uint64_t) {
-  if (UNLIKELY(state >= State::Foreground)) {
-    // GC in progress
-    firstRequestArrival = std::numeric_limits<uint64_t>::max();
-  }
-  else {
+  if (UNLIKELY(state < State::Foreground)) {
     triggerBackground(now);
   }
 }
