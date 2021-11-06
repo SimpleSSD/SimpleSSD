@@ -99,8 +99,10 @@ class AbstractFTL : public Object {
    * Restart stalled write request. If GC module reclaims block, it will call
    * this function to restart some write requests. You must stop submitting
    * when AbstractAllocator::checkForegroundGCThreshold returns true.
+   *
+   * \return True when any of requests are restarted.
    */
-  virtual void restartStalledRequests() = 0;
+  virtual bool restartStalledRequests() = 0;
 
   // In initialize phase of mapping, they may want to write spare area
   void writeSpare(PPN ppn, uint8_t *buffer, uint64_t size) {

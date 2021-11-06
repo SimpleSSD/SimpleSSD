@@ -105,7 +105,7 @@ class PageLevelFTL : public AbstractFTL {
   bool write(Request *) override;
   void invalidate(Request *) override;
 
-  void restartStalledRequests() override;
+  bool restartStalledRequests() override;
 
   void getStatList(std::vector<Stat> &, std::string) noexcept override;
   void getStatValues(std::vector<double> &) noexcept override;

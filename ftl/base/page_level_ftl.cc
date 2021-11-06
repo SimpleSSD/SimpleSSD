@@ -444,12 +444,19 @@ void PageLevelFTL::invalidate_submit(uint64_t, uint64_t tag) {
   completeRequest(req);
 }
 
-void PageLevelFTL::restartStalledRequests() {
+bool PageLevelFTL::restartStalledRequests() {
+  bool ret = false;
+
   while (!stalledRequestList.empty()) {
     if (!write(nullptr)) {
       break;
     }
+    else {
+      ret = true;
+    }
   }
+
+  return ret;
 }
 
 void PageLevelFTL::getStatList(std::vector<Stat> &list,
