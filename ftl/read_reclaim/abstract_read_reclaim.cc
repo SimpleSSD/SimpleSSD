@@ -46,7 +46,7 @@ uint32_t AbstractReadReclaim::estimateBitError(uint64_t now, const PSBN &psbn) {
            gamma * pow(cycles, p) * pow(reads, q);  // disturbance
   }
 
-  return (uint32_t)(pageSize * rber);
+  return (uint32_t)(pageSize * 8 * rber);
 }
 
 void AbstractReadReclaim::initialize(bool) {}
