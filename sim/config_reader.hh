@@ -63,7 +63,8 @@ class ConfigReader {
   ConfigReader &operator=(ConfigReader &&) = default;
 
   void load(const std::filesystem::path &,
-            std::function<bool(pugi::xml_node &)>, bool = false) noexcept;
+            const std::function<bool(pugi::xml_node &)> &,
+            bool = false) noexcept;
   void save(const std::filesystem::path &) noexcept;
 
   int64_t readInt(Section, uint32_t) const noexcept;

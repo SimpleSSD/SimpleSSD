@@ -26,7 +26,7 @@ ConfigReader::~ConfigReader() {}
  * \param[in] path Input file path
  */
 void ConfigReader::load(const std::filesystem::path &path,
-                        std::function<bool(pugi::xml_node &)> cb,
+                        const std::function<bool(pugi::xml_node &)> &cb,
                         bool test) noexcept {
   auto result = file.load_file(path.c_str(),
                                pugi::parse_default | pugi::parse_trim_pcdata,
