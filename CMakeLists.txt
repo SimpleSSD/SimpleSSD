@@ -438,11 +438,11 @@ if (FW_LATENCY)
     add_custom_command(OUTPUT ${OBJ}
       COMMAND mkdir -p ${DIR}
       COMMAND clang++ ${FW_DEFAULT_ARGS} ${FW_FIRST_PASS_ARGS} ${FW_INCLUDE} -o "${OBJ}.bc" ${SRC}
-      COMMAND opt --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND opt -enable-new-pm=0 --load=${LLVM_PASS} --blockcollector -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
       COMMAND llc ${FW_CPU_ARG} -O2 -filetype=asm -o "${OBJ}.bc.S" "${OBJ}.opt.bc"
       COMMAND ${STAT_COLLECTOR} "${OBJ}.bc"
       COMMAND clang++ ${FW_DEFAULT_ARGS} -O2 -o "${OBJ}.bc" ${SRC}
-      COMMAND opt --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
+      COMMAND opt -enable-new-pm=0 --load=${LLVM_PASS} --inststat -O2 -o "${OBJ}.opt.bc" "${OBJ}.bc"
       COMMAND llc -O2 -filetype=obj -o ${OBJ} "${OBJ}.opt.bc"
       DEPENDS ${SRC}
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
