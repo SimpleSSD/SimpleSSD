@@ -10,6 +10,7 @@
 #ifndef __SIMPLESSD_UTIL_SORTED_MAP_HH__
 #define __SIMPLESSD_UTIL_SORTED_MAP_HH__
 
+#include <cinttypes>
 #include <functional>
 #include <unordered_map>
 

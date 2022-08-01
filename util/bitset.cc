@@ -9,6 +9,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 #include "sim/checkpoint.hh"
 
