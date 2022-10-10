@@ -309,7 +309,7 @@ CPU::Function RingBuffer::getValidLine(LPN lpn, CacheTag **ctag) {
 }
 
 CPU::Function RingBuffer::getAllocatableLine(LPN lpn, CacheTag **ctag) {
-  uint64_t idx;
+  uint64_t idx = totalEntries;
 
   auto fstat = getEmptyLine(idx);
 
