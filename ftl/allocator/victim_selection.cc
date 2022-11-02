@@ -324,35 +324,34 @@ class MRUVictimSelection : public AbstractVictimSelection {
   }
 };
 
-static std::vector<AbstractVictimSelection *> algorithms;
-
-void initializeVictimSelectionAlgorithms(ObjectData &object,
-                                         AbstractAllocator *pAllocator) {
-  algorithms.push_back(new RandomVictimSelection(pAllocator));
-  algorithms.push_back(new GreedyVictimSelection(pAllocator));
-  algorithms.push_back(new CostBenefitVictimSelection(object, pAllocator));
-  algorithms.push_back(new DChoiceVictimSelection(object, pAllocator));
-  algorithms.push_back(new LeastErasedVictimSelection(pAllocator));
-  algorithms.push_back(new LeastReadVictimSelection(pAllocator));
-  algorithms.push_back(new MostErasedVictimSelection(pAllocator));
-  algorithms.push_back(new MostReadVictimSelection(pAllocator));
-  algorithms.push_back(new LRUVictimSelection(pAllocator));
-  algorithms.push_back(new MRUVictimSelection(pAllocator));
-}
-
-void finalizeVictimSelectionAlgorithms() {
-  for (const auto &iter : algorithms) {
-    delete iter;
+AbstractVictimSelection *
+VictimSelectionFactory::createVictiomSelectionAlgorithm(
+    ObjectData &object, AbstractAllocator *pAllocator, VictimSelectionID id) {
+  switch (id) {
+    case VictimSelectionID::Random:
+      return new RandomVictimSelection(pAllocator);
+    case VictimSelectionID::Greedy:
+      return new GreedyVictimSelection(pAllocator);
+    case VictimSelectionID::CostBenefit:
+      return new CostBenefitVictimSelection(object, pAllocator);
+    case VictimSelectionID::DChoice:
+      return new DChoiceVictimSelection(object, pAllocator);
+    case VictimSelectionID::LeastErased:
+      return new LeastErasedVictimSelection(pAllocator);
+    case VictimSelectionID::LeastRead:
+      return new LeastReadVictimSelection(pAllocator);
+    case VictimSelectionID::MostErased:
+      return new MostErasedVictimSelection(pAllocator);
+    case VictimSelectionID::MostRead:
+      return new MostReadVictimSelection(pAllocator);
+    case VictimSelectionID::LeastRecentlyUsed:
+      return new LRUVictimSelection(pAllocator);
+    case VictimSelectionID::MostRecentlyUsed:
+      return new MRUVictimSelection(pAllocator);
   }
-}
 
-AbstractVictimSelection *getVictimSelectionAlgorithm(
-    VictimSelectionID id) noexcept {
-  auto _id = static_cast<uint64_t>(id);
-
-  if (_id < algorithms.size()) {
-    return algorithms.at(_id);
-  }
+  object.log->print(Log::LogID::Panic,
+                    "Undefined VictimSelectionID specified.");
 
   return nullptr;
 }

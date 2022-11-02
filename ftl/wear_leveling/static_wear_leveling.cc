@@ -19,15 +19,19 @@ StaticWearLeveling::StaticWearLeveling(ObjectData &o, FTLObjectData &fo,
   threshold = (double)readConfigFloat(Section::FlashTranslation,
                                       Config::Key::StaticWearLevelingThreshold);
 
-  method = BlockAllocator::getVictimSelectionAlgorithm(
-      BlockAllocator::VictimSelectionID::LeastErased);
+  method =
+      BlockAllocator::VictimSelectionFactory::createVictiomSelectionAlgorithm(
+          object, ftlobject.pAllocator,
+          BlockAllocator::VictimSelectionID::LeastErased);
 
   ftlobject.pAllocator->registerBlockEraseEventListener(eventEraseCallback);
 
   resetStatValues();
 }
 
-StaticWearLeveling::~StaticWearLeveling() {}
+StaticWearLeveling::~StaticWearLeveling() {
+  delete method;
+}
 
 void StaticWearLeveling::initialize(bool restore) {
   configure(Log::DebugID::FTL_StaticWearLeveling, "WL    ", "FTL::WearLeveling",

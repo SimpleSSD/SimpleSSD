@@ -15,33 +15,31 @@ AbstractGC::AbstractGC(ObjectData &o, FTLObjectData &fo, FIL::FIL *fil)
     : AbstractBlockCopyJob(o, fo, fil), state(State::Idle) {
   auto mode = (Config::VictimSelectionMode)readConfigUint(
       Section::FlashTranslation, Config::Key::VictimSelectionPolicy);
+  BlockAllocator::VictimSelectionID id =
+      BlockAllocator::VictimSelectionID::Random;
 
   switch (mode) {
     case Config::VictimSelectionMode::Random:
-      method = BlockAllocator::getVictimSelectionAlgorithm(
-          BlockAllocator::VictimSelectionID::Random);
-
+      id = BlockAllocator::VictimSelectionID::Random;
       break;
     case Config::VictimSelectionMode::Greedy:
-      method = BlockAllocator::getVictimSelectionAlgorithm(
-          BlockAllocator::VictimSelectionID::Greedy);
-
+      id = BlockAllocator::VictimSelectionID::Greedy;
       break;
     case Config::VictimSelectionMode::CostBenefit:
-      method = BlockAllocator::getVictimSelectionAlgorithm(
-          BlockAllocator::VictimSelectionID::CostBenefit);
-
+      id = BlockAllocator::VictimSelectionID::CostBenefit;
       break;
     case Config::VictimSelectionMode::DChoice:
-      method = BlockAllocator::getVictimSelectionAlgorithm(
-          BlockAllocator::VictimSelectionID::DChoice);
-
+      id = BlockAllocator::VictimSelectionID::DChoice;
       break;
     default:
       panic("Unexpected victim block selection mode.");
 
       break;
   }
+
+  method =
+      BlockAllocator::VictimSelectionFactory::createVictiomSelectionAlgorithm(
+          object, ftlobject.pAllocator, id);
 }
 
 AbstractGC::~AbstractGC() {}

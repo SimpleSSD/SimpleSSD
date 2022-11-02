@@ -73,10 +73,6 @@ FTL::FTL(ObjectData &o) : Object(o), ftlobject(), requestCounter(0) {
       break;
   }
 
-  // Initialize algorithms before creating background jobs
-  BlockAllocator::initializeVictimSelectionAlgorithms(object,
-                                                      ftlobject.pAllocator);
-
   // GC algorithm
   AbstractJob *gcjob = nullptr;
 
@@ -160,8 +156,6 @@ FTL::~FTL() {
   delete ftlobject.pAllocator;
   delete ftlobject.pFTL;
   delete ftlobject.pJobManager;
-
-  BlockAllocator::finalizeVictimSelectionAlgorithms();
 }
 
 Request *FTL::insertRequest(Request &&req) {

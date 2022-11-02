@@ -54,21 +54,11 @@ enum class VictimSelectionID {
   MostRecentlyUsed,   // Select most recently accessed block after erase.
 };
 
-/**
- * \brief Get the Victim Selection Algorithm object
- *
- * This function returns victim selection algorithm object.
- * See comments of each object for more details.
- *
- * \param id Algorithm ID.
- * \return Victim selection algorithm.
- */
-AbstractVictimSelection *getVictimSelectionAlgorithm(
-    VictimSelectionID id) noexcept;
-
-void initializeVictimSelectionAlgorithms(ObjectData &object,
-                                         AbstractAllocator *pAllocator);
-void finalizeVictimSelectionAlgorithms();
+class VictimSelectionFactory {
+ public:
+  static AbstractVictimSelection *createVictiomSelectionAlgorithm(
+      ObjectData &object, AbstractAllocator *pAllocator, VictimSelectionID id);
+};
 
 }  // namespace SimpleSSD::FTL::BlockAllocator
 
