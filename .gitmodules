@@ -3,10 +3,10 @@
 	url = git@github.com:zeux/pugixml
 [submodule "lib/mcpat"]
 	path = lib/mcpat
-	url = git@camel.kaist.ac.kr:simplessd/mcpat
+	url = git@github.com:simplessd/mcpat
 [submodule "lib/llvm-simplessd"]
 	path = lib/llvm-simplessd
-	url = git@camel.kaist.ac.kr:simplessd/llvm-simplessd
+	url = git@github.com:simplessd/llvm-simplessd
 [submodule "lib/catch2"]
 	path = lib/catch2
 	url = git@github.com:catchorg/Catch2.git
